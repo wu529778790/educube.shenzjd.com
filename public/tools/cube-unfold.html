@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>正方体展开图</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  .scene {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    perspective: 900px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #f0f7ff 0%, #fdfaf4 100%);
+  }
+
+  /* 展开图容器（2D 平面展开） */
+  #unfold-container {
+    position: relative;
+    width: 360px;
+    height: 360px;
+    transform-style: preserve-3d;
+  }
+
+  .face {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    border: 3px solid #1a3a5c;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.9);
+    transition: all 0.7s cubic-bezier(0.4,0,0.2,1);
+    cursor: default;
+    user-select: none;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+    backface-visibility: hidden;
+  }
+
+  /* 折叠态：3D 正方体各面位置 */
+  .face.folded {
+    transition: all 0.7s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  #progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    transition: width 0.1s linear;
+    border-radius: 0 3px 3px 0;
+  }
+
+  .pattern-btn {
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid #e2e8f0;
+    background: #fff;
+    color: #64748b;
+    transition: all 0.15s;
+    font-family: var(--edu-font);
+  }
+  .pattern-btn.active { background: #8b5cf6; color: #fff; border-color: #8b5cf6; }
+  .pattern-btn:hover:not(.active) { border-color: #94a3b8; }
+
+  .info-panel {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: #64748b;
+    line-height: 2;
+    min-width: 140px;
+  }
+  .info-row { display: flex; justify-content: space-between; gap: 16px; }
+  .info-val { font-weight: 700; color: #8b5cf6; }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <!-- 工具栏 -->
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="edu-toolbar-title">📦 正方体展开图</span>
+      <span class="edu-toolbar-subtitle">空间想象辅助</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" id="btn-toggle" onclick="toggleAnimation()">▶ 展开</button>
+      <div class="edu-divider"></div>
+      <span style="font-size:12px;color:#64748b;">展开方式：</span>
+      <button class="pattern-btn active" onclick="setPattern(0)">方式一</button>
+      <button class="pattern-btn" onclick="setPattern(1)">方式二</button>
+      <button class="pattern-btn" onclick="setPattern(2)">方式三</button>
+      <button class="pattern-btn" onclick="setPattern(3)">方式四</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAnim()">重置</button>
+    </div>
+  </div>
+
+  <div class="edu-content" style="position:relative;">
+    <div id="progress-bar" style="width:0%"></div>
+    <div class="scene">
+      <div id="unfold-container"></div>
+    </div>
+
+    <div class="info-panel">
+      <div class="info-row"><span>面数</span><span class="info-val">6</span></div>
+      <div class="info-row"><span>棱数</span><span class="info-val">12</span></div>
+      <div class="info-row"><span>顶点数</span><span class="info-val">8</span></div>
+      <div class="info-row"><span>当前状态</span><span class="info-val" id="status-text">已折叠</span></div>
+    </div>
+  </div>
+</div>
+
+<script src="../edu-lib/edu-tools.js"></script>
+<script>
+// 正方体展开图的 11 种方式（常见4种）
+// 每种展开图用 [col,row] 表示每个面的网格位置
+// 面顺序：底 前 后 左 右 顶
+const PATTERNS = [
+  // 方式一：十字形
+  { faces: [
+    { col:1, row:1, label:'底', color:'#4f8cff' },
+    { col:1, row:2, label:'前', color:'#38c6a0' },
+    { col:1, row:0, label:'后', color:'#f97316' },
+    { col:0, row:1, label:'左', color:'#a78bfa' },
+    { col:2, row:1, label:'右', color:'#fbbf24' },
+    { col:1, row:3, label:'顶', color:'#f472b6' },
+  ]},
+  // 方式二：L 形
+  { faces: [
+    { col:0, row:0, label:'底', color:'#4f8cff' },
+    { col:1, row:0, label:'前', color:'#38c6a0' },
+    { col:2, row:0, label:'后', color:'#f97316' },
+    { col:3, row:0, label:'左', color:'#a78bfa' },
+    { col:3, row:1, label:'右', color:'#fbbf24' },
+    { col:3, row:2, label:'顶', color:'#f472b6' },
+  ]},
+  // 方式三：Z 形
+  { faces: [
+    { col:0, row:0, label:'底', color:'#4f8cff' },
+    { col:1, row:0, label:'前', color:'#38c6a0' },
+    { col:2, row:0, label:'后', color:'#f97316' },
+    { col:2, row:1, label:'左', color:'#a78bfa' },
+    { col:3, row:1, label:'右', color:'#fbbf24' },
+    { col:1, row:1, label:'顶', color:'#f472b6' },
+  ]},
+  // 方式四：T 形
+  { faces: [
+    { col:1, row:0, label:'底', color:'#4f8cff' },
+    { col:1, row:1, label:'前', color:'#38c6a0' },
+    { col:0, row:1, label:'后', color:'#f97316' },
+    { col:2, row:1, label:'左', color:'#a78bfa' },
+    { col:3, row:1, label:'右', color:'#fbbf24' },
+    { col:1, row:2, label:'顶', color:'#f472b6' },
+  ]},
+];
+
+const CELL = 100; // 单格大小 px
+const GAP = 4;    // 间隔
+
+let currentPattern = 0;
+let isUnfolded = false;
+let animTimer = null;
+let animProgress = 0; // 0=折叠 1=展开
+
+const container = document.getElementById('unfold-container');
+let faceEls = [];
+
+function createFaces() {
+  faceEls.forEach(el => el.remove());
+  faceEls = [];
+  PATTERNS[currentPattern].faces.forEach((f, i) => {
+    const el = document.createElement('div');
+    el.className = 'face';
+    el.style.background = f.color;
+    el.textContent = f.label;
+    container.appendChild(el);
+    faceEls.push(el);
+  });
+  // 直接设置展开/折叠状态
+  applyPositions(isUnfolded ? 1 : 0);
+}
+
+function applyPositions(t) {
+  // t: 0 = 折叠（3D立方体），1 = 展开（2D平面）
+  const pattern = PATTERNS[currentPattern];
+
+  // 展开位置：按网格排列
+  pattern.faces.forEach((f, i) => {
+    const el = faceEls[i];
+    // 展开态坐标
+    const ux = f.col * (CELL + GAP);
+    const uy = f.row * (CELL + GAP);
+
+    // 折叠态：都堆在中心（模拟叠在一起）
+    const fx = (CELL + GAP); // 中心列
+    const fy = (CELL + GAP); // 中心行
+
+    const x = lerp(fx, ux, t);
+    const y = lerp(fy, uy, t);
+
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    el.style.opacity = lerp(0.4, 1, t);
+    el.style.transform = `scale(${lerp(0.6, 1, t)})`;
+  });
+
+  // 容器本身居中
+  const cols = Math.max(...pattern.faces.map(f => f.col)) + 1;
+  const rows = Math.max(...pattern.faces.map(f => f.row)) + 1;
+  const totalW = cols * (CELL + GAP) - GAP;
+  const totalH = rows * (CELL + GAP) - GAP;
+  container.style.width = totalW + 'px';
+  container.style.height = totalH + 'px';
+
+  document.getElementById('progress-bar').style.width = (t * 100) + '%';
+  document.getElementById('status-text').textContent = t < 0.05 ? '已折叠' : t > 0.95 ? '已展开' : '动画中...';
+}
+
+function toggleAnimation() {
+  clearInterval(animTimer);
+  const btn = document.getElementById('btn-toggle');
+  if (isUnfolded) {
+    // 折叠
+    btn.textContent = '⏸ 动画中';
+    let t = 1;
+    animTimer = setInterval(() => {
+      t -= 0.03;
+      if (t <= 0) { t = 0; isUnfolded = false; clearInterval(animTimer); btn.textContent = '▶ 展开'; }
+      applyPositions(t);
+    }, 16);
+  } else {
+    // 展开
+    btn.textContent = '⏸ 动画中';
+    let t = 0;
+    animTimer = setInterval(() => {
+      t += 0.025;
+      if (t >= 1) { t = 1; isUnfolded = true; clearInterval(animTimer); btn.textContent = '↩ 折叠'; }
+      applyPositions(t);
+    }, 16);
+  }
+}
+
+function setPattern(i) {
+  currentPattern = i;
+  document.querySelectorAll('.pattern-btn').forEach((btn, idx) => {
+    btn.classList.toggle('active', idx === i);
+  });
+  resetAnim();
+  createFaces();
+}
+
+function resetAnim() {
+  clearInterval(animTimer);
+  isUnfolded = false;
+  animProgress = 0;
+  document.getElementById('btn-toggle').textContent = '▶ 展开';
+}
+
+// 初始化
+createFaces();
+</script>
+</body>
+</html>

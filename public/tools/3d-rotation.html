@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>立体图形旋转观察</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  .shape-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid #e2e8f0;
+    background: #fff;
+    color: #64748b;
+    transition: all 0.15s;
+    font-family: var(--edu-font);
+  }
+  .shape-btn:hover:not(.active) { border-color: #f97316; }
+  .shape-btn.active { background: #f97316; color: #fff; border-color: #f97316; }
+
+  #info-panel {
+    position: absolute;
+    bottom: 24px;
+    left: 24px;
+    background: rgba(255,255,255,0.94);
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 14px 18px;
+    min-width: 160px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+  .info-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1a3a5c;
+    margin-bottom: 10px;
+  }
+  .info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: #64748b;
+    padding: 4px 0;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .info-item:last-child { border-bottom: none; }
+  .info-val { font-weight: 700; color: #f97316; font-size: 15px; }
+
+  #drag-hint {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    background: rgba(249,115,22,0.1);
+    border: 1px solid rgba(249,115,22,0.3);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 12px;
+    color: #c2410c;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .color-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    margin-right: 6px;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="edu-toolbar-title">🔄 立体图形旋转观察</span>
+      <span class="edu-toolbar-subtitle">下册·观察物体</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <span style="font-size:12px;color:#64748b;">选择图形：</span>
+      <button class="shape-btn active" id="btn-cuboid" onclick="setShape('cuboid')">长方体</button>
+      <button class="shape-btn" id="btn-cube" onclick="setShape('cube')">正方体</button>
+      <button class="shape-btn" id="btn-cylinder" onclick="setShape('cylinder')">圆柱</button>
+      <button class="shape-btn" id="btn-cone" onclick="setShape('cone')">圆锥</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" id="btn-auto" onclick="toggleAuto()">▶ 自动旋转</button>
+      <button class="edu-btn edu-btn-outline" onclick="resetCamera()">重置</button>
+    </div>
+  </div>
+
+  <div class="edu-content" style="position:relative;background:linear-gradient(135deg,#fff7ed 0%,#fdfaf4 100%);">
+    <canvas id="canvas" class="edu-canvas-full"></canvas>
+    <div id="drag-hint">✋ 拖拽旋转 · 滚轮缩放</div>
+    <div id="info-panel">
+      <div class="info-title" id="shape-name">长方体</div>
+      <div class="info-item"><span>面数</span><span class="info-val" id="val-faces">6</span></div>
+      <div class="info-item"><span>棱数</span><span class="info-val" id="val-edges">12</span></div>
+      <div class="info-item"><span>顶点数</span><span class="info-val" id="val-vertices">8</span></div>
+      <div class="info-item" style="margin-top:6px;">
+        <span style="font-size:11px;color:#94a3b8;">面的形状</span>
+        <span style="font-size:11px;color:#64748b;" id="val-face-shape">长方形</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../edu-lib/edu-tools.js"></script>
+<script>
+const canvas = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+camera.position.set(4, 3, 5);
+camera.lookAt(0, 0, 0);
+
+// 灯光
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 0.85);
+dl.position.set(6, 8, 6);
+dl.castShadow = true;
+scene.add(dl);
+scene.add(new THREE.DirectionalLight(0xffeedd, 0.3).position.set(-4, 2, -4));
+const hl = new THREE.HemisphereLight(0xe8f4ff, 0xfff3e0, 0.4);
+scene.add(hl);
+
+// 地面
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(12, 12),
+  new THREE.MeshLambertMaterial({ color: 0xf8f8f8 })
+);
+floor.rotation.x = -Math.PI / 2;
+floor.position.y = -1.6;
+floor.receiveShadow = true;
+scene.add(floor);
+scene.add(new THREE.GridHelper(12, 12, 0xe0e7ef, 0xe0e7ef));
+scene.children[scene.children.length-1].position.y = -1.6;
+
+// 形状定义
+const SHAPES = {
+  cuboid: {
+    name: '长方体',
+    faces: 6, edges: 12, vertices: 8,
+    faceShape: '长方形',
+    geo: () => new THREE.BoxGeometry(2.4, 1.4, 1.6),
+    colors: [0x4f8cff, 0x3b72e0, 0x60a5fa, 0x93c5fd, 0x2563eb, 0x7dd3fc]
+  },
+  cube: {
+    name: '正方体',
+    faces: 6, edges: 12, vertices: 8,
+    faceShape: '正方形',
+    geo: () => new THREE.BoxGeometry(1.8, 1.8, 1.8),
+    colors: [0xf97316, 0xea580c, 0xfb923c, 0xfed7aa, 0xc2410c, 0xfdba74]
+  },
+  cylinder: {
+    name: '圆柱',
+    faces: 3, edges: 2, vertices: 0,
+    faceShape: '2个圆形 + 1个矩形',
+    geo: () => new THREE.CylinderGeometry(0.9, 0.9, 2, 32),
+    colors: [0x22c55e, 0x16a34a, 0x4ade80, 0x86efac, 0x15803d, 0xa3e635]
+  },
+  cone: {
+    name: '圆锥',
+    faces: 2, edges: 1, vertices: 1,
+    faceShape: '1个圆形 + 1个扇形',
+    geo: () => new THREE.ConeGeometry(1, 2.2, 32),
+    colors: [0xa855f7, 0x9333ea, 0xc084fc, 0xe9d5ff, 0x7e22ce, 0xd8b4fe]
+  }
+};
+
+let currentMesh = null;
+let autoRotate = false;
+
+function setShape(key) {
+  // 移除旧网格
+  if (currentMesh) {
+    scene.remove(currentMesh);
+    currentMesh.geometry.dispose();
+  }
+
+  const def = SHAPES[key];
+
+  // 多面材质（区分各面颜色）
+  const geo = def.geo();
+  let mat;
+  if (key === 'cuboid' || key === 'cube') {
+    mat = def.colors.map(c => new THREE.MeshLambertMaterial({ color: c }));
+  } else {
+    mat = def.colors.slice(0, 3).map(c => new THREE.MeshLambertMaterial({ color: c }));
+  }
+
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+  currentMesh = mesh;
+
+  // 更新信息面板
+  document.getElementById('shape-name').textContent = def.name;
+  document.getElementById('val-faces').textContent = def.faces;
+  document.getElementById('val-edges').textContent = def.edges;
+  document.getElementById('val-vertices').textContent = def.vertices;
+  document.getElementById('val-face-shape').textContent = def.faceShape;
+
+  // 更新按钮
+  Object.keys(SHAPES).forEach(k => {
+    document.getElementById('btn-' + k).classList.toggle('active', k === key);
+  });
+}
+
+function resetCamera() {
+  camera.position.set(4, 3, 5);
+  camera.lookAt(0, 0, 0);
+  if (currentMesh) {
+    currentMesh.rotation.set(0, 0, 0);
+  }
+}
+
+function toggleAuto() {
+  autoRotate = !autoRotate;
+  document.getElementById('btn-auto').textContent = autoRotate ? '⏸ 停止旋转' : '▶ 自动旋转';
+  document.getElementById('btn-auto').classList.toggle('edu-btn-primary', autoRotate);
+}
+
+// 鼠标拖拽旋转
+let isDragging = false, prevX = 0, prevY = 0;
+
+canvas.addEventListener('mousedown', e => {
+  isDragging = true;
+  prevX = e.clientX;
+  prevY = e.clientY;
+});
+document.addEventListener('mousemove', e => {
+  if (!isDragging || !currentMesh) return;
+  const dx = e.clientX - prevX;
+  const dy = e.clientY - prevY;
+  currentMesh.rotation.y += dx * 0.012;
+  currentMesh.rotation.x += dy * 0.012;
+  prevX = e.clientX;
+  prevY = e.clientY;
+});
+document.addEventListener('mouseup', () => isDragging = false);
+
+// 触摸支持
+let lastTouch = null;
+canvas.addEventListener('touchstart', e => {
+  lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+}, { passive: true });
+canvas.addEventListener('touchmove', e => {
+  if (!lastTouch || !currentMesh) return;
+  const dx = e.touches[0].clientX - lastTouch.x;
+  const dy = e.touches[0].clientY - lastTouch.y;
+  currentMesh.rotation.y += dx * 0.012;
+  currentMesh.rotation.x += dy * 0.012;
+  lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+}, { passive: true });
+canvas.addEventListener('touchend', () => lastTouch = null);
+
+// 滚轮缩放
+canvas.addEventListener('wheel', e => {
+  camera.position.multiplyScalar(1 + e.deltaY * 0.001);
+}, { passive: true });
+
+function resize() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  resize();
+  if (autoRotate && currentMesh) {
+    currentMesh.rotation.y += 0.008;
+  }
+  renderer.render(scene, camera);
+}
+
+setShape('cuboid');
+animate();
+</script>
+</body>
+</html>

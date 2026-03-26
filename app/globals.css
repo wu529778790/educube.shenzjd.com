@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+:root {
+  --edu-cream: #fdfaf4;
+  --edu-navy: #1a3a5c;
+  --edu-orange: #f97316;
+  --edu-sky: #0ea5e9;
+}
+
+body {
+  background: var(--edu-cream);
+  color: #1e293b;
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC",
+    sans-serif;
+}

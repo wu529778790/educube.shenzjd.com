@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>积木三视图观察器</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  .view-btn {
+    padding: 7px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid #e2e8f0;
+    background: #fff;
+    color: #1e293b;
+    transition: all 0.18s ease;
+    font-family: var(--edu-font);
+  }
+  .view-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+  .view-btn.active { background: #1a3a5c; color: #fff; border-color: #1a3a5c; }
+
+  #view-label {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(26,58,92,0.82);
+    color: #fff;
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  #view-hint {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.8;
+  }
+
+  .shape-btn {
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid #e2e8f0;
+    background: #fff;
+    color: #64748b;
+    transition: all 0.15s;
+    font-family: var(--edu-font);
+  }
+  .shape-btn:hover { border-color: #94a3b8; }
+  .shape-btn.active { background: #0ea5e9; color: #fff; border-color: #0ea5e9; }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <!-- 工具栏 -->
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="edu-toolbar-title">🧊 积木三视图观察器</span>
+      <span class="edu-toolbar-subtitle">下册·观察物体</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <span style="font-size:12px;color:#64748b;">切换视角：</span>
+      <button class="view-btn active" id="btn-front" onclick="setView('front')">正视图</button>
+      <button class="view-btn" id="btn-side" onclick="setView('side')">侧视图</button>
+      <button class="view-btn" id="btn-top" onclick="setView('top')">俯视图</button>
+      <div class="edu-divider"></div>
+      <span style="font-size:12px;color:#64748b;">积木：</span>
+      <button class="shape-btn active" id="shape-a" onclick="setShape('A')">形状A</button>
+      <button class="shape-btn" id="shape-b" onclick="setShape('B')">形状B</button>
+      <button class="shape-btn" id="shape-c" onclick="setShape('C')">形状C</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetView()">重置</button>
+    </div>
+  </div>
+
+  <!-- 画布区域 -->
+  <div class="edu-content" style="position:relative;">
+    <canvas id="canvas" class="edu-canvas-full"></canvas>
+    <div id="view-label">正视图（从正面看）</div>
+    <div id="view-hint">
+      <strong>提示</strong><br/>
+      • 正视图：从正面看<br/>
+      • 侧视图：从右侧看<br/>
+      • 俯视图：从上方看<br/>
+      拖拽可旋转观察
+    </div>
+  </div>
+</div>
+
+<script src="../edu-lib/edu-tools.js"></script>
+<script>
+// ===================== Three.js 场景初始化 =====================
+const canvas = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf8fafc);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+
+// 灯光
+const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+scene.add(ambient);
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(8, 12, 8);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.width = 1024;
+dirLight.shadow.mapSize.height = 1024;
+scene.add(dirLight);
+const fillLight = new THREE.DirectionalLight(0x9ecfff, 0.3);
+fillLight.position.set(-5, 3, -5);
+scene.add(fillLight);
+
+// 地面网格
+const gridHelper = new THREE.GridHelper(10, 10, 0xdde3ec, 0xdde3ec);
+scene.add(gridHelper);
+
+// ===================== 积木形状定义 =====================
+// 每个形状用坐标数组 [x, y, z] 表示积木单元格位置
+const shapes = {
+  A: [
+    [0,0,0],[1,0,0],[2,0,0],
+    [0,1,0],[1,1,0],
+    [1,0,1],[1,1,1]
+  ],
+  B: [
+    [0,0,0],[1,0,0],
+    [1,0,1],[1,0,2],
+    [0,1,0],[1,1,0],[1,1,1]
+  ],
+  C: [
+    [0,0,0],[1,0,0],[2,0,0],
+    [0,0,1],[1,0,1],[2,0,1],
+    [1,1,0],[1,1,1],[1,2,0]
+  ]
+};
+
+const COLORS = [
+  0x4f8cff, 0x38c6a0, 0xf97316,
+  0xa78bfa, 0xfbbf24, 0xf472b6,
+  0x60a5fa, 0x34d399, 0xfca5a5,
+  0x818cf8
+];
+
+let blockGroup = new THREE.Group();
+scene.add(blockGroup);
+
+function buildShape(shapeKey) {
+  while (blockGroup.children.length) blockGroup.remove(blockGroup.children[0]);
+  const positions = shapes[shapeKey];
+  const geo = new THREE.BoxGeometry(0.92, 0.92, 0.92);
+  positions.forEach((pos, i) => {
+    const mat = new THREE.MeshLambertMaterial({ color: COLORS[i % COLORS.length] });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(pos[0] - 1, pos[1] + 0.46, pos[2] - 1);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    // 边框
+    const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(0.92, 0.92, 0.92));
+    const lineMat = new THREE.LineBasicMaterial({ color: 0x00000022, linewidth: 1 });
+    const wireframe = new THREE.LineSegments(edges, lineMat);
+    mesh.add(wireframe);
+    blockGroup.add(mesh);
+  });
+}
+
+// ===================== 视角定义 =====================
+const views = {
+  free:  { pos: [6, 5, 6],   target: [0, 1, 0], label: '自由旋转' },
+  front: { pos: [0, 2, 7],   target: [0, 1, 0], label: '正视图（从正面看）' },
+  side:  { pos: [7, 2, 0],   target: [0, 1, 0], label: '侧视图（从右侧看）' },
+  top:   { pos: [0, 10, 0.001], target: [0, 0, 0], label: '俯视图（从上方看）' }
+};
+
+let currentView = 'front';
+let targetPos = new THREE.Vector3(...views.front.pos);
+let targetLook = new THREE.Vector3(...views.front.target);
+let isAnimating = false;
+
+// 鼠标旋转（仅自由视角时）
+let isDragging = false, prevMouse = {x:0,y:0};
+let spherical = { theta: Math.PI/4, phi: Math.PI/3, radius: 9 };
+
+canvas.addEventListener('mousedown', e => {
+  if (currentView !== 'free') return;
+  isDragging = true;
+  prevMouse = { x: e.clientX, y: e.clientY };
+});
+document.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  const dx = e.clientX - prevMouse.x;
+  const dy = e.clientY - prevMouse.y;
+  spherical.theta -= dx * 0.01;
+  spherical.phi = Math.max(0.1, Math.min(Math.PI/2 - 0.05, spherical.phi - dy * 0.01));
+  prevMouse = { x: e.clientX, y: e.clientY };
+});
+document.addEventListener('mouseup', () => isDragging = false);
+
+function setView(name) {
+  currentView = name;
+  const v = views[name];
+  document.getElementById('view-label').textContent = v.label;
+
+  // 更新按钮状态
+  ['front','side','top'].forEach(k => {
+    document.getElementById('btn-' + k).classList.toggle('active', k === name);
+  });
+
+  // 动画到目标位置
+  targetPos.set(...v.pos);
+  targetLook.set(...v.target);
+  isAnimating = true;
+}
+
+function resetView() {
+  setView('front');
+}
+
+let currentShape = 'A';
+function setShape(key) {
+  currentShape = key;
+  ['A','B','C'].forEach(k => {
+    document.getElementById('shape-' + k.toLowerCase()).classList.toggle('active', k === key);
+  });
+  buildShape(key);
+}
+
+// ===================== 渲染循环 =====================
+function resize() {
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  resize();
+
+  if (currentView === 'free') {
+    const x = spherical.radius * Math.sin(spherical.phi) * Math.sin(spherical.theta);
+    const y = spherical.radius * Math.cos(spherical.phi);
+    const z = spherical.radius * Math.sin(spherical.phi) * Math.cos(spherical.theta);
+    camera.position.set(x, y, z);
+    camera.lookAt(0, 1, 0);
+  } else {
+    // 平滑插值
+    camera.position.lerp(targetPos, 0.08);
+    const lookNow = new THREE.Vector3().copy(camera.position).lerp(targetLook, 0.08);
+    camera.lookAt(lookNow);
+  }
+
+  renderer.render(scene, camera);
+}
+
+// 初始化
+buildShape('A');
+setView('front');
+animate();
+</script>
+</body>
+</html>

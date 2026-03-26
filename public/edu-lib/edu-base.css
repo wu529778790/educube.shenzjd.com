@@ -1,0 +1,227 @@
+/* 教立方 EduCube — 教具公共基础样式 */
+
+:root {
+  --edu-bg: #fdfbf7;
+  --edu-surface: #ffffff;
+  --edu-primary: #1a3a5c;
+  --edu-accent: #f97316;
+  --edu-accent2: #0ea5e9;
+  --edu-success: #22c55e;
+  --edu-text: #1e293b;
+  --edu-text-muted: #64748b;
+  --edu-border: #e2e8f0;
+  --edu-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --edu-radius: 12px;
+  --edu-font: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC",
+    sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--edu-font);
+  background: var(--edu-bg);
+  color: var(--edu-text);
+}
+
+/* 教具容器 */
+.edu-tool {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--edu-bg);
+  overflow: hidden;
+}
+
+/* 顶部工具栏 */
+.edu-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--edu-surface);
+  border-bottom: 1px solid var(--edu-border);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  gap: 12px;
+}
+
+.edu-toolbar-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--edu-primary);
+  white-space: nowrap;
+}
+
+.edu-toolbar-subtitle {
+  font-size: 12px;
+  color: var(--edu-text-muted);
+  padding: 3px 8px;
+  background: #f1f5f9;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.edu-toolbar-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* 教具主内容区 */
+.edu-content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 按钮基础样式 */
+.edu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: var(--edu-font);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.edu-btn:active {
+  transform: scale(0.97);
+}
+
+.edu-btn-primary {
+  background: var(--edu-primary);
+  color: #fff;
+}
+
+.edu-btn-primary:hover {
+  background: #1e4a76;
+}
+
+.edu-btn-accent {
+  background: var(--edu-accent);
+  color: #fff;
+}
+
+.edu-btn-accent:hover {
+  background: #ea6c0a;
+}
+
+.edu-btn-outline {
+  background: transparent;
+  color: var(--edu-primary);
+  border: 1.5px solid var(--edu-border);
+}
+
+.edu-btn-outline:hover {
+  background: #f1f5f9;
+  border-color: var(--edu-primary);
+}
+
+.edu-btn-active {
+  background: var(--edu-primary);
+  color: #fff;
+}
+
+/* 面板 */
+.edu-panel {
+  background: var(--edu-surface);
+  border: 1px solid var(--edu-border);
+  border-radius: var(--edu-radius);
+  padding: 16px;
+  box-shadow: var(--edu-shadow);
+}
+
+/* 标签组 */
+.edu-tag-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.edu-tag {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1.5px solid transparent;
+  user-select: none;
+  font-family: var(--edu-font);
+}
+
+/* Canvas 全尺寸 */
+.edu-canvas-full {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 提示文字 */
+.edu-hint {
+  font-size: 12px;
+  color: var(--edu-text-muted);
+  text-align: center;
+  padding: 6px 0;
+}
+
+/* 数值显示 */
+.value-display {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--edu-accent);
+  min-width: 40px;
+  text-align: center;
+}
+
+/* 滑块 */
+input[type="range"] {
+  -webkit-appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--edu-border);
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--edu-primary);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: var(--edu-accent);
+}
+
+/* 分隔线 */
+.edu-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--edu-border);
+  flex-shrink: 0;
+}
