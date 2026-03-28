@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>有余数的除法演示</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 240px;
+    height: 100%;
+    gap: 0;
+  }
+  .canvas-area {
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    overflow: auto;
+    background: linear-gradient(135deg, #fefce8 0%, #fdfaf4 100%);
+  }
+  .control-panel {
+    background: #fdfaf4;
+    border-left: 1px solid #e2e8f0;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow: auto;
+  }
+  .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+  .ctrl-label {
+    font-size: 11px; font-weight: 700; color: #64748b;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .input-row label {
+    font-size: 13px;
+    color: #64748b;
+    min-width: 50px;
+    font-weight: 600;
+  }
+  .num-input {
+    width: 60px;
+    padding: 6px 8px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+    color: #1a3a5c;
+    font-family: 'Courier New', monospace;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .num-input:focus { border-color: #eab308; }
+  .eq-display {
+    background: #fff;
+    border: 2px solid #eab308;
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+  }
+  .eq-formula {
+    font-size: 24px;
+    font-weight: 800;
+    color: #1a3a5c;
+    font-family: 'Courier New', monospace;
+    line-height: 1.6;
+  }
+  .eq-formula .quot { color: #2563eb; }
+  .eq-formula .rem { color: #ef4444; }
+  .eq-formula .op { color: #94a3b8; }
+  .eq-check {
+    font-size: 13px;
+    margin-top: 6px;
+  }
+  .eq-check.ok { color: #16a34a; }
+  .eq-check.err { color: #ef4444; }
+  .preset-btn {
+    padding: 8px 0; border-radius: 8px; font-size: 14px;
+    font-weight: 700; cursor: pointer;
+    border: 1.5px solid #e2e8f0; background: #fff;
+    color: #1a3a5c; transition: all 0.15s;
+    font-family: 'Courier New', monospace; text-align: center;
+  }
+  .preset-btn:hover { border-color: #eab308; color: #ca8a04; }
+  .divider { height: 1px; background: #e2e8f0; }
+  .info-box {
+    background: #fff; border: 1px solid #fde68a;
+    border-radius: 10px; padding: 10px 12px;
+    font-size: 12px; color: #64748b; line-height: 1.8;
+  }
+  .info-box strong { color: #ca8a04; }
+
+  /* 可视化区 */
+  .visual-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .group-section {
+    background: rgba(255,255,255,0.8);
+    border-radius: 14px;
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+  }
+  .group-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .group-title .num {
+    font-size: 18px;
+    font-weight: 800;
+    font-family: 'Courier New', monospace;
+  }
+  .groups-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .single-group {
+    background: #eff6ff;
+    border: 1.5px solid #93c5fd;
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 60px;
+    justify-content: center;
+    position: relative;
+  }
+  .group-num {
+    position: absolute;
+    top: -10px;
+    left: 8px;
+    background: #3b82f6;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 8px;
+    border-radius: 8px;
+  }
+  .remain-group {
+    background: #fef2f2;
+    border: 1.5px solid #fca5a5;
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 60px;
+    justify-content: center;
+    position: relative;
+  }
+  .remain-label {
+    position: absolute;
+    top: -10px;
+    left: 8px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 8px;
+    border-radius: 8px;
+  }
+  .obj {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .obj.blue { background: #dbeafe; border: 1.5px solid #93c5fd; }
+  .obj.red { background: #fee2e2; border: 1.5px solid #fca5a5; }
+
+  /* 竖式除法 */
+  .long-div {
+    background: #fff;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px 20px;
+    text-align: center;
+  }
+  .long-div-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    margin-bottom: 8px;
+  }
+  .div-form {
+    font-family: 'Courier New', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a3a5c;
+    line-height: 1.6;
+    display: inline-block;
+    text-align: left;
+  }
+  .div-form .divisor { color: #2563eb; }
+  .div-form .quot-line { color: #16a34a; border-bottom: 2px solid #1a3a5c; }
+  .div-form .product { color: #94a3b8; }
+  .div-form .remainder { color: #ef4444; }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="edu-toolbar-title">➗ 有余数的除法演示</span>
+      <span class="edu-toolbar-subtitle">上册·有余数的除法</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="calc()">计算</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="clearAll()">清空</button>
+    </div>
+  </div>
+
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <!-- 输入区 -->
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap;">
+          <div class="input-row">
+            <label>被除数</label>
+            <input class="num-input" id="input-dividend" type="number" value="17" min="1" max="99" oninput="calc()"/>
+          </div>
+          <div style="font-size:24px;color:#94a3b8;font-weight:700;">÷</div>
+          <div class="input-row">
+            <label>除数</label>
+            <input class="num-input" id="input-divisor" type="number" value="5" min="1" max="20" oninput="calc()"/>
+          </div>
+          <div style="font-size:24px;color:#94a3b8;font-weight:700;">=</div>
+          <!-- 结果 -->
+          <div class="eq-display">
+            <div class="eq-formula" id="eq-formula"></div>
+            <div class="eq-check" id="eq-check"></div>
+          </div>
+        </div>
+
+        <!-- 可视化 -->
+        <div class="visual-area">
+          <!-- 分组展示 -->
+          <div class="group-section">
+            <div class="group-title">分组结果：<span class="num" id="g-info"></span></div>
+            <div class="groups-row" id="groups-container"></div>
+          </div>
+
+          <!-- 竖式 -->
+          <div class="long-div">
+            <div class="long-div-title">竖式计算</div>
+            <div class="div-form" id="long-form"></div>
+          </div>
+        </div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择例题</div>
+          <button class="preset-btn" onclick="loadExample(17,5)">17 ÷ 5</button>
+          <button class="preset-btn" onclick="loadExample(23,4)">23 ÷ 4</button>
+          <button class="preset-btn" onclick="loadExample(30,7)">30 ÷ 7</button>
+          <button class="preset-btn" onclick="loadExample(25,6)">25 ÷ 6</button>
+          <button class="preset-btn" onclick="loadExample(19,3)">19 ÷ 3</button>
+          <button class="preset-btn" onclick="loadExample(50,8)">50 ÷ 8</button>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">知识卡片</div>
+          <div class="info-box">
+            <strong>除法各部分名称：</strong><br/>
+            被除数 ÷ 除数 = 商 … 余数<br/><br/>
+            <strong>余数要比除数小：</strong><br/>
+            如果余数 ≥ 除数，说明还可以再分一组。<br/><br/>
+            <strong>验算方法：</strong><br/>
+            除数 × 商 + 余数 = 被除数<br/><br/>
+            <strong>注意：</strong>余数的单位和被除数的单位相同。
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">除法口诀</div>
+          <div class="info-box">
+            一除二商三乘四减五比<br/>
+            <strong>一除：</strong>确定商的位置<br/>
+            <strong>二商：</strong>试商<br/>
+            <strong>三乘：</strong>除数 × 商<br/>
+            <strong>四减：</strong>被除数 - 乘积<br/>
+            <strong>五比：</strong>余数 < 除数
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const EMOJIS = ['🔵','🟢','🟡','🟣','🟠','⚪','🟤','🟥'];
+
+function calc() {
+  const dividend = parseInt(document.getElementById('input-dividend').value) || 0;
+  const divisor = parseInt(document.getElementById('input-divisor').value) || 1;
+
+  const quotient = Math.floor(dividend / divisor);
+  const remainder = dividend % divisor;
+
+  // 公式
+  const formulaEl = document.getElementById('eq-formula');
+  formulaEl.innerHTML = `${dividend} <span class="op">÷</span> ${divisor} <span class="op">=</span> <span class="quot">${quotient}</span> <span class="op">…</span> <span class="rem">${remainder}</span>`;
+
+  // 验算
+  const checkEl = document.getElementById('eq-check');
+  const checkVal = divisor * quotient + remainder;
+  if (checkVal === dividend) {
+    checkEl.className = 'eq-check ok';
+    checkEl.textContent = `✓ 验算：${divisor} × ${quotient} + ${remainder} = ${checkVal}`;
+  } else {
+    checkEl.className = 'eq-check err';
+    checkEl.textContent = `✗ 计算有误`;
+  }
+
+  // 分组可视化
+  document.getElementById('g-info').textContent =
+    `${dividend} 个分成 ${divisor} 组，每组 ${quotient} 个，余 ${remainder} 个`;
+
+  const container = document.getElementById('groups-container');
+  container.innerHTML = '';
+
+  for (let g = 0; g < divisor && g < 12; g++) {
+    const groupEl = document.createElement('div');
+    groupEl.className = 'single-group';
+    groupEl.innerHTML = `<div class="group-num">第${g + 1}组</div>`;
+    for (let i = 0; i < quotient && i < 20; i++) {
+      const obj = document.createElement('div');
+      obj.className = 'obj blue';
+      obj.textContent = '●';
+      groupEl.appendChild(obj);
+    }
+    container.appendChild(groupEl);
+  }
+
+  // 余数
+  if (remainder > 0) {
+    const remGroup = document.createElement('div');
+    remGroup.className = 'remain-group';
+    remGroup.innerHTML = `<div class="remain-label">余数</div>`;
+    for (let i = 0; i < remainder && i < 20; i++) {
+      const obj = document.createElement('div');
+      obj.className = 'obj red';
+      obj.textContent = '●';
+      remGroup.appendChild(obj);
+    }
+    container.appendChild(remGroup);
+  }
+
+  // 竖式
+  const formEl = document.getElementById('long-form');
+  const product = divisor * quotient;
+  formEl.innerHTML = `
+    <div style="display:inline-block;border-left:2px solid #1a3a5c;padding-left:8px;">
+      <div style="text-align:right;"><span class="quot-line">${quotient}</span></div>
+      <div><span class="divisor">${divisor}</span>)${dividend}</div>
+    </div><br/>
+    <div style="padding-left:20px;">
+      <div style="color:#94a3b8;">  − ${product}</div>
+      <div style="border-top:2px solid #1a3a5c;display:inline-block;width:60px;text-align:right;">
+        <span class="remainder">${remainder}</span>
+      </div>
+    </div>
+  `;
+}
+
+function loadExample(a, b) {
+  document.getElementById('input-dividend').value = a;
+  document.getElementById('input-divisor').value = b;
+  calc();
+}
+
+function clearAll() {
+  document.getElementById('input-dividend').value = '';
+  document.getElementById('input-divisor').value = '';
+  document.getElementById('eq-formula').innerHTML = '';
+  document.getElementById('eq-check').textContent = '';
+  document.getElementById('g-info').textContent = '';
+  document.getElementById('groups-container').innerHTML = '';
+  document.getElementById('long-form').innerHTML = '';
+}
+
+calc();
+</script>
+</body>
+</html>

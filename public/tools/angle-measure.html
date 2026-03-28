@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>量角器与角度测量</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 200px;
+    height: 100%;
+    gap: 0;
+  }
+  .canvas-area {
+    position: relative;
+    background: #fff;
+    overflow: hidden;
+  }
+  .control-panel {
+    background: #fdfaf4;
+    border-left: 1px solid #e2e8f0;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow: auto;
+  }
+  .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+  .ctrl-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .angle-display {
+    text-align: center;
+    padding: 12px 0;
+  }
+  .angle-num {
+    font-size: 42px;
+    font-weight: 800;
+    color: #f97316;
+    line-height: 1;
+  }
+  .angle-unit { font-size: 16px; color: #94a3b8; margin-left: 2px; }
+  .angle-name {
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 6px;
+    font-weight: 600;
+  }
+  .preset-btn {
+    padding: 6px 0;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid #e2e8f0;
+    background: #fff;
+    color: #64748b;
+    transition: all 0.15s;
+    font-family: var(--edu-font);
+    text-align: center;
+  }
+  .preset-btn:hover { border-color: #f97316; color: #f97316; }
+  .divider { height: 1px; background: #e2e8f0; }
+  .info-box {
+    background: #fff;
+    border: 1px solid #fed7aa;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.8;
+  }
+  .info-box strong { color: #f97316; }
+  .hint-label {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    background: rgba(249,115,22,0.1);
+    border: 1px solid rgba(249,115,22,0.3);
+    border-radius: 10px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: #c2410c;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="edu-toolbar-title">📐 量角器与角度测量</span>
+      <span class="edu-toolbar-subtitle">上册·角的度量</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="resetAngle()">重置角度</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" id="btn-show-arc" onclick="toggleArc()">显示弧线</button>
+      <button class="edu-btn edu-btn-outline" id="btn-show-labels" onclick="toggleLabels()">显示刻度</button>
+    </div>
+  </div>
+
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="canvas" class="edu-canvas-full"></canvas>
+        <div class="hint-label">拖拽射线端点改变角度</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">当前角度</div>
+          <div class="angle-display">
+            <div><span class="angle-num" id="angle-val">45</span><span class="angle-unit">°</span></div>
+            <div class="angle-name" id="angle-type">锐角</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">常用角度</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <button class="preset-btn" onclick="setAngle(30)">30°</button>
+            <button class="preset-btn" onclick="setAngle(45)">45°</button>
+            <button class="preset-btn" onclick="setAngle(60)">60°</button>
+            <button class="preset-btn" onclick="setAngle(90)">90°</button>
+            <button class="preset-btn" onclick="setAngle(120)">120°</button>
+            <button class="preset-btn" onclick="setAngle(180)">180°</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">角度知识</div>
+          <div class="info-box">
+            <strong>锐角</strong>：小于 90°<br/>
+            <strong>直角</strong>：等于 90°<br/>
+            <strong>钝角</strong>：大于 90° 小于 180°<br/>
+            <strong>平角</strong>：等于 180°<br/>
+            <strong>周角</strong>：等于 360°
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">测量信息</div>
+          <div class="info-box" id="measure-info">
+            射线 OA 与 OB 之间的夹角
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../edu-lib/edu-tools.js"></script>
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let W, H, cx, cy, radius;
+let angleDeg = 45;
+let showArc = true;
+let showLabels = true;
+let dragging = false;
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  W = canvas.clientWidth;
+  H = canvas.clientHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  cx = W / 2;
+  cy = H / 2;
+  radius = Math.min(W, H) * 0.35;
+}
+
+function getAngleType(deg) {
+  if (deg === 0) return '零角';
+  if (deg === 360) return '周角';
+  if (deg === 180) return '平角';
+  if (deg === 90) return '直角';
+  if (deg < 90) return '锐角';
+  if (deg < 180) return '钝角';
+  return '优角（大于180°）';
+}
+
+function render() {
+  resize();
+  ctx.clearRect(0, 0, W, H);
+
+  // 背景网格
+  drawGrid(ctx, W, H, 40, '#f1f5f9');
+
+  const rad = toRad(angleDeg);
+
+  // 量角器底座（半圆）
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // 半圆背景
+  ctx.beginPath();
+  ctx.arc(0, 0, radius + 10, Math.PI, 0);
+  ctx.fillStyle = '#fef3e2';
+  ctx.fill();
+  ctx.strokeStyle = '#f97316';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // 量角器外圈刻度
+  if (showLabels) {
+    for (let i = 0; i <= 180; i++) {
+      const a = Math.PI - (i * Math.PI) / 180;
+      const isMain = i % 10 === 0;
+      const isMid = i % 5 === 0;
+      const innerR = isMain ? radius - 18 : isMid ? radius - 12 : radius - 8;
+      const outerR = radius + 2;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * innerR, Math.sin(a) * innerR);
+      ctx.lineTo(Math.cos(a) * outerR, Math.sin(a) * outerR);
+      ctx.strokeStyle = isMain ? '#1a3a5c' : '#94a3b8';
+      ctx.lineWidth = isMain ? 1.5 : 0.8;
+      ctx.stroke();
+
+      if (isMain && i > 0 && i < 180) {
+        ctx.save();
+        const tx = Math.cos(a) * (radius - 28);
+        const ty = Math.sin(a) * (radius - 28);
+        ctx.translate(tx, ty);
+        ctx.rotate(a + Math.PI);
+        ctx.fillStyle = '#1a3a5c';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(i + '°', 0, 0);
+        ctx.restore();
+      }
+    }
+
+    // 从 0° 到 180° 的方向标记（左到右）
+    ctx.fillStyle = '#f97316';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('0°', -radius - 20, 2);
+    ctx.fillText('180°', radius + 20, 2);
+    ctx.fillText('90°', 0, -radius - 15);
+  }
+
+  // 角度弧线
+  if (showArc && angleDeg > 0 && angleDeg < 180) {
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, radius * 0.35, Math.PI, Math.PI - rad, true);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(249,115,22,0.15)';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * 0.35, Math.PI, Math.PI - rad, true);
+    ctx.strokeStyle = '#f97316';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // 顶点 O
+  ctx.beginPath();
+  ctx.arc(0, 0, 5, 0, Math.PI * 2);
+  ctx.fillStyle = '#1a3a5c';
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // 射线 OA（固定向左）
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  const ax = -radius * 1.1;
+  ctx.lineTo(ax, 0);
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  // A 端箭头
+  ctx.beginPath();
+  ctx.moveTo(ax, 0);
+  ctx.lineTo(ax + 10, -5);
+  ctx.lineTo(ax + 10, 5);
+  ctx.closePath();
+  ctx.fillStyle = '#3b82f6';
+  ctx.fill();
+  ctx.fillStyle = '#3b82f6';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('A', ax - 10, -12);
+
+  // 射线 OB（可旋转）
+  const bx = Math.cos(Math.PI - rad) * radius * 1.1;
+  const by = Math.sin(Math.PI - rad) * radius * 1.1;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(bx, by);
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  // B 端箭头
+  const bAngle = Math.atan2(by, bx);
+  ctx.save();
+  ctx.translate(bx, by);
+  ctx.rotate(bAngle);
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(-10, -5);
+  ctx.lineTo(-10, 5);
+  ctx.closePath();
+  ctx.fillStyle = '#ef4444';
+  ctx.fill();
+  ctx.restore();
+  // B 端可拖拽圆点
+  ctx.beginPath();
+  ctx.arc(bx, by, 10, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(239,68,68,0.2)';
+  ctx.fill();
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.fillStyle = '#ef4444';
+  ctx.font = 'bold 14px sans-serif';
+  const bLabelX = bx + 15 * Math.cos(bAngle + Math.PI / 2);
+  const bLabelY = by + 15 * Math.sin(bAngle + Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.fillText('B', bx + 12, by - 12);
+
+  // 角度标注（在弧线中间）
+  if (angleDeg > 0 && angleDeg < 180) {
+    const labelAngle = Math.PI - rad / 2;
+    const labelR = radius * 0.35 + 18;
+    ctx.fillStyle = '#f97316';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(Math.round(angleDeg) + '°', Math.cos(labelAngle) * labelR, Math.sin(labelAngle) * labelR);
+  }
+
+  // O 标注
+  ctx.fillStyle = '#1a3a5c';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('O', -12, 16);
+
+  ctx.restore();
+
+  // 更新面板
+  document.getElementById('angle-val').textContent = Math.round(angleDeg);
+  document.getElementById('angle-type').textContent = getAngleType(angleDeg);
+}
+
+function setAngle(deg) {
+  angleDeg = deg;
+  render();
+}
+
+function resetAngle() {
+  angleDeg = 45;
+  render();
+}
+
+function toggleArc() {
+  showArc = !showArc;
+  const btn = document.getElementById('btn-show-arc');
+  btn.textContent = showArc ? '隐藏弧线' : '显示弧线';
+  btn.classList.toggle('edu-btn-active', showArc);
+  render();
+}
+
+function toggleLabels() {
+  showLabels = !showLabels;
+  const btn = document.getElementById('btn-show-labels');
+  btn.textContent = showLabels ? '隐藏刻度' : '显示刻度';
+  btn.classList.toggle('edu-btn-active', showLabels);
+  render();
+}
+
+// 拖拽 OB 端点
+function getMouseAngle(e) {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left - cx;
+  const my = e.clientY - rect.top - cy;
+  let angle = Math.atan2(-my, mx); // 从正右方向逆时针
+  if (angle < 0) angle += Math.PI * 2;
+  // 限制在 0~180 度范围
+  angle = Math.max(0, Math.min(Math.PI, angle));
+  return (angle * 180) / Math.PI;
+}
+
+canvas.addEventListener('mousedown', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  // 检查是否点击在 OB 端点附近
+  const rad = toRad(angleDeg);
+  const bx = cx + Math.cos(Math.PI - rad) * radius * 1.1;
+  const by = cy + Math.sin(Math.PI - rad) * radius * 1.1;
+  const dist = Math.sqrt((mx - bx) ** 2 + (my - by) ** 2);
+  if (dist < 25) dragging = true;
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (!dragging) {
+    canvas.style.cursor = 'default';
+    return;
+  }
+  canvas.style.cursor = 'grabbing';
+  angleDeg = Math.round(getMouseAngle(e));
+  render();
+});
+
+canvas.addEventListener('mouseup', () => { dragging = false; });
+canvas.addEventListener('mouseleave', () => { dragging = false; });
+
+// 触摸支持
+canvas.addEventListener('touchstart', e => {
+  const rect = canvas.getBoundingClientRect();
+  const tx = e.touches[0].clientX - rect.left;
+  const ty = e.touches[0].clientY - rect.top;
+  const rad = toRad(angleDeg);
+  const bx = cx + Math.cos(Math.PI - rad) * radius * 1.1;
+  const by = cy + Math.sin(Math.PI - rad) * radius * 1.1;
+  const dist = Math.sqrt((tx - bx) ** 2 + (ty - by) ** 2);
+  if (dist < 35) dragging = true;
+}, { passive: true });
+
+canvas.addEventListener('touchmove', e => {
+  if (!dragging) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.touches[0].clientX - rect.left - cx;
+  const my = e.touches[0].clientY - rect.top - cy;
+  let angle = Math.atan2(-my, mx);
+  if (angle < 0) angle += Math.PI * 2;
+  angle = Math.max(0, Math.min(Math.PI, angle));
+  angleDeg = Math.round((angle * 180) / Math.PI);
+  render();
+}, { passive: true });
+
+canvas.addEventListener('touchend', () => { dragging = false; });
+
+window.addEventListener('resize', render);
+render();
+</script>
+</body>
+</html>

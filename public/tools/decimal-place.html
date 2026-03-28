@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>小数的意义与性质</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    height: 100%;
+    gap: 0;
+  }
+  .canvas-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    background: linear-gradient(135deg, #f0f7ff 0%, #fdfaf4 100%);
+    overflow: auto;
+  }
+  .control-panel {
+    background: #fdfaf4;
+    border-left: 1px solid #e2e8f0;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow: auto;
+  }
+  .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+  .ctrl-label {
+    font-size: 11px; font-weight: 700; color: #64748b;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .preset-btn {
+    padding: 8px 0; border-radius: 8px; font-size: 14px;
+    font-weight: 700; cursor: pointer;
+    border: 1.5px solid #e2e8f0; background: #fff;
+    color: #1a3a5c; transition: all 0.15s;
+    font-family: 'Courier New', monospace;
+  }
+  .preset-btn:hover { border-color: #0ea5e9; color: #0284c7; }
+  .divider { height: 1px; background: #e2e8f0; }
+  .info-box {
+    background: #fff; border: 1px solid #bae6fd;
+    border-radius: 10px; padding: 10px 12px;
+    font-size: 12px; color: #64748b; line-height: 1.8;
+  }
+  .info-box strong { color: #0284c7; }
+
+  /* 数位表 */
+  .place-value-chart {
+    width: 100%;
+    max-width: 700px;
+  }
+  .number-display {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  .number-big {
+    font-size: 56px;
+    font-weight: 800;
+    color: #1a3a5c;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 2px;
+  }
+  .number-big .dot {
+    color: #ef4444;
+    font-size: 64px;
+    position: relative;
+    top: 2px;
+  }
+  .number-big .active-digit {
+    color: #0ea5e9;
+    text-decoration: underline;
+    text-underline-offset: 6px;
+    text-decoration-color: #0ea5e9;
+    text-decoration-thickness: 3px;
+  }
+  .read-out {
+    font-size: 18px;
+    color: #64748b;
+    margin-top: 8px;
+  }
+
+  /* 数位列 */
+  .columns {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+  }
+  .digit-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 72px;
+  }
+  .digit-col.decimal-col {
+    min-width: 56px;
+  }
+  .col-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    padding: 4px 8px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    text-align: center;
+  }
+  .col-label.active { background: #dbeafe; color: #1d4ed8; }
+
+  .digit-value {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 800;
+    font-family: 'Courier New', monospace;
+    border: 2px solid #e2e8f0;
+    background: #fff;
+    color: #1a3a5c;
+    transition: all 0.2s;
+  }
+  .digit-value.active {
+    border-color: #0ea5e9;
+    background: #e0f2fe;
+    color: #0284c7;
+    box-shadow: 0 2px 12px rgba(14,165,233,0.2);
+  }
+
+  .digit-controls {
+    display: flex;
+    gap: 4px;
+  }
+  .digit-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1.5px solid #e2e8f0;
+    background: #fff;
+    color: #64748b;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    font-family: var(--edu-font);
+  }
+  .digit-btn:hover { border-color: #0ea5e9; color: #0284c7; }
+
+  .dot-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+  }
+  .dot-mark {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    font-weight: 800;
+    color: #ef4444;
+  }
+
+  /* 数轴 */
+  .number-line {
+    width: 100%;
+    max-width: 700px;
+    margin-top: 30px;
+  }
+  .number-line canvas {
+    width: 100%;
+    height: 80px;
+    display: block;
+  }
+
+  /* 十进制分数表 */
+  .fraction-table {
+    width: 100%;
+    max-width: 700px;
+    margin-top: 20px;
+  }
+  .frac-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 6px;
+  }
+  .frac-row.highlight { border-color: #0ea5e9; background: #e0f2fe; }
+  .frac-pos { font-size: 13px; color: #94a3b8; min-width: 60px; font-weight: 600; }
+  .frac-val { font-size: 16px; font-weight: 700; color: #1a3a5c; font-family: 'Courier New', monospace; }
+  .frac-name { font-size: 13px; color: #64748b; }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="edu-toolbar-title">📊 小数的意义与性质</span>
+      <span class="edu-toolbar-subtitle">下册·小数的意义和性质</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="resetAll()">重置</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" id="btn-line" onclick="toggleLine()">显示数轴</button>
+    </div>
+  </div>
+
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div class="place-value-chart">
+          <!-- 大数字显示 -->
+          <div class="number-display">
+            <div class="number-big" id="number-big"></div>
+            <div class="read-out" id="read-out"></div>
+          </div>
+
+          <!-- 数位列 -->
+          <div class="columns" id="columns"></div>
+
+          <!-- 数轴 -->
+          <div class="number-line" id="number-line-wrap" style="display:none;">
+            <canvas id="line-canvas"></canvas>
+          </div>
+
+          <!-- 分数表示 -->
+          <div class="fraction-table" id="frac-table"></div>
+        </div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择数位</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;" id="pos-buttons"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">常用小数</div>
+          <button class="preset-btn" onclick="loadNumber([0,3,1,4])">0.314 — 三百一十四毫</button>
+          <button class="preset-btn" onclick="loadNumber([1,2,5,0])">1.250 — 一点二五零</button>
+          <button class="preset-btn" onclick="loadNumber([0,5,0,0])">0.500 — 零点五零零</button>
+          <button class="preset-btn" onclick="loadNumber([3,1,4,2])">3.142 — 三点一四二</button>
+          <button class="preset-btn" onclick="loadNumber([0,0,0,1])">0.001 — 零点零零一</button>
+          <button class="preset-btn" onclick="loadNumber([9,9,9,9])">9.999 — 九点九九九</button>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">小数知识</div>
+          <div class="info-box">
+            <strong>数位顺序：</strong><br/>
+            … 百、十、<strong>个</strong> · <strong>十分</strong>位、<strong>百分</strong>位、<strong>千分</strong>位 …<br/><br/>
+            <strong>计数单位：</strong><br/>
+            一（个）、0.1（十分之一）<br/>
+            0.01（百分之一）、0.001（千分之一）<br/><br/>
+            <strong>性质：</strong>小数末尾添0或去掉0，小数大小不变。<br/>
+            例：0.5 = 0.50 = 0.500
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// digits: [ones, tenths, hundredths, thousandths]
+let digits = [0, 0, 0, 0];
+let activePos = 1; // 默认选中十分位
+let showLine = false;
+
+const POSITIONS = [
+  { key: 'ones', label: '个位', name: '个', unit: '一', factor: 1 },
+  { key: 'tenths', label: '十分位', name: '十分之一', unit: '0.1', factor: 0.1 },
+  { key: 'hundredths', label: '百分位', name: '百分之一', unit: '0.01', factor: 0.01 },
+  { key: 'thousandths', label: '千分位', name: '千分之一', unit: '0.001', factor: 0.001 },
+];
+
+function getDecimalValue() {
+  return digits[0] + digits[1] * 0.1 + digits[2] * 0.01 + digits[3] * 0.001;
+}
+
+function readChinese(d) {
+  if (d.every(v => v === 0)) return '零';
+  const numChars = ['零','一','二','三','四','五','六','七','八','九'];
+  let parts = [];
+  if (d[0] > 0) parts.push(numChars[d[0]]);
+  let hasDecimal = d[1] + d[2] + d[3] > 0;
+  if (hasDecimal) {
+    let dec = '';
+    for (let i = 1; i <= 3; i++) {
+      dec += numChars[d[i]];
+    }
+    parts.push('点' + dec);
+  }
+  return parts.join('');
+}
+
+function renderColumns() {
+  const container = document.getElementById('columns');
+  container.innerHTML = '';
+
+  for (let i = 0; i < 4; i++) {
+    if (i === 1) {
+      // 小数点
+      const dotCol = document.createElement('div');
+      dotCol.className = 'dot-col';
+      dotCol.innerHTML = `<div class="dot-mark">.</div>`;
+      container.appendChild(dotCol);
+    }
+
+    const col = document.createElement('div');
+    col.className = 'digit-col';
+
+    const isActive = activePos === i;
+    col.innerHTML = `
+      <div class="col-label ${isActive ? 'active' : ''}">${POSITIONS[i].label}</div>
+      <div class="digit-value ${isActive ? 'active' : ''}" onclick="setActivePos(${i})">${digits[i]}</div>
+      <div class="digit-controls">
+        <button class="digit-btn" onclick="changeDigit(${i}, -1)">−</button>
+        <button class="digit-btn" onclick="changeDigit(${i}, 1)">+</button>
+      </div>
+    `;
+    container.appendChild(col);
+  }
+}
+
+function renderBigNumber() {
+  const el = document.getElementById('number-big');
+  let html = '';
+  html += `<span class="${activePos === 0 ? 'active-digit' : ''}">${digits[0]}</span>`;
+  html += `<span class="dot">.</span>`;
+  for (let i = 1; i <= 3; i++) {
+    html += `<span class="${activePos === i ? 'active-digit' : ''}">${digits[i]}</span>`;
+  }
+  el.innerHTML = html;
+  document.getElementById('read-out').textContent =
+    `${getDecimalValue().toFixed(3)} — ${readChinese(digits)}`;
+}
+
+function renderPosButtons() {
+  const container = document.getElementById('pos-buttons');
+  container.innerHTML = '';
+  POSITIONS.forEach((pos, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'preset-btn';
+    btn.style.borderColor = activePos === i ? '#0ea5e9' : '';
+    btn.style.color = activePos === i ? '#0284c7' : '';
+    btn.style.background = activePos === i ? '#e0f2fe' : '';
+    btn.textContent = pos.label;
+    btn.onclick = () => setActivePos(i);
+    container.appendChild(btn);
+  });
+}
+
+function renderFractionTable() {
+  const el = document.getElementById('frac-table');
+  const val = getDecimalValue();
+  el.innerHTML = '';
+
+  const rows = [];
+  // 整数部分
+  if (digits[0] > 0) {
+    rows.push({ pos: '个位', val: digits[0], name: `${digits[0]}个一`, hi: activePos === 0 });
+  }
+  // 小数部分
+  if (digits[1] > 0) {
+    rows.push({ pos: '十分位', val: `${digits[1]}/10`, name: `${digits[1]}个十分之一`, hi: activePos === 1 });
+  }
+  if (digits[2] > 0) {
+    rows.push({ pos: '百分位', val: `${digits[2]}/100`, name: `${digits[2]}个百分之一`, hi: activePos === 2 });
+  }
+  if (digits[3] > 0) {
+    rows.push({ pos: '千分位', val: `${digits[3]}/1000`, name: `${digits[3]}个千分之一`, hi: activePos === 3 });
+  }
+
+  if (rows.length === 0) {
+    rows.push({ pos: '—', val: '0', name: '零', hi: false });
+  }
+
+  rows.forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'frac-row' + (r.hi ? ' highlight' : '');
+    row.innerHTML = `
+      <div class="frac-pos">${r.pos}</div>
+      <div class="frac-val">${r.val}</div>
+      <div class="frac-name">${r.name}</div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+function renderNumberLine() {
+  if (!showLine) return;
+  const wrap = document.getElementById('number-line-wrap');
+  const canvas = document.getElementById('line-canvas');
+  const rect = wrap.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = 80 * dpr;
+  canvas.style.height = '80px';
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const W = rect.width, H = 80;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = 40;
+  const lineY = 40;
+  const range = 1; // 0 to 1
+  const toX = v => pad + (v / range) * (W - 2 * pad);
+
+  // 主线
+  ctx.beginPath();
+  ctx.moveTo(pad, lineY);
+  ctx.lineTo(W - pad, lineY);
+  ctx.strokeStyle = '#1a3a5c';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // 箭头
+  ctx.beginPath();
+  ctx.moveTo(W - pad, lineY);
+  ctx.lineTo(W - pad - 8, lineY - 5);
+  ctx.lineTo(W - pad - 8, lineY + 5);
+  ctx.closePath();
+  ctx.fillStyle = '#1a3a5c';
+  ctx.fill();
+
+  // 刻度
+  for (let i = 0; i <= 10; i++) {
+    const v = i / 10;
+    const x = toX(v);
+    ctx.beginPath();
+    ctx.moveTo(x, lineY - 8);
+    ctx.lineTo(x, lineY + 8);
+    ctx.strokeStyle = i % 5 === 0 ? '#1a3a5c' : '#94a3b8';
+    ctx.lineWidth = i % 5 === 0 ? 2 : 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(v.toFixed(1), x, lineY + 22);
+  }
+
+  // 当前值标记
+  const val = getDecimalValue();
+  if (val >= 0 && val <= 1) {
+    const x = toX(val);
+    ctx.beginPath();
+    ctx.moveTo(x, lineY - 16);
+    ctx.lineTo(x - 6, lineY - 26);
+    ctx.lineTo(x + 6, lineY - 26);
+    ctx.closePath();
+    ctx.fillStyle = '#0ea5e9';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x, lineY - 12);
+    ctx.lineTo(x, lineY + 12);
+    ctx.strokeStyle = '#0ea5e9';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, lineY, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#0ea5e9';
+    ctx.fill();
+
+    ctx.fillStyle = '#0284c7';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(val.toFixed(3), x, lineY - 30);
+  }
+}
+
+function renderAll() {
+  renderColumns();
+  renderBigNumber();
+  renderPosButtons();
+  renderFractionTable();
+  renderNumberLine();
+}
+
+function setActivePos(i) {
+  activePos = i;
+  renderAll();
+}
+
+function changeDigit(pos, delta) {
+  digits[pos] = Math.max(0, Math.min(9, digits[pos] + delta));
+  renderAll();
+}
+
+function resetAll() {
+  digits = [0, 0, 0, 0];
+  activePos = 1;
+  renderAll();
+}
+
+function loadNumber(arr) {
+  digits = [...arr];
+  activePos = 1;
+  renderAll();
+}
+
+function toggleLine() {
+  showLine = !showLine;
+  const btn = document.getElementById('btn-line');
+  btn.textContent = showLine ? '隐藏数轴' : '显示数轴';
+  btn.classList.toggle('edu-btn-active', showLine);
+  document.getElementById('number-line-wrap').style.display = showLine ? 'block' : 'none';
+  if (showLine) renderNumberLine();
+}
+
+window.addEventListener('resize', () => { if (showLine) renderNumberLine(); });
+renderAll();
+</script>
+</body>
+</html>

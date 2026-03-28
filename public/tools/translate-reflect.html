@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>平移与轴对称演示</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 220px;
+    height: 100%;
+    gap: 0;
+  }
+  .canvas-area { position: relative; background: #fff; overflow: hidden; }
+  .control-panel {
+    background: #fdfaf4;
+    border-left: 1px solid #e2e8f0;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow: auto;
+  }
+  .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+  .ctrl-label {
+    font-size: 11px; font-weight: 700; color: #64748b;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .mode-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .mode-tab {
+    padding: 8px 0; border-radius: 8px; font-size: 13px;
+    font-weight: 700; cursor: pointer;
+    border: 2px solid #e2e8f0; background: #fff;
+    color: #64748b; transition: all 0.15s;
+    font-family: var(--edu-font); text-align: center;
+  }
+  .mode-tab.active { border-color: #3b82f6; background: #eff6ff; color: #1d4ed8; }
+  .mode-tab:hover:not(.active) { border-color: #93c5fd; }
+  .shape-btn {
+    padding: 7px 0; border-radius: 6px; font-size: 12px;
+    font-weight: 600; cursor: pointer;
+    border: 1.5px solid #e2e8f0; background: #fff;
+    color: #64748b; transition: all 0.15s;
+    font-family: var(--edu-font); text-align: center;
+  }
+  .shape-btn.active { background: #8b5cf6; color: #fff; border-color: #8b5cf6; }
+  .shape-btn:hover:not(.active) { border-color: #a78bfa; }
+  .divider { height: 1px; background: #e2e8f0; }
+  .info-box {
+    background: #fff; border: 1px solid #c4b5fd;
+    border-radius: 10px; padding: 10px 12px;
+    font-size: 12px; color: #64748b; line-height: 1.8;
+  }
+  .info-box strong { color: #7c3aed; }
+  .hint-label {
+    position: absolute; top: 14px; left: 14px;
+    background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.3);
+    border-radius: 10px; padding: 6px 12px; font-size: 12px; color: #6b21a8;
+  }
+  .arrow-display {
+    text-align: center;
+    font-size: 13px; color: #64748b;
+    padding: 6px; background: #fff;
+    border-radius: 8px; border: 1px solid #e2e8f0;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="edu-toolbar-title">↔ 平移与轴对称演示</span>
+      <span class="edu-toolbar-subtitle">下册·图形的运动</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="doTransform()">执行变换</button>
+      <button class="edu-btn edu-btn-accent" onclick="animateTransform()">动画演示</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="canvas" class="edu-canvas-full"></canvas>
+        <div class="hint-label" id="hint-text">拖拽图形移动位置</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">变换方式</div>
+          <div class="mode-tabs">
+            <button class="mode-tab active" id="mode-translate" onclick="setMode('translate')">↔ 平移</button>
+            <button class="mode-tab" id="mode-reflect" onclick="setMode('reflect')">↔ 对称</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section" id="translate-controls">
+          <div class="ctrl-label">平移方向</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <button class="shape-btn active" id="dir-right" onclick="setDir('right')">→ 向右</button>
+            <button class="shape-btn" id="dir-left" onclick="setDir('left')">← 向左</button>
+            <button class="shape-btn" id="dir-up" onclick="setDir('up')">↑ 向上</button>
+            <button class="shape-btn" id="dir-down" onclick="setDir('down')">↓ 向下</button>
+          </div>
+          <div class="arrow-display">平移距离：<strong id="dist-val">3</strong> 格</div>
+          <input type="range" id="dist-slider" min="1" max="8" value="3"
+            oninput="setDist(this.value)" style="width:100%;"/>
+        </div>
+        <div class="ctrl-section" id="reflect-controls" style="display:none;">
+          <div class="ctrl-label">对称轴</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <button class="shape-btn active" id="axis-v" onclick="setAxis('v')">竖轴</button>
+            <button class="shape-btn" id="axis-h" onclick="setAxis('h')">横轴</button>
+            <button class="shape-btn" id="axis-d1" onclick="setAxis('d1')">对角 ↘</button>
+            <button class="shape-btn" id="axis-d2" onclick="setAxis('d2')">对角 ↗</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择图形</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <button class="shape-btn active" id="sh-triangle" onclick="setShape('triangle')">三角形</button>
+            <button class="shape-btn" id="sh-rect" onclick="setShape('rect')">长方形</button>
+            <button class="shape-btn" id="sh-arrow" onclick="setShape('arrow')">箭头</button>
+            <button class="shape-btn" id="sh-L" onclick="setShape('L')">L形</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">变换知识</div>
+          <div class="info-box" id="info-box">
+            <strong>平移：</strong>图形沿某一方向移动一定的距离，形状和大小不变。<br/>
+            平移两要素：方向、距离。<br/>
+            <strong>轴对称：</strong>沿对称轴折叠，两部分完全重合。<br/>
+            对称点到对称轴的距离相等。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../edu-lib/edu-tools.js"></script>
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+let mode = 'translate';
+let direction = 'right';
+let dist = 3;
+let axis = 'v';
+let shapeKey = 'triangle';
+let animating = false;
+let animT = 0;
+
+// 网格设置
+const CELL = 50;
+let offsetX = 0, offsetY = 0;
+
+// 图形定义（网格坐标，左上角原点）
+const SHAPES = {
+  triangle: [[2,2],[4,2],[3,4]],
+  rect: [[2,1],[5,1],[5,3],[2,3]],
+  arrow: [[3,1],[4,2],[3.5,2],[3.5,4],[2.5,4],[2.5,2],[2,2]],
+  L: [[2,1],[4,1],[4,2],[3,2],[3,3],[2,3]]
+};
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  W = canvas.clientWidth;
+  H = canvas.clientHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  offsetX = Math.floor((W - 10 * CELL) / 2);
+  offsetY = Math.floor((H - 8 * CELL) / 2) + 20;
+}
+
+function g2p(p) {
+  return { x: offsetX + p[0] * CELL, y: offsetY + p[1] * CELL };
+}
+
+function translatePts(pts, dx, dy) {
+  return pts.map(p => [p[0] + dx, p[1] + dy]);
+}
+
+function reflectPts(pts) {
+  // 围绕画布中心轴对称
+  const cx = 5, cy = 4; // 中心
+  return pts.map(p => {
+    switch (axis) {
+      case 'v': return [2 * cx - p[0], p[1]];
+      case 'h': return [p[0], 2 * cy - p[1]];
+      case 'd1': return [p[1] + (cx - cy), p[0] + (cy - cx)]; // y=x 对角线
+      case 'd2': return [(cx + cy) - p[1], (cx + cy) - p[0]]; // y=-x 对角线（调整）
+    }
+    return p;
+  });
+}
+
+function getTranslation() {
+  switch (direction) {
+    case 'right': return { dx: dist, dy: 0 };
+    case 'left': return { dx: -dist, dy: 0 };
+    case 'up': return { dx: 0, dy: -dist };
+    case 'down': return { dx: 0, dy: dist };
+  }
+}
+
+function drawPolygon(pts, fill, stroke, lineWidth, dash) {
+  if (pts.length < 2) return;
+  ctx.beginPath();
+  const p0 = g2p(pts[0]);
+  ctx.moveTo(p0.x, p0.y);
+  for (let i = 1; i < pts.length; i++) {
+    const p = g2p(pts[i]);
+    ctx.lineTo(p.x, p.y);
+  }
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) {
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = lineWidth || 2;
+    if (dash) ctx.setLineDash(dash);
+    ctx.stroke();
+    if (dash) ctx.setLineDash([]);
+  }
+}
+
+function drawArrow(from, to, color) {
+  const p1 = g2p(from), p2 = g2p(to);
+  ctx.beginPath();
+  ctx.moveTo(p1.x, p1.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+  ctx.beginPath();
+  ctx.moveTo(p2.x, p2.y);
+  ctx.lineTo(p2.x - 12 * Math.cos(angle - 0.3), p2.y - 12 * Math.sin(angle - 0.3));
+  ctx.lineTo(p2.x - 12 * Math.cos(angle + 0.3), p2.y - 12 * Math.sin(angle + 0.3));
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function drawAxis() {
+  const cx = offsetX + 5 * CELL;
+  const cy = offsetY + 4 * CELL;
+  ctx.save();
+  ctx.beginPath();
+  ctx.setLineDash([8, 4]);
+  ctx.lineWidth = 2;
+
+  switch (axis) {
+    case 'v':
+      ctx.moveTo(cx, offsetY);
+      ctx.lineTo(cx, offsetY + 8 * CELL);
+      ctx.strokeStyle = '#ef4444';
+      break;
+    case 'h':
+      ctx.moveTo(offsetX, cy);
+      ctx.lineTo(offsetX + 10 * CELL, cy);
+      ctx.strokeStyle = '#ef4444';
+      break;
+    case 'd1':
+      ctx.moveTo(offsetX, offsetY);
+      ctx.lineTo(offsetX + 10 * CELL, offsetY + 8 * CELL);
+      ctx.strokeStyle = '#ef4444';
+      break;
+    case 'd2':
+      ctx.moveTo(offsetX, offsetY + 8 * CELL);
+      ctx.lineTo(offsetX + 10 * CELL, offsetY);
+      ctx.strokeStyle = '#ef4444';
+      break;
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // 标注
+  ctx.fillStyle = '#ef4444';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.fillText('对称轴', cx - 18, offsetY - 6);
+}
+
+function render() {
+  resize();
+  ctx.clearRect(0, 0, W, H);
+
+  // 网格
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 10; i++) {
+    const x = offsetX + i * CELL;
+    ctx.beginPath(); ctx.moveTo(x, offsetY); ctx.lineTo(x, offsetY + 8 * CELL); ctx.stroke();
+  }
+  for (let j = 0; j <= 8; j++) {
+    const y = offsetY + j * CELL;
+    ctx.beginPath(); ctx.moveTo(offsetX, y); ctx.lineTo(offsetX + 10 * CELL, y); ctx.stroke();
+  }
+
+  const origPts = SHAPES[shapeKey];
+
+  if (mode === 'translate') {
+    const t = getTranslation();
+    const movedPts = translatePts(origPts, t.dx * animT, t.dy * animT);
+
+    // 原始图形（虚线）
+    drawPolygon(origPts, 'rgba(59,130,246,0.1)', '#3b82f6', 2, [6, 4]);
+
+    // 变换后图形
+    drawPolygon(movedPts, 'rgba(59,130,246,0.25)', '#2563eb', 2.5);
+
+    // 连接箭头
+    if (animT > 0.1) {
+      const oc = centroid(origPts);
+      const mc = centroid(movedPts);
+      drawArrow(oc, mc, '#f97316');
+    }
+
+    // 标注
+    ctx.fillStyle = '#3b82f6';
+    ctx.font = 'bold 12px sans-serif';
+    const oc = centroid(origPts);
+    ctx.fillText('原图', offsetX + oc[0]*CELL - 12, offsetY + oc[1]*CELL - 10);
+    if (animT > 0.1) {
+      ctx.fillStyle = '#2563eb';
+      const mc = centroid(movedPts);
+      ctx.fillText('平移后', offsetX + mc[0]*CELL - 18, offsetY + mc[1]*CELL - 10);
+    }
+  } else {
+    // 轴对称
+    const refPts = reflectPts(origPts);
+
+    drawAxis();
+
+    // 原始图形
+    drawPolygon(origPts, 'rgba(139,92,246,0.15)', '#7c3aed', 2);
+
+    // 对称图形
+    if (animT > 0.1) {
+      drawPolygon(refPts, 'rgba(139,92,246,0.25)', '#6d28d9', 2.5, [6, 4]);
+
+      // 对称点连线
+      for (let i = 0; i < origPts.length; i++) {
+        const p1 = g2p(origPts[i]);
+        const p2 = g2p(refPts[i]);
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.strokeStyle = 'rgba(168,85,247,0.3)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    ctx.fillStyle = '#7c3aed';
+    ctx.font = 'bold 12px sans-serif';
+    const oc = centroid(origPts);
+    ctx.fillText('原图', offsetX + oc[0]*CELL - 12, offsetY + oc[1]*CELL - 10);
+    if (animT > 0.1) {
+      ctx.fillStyle = '#6d28d9';
+      const rc = centroid(refPts);
+      ctx.fillText('对称图形', offsetX + rc[0]*CELL - 24, offsetY + rc[1]*CELL - 10);
+    }
+  }
+}
+
+function centroid(pts) {
+  let sx = 0, sy = 0;
+  pts.forEach(p => { sx += p[0]; sy += p[1]; });
+  return [sx / pts.length, sy / pts.length];
+}
+
+function doTransform() {
+  animT = 1;
+  render();
+}
+
+function animateTransform() {
+  if (animating) return;
+  animating = true;
+  animT = 0;
+  const timer = setInterval(() => {
+    animT += 0.02;
+    if (animT >= 1) { animT = 1; animating = false; clearInterval(timer); }
+    render();
+  }, 16);
+}
+
+function resetAll() {
+  animating = false;
+  animT = 0;
+  render();
+}
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('mode-translate').classList.toggle('active', m === 'translate');
+  document.getElementById('mode-reflect').classList.toggle('active', m === 'reflect');
+  document.getElementById('translate-controls').style.display = m === 'translate' ? 'flex' : 'none';
+  document.getElementById('reflect-controls').style.display = m === 'reflect' ? 'flex' : 'none';
+  document.getElementById('hint-text').textContent = m === 'translate' ? '拖拽图形移动位置' : '拖拽图形改变位置';
+  animT = 0;
+  render();
+}
+
+function setDir(d) {
+  direction = d;
+  ['right','left','up','down'].forEach(k => {
+    document.getElementById('dir-' + k).classList.toggle('active', k === d);
+  });
+  animT = 0;
+  render();
+}
+
+function setDist(v) {
+  dist = parseInt(v);
+  document.getElementById('dist-val').textContent = v;
+  animT = 0;
+  render();
+}
+
+function setAxis(a) {
+  axis = a;
+  ['v','h','d1','d2'].forEach(k => {
+    document.getElementById('axis-' + k).classList.toggle('active', k === a);
+  });
+  animT = 0;
+  render();
+}
+
+function setShape(s) {
+  shapeKey = s;
+  ['triangle','rect','arrow','L'].forEach(k => {
+    document.getElementById('sh-' + k).classList.toggle('active', k === s);
+  });
+  animT = 0;
+  render();
+}
+
+window.addEventListener('resize', render);
+render();
+</script>
+</body>
+</html>
