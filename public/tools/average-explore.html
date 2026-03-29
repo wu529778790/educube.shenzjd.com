@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>平均数探究</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    height: 100%;
+  }
+  .canvas-area { position: relative; background: #fff; overflow: hidden; }
+  .control-panel {
+    background: #fdfaf4; border-left: 1px solid #e2e8f0;
+    padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow: auto;
+  }
+  .ctrl-section { display: flex; flex-direction: column; gap: 8px; }
+  .ctrl-label {
+    font-size: 11px; font-weight: 700; color: #64748b;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .divider { height: 1px; background: #e2e8f0; }
+  .info-box {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+    padding: 10px 12px; font-size: 12px; color: #64748b; line-height: 1.8;
+  }
+  .info-box strong { color: #8b5cf6; }
+  .data-input {
+    padding: 5px 8px; border: 1.5px solid #e2e8f0; border-radius: 6px;
+    font-size: 14px; font-family: var(--edu-font); outline: none; text-align: center; width: 50px;
+  }
+  .data-input:focus { border-color: #8b5cf6; }
+  .data-row { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .color-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .preset-btn {
+    padding: 5px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;
+    cursor: pointer; border: 1.5px solid #e2e8f0; background: #fff; color: #64748b;
+    transition: all 0.15s; font-family: var(--edu-font); text-align: center;
+  }
+  .preset-btn:hover { border-color: #8b5cf6; color: #8b5cf6; }
+  .avg-big {
+    text-align: center; font-size: 28px; font-weight: 800; color: #8b5cf6; line-height: 1;
+  }
+  .hint-text { font-size: 11px; color: #94a3b8; }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="edu-toolbar-title">📊 平均数探究</span>
+      <span class="edu-toolbar-subtitle">下册·平均数与条形统计图</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" id="btn-level" onclick="toggleLevel()">⚖️ 移多补少</button>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="main-canvas" class="edu-canvas-full"></canvas>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">数据输入（每人数量）</div>
+          <div id="data-rows"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">平均数</div>
+          <div class="avg-big"><span id="avg-val">—</span></div>
+          <div style="text-align:center;font-size:12px;color:#94a3b8;margin-top:4px;" id="avg-formula"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设数据</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <button class="preset-btn" onclick="loadPreset('height')">身高</button>
+            <button class="preset-btn" onclick="loadPreset('score')">成绩</button>
+            <button class="preset-btn" onclick="loadPreset('temp')">温度</button>
+            <button class="preset-btn" onclick="loadPreset('water')">饮水量</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">知识卡片</div>
+          <div class="info-box" style="font-size:11px;line-height:1.7;">
+            <strong>平均数</strong>：一组数据的总和除以这组数据的个数，所得的商叫做平均数。<br/>
+            <strong>移多补少法</strong>：从多的数量中拿出一部分补给少的，使每个数量变得一样多，这个相同的数就是平均数。<br/>
+            <strong>公式法</strong>：平均数 = 总数 ÷ 个数。
+          </div>
+        </div>
+        <div class="hint-text">修改数值后点击"移多补少"观看动画演示。</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="../edu-lib/edu-tools.js"></script>
+<script>
+const canvas = document.getElementById('main-canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+const COLORS = ['#3b82f6', '#ef4444', '#22c55e', '#f97316', '#8b5cf6', '#ec4899'];
+
+const PRESETS = {
+  height: { label: '身高(cm)', data: [135, 142, 128, 145, 140], unit: 'cm' },
+  score: { label: '考试成绩', data: [85, 92, 78, 95, 88, 90], unit: '分' },
+  temp: { label: '气温(°C)', data: [22, 25, 20, 28, 18], unit: '°C' },
+  water: { label: '饮水量(杯)', data: [6, 8, 4, 7, 5], unit: '杯' },
+};
+
+let data = [6, 8, 4, 7, 5];
+let levelProgress = 0; // 0 = original, 1 = leveled
+let leveling = false;
+
+function buildDataRows() {
+  const container = document.getElementById('data-rows');
+  container.innerHTML = '';
+  data.forEach((v, i) => {
+    const row = document.createElement('div');
+    row.className = 'data-row';
+    row.innerHTML = `
+      <span class="color-dot" style="background:${COLORS[i % COLORS.length]}"></span>
+      <span style="min-width:28px;">第${i + 1}人</span>
+      <input class="data-input" type="number" min="0" max="30" value="${v}" data-idx="${i}" oninput="updateData(this)"/>
+      <span style="font-size:11px;color:#94a3b8;" id="unit-label">${PRESETS.water.unit}</span>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function updateData(el) {
+  const idx = parseInt(el.dataset.idx);
+  data[idx] = Math.max(0, parseInt(el.value) || 0);
+  levelProgress = 0;
+  updateInfo();
+  render();
+}
+
+function loadPreset(key) {
+  const p = PRESETS[key];
+  data = [...p.data];
+  levelProgress = 0;
+  buildDataRows();
+  document.getElementById('unit-label') && document.querySelectorAll('#unit-label').forEach(el => el.textContent = p.unit);
+  updateInfo();
+  render();
+}
+
+function getAvg() {
+  return data.reduce((a, b) => a + b, 0) / data.length;
+}
+
+function updateInfo() {
+  const avg = getAvg();
+  const sum = data.reduce((a, b) => a + b, 0);
+  document.getElementById('avg-val').textContent = fmt(avg, 1);
+  document.getElementById('avg-formula').textContent = `(${data.join('+')}) ÷ ${data.length} = ${sum} ÷ ${data.length} = ${fmt(avg, 1)}`;
+}
+
+function toggleLevel() {
+  if (leveling) return;
+  leveling = true;
+  const start = levelProgress;
+  const end = levelProgress > 0.5 ? 0 : 1;
+  const duration = 1200;
+  const startTime = performance.now();
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    levelProgress = lerp(start, end, ease);
+    render();
+    if (t < 1) requestAnimationFrame(animate);
+    else leveling = false;
+  }
+  requestAnimationFrame(animate);
+}
+
+function resetAll() {
+  data = [6, 8, 4, 7, 5];
+  levelProgress = 0;
+  buildDataRows();
+  updateInfo();
+  render();
+}
+
+function render() {
+  const dpr = window.devicePixelRatio || 1;
+  W = canvas.clientWidth; H = canvas.clientHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  drawGrid(ctx, W, H, 40, '#e2e8f020');
+
+  const n = data.length;
+  const maxVal = Math.max(...data, 1);
+  const avg = getAvg();
+  const padL = 50, padR = 30, padT = 50, padB = 60;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+  const niceMax = Math.ceil(maxVal / 5) * 5;
+
+  // axes
+  ctx.strokeStyle = '#64748b';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(padL, padT);
+  ctx.lineTo(padL, H - padB);
+  ctx.lineTo(W - padR, H - padB);
+  ctx.stroke();
+
+  // Y labels
+  ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
+  ctx.fillStyle = '#64748b';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 5; i++) {
+    const v = (niceMax / 5) * i;
+    const y = H - padB - (v / niceMax) * chartH;
+    ctx.fillText(fmt(v, 0), padL - 8, y + 4);
+    if (i > 0) {
+      ctx.beginPath();
+      ctx.moveTo(padL, y);
+      ctx.lineTo(W - padR, y);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+  }
+
+  // bars
+  const barGap = chartW * 0.06;
+  const totalGap = barGap * (n + 1);
+  const barW = (chartW - totalGap) / n;
+
+  const leveledData = data.map(v => lerp(v, avg, levelProgress));
+
+  leveledData.forEach((v, i) => {
+    const x = padL + barGap + i * (barW + barGap);
+    const barH = (v / niceMax) * chartH;
+    const y = H - padB - barH;
+    const color = COLORS[i % COLORS.length];
+
+    const grad = ctx.createLinearGradient(x, y, x, H - padB);
+    grad.addColorStop(0, color);
+    grad.addColorStop(1, color + '80');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    const r = 4;
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + barW - r, y);
+    ctx.quadraticCurveTo(x + barW, y, x + barW, y + r);
+    ctx.lineTo(x + barW, H - padB);
+    ctx.lineTo(x, H - padB);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.fill();
+
+    // value on top
+    ctx.font = 'bold 13px ' + getComputedStyle(document.body).fontFamily;
+    ctx.fillStyle = color;
+    ctx.textAlign = 'center';
+    ctx.fillText(levelProgress > 0.9 ? fmt(avg, 1) : fmt(v, 1), x + barW / 2, y - 8);
+
+    // label
+    ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
+    ctx.fillStyle = '#64748b';
+    ctx.fillText('第' + (i + 1) + '人', x + barW / 2, H - padB + 18);
+  });
+
+  // average line
+  const avgY = H - padB - (avg / niceMax) * chartH;
+  ctx.strokeStyle = '#8b5cf6';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8, 4]);
+  ctx.beginPath();
+  ctx.moveTo(padL, avgY);
+  ctx.lineTo(W - padR, avgY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.font = 'bold 12px ' + getComputedStyle(document.body).fontFamily;
+  ctx.fillStyle = '#8b5cf6';
+  ctx.textAlign = 'left';
+  ctx.fillText(`平均数 = ${fmt(avg, 1)}`, W - padR - 120, avgY - 8);
+
+  // arrows showing "move" when leveling
+  if (levelProgress > 0 && levelProgress < 1) {
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillStyle = '#8b5cf6';
+    ctx.textAlign = 'center';
+    ctx.fillText('移多补少中...', W / 2, padT - 15);
+  } else if (levelProgress >= 1) {
+    ctx.font = 'bold 14px ' + getComputedStyle(document.body).fontFamily;
+    ctx.fillStyle = '#22c55e';
+    ctx.textAlign = 'center';
+    ctx.fillText(`所有柱子变得一样高 = 平均数 ${fmt(avg, 1)}`, W / 2, padT - 15);
+  }
+
+  updateInfo();
+}
+
+window.addEventListener('resize', render);
+setTimeout(() => { buildDataRows(); updateInfo(); render(); }, 50);
+</script>
+</body>
+</html>

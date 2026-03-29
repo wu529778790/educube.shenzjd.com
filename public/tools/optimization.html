@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>优化问题</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    height: 100%;
+  }
+  .canvas-area { position: relative; background: #fff; overflow: hidden; }
+  .control-panel {
+    background: #fdfaf4; border-left: 1px solid #e2e8f0;
+    padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow: auto;
+  }
+  .ctrl-section { display: flex; flex-direction: column; gap: 8px; }
+  .ctrl-label {
+    font-size: 11px; font-weight: 700; color: #64748b;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .divider { height: 1px; background: #e2e8f0; }
+  .tab-btn {
+    padding: 7px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1.5px solid #e2e8f0; background: #fff; color: #64748b;
+    text-align: center; transition: all 0.15s; font-family: var(--edu-font);
+  }
+  .tab-btn:hover:not(.active) { border-color: #22c55e; }
+  .tab-btn.active { background: #22c55e; color: #fff; border-color: #22c55e; }
+  .info-box {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+    padding: 10px 12px; font-size: 12px; color: #64748b; line-height: 1.8;
+  }
+  .info-box strong { color: #22c55e; }
+  .result-big {
+    text-align: center; font-size: 20px; font-weight: 800; color: #22c55e; line-height: 1.3;
+  }
+  .data-input {
+    padding: 5px 8px; border: 1.5px solid #e2e8f0; border-radius: 6px;
+    font-size: 14px; font-family: var(--edu-font); outline: none; text-align: center; width: 60px;
+  }
+  .data-input:focus { border-color: #22c55e; }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="edu-toolbar-title">🍳 优化问题</span>
+      <span class="edu-toolbar-subtitle">上册·数学广角</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" id="btn-play" onclick="playAnimation()">▶ 播放动画</button>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="main-canvas" class="edu-canvas-full"></canvas>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择问题</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <button class="tab-btn active" id="tb-pancake" onclick="setProblem('pancake')">烙饼问题</button>
+            <button class="tab-btn" id="tb-tea" onclick="setProblem('tea')">沏茶问题</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section" id="pancake-params">
+          <div class="ctrl-label">烙饼参数</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span style="font-size:12px;">饼数：</span>
+            <input class="data-input" id="inp-pancakes" type="number" min="1" max="10" value="3" onchange="onPancakeChange()"/>
+          </div>
+          <div class="info-box" style="font-size:11px;line-height:1.6;">
+            每次最多烙 <strong>2</strong> 张饼<br/>
+            每面需要 <strong>3</strong> 分钟<br/>
+            两面都要烙
+          </div>
+        </div>
+        <div class="ctrl-section" id="tea-params" style="display:none;">
+          <div class="ctrl-label">沏茶步骤</div>
+          <div class="info-box" style="font-size:11px;line-height:1.6;">
+            <strong>洗水壶</strong> 1分钟 → <strong>烧水</strong> 8分钟 → <strong>沏茶</strong> 1分钟<br/>
+            烧水时可同时：<strong>洗茶杯</strong> 2分钟、<strong>拿茶叶</strong> 1分钟<br/>
+            <strong>最优方案</strong>：烧水时做其他事，省时间！
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">最少时间</div>
+          <div class="result-big" id="result-text">—</div>
+          <div id="result-note" style="text-align:center;font-size:12px;color:#94a3b8;margin-top:4px;"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">知识卡片</div>
+          <div class="info-box" style="font-size:11px;line-height:1.7;">
+            <strong>烙饼问题</strong>：合理安排，充分利用锅的空间。n 张饼最少需要 n×3 分钟（n≥2）。<br/>
+            <strong>沏茶问题</strong>：找出哪些事可以同时做，合理安排顺序，使总时间最短。这就是<strong>统筹优化</strong>思想。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="../edu-lib/edu-tools.js"></script>
+<script>
+const canvas = document.getElementById('main-canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+let problem = 'pancake';
+let animFrame = 0;
+let animPlaying = false;
+let animTimer = null;
+let pancakeCount = 3;
+
+// Pancake scheduling states
+// Each pancake has front and back side
+// States: 0=uncooked, 1=front cooking, 2=front done/back uncooked, 3=back cooking, 4=done
+let pancakeStates = [];
+let currentTime = 0;
+let schedule = [];
+
+function setProblem(p) {
+  problem = p;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(p === 'pancake' ? 'tb-pancake' : 'tb-tea').classList.add('active');
+  document.getElementById('pancake-params').style.display = p === 'pancake' ? 'flex' : 'none';
+  document.getElementById('tea-params').style.display = p === 'tea' ? 'flex' : 'none';
+  resetAll();
+}
+
+function onPancakeChange() {
+  pancakeCount = Math.max(1, Math.min(10, parseInt(document.getElementById('inp-pancakes').value) || 3));
+  resetAll();
+}
+
+function computeSchedule() {
+  schedule = [];
+  const n = pancakeCount;
+  if (n === 1) {
+    schedule.push({ slot1: { pancake: 0, side: 'front' }, slot2: null });
+    schedule.push({ slot1: { pancake: 0, side: 'back' }, slot2: null });
+    return;
+  }
+
+  const frontDone = new Array(n).fill(false);
+  const backDone = new Array(n).fill(false);
+  const frontCooking = new Array(n).fill(false);
+
+  while (!frontDone.every(d => d) || !backDone.every(d => d)) {
+    const step = { slot1: null, slot2: null };
+    let s = 0;
+
+    // Priority 1: cook back of any pancake whose front is done
+    for (let i = 0; i < n && s < 2; i++) {
+      if (frontDone[i] && !backDone[i] && !frontCooking[i]) {
+        const slot = s === 0 ? 'slot1' : 'slot2';
+        step[slot] = { pancake: i, side: 'back' };
+        s++;
+      }
+    }
+
+    // Priority 2: cook front of any pancake not started
+    for (let i = 0; i < n && s < 2; i++) {
+      if (!frontDone[i] && !frontCooking[i]) {
+        const slot = s === 0 ? 'slot1' : 'slot2';
+        step[slot] = { pancake: i, side: 'front' };
+        frontCooking[i] = true;
+        s++;
+      }
+    }
+
+    // Update states
+    if (step.slot1) {
+      if (step.slot1.side === 'front') frontDone[step.slot1.pancake] = true;
+      else backDone[step.slot1.pancake] = true;
+    }
+    if (step.slot2) {
+      if (step.slot2.side === 'front') frontDone[step.slot2.pancake] = true;
+      else backDone[step.slot2.pancake] = true;
+    }
+
+    if (step.slot1 || step.slot2) schedule.push(step);
+    else break;
+  }
+}
+
+function getMinTime() {
+  if (problem === 'pancake') {
+    if (pancakeCount === 1) return 6;
+    return pancakeCount * 3;
+  }
+  // tea: wash kettle(1) + boil(8) + brew(1) = 10 (wash cups and get tea during boil)
+  return 10;
+}
+
+function resetAll() {
+  clearInterval(animTimer);
+  animPlaying = false;
+  animFrame = 0;
+  currentTime = 0;
+  document.getElementById('btn-play').textContent = '▶ 播放动画';
+
+  if (problem === 'pancake') {
+    computeSchedule();
+    pancakeStates = new Array(pancakeCount).fill(0);
+  }
+
+  const minTime = getMinTime();
+  document.getElementById('result-text').textContent = minTime + ' 分钟';
+  document.getElementById('result-note').textContent = '';
+
+  render();
+}
+
+function playAnimation() {
+  if (animPlaying) {
+    clearInterval(animTimer);
+    animPlaying = false;
+    document.getElementById('btn-play').textContent = '▶ 播放动画';
+    return;
+  }
+
+  if (problem === 'pancake') playPancakeAnim();
+  else playTeaAnim();
+}
+
+function playPancakeAnim() {
+  animFrame = 0;
+  pancakeStates = new Array(pancakeCount).fill(0);
+  animPlaying = true;
+  document.getElementById('btn-play').textContent = '⏸ 暂停';
+
+  animTimer = setInterval(() => {
+    if (animFrame >= schedule.length) {
+      clearInterval(animTimer);
+      animPlaying = false;
+      document.getElementById('btn-play').textContent = '▶ 播放动画';
+      document.getElementById('result-note').innerHTML = `<strong style="color:#22c55e;">最优方案：${schedule.length * 3} 分钟完成！</strong>`;
+      render();
+      return;
+    }
+
+    const step = schedule[animFrame];
+    // Update states
+    if (step.slot1) {
+      const i = step.slot1.pancake;
+      if (step.slot1.side === 'front') pancakeStates[i] = 2; // front done
+      else pancakeStates[i] = 4; // back done (fully cooked)
+    }
+    if (step.slot2) {
+      const i = step.slot2.pancake;
+      if (step.slot2.side === 'front') pancakeStates[i] = 2;
+      else pancakeStates[i] = 4;
+    }
+
+    currentTime = (animFrame + 1) * 3;
+    animFrame++;
+    render();
+  }, 1000);
+}
+
+function playTeaAnim() {
+  animPlaying = true;
+  animFrame = 0;
+  document.getElementById('btn-play').textContent = '⏸ 暂停';
+
+  const teaSteps = [
+    { label: '洗水壶', time: 1, x: 0, y: 0, color: '#3b82f6' },
+    { label: '烧水', time: 8, x: 1, y: 0, color: '#ef4444' },
+    { label: '洗茶杯', time: 2, x: 1, y: 1, color: '#22c55e' },
+    { label: '拿茶叶', time: 1, x: 1, y: 2, color: '#f97316' },
+    { label: '沏茶', time: 1, x: 2, y: 0, color: '#8b5cf6' },
+  ];
+
+  let elapsed = 0;
+  animTimer = setInterval(() => {
+    animFrame++;
+    elapsed++;
+    if (elapsed > 10) {
+      clearInterval(animTimer);
+      animPlaying = false;
+      document.getElementById('btn-play').textContent = '▶ 播放动画';
+      document.getElementById('result-note').innerHTML = `<strong style="color:#22c55e;">最优方案：10 分钟完成！（烧水时同时做其他事）</strong>`;
+      render();
+      return;
+    }
+    render();
+  }, 500);
+}
+
+function render() {
+  const dpr = window.devicePixelRatio || 1;
+  W = canvas.clientWidth; H = canvas.clientHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  drawGrid(ctx, W, H, 40, '#e2e8f020');
+
+  if (problem === 'pancake') renderPancake();
+  else renderTea();
+}
+
+function renderPancake() {
+  const n = pancakeCount;
+
+  // Title
+  ctx.font = 'bold 16px ' + getComputedStyle(document.body).fontFamily;
+  ctx.fillStyle = '#1e293b';
+  ctx.textAlign = 'center';
+  ctx.fillText(`烙 ${n} 张饼的最优方案`, W / 2, 30);
+
+  // Draw pan (two slots)
+  const panW = 160, panH = 70;
+  const panX = W / 2 - panW;
+  const panY = 50;
+  const gap = 20;
+
+  // Pan label
+  ctx.font = 'bold 13px ' + getComputedStyle(document.body).fontFamily;
+  ctx.fillStyle = '#64748b';
+  ctx.textAlign = 'center';
+
+  // Left slot
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(panX, panY, panW - gap / 2, panH);
+  ctx.fillText('锅 · 左', panX + (panW - gap / 2) / 2, panY - 8);
+
+  // Right slot
+  ctx.strokeRect(panX + panW + gap / 2, panY, panW - gap / 2, panH);
+  ctx.fillText('锅 · 右', panX + panW + gap / 2 + (panW - gap / 2) / 2, panY - 8);
+
+  // Current step info
+  if (animFrame > 0 && animFrame <= schedule.length) {
+    const step = schedule[animFrame - 1];
+    const leftSlot = step.slot1;
+    const rightSlot = step.slot2;
+
+    // Draw pancake in left slot
+    if (leftSlot) drawPancakeInSlot(panX, panY, panW - gap / 2, panH, leftSlot);
+    if (rightSlot) drawPancakeInSlot(panX + panW + gap / 2, panY, panW - gap / 2, panH, rightSlot);
+
+    ctx.font = 'bold 14px ' + getComputedStyle(document.body).fontFamily;
+    ctx.fillStyle = '#1e293b';
+    ctx.textAlign = 'center';
+    ctx.fillText(`第 ${animFrame} 轮（第 ${(animFrame - 1) * 3 + 1}-${animFrame * 3} 分钟）`, W / 2, panY + panH + 30);
+  }
+
+  // Pancake status table below
+  const tableY = panY + panH + 60;
+  const cellW = Math.min(80, (W - 80) / n);
+  const tableStartX = (W - n * cellW) / 2;
+
+  ctx.font = 'bold 13px ' + getComputedStyle(document.body).fontFamily;
+  ctx.fillStyle = '#1e293b';
+  ctx.textAlign = 'center';
+  ctx.fillText('各饼状态', W / 2, tableY - 8);
+
+  const stateLabels = ['未烙', '正面烙中', '正面完成', '反面烙中', '完成'];
+  const stateColors = ['#94a3b8', '#fbbf24', '#f97316', '#fbbf24', '#22c55e'];
+
+  for (let i = 0; i < n; i++) {
+    const x = tableStartX + i * cellW;
+    const state = pancakeStates[i] || 0;
+    const color = stateColors[state];
+
+    // pancake circle
+    ctx.beginPath();
+    ctx.arc(x + cellW / 2, tableY + 30, Math.min(25, cellW / 2 - 4), 0, Math.PI * 2);
+    ctx.fillStyle = color + '30';
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // number
+    ctx.font = 'bold 16px ' + getComputedStyle(document.body).fontFamily;
+    ctx.fillStyle = color;
+    ctx.textAlign = 'center';
+    ctx.fillText((i + 1) + '', x + cellW / 2, tableY + 36);
+
+    // state label
+    ctx.font = '11px ' + getComputedStyle(document.body).fontFamily;
+    ctx.fillStyle = color;
+    ctx.fillText(stateLabels[state], x + cellW / 2, tableY + 65);
+  }
+
+  // Timeline at bottom
+  const tlY = tableY + 90;
+  const tlStartX = 60;
+  const tlEndX = W - 60;
+  const tlW = tlEndX - tlStartX;
+  const totalTime = schedule.length * 3;
+
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(tlStartX, tlY);
+  ctx.lineTo(tlEndX, tlY);
+  ctx.stroke();
+
+  // progress
+  const progress = totalTime > 0 ? Math.min(currentTime / totalTime, 1) : 0;
+  ctx.strokeStyle = '#22c55e';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(tlStartX, tlY);
+  ctx.lineTo(tlStartX + progress * tlW, tlY);
+  ctx.stroke();
+
+  // time markers
+  for (let i = 0; i <= totalTime; i += 3) {
+    const x = tlStartX + (i / totalTime) * tlW;
+    ctx.beginPath();
+    ctx.moveTo(x, tlY - 8);
+    ctx.lineTo(x, tlY + 8);
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.font = '10px ' + getComputedStyle(document.body).fontFamily;
+    ctx.fillStyle = '#64748b';
+    ctx.textAlign = 'center';
+    ctx.fillText(i + '分', x, tlY + 20);
+  }
+}
+
+function drawPancakeInSlot(sx, sy, sw, sh, info) {
+  const cx = sx + sw / 2;
+  const cy = sy + sh / 2;
+  const r = Math.min(sw, sh) / 2 - 8;
+  const isFront = info.side === 'front';
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = isFront ? '#fbbf2430' : '#fbbf2450';
+  ctx.fill();
+  ctx.strokeStyle = '#f97316';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  ctx.font = 'bold 18px ' + getComputedStyle(document.body).fontFamily;
+  ctx.fillStyle = '#92400e';
+  ctx.textAlign = 'center';
+  ctx.fillText('饼' + (info.pancake + 1), cx, cy - 4);
+  ctx.font = '11px ' + getComputedStyle(document.body).fontFamily;
+  ctx.fillStyle = '#f97316';
+  ctx.fillText(isFront ? '烙正面' : '烙反面', cx, cy + 14);
+}
+
+function renderTea() {
+  const steps = [
+    { label: '洗水壶', time: 1, start: 0, row: 0, color: '#3b82f6' },
+    { label: '烧水', time: 8, start: 1, row: 0, color: '#ef4444' },
+    { label: '洗茶杯', time: 2, start: 1, row: 1, color: '#22c55e' },
+    { label: '拿茶叶', time: 1, start: 3, row: 1, color: '#f97316' },
+    { label: '沏茶', time: 1, start: 9, row: 0, color: '#8b5cf6' },
+  ];
+
+  const totalTime = 10;
+  const barH = 36;
+  const gap = 8;
+  const padL = 80, padR = 40, padT = 50;
+  const chartW = W - padL - padR;
+  const chartH = steps.length * (barH + gap);
+
+  // Title
+  ctx.font = 'bold 16px ' + getComputedStyle(document.body).fontFamily;
+  ctx.fillStyle = '#1e293b';
+  ctx.textAlign = 'center';
+  ctx.fillText('沏茶问题 — 最优安排', W / 2, 30);
+
+  // time axis
+  for (let t = 0; t <= totalTime; t++) {
+    const x = padL + (t / totalTime) * chartW;
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(x, padT);
+    ctx.lineTo(x, padT + chartH + 20);
+    ctx.stroke();
+
+    ctx.font = '11px ' + getComputedStyle(document.body).fontFamily;
+    ctx.fillStyle = '#64748b';
+    ctx.textAlign = 'center';
+    ctx.fillText(t + '分', x, padT + chartH + 34);
+  }
+
+  // progress based on animation
+  const elapsed = animFrame !== undefined ? Math.min(animFrame, totalTime) : 0;
+
+  // draw bars
+  const rowMap = {};
+  steps.forEach((s, i) => {
+    if (!(s.row in rowMap)) rowMap[s.row] = [];
+    rowMap[s.row].push({ ...s, idx: i });
+  });
+
+  let yPos = padT;
+  Object.keys(rowMap).sort().forEach(row => {
+    const rowSteps = rowMap[row];
+    const rowLabel = row == 0 ? '主线' : '同时做';
+    ctx.font = 'bold 12px ' + getComputedStyle(document.body).fontFamily;
+    ctx.fillStyle = '#64748b';
+    ctx.textAlign = 'right';
+    ctx.fillText(rowLabel, padL - 10, yPos + barH / 2 + 4);
+
+    rowSteps.forEach(s => {
+      const x = padL + (s.start / totalTime) * chartW;
+      const w = (s.time / totalTime) * chartW;
+      const progress = Math.max(0, Math.min(1, (elapsed - s.start) / s.time));
+      const done = elapsed >= s.start + s.time;
+
+      // background bar
+      ctx.fillStyle = '#f1f5f9';
+      ctx.beginPath();
+      const r = 6;
+      ctx.moveTo(x + r, yPos);
+      ctx.lineTo(x + w - r, yPos);
+      ctx.quadraticCurveTo(x + w, yPos, x + w, yPos + r);
+      ctx.lineTo(x + w, yPos + barH - r);
+      ctx.quadraticCurveTo(x + w, yPos + barH, x + w - r, yPos + barH);
+      ctx.lineTo(x + r, yPos + barH);
+      ctx.quadraticCurveTo(x, yPos + barH, x, yPos + barH - r);
+      ctx.lineTo(x, yPos + r);
+      ctx.quadraticCurveTo(x, yPos, x + r, yPos);
+      ctx.fill();
+      ctx.strokeStyle = s.color + '40';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // progress fill
+      if (progress > 0) {
+        const pw = w * progress;
+        ctx.fillStyle = s.color + (done ? 'cc' : '50');
+        ctx.beginPath();
+        ctx.moveTo(x + r, yPos);
+        ctx.lineTo(x + pw - r, yPos);
+        ctx.quadraticCurveTo(x + pw, yPos, x + pw, yPos + r);
+        ctx.lineTo(x + pw, yPos + barH - r);
+        ctx.quadraticCurveTo(x + pw, yPos + barH, x + pw - r, yPos + barH);
+        ctx.lineTo(x + r, yPos + barH);
+        ctx.quadraticCurveTo(x, yPos + barH, x, yPos + barH - r);
+        ctx.lineTo(x, yPos + r);
+        ctx.quadraticCurveTo(x, yPos, x + r, yPos);
+        ctx.fill();
+      }
+
+      // label
+      ctx.font = 'bold 12px ' + getComputedStyle(document.body).fontFamily;
+      ctx.fillStyle = done ? '#fff' : s.color;
+      ctx.textAlign = 'center';
+      ctx.fillText(s.label + `(${s.time}分)`, x + w / 2, yPos + barH / 2 + 4);
+
+      // checkmark
+      if (done) {
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.fillText('✓', x + w - 14, yPos + 14);
+      }
+    });
+
+    yPos += barH + gap + 10;
+  });
+
+  // elapsed indicator
+  if (elapsed > 0) {
+    const ex = padL + (Math.min(elapsed, totalTime) / totalTime) * chartW;
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ex, padT - 5);
+    ctx.lineTo(ex, padT + chartH + 20);
+    ctx.stroke();
+
+    ctx.font = 'bold 12px ' + getComputedStyle(document.body).fontFamily;
+    ctx.fillStyle = '#ef4444';
+    ctx.textAlign = 'center';
+    ctx.fillText(`已用 ${Math.min(elapsed, totalTime)} 分钟`, ex, padT - 12);
+  }
+}
+
+window.addEventListener('resize', render);
+setTimeout(() => { computeSchedule(); resetAll(); }, 50);
+</script>
+</body>
+</html>

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>轴对称图形探究</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    height: 100%;
+  }
+  .canvas-area { position: relative; background: #fff; overflow: hidden; }
+  .control-panel {
+    background: #fdfaf4; border-left: 1px solid #e2e8f0;
+    padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow: auto;
+  }
+  .ctrl-section { display: flex; flex-direction: column; gap: 8px; }
+  .ctrl-label {
+    font-size: 11px; font-weight: 700; color: #64748b;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .divider { height: 1px; background: #e2e8f0; }
+  .shape-btn {
+    padding: 7px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1.5px solid #e2e8f0; background: #fff; color: #64748b;
+    text-align: center; transition: all 0.15s; font-family: var(--edu-font);
+  }
+  .shape-btn:hover:not(.active) { border-color: #22c55e; }
+  .shape-btn.active { background: #22c55e; color: #fff; border-color: #22c55e; }
+  .info-box {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+    padding: 10px 12px; font-size: 12px; color: #64748b; line-height: 1.8;
+  }
+  .info-box strong { color: #22c55e; }
+  .hint-text { font-size: 11px; color: #94a3b8; }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="edu-toolbar-title">🦋 轴对称图形探究</span>
+      <span class="edu-toolbar-subtitle">下册·图形的运动</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" id="btn-fold" onclick="toggleFold()">🔄 折叠/展开</button>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="main-canvas" class="edu-canvas-full"></canvas>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设图形</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <button class="shape-btn active" id="sb-butterfly" onclick="setShape('butterfly')">蝴蝶</button>
+            <button class="shape-btn" id="sb-heart" onclick="setShape('heart')">心形</button>
+            <button class="shape-btn" id="sb-star" onclick="setShape('star')">五角星</button>
+            <button class="shape-btn" id="sb-free" onclick="setShape('free')">自由绘制</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">折叠进度</div>
+          <input type="range" id="fold-slider" min="0" max="100" step="1" value="0"
+            style="width:100%;" oninput="setFold(parseInt(this.value))"/>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;">
+            <span>展开</span><span>对折</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">对称信息</div>
+          <div class="info-box" id="sym-info">
+            <div>对称轴：<strong>1 条（竖直）</strong></div>
+            <div id="match-info">左侧与右侧完全重合</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">知识卡片</div>
+          <div class="info-box" style="font-size:11px;line-height:1.7;">
+            <strong>轴对称图形</strong>：如果一个图形沿一条直线对折，直线两旁的部分能够完全重合，这个图形就是轴对称图形。这条直线叫<strong>对称轴</strong>。<br/><br/>
+            常见的轴对称图形：等腰三角形（1条对称轴）、等边三角形（3条）、长方形（2条）、正方形（4条）、圆（无数条）。
+          </div>
+        </div>
+        <div id="free-hint" class="hint-text" style="display:none;">自由绘制模式：在左侧画布上点击添加点，自动生成对称图形。</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="../edu-lib/edu-tools.js"></script>
+<script>
+const canvas = document.getElementById('main-canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+let foldProgress = 0;
+let currentShape = 'butterfly';
+let freePoints = [];
+
+// shape definitions (left half, right half is mirrored)
+const SHAPES = {
+  butterfly: [
+    { x: 0, y: -80 },
+    { x: -30, y: -70 }, { x: -70, y: -50 }, { x: -90, y: -20 },
+    { x: -80, y: 10 }, { x: -50, y: 30 }, { x: -20, y: 40 },
+    { x: -10, y: 60 }, { x: -30, y: 80 },
+    { x: 0, y: 60 },
+  ],
+  heart: [
+    { x: 0, y: 70 },
+    { x: -10, y: 50 }, { x: -30, y: 20 }, { x: -50, y: -10 },
+    { x: -55, y: -35 }, { x: -45, y: -55 }, { x: -25, y: -65 },
+    { x: -5, y: -55 }, { x: 0, y: -40 },
+  ],
+  star: (() => {
+    const pts = [];
+    for (let i = 0; i <= 5; i++) {
+      const outer = -Math.PI / 2 + (i * 2 * Math.PI / 5);
+      const inner = outer + Math.PI / 5;
+      pts.push({ x: Math.cos(outer) * 80, y: Math.sin(outer) * 80 });
+      if (i < 5) pts.push({ x: Math.cos(inner) * 35, y: Math.sin(inner) * 35 });
+    }
+    // only keep left half + center
+    return pts.filter(p => p.x <= 1);
+  })(),
+};
+
+function mirrorPoint(p, axisX) {
+  return { x: 2 * axisX - p.x, y: p.y };
+}
+
+function getCurrentPoints() {
+  if (currentShape === 'free') return freePoints;
+  return SHAPES[currentShape] || [];
+}
+
+function render() {
+  const dpr = window.devicePixelRatio || 1;
+  W = canvas.clientWidth; H = canvas.clientHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  drawGrid(ctx, W, H, 40, '#e2e8f020');
+
+  const axisX = W * 0.5;
+  const cx = axisX, cy = H * 0.5;
+  const t = foldProgress / 100;
+
+  // symmetry axis
+  ctx.strokeStyle = '#22c55e';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8, 4]);
+  ctx.beginPath();
+  ctx.moveTo(axisX, 20);
+  ctx.lineTo(axisX, H - 20);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // axis label
+  ctx.font = 'bold 12px ' + getComputedStyle(document.body).fontFamily;
+  ctx.fillStyle = '#22c55e';
+  ctx.textAlign = 'center';
+  ctx.fillText('对称轴', axisX, 16);
+
+  const points = getCurrentPoints();
+  if (points.length < 2) {
+    if (currentShape === 'free' && freePoints.length === 0) {
+      ctx.font = '14px ' + getComputedStyle(document.body).fontFamily;
+      ctx.fillStyle = '#94a3b8';
+      ctx.textAlign = 'center';
+      ctx.fillText('在左侧画布点击添加顶点', cx - 80, cy);
+    }
+    return;
+  }
+
+  // left shape points (canvas coords)
+  const leftPts = points.map(p => ({ x: cx + p.x, y: cy + p.y }));
+  // right shape (mirrored)
+  const rightPts = leftPts.map(p => mirrorPoint(p, axisX));
+
+  // when folding, right side slides toward axis
+  const foldedRight = rightPts.map(p => ({
+    x: lerp(p.x, axisX, t),
+    y: p.y
+  }));
+
+  // also fold the left side slightly toward axis
+  const foldedLeft = leftPts.map(p => ({
+    x: lerp(p.x, axisX, t),
+    y: p.y
+  }));
+
+  // draw left shape
+  ctx.beginPath();
+  ctx.moveTo(foldedLeft[0].x, foldedLeft[0].y);
+  for (let i = 1; i < foldedLeft.length; i++) ctx.lineTo(foldedLeft[i].x, foldedLeft[i].y);
+  ctx.closePath();
+  ctx.fillStyle = '#3b82f620';
+  ctx.fill();
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // draw right shape
+  ctx.beginPath();
+  ctx.moveTo(foldedRight[0].x, foldedRight[0].y);
+  for (let i = 1; i < foldedRight.length; i++) ctx.lineTo(foldedRight[i].x, foldedRight[i].y);
+  ctx.closePath();
+  ctx.fillStyle = '#ef444420';
+  ctx.fill();
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // connection lines to mirror points
+  if (t < 0.9) {
+    leftPts.forEach((lp, i) => {
+      const rp = rightPts[i];
+      ctx.beginPath();
+      ctx.moveTo(lp.x, lp.y);
+      ctx.lineTo(rp.x, rp.y);
+      ctx.strokeStyle = '#94a3b840';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    });
+  }
+
+  // dots on left points
+  leftPts.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#3b82f6';
+    ctx.fill();
+  });
+
+  // dots on right (mirrored) points
+  rightPts.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#ef4444';
+    ctx.fill();
+  });
+
+  // match info
+  const matchInfo = document.getElementById('match-info');
+  if (t > 0.9) {
+    matchInfo.innerHTML = '✅ 折叠后两侧<strong>完全重合</strong>，是轴对称图形！';
+  } else {
+    matchInfo.innerHTML = `折叠进度 ${foldProgress}%，继续对折观察是否重合`;
+  }
+}
+
+function setFold(v) {
+  foldProgress = v;
+  render();
+}
+
+function toggleFold() {
+  const slider = document.getElementById('fold-slider');
+  const start = foldProgress;
+  const end = foldProgress > 50 ? 0 : 100;
+  const duration = 1000;
+  const startTime = performance.now();
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    foldProgress = Math.round(lerp(start, end, ease));
+    slider.value = foldProgress;
+    render();
+    if (t < 1) requestAnimationFrame(animate);
+  }
+  requestAnimationFrame(animate);
+}
+
+function setShape(key) {
+  currentShape = key;
+  document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sb-' + key).classList.add('active');
+  document.getElementById('free-hint').style.display = key === 'free' ? 'block' : 'none';
+  if (key === 'free') freePoints = [];
+  foldProgress = 0;
+  document.getElementById('fold-slider').value = 0;
+  render();
+}
+
+function resetAll() {
+  foldProgress = 0;
+  document.getElementById('fold-slider').value = 0;
+  if (currentShape === 'free') freePoints = [];
+  render();
+}
+
+// free draw mode
+canvas.addEventListener('click', e => {
+  if (currentShape !== 'free') return;
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const cx = W * 0.5, cy = H * 0.5;
+  // only allow clicking on left side
+  if (x < cx - 5) {
+    freePoints.push({ x: x - cx, y: y - cy });
+    render();
+  }
+});
+
+window.addEventListener('resize', render);
+setTimeout(render, 50);
+</script>
+</body>
+</html>

@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>运算定律探究</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    height: 100%;
+  }
+  .canvas-area { position: relative; background: #fff; overflow: hidden; }
+  .control-panel {
+    background: #fdfaf4; border-left: 1px solid #e2e8f0;
+    padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow: auto;
+  }
+  .ctrl-section { display: flex; flex-direction: column; gap: 8px; }
+  .ctrl-label {
+    font-size: 11px; font-weight: 700; color: #64748b;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .divider { height: 1px; background: #e2e8f0; }
+  .law-btn {
+    padding: 7px 6px; border-radius: 8px; font-size: 11px; font-weight: 600;
+    cursor: pointer; border: 1.5px solid #e2e8f0; background: #fff; color: #64748b;
+    text-align: center; transition: all 0.15s; font-family: var(--edu-font);
+    line-height: 1.4;
+  }
+  .law-btn:hover:not(.active) { border-color: #f97316; }
+  .law-btn.active { background: #f97316; color: #fff; border-color: #f97316; }
+  .info-box {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+    padding: 10px 12px; font-size: 12px; color: #64748b; line-height: 1.8;
+  }
+  .info-box strong { color: #f97316; }
+  .formula {
+    text-align: center; font-size: 16px; font-weight: 700; color: #f97316;
+    padding: 8px; background: #fff7ed; border-radius: 8px; line-height: 1.6;
+    font-family: var(--edu-font);
+  }
+  .data-input {
+    padding: 5px 8px; border: 1.5px solid #e2e8f0; border-radius: 6px;
+    font-size: 14px; font-family: var(--edu-font); outline: none; text-align: center; width: 55px;
+  }
+  .data-input:focus { border-color: #f97316; }
+  .data-row { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="edu-toolbar-title">➗ 运算定律探究</span>
+      <span class="edu-toolbar-subtitle">下册·运算定律</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="main-canvas" class="edu-canvas-full"></canvas>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择定律</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <button class="law-btn active" id="lb-dist" onclick="setLaw('distributive')">乘法分配律</button>
+            <button class="law-btn" id="lb-comm" onclick="setLaw('commutative')">加法交换律</button>
+            <button class="law-btn" id="lb-assoc" onclick="setLaw('associative')">加法结合律</button>
+            <button class="law-btn" id="lb-mcomm" onclick="setLaw('mult-commutative')">乘法交换律</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">参数设置</div>
+          <div class="data-row" id="param-a">
+            <span>a =</span>
+            <input class="data-input" id="inp-a" type="number" min="1" max="15" value="3" oninput="onParamChange()"/>
+          </div>
+          <div class="data-row" id="param-b">
+            <span>b =</span>
+            <input class="data-input" id="inp-b" type="number" min="1" max="15" value="4" oninput="onParamChange()"/>
+          </div>
+          <div class="data-row" id="param-c">
+            <span>c =</span>
+            <input class="data-input" id="inp-c" type="number" min="1" max="15" value="5" oninput="onParamChange()"/>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">运算公式</div>
+          <div class="formula" id="formula-display">
+            (a + b) × c = a×c + b×c
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">计算验证</div>
+          <div class="info-box" id="calc-box">
+            <div id="calc-left">左边 = —</div>
+            <div id="calc-right">右边 = —</div>
+            <div id="calc-result">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="../edu-lib/edu-tools.js"></script>
+<script>
+const canvas = document.getElementById('main-canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+let currentLaw = 'distributive';
+
+function getParams() {
+  return {
+    a: Math.max(1, parseInt(document.getElementById('inp-a').value) || 1),
+    b: Math.max(1, parseInt(document.getElementById('inp-b').value) || 1),
+    c: Math.max(1, parseInt(document.getElementById('inp-c').value) || 1),
+  };
+}
+
+function setLaw(law) {
+  currentLaw = law;
+  document.querySelectorAll('.law-btn').forEach(b => b.classList.remove('active'));
+  const ids = { distributive: 'lb-dist', commutative: 'lb-comm', associative: 'lb-assoc', 'mult-commutative': 'lb-mcomm' };
+  document.getElementById(ids[law]).classList.add('active');
+
+  // show/hide params
+  const showC = law === 'distributive';
+  document.getElementById('param-c').style.display = showC ? 'flex' : 'none';
+
+  updateFormula();
+  render();
+}
+
+function updateFormula() {
+  const { a, b, c } = getParams();
+  const el = document.getElementById('formula-display');
+  let leftVal, rightVal;
+
+  switch (currentLaw) {
+    case 'distributive':
+      el.innerHTML = `(${a} + ${b}) × ${c} = ${a}×${c} + ${b}×${c}`;
+      leftVal = (a + b) * c;
+      rightVal = a * c + b * c;
+      break;
+    case 'commutative':
+      el.innerHTML = `${a} + ${b} = ${b} + ${a}`;
+      leftVal = a + b;
+      rightVal = b + a;
+      break;
+    case 'associative':
+      el.innerHTML = `(${a} + ${b}) + ${c} = ${a} + (${b} + ${c})`;
+      leftVal = (a + b) + c;
+      rightVal = a + (b + c);
+      break;
+    case 'mult-commutative':
+      el.innerHTML = `${a} × ${b} = ${b} × ${a}`;
+      leftVal = a * b;
+      rightVal = b * a;
+      break;
+  }
+
+  document.getElementById('calc-left').innerHTML = `左边 = <strong>${leftVal}</strong>`;
+  document.getElementById('calc-right').innerHTML = `右边 = <strong>${rightVal}</strong>`;
+  document.getElementById('calc-result').innerHTML = leftVal === rightVal
+    ? `<strong style="color:#22c55e;">左边 = 右边 ✓ 定律成立！</strong>`
+    : `<strong style="color:#ef4444;">不等</strong>`;
+}
+
+function onParamChange() {
+  updateFormula();
+  render();
+}
+
+function render() {
+  const dpr = window.devicePixelRatio || 1;
+  W = canvas.clientWidth; H = canvas.clientHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  drawGrid(ctx, W, H, 40, '#e2e8f020');
+
+  const { a, b, c } = getParams();
+
+  switch (currentLaw) {
+    case 'distributive': drawDistributive(a, b, c); break;
+    case 'commutative': drawCommutative(a, b); break;
+    case 'associative': drawAssociative(a, b, c); break;
+    case 'mult-commutative': drawMultCommutative(a, b); break;
+  }
+}
+
+function drawDistributive(a, b, c) {
+  const cellSize = Math.min((W - 160) / (a + b + 4), (H - 120) / (c + 4), 45);
+  const totalW = (a + b) * cellSize;
+  const totalH = c * cellSize;
+  const ox = (W - totalW) / 2;
+  const oy = (H - totalH) / 2;
+
+  // left part (a columns)
+  for (let row = 0; row < c; row++) {
+    for (let col = 0; col < a; col++) {
+      const x = ox + col * cellSize;
+      const y = oy + row * cellSize;
+      ctx.fillStyle = '#3b82f620';
+      ctx.fillRect(x, y, cellSize, cellSize);
+      ctx.strokeStyle = '#3b82f660';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x, y, cellSize, cellSize);
+    }
+  }
+  // bold border for left part
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(ox, oy, a * cellSize, c * cellSize);
+
+  // right part (b columns)
+  for (let row = 0; row < c; row++) {
+    for (let col = 0; col < b; col++) {
+      const x = ox + (a + col) * cellSize;
+      const y = oy + row * cellSize;
+      ctx.fillStyle = '#f9731620';
+      ctx.fillRect(x, y, cellSize, cellSize);
+      ctx.strokeStyle = '#f9731660';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x, y, cellSize, cellSize);
+    }
+  }
+  ctx.strokeStyle = '#f97316';
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(ox + a * cellSize, oy, b * cellSize, c * cellSize);
+
+  // outer bracket
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(ox, oy, totalW, totalH);
+
+  // labels
+  ctx.font = 'bold 14px ' + getComputedStyle(document.body).fontFamily;
+
+  // a label
+  ctx.fillStyle = '#3b82f6';
+  ctx.textAlign = 'center';
+  ctx.fillText(`a = ${a}`, ox + a * cellSize / 2, oy - 12);
+
+  // b label
+  ctx.fillStyle = '#f97316';
+  ctx.fillText(`b = ${b}`, ox + a * cellSize + b * cellSize / 2, oy - 12);
+
+  // c label (left side)
+  ctx.save();
+  ctx.translate(ox - 14, oy + totalH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillStyle = '#1e293b';
+  ctx.fillText(`c = ${c}`, 0, 0);
+  ctx.restore();
+
+  // formula below
+  ctx.font = 'bold 15px ' + getComputedStyle(document.body).fontFamily;
+  ctx.fillStyle = '#1e293b';
+  ctx.textAlign = 'center';
+  const leftArea = (a + b) * c;
+  const rightArea = a * c + b * c;
+  ctx.fillText(`总面积：(${a}+${b})×${c} = ${leftArea}`, W / 2, oy + totalH + 30);
+  ctx.fillStyle = '#f97316';
+  ctx.fillText(`= ${a}×${c} + ${b}×${c} = ${a * c} + ${b * c} = ${rightArea}`, W / 2, oy + totalH + 52);
+}
+
+function drawCommutative(a, b) {
+  const cellSize = Math.min((W - 160) / Math.max(a, b) / 2, (H - 140) / 2, 40);
+
+  // Top: a + b
+  const topW = a * cellSize + b * cellSize;
+  const topX = (W - topW) / 2;
+  const topY = H * 0.2;
+
+  for (let i = 0; i < a; i++) {
+    ctx.fillStyle = '#3b82f620';
+    ctx.fillRect(topX + i * cellSize, topY, cellSize, cellSize);
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(topX + i * cellSize, topY, cellSize, cellSize);
+  }
+  for (let i = 0; i < b; i++) {
+    ctx.fillStyle = '#f9731620';
+    ctx.fillRect(topX + (a + i) * cellSize, topY, cellSize, cellSize);
+    ctx.strokeStyle = '#f97316';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(topX + (a + i) * cellSize, topY, cellSize, cellSize);
+  }
+
+  ctx.font = 'bold 14px ' + getComputedStyle(document.body).fontFamily;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#3b82f6';
+  ctx.fillText(`${a}`, topX + a * cellSize / 2, topY - 8);
+  ctx.fillStyle = '#f97316';
+  ctx.fillText(`${b}`, topX + a * cellSize + b * cellSize / 2, topY - 8);
+  ctx.fillStyle = '#1e293b';
+  ctx.fillText(`${a} + ${b} = ${a + b}`, topX + topW / 2, topY + cellSize + 22);
+
+  // Bottom: b + a
+  const botY = H * 0.6;
+  for (let i = 0; i < b; i++) {
+    ctx.fillStyle = '#f9731620';
+    ctx.fillRect(topX + i * cellSize, botY, cellSize, cellSize);
+    ctx.strokeStyle = '#f97316';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(topX + i * cellSize, botY, cellSize, cellSize);
+  }
+  for (let i = 0; i < a; i++) {
+    ctx.fillStyle = '#3b82f620';
+    ctx.fillRect(topX + (b + i) * cellSize, botY, cellSize, cellSize);
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(topX + (b + i) * cellSize, botY, cellSize, cellSize);
+  }
+
+  ctx.fillStyle = '#f97316';
+  ctx.fillText(`${b}`, topX + b * cellSize / 2, botY - 8);
+  ctx.fillStyle = '#3b82f6';
+  ctx.fillText(`${a}`, topX + b * cellSize + a * cellSize / 2, botY - 8);
+  ctx.fillStyle = '#1e293b';
+  ctx.fillText(`${b} + ${a} = ${b + a}`, topX + topW / 2, botY + cellSize + 22);
+
+  // equals sign between
+  ctx.font = 'bold 28px sans-serif';
+  ctx.fillStyle = '#22c55e';
+  ctx.fillText('=', W / 2, H * 0.5);
+}
+
+function drawAssociative(a, b, c) {
+  const cellSize = Math.min((W - 160) / (a + b + c + 4), (H - 120) / 2, 35);
+  const total = a + b + c;
+  const totalW = total * cellSize;
+  const startX = (W - totalW) / 2;
+
+  // Top: (a + b) + c
+  const topY = H * 0.2;
+  const colors = ['#3b82f6', '#f97316', '#22c55e'];
+  const vals = [a, b, c];
+
+  vals.forEach((v, ci) => {
+    const offset = vals.slice(0, ci).reduce((s, x) => s + x, 0);
+    for (let i = 0; i < v; i++) {
+      const x = startX + (offset + i) * cellSize;
+      ctx.fillStyle = colors[ci] + '20';
+      ctx.fillRect(x, topY, cellSize, cellSize);
+      ctx.strokeStyle = colors[ci];
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x, topY, cellSize, cellSize);
+    }
+  });
+
+  // bracket for (a+b)
+  const bx1 = startX - 4, bx2 = startX + (a + b) * cellSize + 4;
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(bx1, topY + cellSize + 4);
+  ctx.lineTo(bx1, topY + cellSize + 12);
+  ctx.lineTo(bx2, topY + cellSize + 12);
+  ctx.lineTo(bx2, topY + cellSize + 4);
+  ctx.stroke();
+  ctx.font = 'bold 11px ' + getComputedStyle(document.body).fontFamily;
+  ctx.fillStyle = '#1e293b';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${a}+${b}=${a+b}`, (bx1 + bx2) / 2, topY + cellSize + 24);
+
+  ctx.font = 'bold 14px ' + getComputedStyle(document.body).fontFamily;
+  ctx.fillText(`(${a}+${b})+${c} = ${a + b + c}`, W / 2, topY + cellSize + 44);
+
+  // Bottom: a + (b + c)
+  const botY = H * 0.6;
+  vals.forEach((v, ci) => {
+    const offset = vals.slice(0, ci).reduce((s, x) => s + x, 0);
+    for (let i = 0; i < v; i++) {
+      const x = startX + (offset + i) * cellSize;
+      ctx.fillStyle = colors[ci] + '20';
+      ctx.fillRect(x, botY, cellSize, cellSize);
+      ctx.strokeStyle = colors[ci];
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x, botY, cellSize, cellSize);
+    }
+  });
+
+  // bracket for (b+c)
+  const cx1 = startX + a * cellSize - 4, cx2 = startX + (a + b + c) * cellSize + 4;
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx1, botY + cellSize + 4);
+  ctx.lineTo(cx1, botY + cellSize + 12);
+  ctx.lineTo(cx2, botY + cellSize + 12);
+  ctx.lineTo(cx2, botY + cellSize + 4);
+  ctx.stroke();
+  ctx.font = 'bold 11px ' + getComputedStyle(document.body).fontFamily;
+  ctx.fillStyle = '#1e293b';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${b}+${c}=${b+c}`, (cx1 + cx2) / 2, botY + cellSize + 24);
+
+  ctx.font = 'bold 14px ' + getComputedStyle(document.body).fontFamily;
+  ctx.fillText(`${a}+(${b}+${c}) = ${a + b + c}`, W / 2, botY + cellSize + 44);
+
+  // equals
+  ctx.font = 'bold 28px sans-serif';
+  ctx.fillStyle = '#22c55e';
+  ctx.fillText('=', W / 2, H * 0.5);
+}
+
+function drawMultCommutative(a, b) {
+  const cellSize = Math.min((W - 160) / Math.max(a, b) / 1.5, (H - 160) / Math.max(a, b) / 1.5, 40);
+
+  // Top grid: a × b
+  const topW = a * cellSize, topH = b * cellSize;
+  const topX = (W - topW) / 2;
+  const topY = (H / 2 - topH) / 2;
+
+  for (let r = 0; r < b; r++) {
+    for (let c = 0; c < a; c++) {
+      ctx.fillStyle = '#3b82f618';
+      ctx.fillRect(topX + c * cellSize, topY + r * cellSize, cellSize, cellSize);
+      ctx.strokeStyle = '#3b82f650';
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(topX + c * cellSize, topY + r * cellSize, cellSize, cellSize);
+    }
+  }
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(topX, topY, topW, topH);
+
+  ctx.font = 'bold 14px ' + getComputedStyle(document.body).fontFamily;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#3b82f6';
+  ctx.fillText(`${a} × ${b} = ${a * b} 个格子`, topX + topW / 2, topY + topH + 22);
+
+  // Bottom grid: b × a
+  const botW = b * cellSize, botH = a * cellSize;
+  const botX = (W - botW) / 2;
+  const botY = H / 2 + (H / 2 - botH) / 2;
+
+  for (let r = 0; r < a; r++) {
+    for (let c = 0; c < b; c++) {
+      ctx.fillStyle = '#f9731618';
+      ctx.fillRect(botX + c * cellSize, botY + r * cellSize, cellSize, cellSize);
+      ctx.strokeStyle = '#f9731650';
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(botX + c * cellSize, botY + r * cellSize, cellSize, cellSize);
+    }
+  }
+  ctx.strokeStyle = '#f97316';
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(botX, botY, botW, botH);
+
+  ctx.fillStyle = '#f97316';
+  ctx.fillText(`${b} × ${a} = ${b * a} 个格子`, botX + botW / 2, botY + botH + 22);
+
+  // equals
+  ctx.font = 'bold 28px sans-serif';
+  ctx.fillStyle = '#22c55e';
+  ctx.textAlign = 'center';
+  ctx.fillText('=', W / 2, H / 2);
+}
+
+function resetAll() {
+  document.getElementById('inp-a').value = 3;
+  document.getElementById('inp-b').value = 4;
+  document.getElementById('inp-c').value = 5;
+  setLaw('distributive');
+}
+
+window.addEventListener('resize', render);
+setTimeout(() => { setLaw('distributive'); }, 50);
+</script>
+</body>
+</html>

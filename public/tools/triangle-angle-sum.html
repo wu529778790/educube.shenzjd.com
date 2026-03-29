@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>三角形内角和验证</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    height: 100%;
+  }
+  .canvas-area { position: relative; background: #fff; overflow: hidden; }
+  .control-panel {
+    background: #fdfaf4; border-left: 1px solid #e2e8f0;
+    padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow: auto;
+  }
+  .ctrl-section { display: flex; flex-direction: column; gap: 8px; }
+  .ctrl-label {
+    font-size: 11px; font-weight: 700; color: #64748b;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .divider { height: 1px; background: #e2e8f0; }
+  .info-box {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+    padding: 10px 12px; font-size: 12px; color: #64748b; line-height: 1.8;
+  }
+  .info-box strong { color: #0ea5e9; }
+  .big-result {
+    text-align: center; font-size: 22px; font-weight: 800; color: #0ea5e9; line-height: 1.2;
+  }
+  .hint-text { font-size: 11px; color: #94a3b8; }
+  .angle-chip {
+    display: inline-block; padding: 2px 8px; border-radius: 12px;
+    font-size: 12px; font-weight: 700; margin: 2px;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="edu-toolbar-title">📐 三角形内角和验证</span>
+      <span class="edu-toolbar-subtitle">下册·三角形</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" id="btn-tear" onclick="toggleTear()">✂ 撕角拼合</button>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="main-canvas" class="edu-canvas-full"></canvas>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">三个内角</div>
+          <div class="info-box" id="angles-box">
+            <div id="angles-display">—</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">内角和</div>
+          <div class="big-result">
+            <span id="sum-val">180</span>°
+          </div>
+          <div id="sum-note" style="text-align:center;font-size:12px;color:#94a3b8;margin-top:4px;"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">动画进度</div>
+          <input type="range" id="tear-slider" min="0" max="100" step="1" value="0"
+            style="width:100%;" oninput="setTearProgress(parseInt(this.value))"/>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;">
+            <span>原位</span><span>拼合</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">知识卡片</div>
+          <div class="info-box" style="font-size:11px;line-height:1.7;">
+            <strong>三角形内角和定理</strong>：三角形的三个内角之和等于 180°。<br/><br/>
+            拖动滑块或点击"撕角拼合"按钮，观看三个角拼合成一条直线（平角），直观验证内角和 = 180°。
+          </div>
+        </div>
+        <div class="hint-text">拖拽三角形的顶点改变形状，然后观察内角和始终为 180°。</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="../edu-lib/edu-tools.js"></script>
+<script>
+const canvas = document.getElementById('main-canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+let tearProgress = 0; // 0-100
+let tearAnimating = false;
+let draggingIdx = -1;
+
+let pts = [];
+const COLORS = ['#ef4444', '#3b82f6', '#22c55e'];
+const LABELS = ['A', 'B', 'C'];
+
+function initTriangle() {
+  const cx = W * 0.35, cy = H * 0.5;
+  pts = [
+    { x: cx, y: cy - 140 },
+    { x: cx + 170, y: cy + 110 },
+    { x: cx - 130, y: cy + 110 }
+  ];
+}
+
+function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+
+function angleAt(i) {
+  const prev = (i + 2) % 3, next = (i + 1) % 3;
+  const v1 = { x: pts[prev].x - pts[i].x, y: pts[prev].y - pts[i].y };
+  const v2 = { x: pts[next].x - pts[i].x, y: pts[next].y - pts[i].y };
+  const dot = v1.x * v2.x + v1.y * v2.y;
+  const cross = v1.x * v2.y - v1.y * v2.x;
+  return Math.abs(Math.atan2(cross, dot)) * 180 / Math.PI;
+}
+
+function getAngleVectors(i) {
+  const prev = (i + 2) % 3, next = (i + 1) % 3;
+  const d1 = { x: pts[prev].x - pts[i].x, y: pts[prev].y - pts[i].y };
+  const d2 = { x: pts[next].x - pts[i].x, y: pts[next].y - pts[i].y };
+  const l1 = Math.hypot(d1.x, d1.y), l2 = Math.hypot(d2.x, d2.y);
+  return {
+    d1: l1 > 0 ? { x: d1.x / l1, y: d1.y / l1 } : { x: 1, y: 0 },
+    d2: l2 > 0 ? { x: d2.x / l2, y: d2.y / l2 } : { x: -1, y: 0 },
+    l1, l2
+  };
+}
+
+function updateInfo() {
+  const angles = [angleAt(0), angleAt(1), angleAt(2)];
+  const sum = angles.reduce((a, b) => a + b, 0);
+  document.getElementById('angles-display').innerHTML = angles.map((a, i) =>
+    `<span class="angle-chip" style="background:${COLORS[i]}20;color:${COLORS[i]}">∠${LABELS[i]} = ${fmt(a, 1)}°</span>`
+  ).join(' ');
+  document.getElementById('sum-val').textContent = fmt(sum, 1);
+  const note = document.getElementById('sum-note');
+  if (Math.abs(sum - 180) < 1) note.textContent = '内角和 = 180°（平角）';
+  else note.textContent = '';
+}
+
+function render() {
+  const dpr = window.devicePixelRatio || 1;
+  W = canvas.clientWidth; H = canvas.clientHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  drawGrid(ctx, W, H, 40, '#e2e8f020');
+
+  const angles = [angleAt(0), angleAt(1), angleAt(2)];
+
+  if (tearProgress === 0) {
+    // draw full triangle
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    ctx.lineTo(pts[1].x, pts[1].y);
+    ctx.lineTo(pts[2].x, pts[2].y);
+    ctx.closePath();
+    ctx.fillStyle = '#0ea5e910';
+    ctx.fill();
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // angle arcs at vertices
+    for (let i = 0; i < 3; i++) {
+      drawAngleArc(pts[i], i, angles[i], COLORS[i]);
+    }
+
+    // vertices
+    pts.forEach((p, i) => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+      ctx.strokeStyle = COLORS[i];
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.font = 'bold 14px ' + getComputedStyle(document.body).fontFamily;
+      ctx.fillStyle = '#1e293b';
+      ctx.textAlign = 'center';
+      const ox = p.x < (pts[0].x + pts[1].x + pts[2].x) / 3 ? -16 : 16;
+      const oy = p.y < (pts[0].y + pts[1].y + pts[2].y) / 3 ? -14 : 16;
+      ctx.fillText(LABELS[i], p.x + ox, p.y + oy);
+    });
+  } else {
+    // tearing animation
+    const t = tearProgress / 100;
+
+    // assembly point (where angles meet)
+    const ax = W * 0.7, ay = H * 0.5;
+
+    // draw base line
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(ax - 120, ay);
+    ctx.lineTo(ax + 120, ay);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // draw each angle sector
+    let currentAngle = -Math.PI; // start from left
+
+    for (let i = 0; i < 3; i++) {
+      const v = getAngleVectors(i);
+      const angRad = toRad(angles[i]);
+      const sectorR = 70;
+
+      // interpolate position
+      const sx = lerp(pts[i].x, ax, t);
+      const sy = lerp(pts[i].y, ay, t);
+
+      // original angle directions (from vertex)
+      const origStart = Math.atan2(v.d1.y, v.d1.x);
+      const origEnd = Math.atan2(v.d2.y, v.d2.x);
+
+      // target: sequential placement along the line
+      const targetStart = currentAngle;
+      const targetEnd = currentAngle + angRad;
+
+      // interpolate angle positions
+      const startAng = lerp(origStart, targetStart, t);
+      const endAng = lerp(origEnd, targetEnd, t);
+
+      // draw sector
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.arc(sx, sy, sectorR, startAng, endAng, false);
+      ctx.closePath();
+      ctx.fillStyle = COLORS[i] + '30';
+      ctx.fill();
+      ctx.strokeStyle = COLORS[i];
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // label
+      const midAng = (startAng + endAng) / 2;
+      const lx = sx + (sectorR + 20) * Math.cos(midAng);
+      const ly = sy + (sectorR + 20) * Math.sin(midAng);
+      ctx.font = 'bold 13px ' + getComputedStyle(document.body).fontFamily;
+      ctx.fillStyle = COLORS[i];
+      ctx.textAlign = 'center';
+      ctx.fillText(`${fmt(angles[i], 1)}°`, lx, ly);
+
+      currentAngle = targetEnd;
+    }
+
+    // when fully assembled
+    if (t > 0.95) {
+      ctx.font = 'bold 16px ' + getComputedStyle(document.body).fontFamily;
+      ctx.fillStyle = '#0ea5e9';
+      ctx.textAlign = 'center';
+      ctx.fillText('= 180°（平角）', ax, ay + 100);
+    }
+
+    // ghost triangle
+    ctx.globalAlpha = 1 - t;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    ctx.lineTo(pts[1].x, pts[1].y);
+    ctx.lineTo(pts[2].x, pts[2].y);
+    ctx.closePath();
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+  }
+
+  updateInfo();
+}
+
+function drawAngleArc(vertex, i, angle, color) {
+  const v = getAngleVectors(i);
+  const r = 35;
+  const a1 = Math.atan2(v.d1.y, v.d1.x);
+  const a2 = Math.atan2(v.d2.y, v.d2.x);
+
+  let diff = a2 - a1;
+  while (diff < 0) diff += Math.PI * 2;
+  while (diff > Math.PI * 2) diff -= Math.PI * 2;
+
+  ctx.beginPath();
+  ctx.moveTo(vertex.x, vertex.y);
+  ctx.arc(vertex.x, vertex.y, r, a1, a2, diff > Math.PI);
+  ctx.closePath();
+  ctx.fillStyle = color + '25';
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // angle text
+  const midA = diff > Math.PI ? a1 - (Math.PI * 2 - diff) / 2 : a1 + diff / 2;
+  const lx = vertex.x + (r + 16) * Math.cos(midA);
+  const ly = vertex.y + (r + 16) * Math.sin(midA);
+  ctx.font = 'bold 12px ' + getComputedStyle(document.body).fontFamily;
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.fillText(fmt(angle, 1) + '°', lx, ly);
+}
+
+function setTearProgress(v) {
+  tearProgress = v;
+  render();
+}
+
+function toggleTear() {
+  if (tearAnimating) return;
+  tearAnimating = true;
+  const slider = document.getElementById('tear-slider');
+  const start = tearProgress;
+  const end = tearProgress > 50 ? 0 : 100;
+  const duration = 1200;
+  const startTime = performance.now();
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    tearProgress = Math.round(lerp(start, end, ease));
+    slider.value = tearProgress;
+    render();
+    if (t < 1) requestAnimationFrame(animate);
+    else tearAnimating = false;
+  }
+  requestAnimationFrame(animate);
+}
+
+function resetAll() {
+  tearProgress = 0;
+  document.getElementById('tear-slider').value = 0;
+  initTriangle();
+  render();
+}
+
+// drag (only when not tearing)
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const t = e.touches ? e.touches[0] : e;
+  return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+}
+
+canvas.addEventListener('mousedown', e => {
+  if (tearProgress > 0) return;
+  const p = getPos(e);
+  for (let i = 0; i < 3; i++) {
+    if (Math.hypot(p.x - pts[i].x, p.y - pts[i].y) < 16) { draggingIdx = i; return; }
+  }
+});
+canvas.addEventListener('touchstart', e => {
+  if (tearProgress > 0) return;
+  e.preventDefault();
+  const p = getPos(e);
+  for (let i = 0; i < 3; i++) {
+    if (Math.hypot(p.x - pts[i].x, p.y - pts[i].y) < 20) { draggingIdx = i; return; }
+  }
+}, { passive: false });
+
+function onMove(e) {
+  if (draggingIdx < 0) return;
+  e.preventDefault();
+  const p = getPos(e);
+  pts[draggingIdx].x = p.x;
+  pts[draggingIdx].y = p.y;
+  render();
+}
+canvas.addEventListener('mousemove', onMove);
+canvas.addEventListener('touchmove', onMove, { passive: false });
+document.addEventListener('mouseup', () => { draggingIdx = -1; });
+document.addEventListener('touchend', () => { draggingIdx = -1; });
+
+window.addEventListener('resize', render);
+setTimeout(() => { W = canvas.clientWidth; H = canvas.clientHeight; initTriangle(); render(); }, 50);
+</script>
+</body>
+</html>

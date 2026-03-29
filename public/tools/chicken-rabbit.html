@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>鸡兔同笼解题器</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    height: 100%;
+  }
+  .canvas-area { position: relative; background: #fff; overflow: hidden; }
+  .control-panel {
+    background: #fdfaf4; border-left: 1px solid #e2e8f0;
+    padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow: auto;
+  }
+  .ctrl-section { display: flex; flex-direction: column; gap: 8px; }
+  .ctrl-label {
+    font-size: 11px; font-weight: 700; color: #64748b;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .divider { height: 1px; background: #e2e8f0; }
+  .data-input {
+    padding: 6px 10px; border: 1.5px solid #e2e8f0; border-radius: 6px;
+    font-size: 14px; font-family: var(--edu-font); outline: none; text-align: center;
+    width: 80px;
+  }
+  .data-input:focus { border-color: #f97316; }
+  .data-row {
+    display: flex; align-items: center; gap: 8px; font-size: 13px;
+  }
+  .preset-btn {
+    padding: 5px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;
+    cursor: pointer; border: 1.5px solid #e2e8f0; background: #fff; color: #64748b;
+    transition: all 0.15s; font-family: var(--edu-font); text-align: center;
+  }
+  .preset-btn:hover { border-color: #f97316; color: #f97316; }
+  .info-box {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+    padding: 10px 12px; font-size: 12px; color: #64748b; line-height: 1.8;
+  }
+  .info-box strong { color: #f97316; }
+  .result-big {
+    text-align: center; font-size: 20px; font-weight: 800; color: #f97316; line-height: 1.3;
+  }
+  .step-row {
+    display: flex; gap: 4px; align-items: center;
+    padding: 4px 8px; border-radius: 6px; font-size: 12px; margin: 2px 0;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="edu-toolbar-title">🐔 鸡兔同笼解题器</span>
+      <span class="edu-toolbar-subtitle">下册·数学广角</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="solve()">求解</button>
+      <button class="edu-btn edu-btn-accent" id="btn-step" onclick="stepSolve()">逐步推演</button>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="main-canvas" class="edu-canvas-full"></canvas>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">题目参数</div>
+          <div class="data-row">
+            <span>头数（总只数）：</span>
+            <input class="data-input" id="inp-heads" type="number" min="1" max="50" value="8"/>
+          </div>
+          <div class="data-row">
+            <span>脚数（总腿数）：</span>
+            <input class="data-input" id="inp-legs" type="number" min="2" max="200" value="26"/>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">经典题目预设</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+            <button class="preset-btn" onclick="loadPreset(8,26)">鸡兔8头</button>
+            <button class="preset-btn" onclick="loadPreset(35,94)">鸡兔35头</button>
+            <button class="preset-btn" onclick="loadPreset(10,28)">龟鹤10头</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">答案</div>
+          <div class="result-big" id="result-text">点击"求解"查看</div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">假设法推演</div>
+          <div class="info-box" id="steps-box">
+            <div style="color:#94a3b8;">点击"逐步推演"查看过程。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="../edu-lib/edu-tools.js"></script>
+<script>
+const canvas = document.getElementById('main-canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+let chickens = 0, rabbits = 0;
+let solved = false;
+let animStep = -1; // for step-by-step animation
+let animTimer = null;
+
+function getInputs() {
+  return {
+    heads: Math.max(1, parseInt(document.getElementById('inp-heads').value) || 1),
+    legs: Math.max(2, parseInt(document.getElementById('inp-legs').value) || 2)
+  };
+}
+
+function solve() {
+  const { heads, legs } = getInputs();
+  // chicken has 2 legs, rabbit has 4 legs
+  // x + y = heads, 2x + 4y = legs
+  const r = (legs - 2 * heads) / 2;
+  const c = heads - r;
+
+  if (r < 0 || c < 0 || !Number.isInteger(r) || !Number.isInteger(c)) {
+    document.getElementById('result-text').innerHTML = '<span style="color:#ef4444;">无解！请检查数据。</span>';
+    chickens = 0; rabbits = 0; solved = false;
+    render();
+    return;
+  }
+
+  chickens = c;
+  rabbits = r;
+  solved = true;
+  document.getElementById('result-text').innerHTML = `🐔 鸡 <strong>${c}</strong> 只，🐰 兔 <strong>${r}</strong> 只`;
+
+  // show steps
+  showSteps(heads, legs, c, r);
+  render();
+}
+
+function showSteps(heads, legs, c, r) {
+  const box = document.getElementById('steps-box');
+  const diff = legs - 2 * heads;
+  box.innerHTML = `
+    <div class="step-row" style="background:#3b82f610;">
+      <strong>假设</strong>全部是鸡（每只2条腿）：
+    </div>
+    <div class="step-row" style="background:#3b82f610;">
+      ${heads} 只 × 2 = <strong>${heads * 2}</strong> 条腿
+    </div>
+    <div class="step-row" style="background:#f9731610;">
+      实际有 <strong>${legs}</strong> 条腿，差了 <strong>${Math.abs(diff)}</strong> 条
+    </div>
+    <div class="step-row" style="background:#22c55e10;">
+      每把一只鸡换成兔，多 <strong>2</strong> 条腿
+    </div>
+    <div class="step-row" style="background:#22c55e10;">
+      ${Math.abs(diff)} ÷ 2 = <strong>${Math.abs(diff / 2)}</strong> 只兔
+    </div>
+    <div class="step-row" style="background:#8b5cf610;">
+      ${heads} - ${r} = <strong>${c}</strong> 只鸡
+    </div>
+    <div class="step-row" style="background:#8b5cf610;">
+      ✅ 验证：${c}×2 + ${r}×4 = ${c*2} + ${r*4} = <strong>${c*2+r*4}</strong> 条腿
+    </div>
+  `;
+}
+
+function stepSolve() {
+  const { heads, legs } = getInputs();
+  const r = (legs - 2 * heads) / 2;
+  const c = heads - r;
+
+  if (r < 0 || c < 0 || !Number.isInteger(r) || !Number.isInteger(c)) {
+    document.getElementById('result-text').innerHTML = '<span style="color:#ef4444;">无解！请检查数据。</span>';
+    return;
+  }
+
+  // animate: start with all chickens, then gradually replace with rabbits
+  clearInterval(animTimer);
+  let step = 0;
+  const totalSteps = r;
+  chickens = heads;
+  rabbits = 0;
+  solved = true;
+  document.getElementById('result-text').innerHTML = `逐步替换中...`;
+
+  animTimer = setInterval(() => {
+    if (step >= totalSteps) {
+      clearInterval(animTimer);
+      chickens = c;
+      rabbits = r;
+      document.getElementById('result-text').innerHTML = `🐔 鸡 <strong>${c}</strong> 只，🐰 兔 <strong>${r}</strong> 只`;
+      showSteps(heads, legs, c, r);
+      render();
+      return;
+    }
+    chickens--;
+    rabbits++;
+    step++;
+    document.getElementById('result-text').innerHTML = `🐔 鸡 ${chickens} 只，🐰 兔 ${rabbits} 只（${rabbits * 4 + chickens * 2} 条腿）`;
+    render();
+  }, 600);
+}
+
+function loadPreset(heads, legs) {
+  document.getElementById('inp-heads').value = heads;
+  document.getElementById('inp-legs').value = legs;
+  resetAll();
+}
+
+function resetAll() {
+  clearInterval(animTimer);
+  chickens = 0; rabbits = 0; solved = false;
+  document.getElementById('result-text').innerHTML = '点击"求解"查看';
+  document.getElementById('steps-box').innerHTML = '<div style="color:#94a3b8;">点击"逐步推演"查看过程。</div>';
+  render();
+}
+
+function render() {
+  const dpr = window.devicePixelRatio || 1;
+  W = canvas.clientWidth; H = canvas.clientHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  drawGrid(ctx, W, H, 40, '#e2e8f020');
+
+  if (!solved || (chickens === 0 && rabbits === 0)) {
+    ctx.font = '16px ' + getComputedStyle(document.body).fontFamily;
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'center';
+    ctx.fillText('设置参数后点击"求解"', W / 2, H / 2);
+    return;
+  }
+
+  const total = chickens + rabbits;
+  if (total === 0) return;
+
+  // draw animals in a grid
+  const cols = Math.min(total, 8);
+  const rows = Math.ceil(total / cols);
+  const cellW = Math.min(80, (W - 80) / cols);
+  const cellH = Math.min(80, (H - 60) / rows);
+  const startX = (W - cols * cellW) / 2;
+  const startY = (H - rows * cellH) / 2;
+
+  let idx = 0;
+  // draw chickens first
+  for (let i = 0; i < chickens && idx < total; i++, idx++) {
+    const col = idx % cols;
+    const row = Math.floor(idx / cols);
+    drawChicken(startX + col * cellW + cellW / 2, startY + row * cellH + cellH / 2, cellW * 0.4);
+  }
+  // draw rabbits
+  for (let i = 0; i < rabbits && idx < total; i++, idx++) {
+    const col = idx % cols;
+    const row = Math.floor(idx / cols);
+    drawRabbit(startX + col * cellW + cellW / 2, startY + row * cellH + cellH / 2, cellW * 0.4);
+  }
+
+  // summary
+  ctx.font = 'bold 14px ' + getComputedStyle(document.body).fontFamily;
+  ctx.fillStyle = '#1e293b';
+  ctx.textAlign = 'center';
+  const legCount = chickens * 2 + rabbits * 4;
+  ctx.fillText(`🐔 ${chickens}只鸡(2腿) + 🐰 ${rabbits}只兔(4腿) = ${legCount}条腿`, W / 2, H - 20);
+}
+
+function drawChicken(x, y, r) {
+  // body
+  ctx.beginPath();
+  ctx.arc(x, y, r * 0.6, 0, Math.PI * 2);
+  ctx.fillStyle = '#fbbf2430';
+  ctx.fill();
+  ctx.strokeStyle = '#f59e0b';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // head
+  ctx.beginPath();
+  ctx.arc(x + r * 0.3, y - r * 0.5, r * 0.3, 0, Math.PI * 2);
+  ctx.fillStyle = '#fbbf2450';
+  ctx.fill();
+  ctx.strokeStyle = '#f59e0b';
+  ctx.stroke();
+
+  // beak
+  ctx.beginPath();
+  ctx.moveTo(x + r * 0.6, y - r * 0.5);
+  ctx.lineTo(x + r * 0.8, y - r * 0.45);
+  ctx.lineTo(x + r * 0.6, y - r * 0.35);
+  ctx.fillStyle = '#ef4444';
+  ctx.fill();
+
+  // legs (2)
+  ctx.strokeStyle = '#f59e0b';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x - r * 0.15, y + r * 0.5);
+  ctx.lineTo(x - r * 0.15, y + r * 0.9);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x + r * 0.15, y + r * 0.5);
+  ctx.lineTo(x + r * 0.15, y + r * 0.9);
+  ctx.stroke();
+
+  // label
+  ctx.font = `bold ${Math.max(10, r * 0.35)}px ` + getComputedStyle(document.body).fontFamily;
+  ctx.fillStyle = '#92400e';
+  ctx.textAlign = 'center';
+  ctx.fillText('鸡', x, y + 4);
+}
+
+function drawRabbit(x, y, r) {
+  // body
+  ctx.beginPath();
+  ctx.arc(x, y, r * 0.6, 0, Math.PI * 2);
+  ctx.fillStyle = '#c4b5fd30';
+  ctx.fill();
+  ctx.strokeStyle = '#8b5cf6';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // head
+  ctx.beginPath();
+  ctx.arc(x + r * 0.25, y - r * 0.5, r * 0.3, 0, Math.PI * 2);
+  ctx.fillStyle = '#c4b5fd50';
+  ctx.fill();
+  ctx.strokeStyle = '#8b5cf6';
+  ctx.stroke();
+
+  // ears
+  ctx.beginPath();
+  ctx.ellipse(x + r * 0.1, y - r * 1.1, r * 0.1, r * 0.3, -0.2, 0, Math.PI * 2);
+  ctx.fillStyle = '#c4b5fd60';
+  ctx.fill();
+  ctx.strokeStyle = '#8b5cf6';
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(x + r * 0.35, y - r * 1.0, r * 0.1, r * 0.28, 0.2, 0, Math.PI * 2);
+  ctx.fillStyle = '#c4b5fd60';
+  ctx.fill();
+  ctx.strokeStyle = '#8b5cf6';
+  ctx.stroke();
+
+  // legs (4)
+  ctx.strokeStyle = '#8b5cf6';
+  ctx.lineWidth = 2;
+  const legOffsets = [[-0.25, -0.15, 0.15, 0.25], [-0.25, -0.15, 0.15, 0.25]];
+  [[-0.25, 0.9], [-0.1, 0.9], [0.1, 0.9], [0.25, 0.9]].forEach(([ox, oy]) => {
+    ctx.beginPath();
+    ctx.moveTo(x + r * ox, y + r * 0.5);
+    ctx.lineTo(x + r * ox, y + r * oy);
+    ctx.stroke();
+  });
+
+  // label
+  ctx.font = `bold ${Math.max(10, r * 0.35)}px ` + getComputedStyle(document.body).fontFamily;
+  ctx.fillStyle = '#5b21b6';
+  ctx.textAlign = 'center';
+  ctx.fillText('兔', x, y + 4);
+}
+
+window.addEventListener('resize', render);
+setTimeout(render, 50);
+</script>
+</body>
+</html>
