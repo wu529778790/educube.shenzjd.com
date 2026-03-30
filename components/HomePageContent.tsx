@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Tool } from "@/data/tools";
+import type { Semester, Tool } from "@/data/tools";
 import { filterToolsByCatalog } from "@/data/tools";
 import {
   defaultCatalogPath,
@@ -12,8 +12,17 @@ import {
 } from "@/data/curriculum";
 import ToolGrid from "./ToolGrid";
 
+type SemesterFilter = "all" | Semester;
+
 interface HomePageContentProps {
   tools: Tool[];
+}
+
+function sortToolsForDisplay(list: Tool[]): Tool[] {
+  return [...list].sort((a, b) => {
+    if (a.semester !== b.semester) return a.semester === "上册" ? -1 : 1;
+    return a.unitNum - b.unitNum;
+  });
 }
 
 export default function HomePageContent({ tools }: HomePageContentProps) {
@@ -22,13 +31,29 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
   );
   const [gradeId, setGradeId] = useState<string>(defaultCatalogPath.gradeId);
   const [subjectId, setSubjectId] = useState<string>(defaultCatalogPath.subjectId);
+  const [semesterFilter, setSemesterFilter] = useState<SemesterFilter>("all");
 
-  const filteredTools = useMemo(
+  const catalogTools = useMemo(
     () => filterToolsByCatalog(tools, publisherId, gradeId, subjectId),
     [tools, publisherId, gradeId, subjectId],
   );
 
+  const displayTools = useMemo(() => {
+    const list =
+      semesterFilter === "all"
+        ? catalogTools
+        : catalogTools.filter((t) => t.semester === semesterFilter);
+    return sortToolsForDisplay(list);
+  }, [catalogTools, semesterFilter]);
+
   const pathLabel = getPathLabel(publisherId, gradeId, subjectId);
+
+  const semesterSummary =
+    semesterFilter === "all" ? "" : ` · ${semesterFilter}`;
+
+  const countSemesterAll = catalogTools.length;
+  const countSemesterUpper = catalogTools.filter((t) => t.semester === "上册").length;
+  const countSemesterLower = catalogTools.filter((t) => t.semester === "下册").length;
 
   const countForPublisher = (pid: string) =>
     tools.filter(
@@ -153,9 +178,10 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
               </span>
               <p className="text-sm font-medium text-slate-800 truncate">
                 {pathLabel}
+                <span className="text-slate-500 font-normal">{semesterSummary}</span>
                 <span className="text-slate-400 font-normal">
                   {" "}
-                  · 本目录 {filteredTools.length} 个
+                  · 共 {displayTools.length} 个
                 </span>
               </p>
             </div>
@@ -165,7 +191,7 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
 
           <div className="border-t border-slate-100 px-3 pb-3 pt-2 sm:px-4 space-y-3">
             <p className="text-[11px] text-slate-400 leading-snug">
-              未上线的组合会显示「陆续补充」。顶栏也会同步当前路径。
+              未上线的教材 / 年级 / 学科会显示「陆续补充」。可先选册别再浏览列表。
             </p>
 
             {/* ① 教材 */}
@@ -248,7 +274,40 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
               </div>
             </div>
 
-            {/* ③ 学科 */}
+            {/* ③ 册别（上册 / 下册） */}
+            <div>
+              <span className="mb-1.5 block text-[11px] font-bold text-slate-500">册别</span>
+              <div className="flex flex-wrap gap-1.5">
+                {(
+                  [
+                    { key: "all" as const, label: "全部", count: countSemesterAll },
+                    { key: "上册" as const, label: "上册", count: countSemesterUpper },
+                    { key: "下册" as const, label: "下册", count: countSemesterLower },
+                  ] satisfies { key: SemesterFilter; label: string; count: number }[]
+                ).map((tab) => {
+                  const active = semesterFilter === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setSemesterFilter(tab.key)}
+                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
+                        active
+                          ? "border-amber-600 bg-amber-600 text-white"
+                          : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
+                      }`}
+                    >
+                      {tab.label}
+                      <span className={active ? "text-white/80" : "text-slate-400"}>
+                        {tab.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ④ 学科 */}
             <div>
               <span className="mb-1.5 block text-[11px] font-bold text-slate-500">学科</span>
               <div className="flex flex-wrap gap-1.5">
@@ -279,14 +338,7 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
 
       {/* 教具列表 */}
       <section id="tools" className="max-w-6xl mx-auto px-4 sm:px-6 pb-20 scroll-mt-20">
-        <div className="mb-5 mt-4">
-          <h2 className="text-xl font-bold text-slate-800">本目录下的教具</h2>
-          <p className="text-sm text-slate-400 mt-1">
-            {pathLabel} · 共 {filteredTools.length} 个 · 点击进入全屏演示
-          </p>
-        </div>
-
-        {filteredTools.length === 0 ? (
+        {catalogTools.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white/80 px-8 py-16 text-center">
             <p className="text-slate-600 font-medium text-lg mb-2">该目录下暂无教具</p>
             <p className="text-slate-400 text-sm max-w-md mx-auto leading-relaxed">
@@ -302,8 +354,17 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
               查看已上线示例，或收藏本站关注更新。
             </p>
           </div>
+        ) : displayTools.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-6 py-10 text-center">
+            <p className="text-slate-600 font-medium mb-1">
+              当前册别下暂无教具
+            </p>
+            <p className="text-slate-400 text-sm">
+              请展开「筛选条件」，将册别改为「全部」或切换另一册。
+            </p>
+          </div>
         ) : (
-          <ToolGrid tools={filteredTools} />
+          <ToolGrid tools={displayTools} />
         )}
       </section>
 
