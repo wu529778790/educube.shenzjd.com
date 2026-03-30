@@ -85,15 +85,6 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
               </span>
             </div>
           </div>
-          <nav className="mt-2 flex items-center gap-3 text-xs text-slate-500">
-            <a href="#catalog" className="hover:text-slate-800 transition-colors">
-              切换教材 / 年级 / 学科
-            </a>
-            <span className="text-slate-300">|</span>
-            <a href="#tools" className="hover:text-slate-800 transition-colors">
-              教具列表
-            </a>
-          </nav>
         </div>
       </header>
 
@@ -131,14 +122,9 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
           </svg>
         </div>
 
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16 relative">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10 relative">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full text-xs font-semibold mb-5">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-              {pathLabel}
-            </div>
-
-            <h1 className="text-3xl sm:text-4xl font-bold text-slate-800 leading-tight mb-4">
+            <h1 className="text-3xl sm:text-4xl font-bold text-slate-800 leading-tight mb-3">
               课堂上的数学，
               <br />
               <span className="relative" style={{ color: "var(--edu-navy)" }}>
@@ -160,11 +146,11 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
               </span>
             </h1>
 
-            <p className="text-slate-500 text-base sm:text-lg leading-relaxed mb-6">
-              先选教材版本、年级与学科，再浏览对应交互教具。多版本、多年级框架已就绪，内容将持续补充。
+            <p className="text-slate-500 text-sm sm:text-base leading-relaxed mb-4">
+              浏览器即用；需要换教材或年级时，在下方点「筛选条件」展开即可。
             </p>
 
-            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-400">
+            <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-slate-400">
               <span className="flex items-center gap-1.5">
                 <span>全站已收录</span>
                 <strong className="text-slate-600">{tools.length}</strong>
@@ -177,32 +163,38 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
         </div>
       </section>
 
-      {/* 课程体系导航 */}
+      {/* 课程体系：默认收起，仅占一行；展开后为紧凑筛选 */}
       <section
         id="catalog"
-        className="max-w-6xl mx-auto px-4 sm:px-6 pb-4 scroll-mt-20"
+        className="max-w-6xl mx-auto px-4 sm:px-6 pb-2 scroll-mt-20"
       >
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div
-            className="px-5 py-4 border-b border-slate-100"
-            style={{ background: "linear-gradient(90deg, #f8fafc 0%, #fff 100%)" }}
-          >
-            <h2 className="text-lg font-bold text-slate-800">课程体系导航</h2>
-            <p className="text-sm text-slate-500 mt-1">
-              三步选择：教材版本 → 年级 → 学科。未上线的组合将显示「陆续补充」。
-            </p>
-          </div>
-
-          <div className="p-5 space-y-6">
-            {/* ① 教材版本 */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-800 text-xs font-bold text-white">
-                  1
+        <details className="group rounded-xl border border-slate-200 bg-white shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 sm:px-4 [&::-webkit-details-marker]:hidden">
+            <div className="min-w-0 flex-1">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                筛选条件
+              </span>
+              <p className="text-sm font-medium text-slate-800 truncate">
+                {pathLabel}
+                <span className="text-slate-400 font-normal">
+                  {" "}
+                  · 本目录 {filteredTools.length} 个
                 </span>
-                <span className="text-sm font-bold text-slate-800">教材版本</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
+              </p>
+            </div>
+            <span className="shrink-0 text-xs text-blue-600 group-open:hidden">展开</span>
+            <span className="hidden shrink-0 text-xs text-slate-500 group-open:inline">收起</span>
+          </summary>
+
+          <div className="border-t border-slate-100 px-3 pb-3 pt-2 sm:px-4 space-y-3">
+            <p className="text-[11px] text-slate-400 leading-snug">
+              未上线的组合会显示「陆续补充」。顶栏也会同步当前路径。
+            </p>
+
+            {/* ① 教材 */}
+            <div>
+              <span className="mb-1.5 block text-[11px] font-bold text-slate-500">版本</span>
+              <div className="flex flex-wrap gap-1.5">
                 {publishers.map((p) => {
                   const n = countForPublisher(p.id);
                   const active = publisherId === p.id;
@@ -211,17 +203,17 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
                       key={p.id}
                       type="button"
                       onClick={() => setPublisherId(p.id)}
-                      className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
+                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
                         active
-                          ? "border-slate-800 bg-slate-800 text-white shadow-md"
-                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                          ? "border-slate-800 bg-slate-800 text-white"
+                          : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
                       }`}
                     >
-                      {p.name}
+                      {p.shortName}
                       <span
-                        className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${
-                          active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-400"
-                        }`}
+                        className={
+                          active ? "text-white/80" : "text-slate-400"
+                        }
                       >
                         {n}
                       </span>
@@ -231,16 +223,10 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
               </div>
             </div>
 
-            {/* ② 年级 */}
+            {/* ② 年级：小学与初中同一视觉块 */}
             <div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-800 text-xs font-bold text-white">
-                  2
-                </span>
-                <span className="text-sm font-bold text-slate-800">年级</span>
-              </div>
-              <p className="text-xs text-slate-400 mb-2">小学</p>
-              <div className="flex flex-wrap gap-2 mb-4">
+              <span className="mb-1.5 block text-[11px] font-bold text-slate-500">年级</span>
+              <div className="flex flex-wrap items-center gap-1.5">
                 {primaryGrades.map((g) => {
                   const n = countForGrade(g.id);
                   const active = gradeId === g.id;
@@ -249,26 +235,20 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
                       key={g.id}
                       type="button"
                       onClick={() => setGradeId(g.id)}
-                      className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
+                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
                         active
-                          ? "border-blue-600 bg-blue-600 text-white shadow-md"
-                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                          ? "border-blue-600 bg-blue-600 text-white"
+                          : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
                       }`}
                     >
-                      {g.name}
-                      <span
-                        className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${
-                          active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-400"
-                        }`}
-                      >
-                        {n}
-                      </span>
+                      {g.name.replace("年级", "")}
+                      <span className={active ? "text-white/80" : "text-slate-400"}>{n}</span>
                     </button>
                   );
                 })}
-              </div>
-              <p className="text-xs text-slate-400 mb-2">初中</p>
-              <div className="flex flex-wrap gap-2">
+                <span className="text-slate-300 px-0.5" aria-hidden>
+                  |
+                </span>
                 {juniorGrades.map((g) => {
                   const n = countForGrade(g.id);
                   const active = gradeId === g.id;
@@ -277,20 +257,14 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
                       key={g.id}
                       type="button"
                       onClick={() => setGradeId(g.id)}
-                      className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
+                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
                         active
-                          ? "border-blue-600 bg-blue-600 text-white shadow-md"
-                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                          ? "border-blue-600 bg-blue-600 text-white"
+                          : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
                       }`}
                     >
-                      {g.name}
-                      <span
-                        className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${
-                          active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-400"
-                        }`}
-                      >
-                        {n}
-                      </span>
+                      {g.name.replace("年级", "")}
+                      <span className={active ? "text-white/80" : "text-slate-400"}>{n}</span>
                     </button>
                   );
                 })}
@@ -299,13 +273,8 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
 
             {/* ③ 学科 */}
             <div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-800 text-xs font-bold text-white">
-                  3
-                </span>
-                <span className="text-sm font-bold text-slate-800">学科</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
+              <span className="mb-1.5 block text-[11px] font-bold text-slate-500">学科</span>
+              <div className="flex flex-wrap gap-1.5">
                 {subjects.map((s) => {
                   const n = countForSubject(s.id);
                   const active = subjectId === s.id;
@@ -314,32 +283,26 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
                       key={s.id}
                       type="button"
                       onClick={() => setSubjectId(s.id)}
-                      className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
+                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
                         active
-                          ? "border-emerald-600 bg-emerald-600 text-white shadow-md"
-                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                          ? "border-emerald-600 bg-emerald-600 text-white"
+                          : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
                       }`}
                     >
                       {s.name}
-                      <span
-                        className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${
-                          active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-400"
-                        }`}
-                      >
-                        {n}
-                      </span>
+                      <span className={active ? "text-white/80" : "text-slate-400"}>{n}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
           </div>
-        </div>
+        </details>
       </section>
 
       {/* 教具列表 */}
       <section id="tools" className="max-w-6xl mx-auto px-4 sm:px-6 pb-20 scroll-mt-20">
-        <div className="mb-6 mt-8">
+        <div className="mb-5 mt-4">
           <h2 className="text-xl font-bold text-slate-800">本目录下的教具</h2>
           <p className="text-sm text-slate-400 mt-1">
             {pathLabel} · 共 {filteredTools.length} 个 · 点击进入全屏演示
