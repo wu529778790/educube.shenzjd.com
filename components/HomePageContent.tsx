@@ -55,34 +55,21 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
       {/* 顶栏：品牌 + 当前路径 */}
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3 min-w-0">
-              <div
-                className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold shrink-0"
-                style={{ background: "var(--edu-navy)" }}
-              >
-                教
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-baseline gap-2 flex-wrap">
-                  <span className="font-bold text-slate-800 text-base">教立方</span>
-                  <span className="text-slate-400 text-sm">EduCube</span>
-                </div>
-                <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">
-                  中小学交互教具平台 · 按教材与年级浏览
-                </p>
-              </div>
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold shrink-0"
+              style={{ background: "var(--edu-navy)" }}
+            >
+              教
             </div>
-            <div className="flex items-center gap-2 min-w-0 sm:max-w-[55%] sm:justify-end">
-              <span className="text-[11px] uppercase tracking-wide text-slate-400 shrink-0 hidden md:inline">
-                当前目录
-              </span>
-              <span
-                className="text-sm font-semibold text-slate-700 truncate px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200"
-                title={pathLabel}
-              >
-                {pathLabel}
-              </span>
+            <div className="min-w-0">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="font-bold text-slate-800 text-base">教立方</span>
+                <span className="text-slate-400 text-sm">EduCube</span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">
+                中小学交互教具平台 · 按教材与年级浏览
+              </p>
             </div>
           </div>
         </div>
@@ -122,9 +109,9 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
           </svg>
         </div>
 
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10 relative">
+        <div className="max-w-6xl mx-auto px-3 sm:px-5 py-5 sm:py-6 relative">
           <div className="max-w-2xl">
-            <h1 className="text-3xl sm:text-4xl font-bold text-slate-800 leading-tight mb-3">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 leading-snug mb-2">
               课堂上的数学，
               <br />
               <span className="relative" style={{ color: "var(--edu-navy)" }}>
@@ -146,19 +133,9 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
               </span>
             </h1>
 
-            <p className="text-slate-500 text-sm sm:text-base leading-relaxed mb-4">
+            <p className="text-slate-500 text-sm leading-snug mb-0">
               浏览器即用；需要换教材或年级时，在下方点「筛选条件」展开即可。
             </p>
-
-            <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-slate-400">
-              <span className="flex items-center gap-1.5">
-                <span>全站已收录</span>
-                <strong className="text-slate-600">{tools.length}</strong>
-                <span>个教具（数学）</span>
-              </span>
-              <span className="hidden sm:inline text-slate-300">·</span>
-              <span>浏览器即用，无需安装</span>
-            </div>
           </div>
         </div>
       </section>
