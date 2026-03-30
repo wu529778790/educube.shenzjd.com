@@ -1,3 +1,4 @@
+import { getPathLabel } from "@/data/curriculum";
 import { getToolById, tools } from "@/data/tools";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -56,8 +57,11 @@ export default async function ToolPage({ params }: PageProps) {
           <span className="text-sm font-semibold text-white truncate">
             {tool.name}
           </span>
-          <span className="hidden sm:inline text-xs text-slate-400 flex-shrink-0">
-            · {tool.chapter}
+          <span
+            className="hidden sm:inline text-xs text-slate-400 flex-shrink-0 truncate max-w-[min(280px,40vw)]"
+            title={getPathLabel(tool.publisherId, tool.gradeId, tool.subjectId)}
+          >
+            · {getPathLabel(tool.publisherId, tool.gradeId, tool.subjectId)}
           </span>
         </div>
 

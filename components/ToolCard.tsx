@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Tool } from "@/data/tools";
+import { getPathLabel } from "@/data/curriculum";
 
 interface ToolCardProps {
   tool: Tool;
@@ -43,7 +44,8 @@ export default function ToolCard({ tool, index }: ToolCardProps) {
           {tool.name}
         </h3>
         <p className="text-xs font-medium mb-3" style={{ color: tool.gradient[0] }}>
-          {tool.subtitle} · {tool.grade}
+          {tool.subtitle} ·{" "}
+          {getPathLabel(tool.publisherId, tool.gradeId, tool.subjectId)}
         </p>
 
         {/* 描述 */}
