@@ -1,4 +1,4 @@
-import ToolCard from "@/components/ToolCard";
+import ToolGrid from "@/components/ToolGrid";
 import { tools } from "@/data/tools";
 
 export default function HomePage() {
@@ -31,7 +31,6 @@ export default function HomePage() {
 
       {/* Hero 区域 */}
       <section className="relative overflow-hidden">
-        {/* 背景装饰 */}
         <div className="absolute inset-0 pointer-events-none">
           <div
             className="absolute -top-20 -right-20 w-96 h-96 rounded-full opacity-10"
@@ -41,7 +40,6 @@ export default function HomePage() {
             className="absolute -bottom-10 -left-10 w-64 h-64 rounded-full opacity-8"
             style={{ background: "var(--edu-orange)" }}
           />
-          {/* 几何网格 */}
           <svg
             className="absolute inset-0 w-full h-full opacity-[0.04]"
             xmlns="http://www.w3.org/2000/svg"
@@ -67,20 +65,16 @@ export default function HomePage() {
 
         <div className="max-w-6xl mx-auto px-6 py-16 relative">
           <div className="max-w-2xl">
-            {/* Badge */}
             <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full text-xs font-semibold mb-6">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-              人教版四年级数学 · 3D 空间感知教具
+              人教版四年级数学 · 上下册全覆盖
             </div>
 
             <h1 className="text-4xl font-bold text-slate-800 leading-tight mb-4">
-              让空间想象力
+              数学课堂，
               <br />
-              <span
-                className="relative"
-                style={{ color: "var(--edu-navy)" }}
-              >
-                看得见、摸得着
+              <span className="relative" style={{ color: "var(--edu-navy)" }}>
+                从抽象到具象
                 <svg
                   className="absolute -bottom-1 left-0 w-full"
                   height="4"
@@ -99,7 +93,7 @@ export default function HomePage() {
             </h1>
 
             <p className="text-slate-500 text-lg leading-relaxed mb-8">
-              5 个精心制作的 3D 交互教具，专为课堂演示设计。
+              {tools.length} 个精心制作的交互教具，覆盖人教版四年级上下册。
               <br />
               点击即用，无需安装，浏览器直接运行。
             </p>
@@ -122,28 +116,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 教具网格 */}
+      {/* 教具库 */}
       <section id="tools" className="max-w-6xl mx-auto px-6 pb-20">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-xl font-bold text-slate-800">3D 空间教具</h2>
-            <p className="text-sm text-slate-400 mt-1">
-              共 {tools.length} 个教具 · 点击进入全屏模式
-            </p>
-          </div>
-          <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 bg-white px-3 py-2 rounded-lg border border-slate-100">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            全屏后按 ESC 返回
-          </div>
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-slate-800">教具库</h2>
+          <p className="text-sm text-slate-400 mt-1">
+            共 {tools.length} 个教具 · 人教版四年级全册 · 点击进入全屏模式
+          </p>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {tools.map((tool, i) => (
-            <ToolCard key={tool.id} tool={tool} index={i} />
-          ))}
-        </div>
+        <ToolGrid tools={tools} />
       </section>
 
       {/* 页脚 */}
