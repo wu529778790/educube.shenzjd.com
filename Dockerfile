@@ -11,28 +11,27 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-# --- 生产层 ---
+# --- 生产层（Next.js standalone 官方推荐布局，勿用 find 定位 server.js，避免命中 node_modules 内同名文件）---
 FROM base AS runner
 WORKDIR /app
+
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
-
-# standalone 输出路径随环境不同，找到 server.js 所在目录并展平
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/.next/standalone /tmp/standalone
-RUN SERVER_DIR=$(dirname $(find /tmp/standalone -name server.js | head -1)) && \
-    cp -r "$SERVER_DIR"/.next ./.next && \
-    cp "$SERVER_DIR"/server.js ./server.js && \
-    cp -r "$SERVER_DIR"/node_modules ./node_modules 2>/dev/null || true && \
-    rm -rf /tmp/standalone
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
+
 EXPOSE 3000
+
 CMD ["node", "server.js"]
