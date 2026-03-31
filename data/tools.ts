@@ -42,22 +42,7 @@ export const tools: Tool[] = [
     gradient: ["#F97316", "#EA580C"],
     icon: "🕐",
   },
-  {
-    id: "add-sub-10000",
-    name: "万以内的加法和减法",
-    subtitle: "万以内的加法和减法（一）",
-    chapter: "上册 · 第二单元",
-    semester: "上册",
-    unitNum: 2,
-    publisherId: "pep",
-    gradeId: "p3",
-    subjectId: "math",
-    description:
-      "输入两个数进行万以内加减法，竖式分步计算，进位借位彩色标注，逆运算验算。",
-    tags: ["万以内", "加减法", "竖式", "进位"],
-    gradient: ["#3B82F6", "#2563EB"],
-    icon: "➕",
-  },
+  
   {
     id: "length-units",
     name: "测量·长度单位",
@@ -90,22 +75,7 @@ export const tools: Tool[] = [
     gradient: ["#EAB308", "#D97706"],
     icon: "×",
   },
-  {
-    id: "multi-one-digit",
-    name: "多位数乘一位数",
-    subtitle: "多位数乘一位数",
-    chapter: "上册 · 第六单元",
-    semester: "上册",
-    unitNum: 6,
-    publisherId: "pep",
-    gradeId: "p3",
-    subjectId: "math",
-    description:
-      "竖式乘法分步演示，面积模型网格可视化，展示进位过程和部分积。",
-    tags: ["乘法", "竖式", "一位数", "进位"],
-    gradient: ["#8B5CF6", "#7C3AED"],
-    icon: "✖",
-  },
+  
   {
     id: "rect-perimeter",
     name: "长方形和正方形周长",
@@ -174,22 +144,7 @@ export const tools: Tool[] = [
     gradient: ["#F97316", "#EA580C"],
     icon: "🧭",
   },
-  {
-    id: "divide-one-digit",
-    name: "除数是一位数的除法",
-    subtitle: "除数是一位数的除法",
-    chapter: "下册 · 第二单元",
-    semester: "下册",
-    unitNum: 2,
-    publisherId: "pep",
-    gradeId: "p3",
-    subjectId: "math",
-    description:
-      "竖式除法分步演示，展示商和余数，逆运算验算，支持2-3位数÷1位数。",
-    tags: ["除法", "竖式", "一位数", "余数"],
-    gradient: ["#EC4899", "#F43F5E"],
-    icon: "➗",
-  },
+  
   {
     id: "area-explore",
     name: "面积的认识",
@@ -226,22 +181,7 @@ export const tools: Tool[] = [
   // ================================================================
   // 上册
   // ================================================================
-  {
-    id: "big-number",
-    name: "大数的认识",
-    subtitle: "大数的认识",
-    chapter: "上册 · 第一单元",
-    semester: "上册",
-    unitNum: 1,
-    publisherId: "pep",
-    gradeId: "p4",
-    subjectId: "math",
-    description:
-      "交互式数位表，从个位到亿位逐位调整，实时显示大数的读法、写法、比较大小和四舍五入。",
-    tags: ["大数", "数位", "读写", "比较"],
-    gradient: ["#F97316", "#EA580C"],
-    icon: "🔢",
-  },
+  
   {
     id: "area-units",
     name: "公顷和平方千米",
@@ -322,22 +262,7 @@ export const tools: Tool[] = [
     gradient: ["#EAB308", "#F59E0B"],
     icon: "➗",
   },
-  {
-    id: "multi-digit",
-    name: "三位数乘两位数",
-    subtitle: "三位数乘两位数",
-    chapter: "上册 · 第四单元",
-    semester: "上册",
-    unitNum: 4,
-    publisherId: "pep",
-    gradeId: "p4",
-    subjectId: "math",
-    description:
-      "输入三位数和两位数，逐步展示竖式计算过程和面积模型，理解乘法分配律在乘法中的应用。",
-    tags: ["乘法", "竖式", "面积模型"],
-    gradient: ["#3B82F6", "#2563EB"],
-    icon: "✖",
-  },
+  
 
   // ================================================================
   // 下册
@@ -422,22 +347,7 @@ export const tools: Tool[] = [
     gradient: ["#F97316", "#EAB308"],
     icon: "✕",
   },
-  {
-    id: "decimal-place",
-    name: "小数的意义与数位",
-    subtitle: "小数的意义和性质",
-    chapter: "下册 · 第四单元",
-    semester: "下册",
-    unitNum: 4,
-    publisherId: "pep",
-    gradeId: "p4",
-    subjectId: "math",
-    description:
-      "数位列逐位增减数字，直观理解个位、十分位、百分位、千分位的计数单位和进率。",
-    tags: ["小数", "数位", "计数单位"],
-    gradient: ["#0EA5E9", "#06B6D4"],
-    icon: "0.1",
-  },
+  
   {
     id: "triangle-classify",
     name: "三角形分类演示",
@@ -782,38 +692,8 @@ export const tools: Tool[] = [
     gradient: ["#F97316", "#EA580C"],
     icon: "½",
   },
-  {
-    id: "frac-compare",
-    name: "分数大小比较",
-    subtitle: "分数的意义和性质",
-    chapter: "下册 · 第四单元",
-    semester: "下册",
-    unitNum: 4,
-    publisherId: "pep",
-    gradeId: "p5",
-    subjectId: "math",
-    description:
-      "输入两个分数，可视化条形对比，展示同分母/同分子/通分三种比较方法。",
-    tags: ["分数", "比较", "通分", "大小"],
-    gradient: ["#EC4899", "#F43F5E"],
-    icon: "↔",
-  },
-  {
-    id: "frac-simplify",
-    name: "约分与通分",
-    subtitle: "分数的意义和性质",
-    chapter: "下册 · 第四单元",
-    semester: "下册",
-    unitNum: 4,
-    publisherId: "pep",
-    gradeId: "p5",
-    subjectId: "math",
-    description:
-      "约分：逐步除以公因数直到最简；通分：求最小公倍数化同分母，分步展示计算过程。",
-    tags: ["约分", "通分", "最简分数", "公倍数"],
-    gradient: ["#22C55E", "#059669"],
-    icon: "✂",
-  },
+  
+  
   {
     id: "frac-add-sub",
     name: "分数加减法",
@@ -898,70 +778,10 @@ export const tools: Tool[] = [
     gradient: ["#0EA5E9", "#06B6D4"],
     icon: "🧭",
   },
-  {
-    id: "frac-word-problem",
-    name: "分数应用题",
-    subtitle: "分数乘法",
-    chapter: "上册 · 第一单元",
-    semester: "上册",
-    unitNum: 1,
-    publisherId: "pep",
-    gradeId: "p6",
-    subjectId: "math",
-    description:
-      "线段图可视化分数应用题，支持求部分、求总量、多少问题和工程问题四种类型。",
-    tags: ["分数", "应用题", "线段图", "工程问题"],
-    gradient: ["#EAB308", "#CA8A04"],
-    icon: "📝",
-  },
-  {
-    id: "frac-divide",
-    name: "分数除法",
-    subtitle: "分数除法",
-    chapter: "上册 · 第三单元",
-    semester: "上册",
-    unitNum: 3,
-    publisherId: "pep",
-    gradeId: "p6",
-    subjectId: "math",
-    description:
-      "分数÷整数、分数÷分数的可视化，动态演示'颠倒相乘'原理，分步显示化简过程。",
-    tags: ["分数", "除法", "倒数", "颠倒相乘"],
-    gradient: ["#EC4899", "#F43F5E"],
-    icon: "➗",
-  },
-  {
-    id: "ratio-explore",
-    name: "比的认识",
-    subtitle: "比",
-    chapter: "上册 · 第四单元",
-    semester: "上册",
-    unitNum: 4,
-    publisherId: "pep",
-    gradeId: "p6",
-    subjectId: "math",
-    description:
-      "拖拽调整比的前后项，化简比、求比值动态展示，条形可视化对比两个量的比例关系。",
-    tags: ["比", "比值", "化简", "比例"],
-    gradient: ["#22C55E", "#16A34A"],
-    icon: "⚖",
-  },
-  {
-    id: "ratio-distribute",
-    name: "按比分配",
-    subtitle: "比",
-    chapter: "上册 · 第四单元",
-    semester: "上册",
-    unitNum: 4,
-    publisherId: "pep",
-    gradeId: "p6",
-    subjectId: "math",
-    description:
-      "输入总量和各部分的比，自动分配并可视化，分步展示解题过程，支持2-6个部分。",
-    tags: ["按比分配", "比的应用", "总量", "分步"],
-    gradient: ["#22C55E", "#059669"],
-    icon: "⚖",
-  },
+  
+  
+  
+  
   {
     id: "circle-props",
     name: "圆的认识",
@@ -1010,22 +830,7 @@ export const tools: Tool[] = [
     gradient: ["#8B5CF6", "#6D28D9"],
     icon: "⭕",
   },
-  {
-    id: "percent-intro",
-    name: "百分数的认识",
-    subtitle: "百分数（一）",
-    chapter: "上册 · 第六单元",
-    semester: "上册",
-    unitNum: 6,
-    publisherId: "pep",
-    gradeId: "p6",
-    subjectId: "math",
-    description:
-      "百分数、分数、小数互转工具，动态对照条可视化，常见百分数对照表。",
-    tags: ["百分数", "分数", "小数", "互转"],
-    gradient: ["#F97316", "#EA580C"],
-    icon: "💯",
-  },
+  
   {
     id: "fan-chart",
     name: "扇形统计图",
@@ -1046,22 +851,7 @@ export const tools: Tool[] = [
   // ================================================================
   // 六年级下册
   // ================================================================
-  {
-    id: "percent-app",
-    name: "百分数应用",
-    subtitle: "百分数（二）",
-    chapter: "下册 · 第二单元",
-    semester: "下册",
-    unitNum: 2,
-    publisherId: "pep",
-    gradeId: "p6",
-    subjectId: "math",
-    description:
-      "折扣、成数、税率、利率的交互计算与可视化，条形图对比原价与现价。",
-    tags: ["折扣", "税率", "利率", "成数"],
-    gradient: ["#F97316", "#EA580C"],
-    icon: "💰",
-  },
+  
   {
     id: "cylinder-explore",
     name: "圆柱的认识",
@@ -1110,22 +900,7 @@ export const tools: Tool[] = [
     gradient: ["#F97316", "#FB923C"],
     icon: "🍦",
   },
-  {
-    id: "proportion-explore",
-    name: "比例的意义",
-    subtitle: "比例",
-    chapter: "下册 · 第四单元",
-    semester: "下册",
-    unitNum: 4,
-    publisherId: "pep",
-    gradeId: "p6",
-    subjectId: "math",
-    description:
-      "拖拽构造比例式，验证内项积=外项积，解比例动画，支持已知三项求第四项。",
-    tags: ["比例", "内项积", "外项积", "解比例"],
-    gradient: ["#22C55E", "#16A34A"],
-    icon: "📐",
-  },
+  
   {
     id: "scale-drawing",
     name: "比例尺应用",
