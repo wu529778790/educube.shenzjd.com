@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>小数的初步认识 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 20px; overflow-y: auto; background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%); display: flex; flex-direction: column; align-items: center; gap: 16px; }
+    .control-panel { background: #f0f9ff; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .preset-btn { padding: 7px 0; border-radius: 8px; font-size: 13px; font-weight: 700; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; width: 100%; }
+    .preset-btn:hover { border-color: #3b82f6; color: #1d4ed8; }
+    canvas { border-radius: 10px; }
+    .numline-wrap { background: #fff; border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 12px; width: 100%; max-width: 560px; }
+    .price-demo { background: #fff; border: 2px solid #3b82f6; border-radius: 12px; padding: 16px; width: 100%; max-width: 560px; }
+    .price-row { display: flex; align-items: center; gap: 12px; margin: 8px 0; font-size: 14px; }
+    .price-row .item { font-size: 24px; }
+    .price-row .tag { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 4px 12px; font-weight: 700; color: #1d4ed8; }
+    .price-row .explain { font-size: 12px; color: #64748b; }
+    .compare-area { background: #fff; border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 16px; width: 100%; max-width: 560px; text-align: center; }
+    .compare-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 8px 0; }
+    .compare-num { font-size: 28px; font-weight: 800; color: #1e293b; min-width: 80px; text-align: center; }
+    .compare-vs { font-size: 16px; font-weight: 700; color: #94a3b8; }
+    .compare-result { font-size: 14px; font-weight: 700; padding: 4px 16px; border-radius: 8px; }
+    .compare-result.bigger { background: #dcfce7; color: #16a34a; }
+    .compare-result.smaller { background: #fef2f2; color: #dc2626; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">0.1 小数的初步认识</div>
+      <div class="edu-toolbar-subtitle">三年级下册 · 第七单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div class="numline-wrap">
+          <div style="font-size:13px;font-weight:700;color:#334155;margin-bottom:8px;text-align:center" id="numlineTitle">数轴 (0 ~ 2)</div>
+          <canvas id="numCanvas" width="520" height="80"></canvas>
+          <div style="text-align:center;margin-top:6px;font-size:12px;color:#64748b" id="numlineHint">点击数轴上的位置查看对应小数</div>
+        </div>
+        <div class="price-demo">
+          <div style="font-size:14px;font-weight:700;color:#334155;margin-bottom:8px;text-align:center">价格中的小数</div>
+          <div class="price-row"><span class="item">🍎</span> 苹果 <span class="tag">¥3.50</span><span class="explain">= 3元5角 = 3元半</span></div>
+          <div class="price-row"><span class="item">📓</span> 笔记本 <span class="tag">¥2.80</span><span class="explain">= 2元8角</span></div>
+          <div class="price-row"><span class="item">✏️</span> 铅笔 <span class="tag">¥1.20</span><span class="explain">= 1元2角</span></div>
+          <div class="price-row"><span class="item">🧃</span> 果汁 <span class="tag">¥4.65</span><span class="explain">= 4元6角5分</span></div>
+        </div>
+        <div class="compare-area">
+          <div style="font-size:14px;font-weight:700;color:#334155;margin-bottom:10px">比较大小</div>
+          <div class="compare-row">
+            <input type="number" id="cmpA" value="0.5" step="0.1" style="width:80px;padding:6px;font-size:18px;font-weight:700;text-align:center;border:1.5px solid #e2e8f0;border-radius:8px" oninput="compare()"/>
+            <span class="compare-vs" id="cmpSymbol">?</span>
+            <input type="number" id="cmpB" value="0.8" step="0.1" style="width:80px;padding:6px;font-size:18px;font-weight:700;text-align:center;border:1.5px solid #e2e8f0;border-radius:8px" oninput="compare()"/>
+          </div>
+          <div id="cmpExplain" style="font-size:12px;color:#64748b;margin-top:6px">输入两个小数比较大小</div>
+        </div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">数轴范围</div>
+          <button class="preset-btn" onclick="setRange(1)">0 ~ 1 (观察小数)</button>
+          <button class="preset-btn" onclick="setRange(2)">0 ~ 2</button>
+          <button class="preset-btn" onclick="setRange(10)">0 ~ 10 (整数+小数)</button>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">标出小数</div>
+          <input type="number" id="markInput" value="0.5" step="0.1" style="width:100%;padding:7px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;font-weight:700;text-align:center" />
+          <button class="preset-btn" onclick="markDecimal()">在数轴上标出</button>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">小数与分数</div>
+          <div class="info-box">
+            <b>小数和分数的关系</b><br/>
+            0.1 = 1/10 (十分之一)<br/>
+            0.2 = 2/10 = 1/5<br/>
+            0.3 = 3/10<br/>
+            0.5 = 5/10 = 1/2 (一半)<br/>
+            0.7 = 7/10<br/>
+            0.9 = 9/10<br/><br/>
+            <b>小数的写法</b><br/>
+            1元2角 = 1.2元<br/>
+            3元5角 = 3.5元<br/>
+            小数点左边是整数，右边是小数
+          </div>
+        </div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">比较大小</div>
+          <div class="info-box">
+            <b>比较方法</b><br/>
+            ① 先比整数部分<br/>
+            ② 整数部分相同，比小数部分<br/>
+            ③ 从左往右逐位比较<br/><br/>
+            例: 2.3 > 1.8 (整数2>1)<br/>
+            例: 0.5 < 0.8 (整数0=0, 5<8)
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const canvas = document.getElementById('numCanvas');
+const ctx = canvas.getContext('2d');
+let range = 2;
+let marker = -1;
+let highlight = 0.5;
+
+function initCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = 520, h = 80;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  draw();
+}
+
+function draw() {
+  const w = 520, h = 80;
+  const pad = 30, lineY = 40;
+  const lineLen = w - pad * 2;
+  ctx.clearRect(0, 0, w, h);
+
+  // main line
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(pad, lineY); ctx.lineTo(pad + lineLen, lineY); ctx.stroke();
+
+  // ticks
+  const step = range <= 2 ? 0.1 : 1;
+  const majorStep = range <= 2 ? 0.5 : 1;
+  for (let v = 0; v <= range; v = Math.round((v + step) * 1000) / 1000) {
+    const x = pad + (v / range) * lineLen;
+    const isMajor = Math.abs(v % majorStep) < 0.001 || Math.abs(v % majorStep - majorStep) < 0.001;
+    const isInt = Math.abs(v % 1) < 0.001;
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = isMajor ? 2 : 1;
+    ctx.beginPath(); ctx.moveTo(x, lineY - (isMajor ? 12 : 6)); ctx.lineTo(x, lineY + (isMajor ? 12 : 6)); ctx.stroke();
+    if (isInt || (range <= 2 && isMajor)) {
+      ctx.fillStyle = '#334155';
+      ctx.font = `${isInt ? 'bold ' : ''}11px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(Number.isInteger(v) ? v.toString() : v.toFixed(1), x, lineY + 24);
+    }
+  }
+
+  // highlight bar
+  if (highlight >= 0 && highlight <= range) {
+    const hx = pad + (highlight / range) * lineLen;
+    ctx.fillStyle = 'rgba(59,130,246,0.15)';
+    ctx.beginPath(); ctx.arc(hx, lineY, 16, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#3b82f6';
+    ctx.beginPath(); ctx.arc(hx, lineY, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1d4ed8';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(highlight.toFixed(range <= 2 ? 1 : 0), hx, lineY - 20);
+  }
+
+  // marker from user
+  if (marker >= 0 && marker <= range) {
+    const mx = pad + (marker / range) * lineLen;
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.moveTo(mx, lineY - 28); ctx.lineTo(mx - 6, lineY - 38); ctx.lineTo(mx + 6, lineY - 38); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(marker.toFixed(2), mx, lineY - 40);
+  }
+
+  // start/end arrows
+  ctx.fillStyle = '#334155';
+  ctx.beginPath(); ctx.moveTo(pad - 4, lineY); ctx.lineTo(pad + 4, lineY - 5); ctx.lineTo(pad + 4, lineY + 5); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(pad + lineLen + 4, lineY); ctx.lineTo(pad + lineLen - 4, lineY - 5); ctx.lineTo(pad + lineLen - 4, lineY + 5); ctx.closePath(); ctx.fill();
+}
+
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const pad = 30, lineLen = 520 - 60;
+  const val = Math.round(((x - pad) / lineLen * range) * 10) / 10;
+  if (val >= 0 && val <= range) { highlight = val; draw(); }
+});
+
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const pad = 30, lineLen = 520 - 60;
+  const val = Math.round(((x - pad) / lineLen * range) * 10) / 10;
+  if (val >= 0 && val <= range) {
+    document.getElementById('numlineHint').textContent = `当前: ${val} ${range <= 2 ? '= ' + (val * 10).toFixed(0) + '/10' : ''}`;
+  }
+});
+
+function setRange(r) {
+  range = r;
+  document.getElementById('numlineTitle').textContent = `数轴 (0 ~ ${r})`;
+  highlight = Math.min(highlight, r); marker = -1; draw();
+}
+
+function markDecimal() {
+  const v = parseFloat(document.getElementById('markInput').value);
+  if (v >= 0 && v <= range) { marker = v; highlight = v; draw(); }
+}
+
+function compare() {
+  const a = parseFloat(document.getElementById('cmpA').value);
+  const b = parseFloat(document.getElementById('cmpB').value);
+  const sym = document.getElementById('cmpSymbol');
+  const exp = document.getElementById('cmpExplain');
+  if (isNaN(a) || isNaN(b)) { sym.textContent = '?'; exp.textContent = ''; return; }
+  if (a > b) { sym.textContent = '>'; sym.style.color = '#16a34a'; exp.innerHTML = `<span style="color:#16a34a">${a} 大于 ${b}</span> — 先比整数${Math.floor(a)===Math.floor(b)?'部分相同比小数部分':''}`; }
+  else if (a < b) { sym.textContent = '<'; sym.style.color = '#dc2626'; exp.innerHTML = `<span style="color:#dc2626">${a} 小于 ${b}</span> — 先比整数${Math.floor(a)===Math.floor(b)?'部分相同比小数部分':''}`; }
+  else { sym.textContent = '='; sym.style.color = '#eab308'; exp.textContent = `${a} 等于 ${b}`; }
+}
+
+function resetAll() { setRange(2); highlight = 0.5; marker = -1; draw(); document.getElementById('cmpA').value = 0.5; document.getElementById('cmpB').value = 0.8; compare(); }
+
+initCanvas();
+compare();
+</script>
+</body>
+</html>

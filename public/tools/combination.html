@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>搭配问题 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 20px; overflow-y: auto; background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); display: flex; flex-direction: column; align-items: center; gap: 16px; }
+    .control-panel { background: #fff7ed; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #fed7aa; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .preset-btn { padding: 7px 0; border-radius: 8px; font-size: 13px; font-weight: 700; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; width: 100%; }
+    .preset-btn:hover { border-color: #f97316; color: #ea580c; }
+    canvas { border-radius: 10px; background: #fff; }
+    .result-bar { background: #fff; border: 2px solid #f97316; border-radius: 12px; padding: 12px 20px; text-align: center; width: 100%; max-width: 560px; }
+    .result-bar .formula { font-size: 16px; font-weight: 800; color: #1e293b; }
+    .result-bar .total { font-size: 28px; font-weight: 800; color: #f97316; margin: 4px 0; }
+    .result-bar .detail { font-size: 12px; color: #64748b; }
+    .tab-bar { display: flex; gap: 8px; }
+    .tab-btn { padding: 6px 14px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .tab-btn.active { background: #f97316; color: #fff; border-color: #f97316; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">👔 搭配问题</div>
+      <div class="edu-toolbar-subtitle">三年级下册 · 数学广角</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="switchScene('clothes')">衣服搭配</button>
+          <button class="tab-btn" onclick="switchScene('lunch')">午餐搭配</button>
+          <button class="tab-btn" onclick="switchScene('path')">路线搭配</button>
+        </div>
+        <canvas id="treeCanvas" width="520" height="360"></canvas>
+        <div class="result-bar">
+          <div class="formula" id="formulaText">2 件上衣 × 3 条裤子</div>
+          <div class="total" id="totalText">= 6 种搭配</div>
+          <div class="detail" id="detailText">每件上衣有3种选择，共2×3=6种</div>
+        </div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">调整数量</div>
+          <div style="font-size:12px;color:#64748b">A组数量: <span id="countA">2</span></div>
+          <input type="range" id="sliderA" min="1" max="5" value="2" style="width:100%" oninput="updateCount()"/>
+          <div style="font-size:12px;color:#64748b">B组数量: <span id="countB">3</span></div>
+          <input type="range" id="sliderB" min="1" max="5" value="3" style="width:100%" oninput="updateCount()"/>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设场景</div>
+          <button class="preset-btn" onclick="loadPreset('clothes',2,3)">👕 衣服: 2上×3裤</button>
+          <button class="preset-btn" onclick="loadPreset('clothes',3,2)">👕 衣服: 3上×2裤</button>
+          <button class="preset-btn" onclick="loadPreset('lunch',3,4)">🍱 午餐: 3主食×4菜</button>
+          <button class="preset-btn" onclick="loadPreset('path',2,3)">🛤️ 路线: 2路×3桥</button>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">搭配知识</div>
+          <div class="info-box">
+            <b>搭配公式</b><br/>
+            总搭配数 = A的种数 × B的种数<br/><br/>
+            <b>有序思考方法</b><br/>
+            ① 先选定A的第一种，配B的所有<br/>
+            ② 再选A的第二种，配B的所有<br/>
+            ③ 依次类推，做到不重不漏<br/><br/>
+            <b>注意</b><br/>
+            ● 要按顺序列举，不重复不遗漏<br/>
+            ● 连线法帮助理清思路<br/>
+            ● 树形图展示所有可能
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const canvas = document.getElementById('treeCanvas');
+const ctx = canvas.getContext('2d');
+let scene = 'clothes';
+let nA = 2, nB = 3;
+
+const SCENES = {
+  clothes: { aName: '上衣', bName: '裤子', aIcons: ['👕','👚','🧥','👔','🎽'], bIcons: ['👖','👗','🩳','🎒','👢'], aColors: ['#ef4444','#3b82f6','#22c55e','#a855f7','#f59e0b'], bColors: ['#6366f1','#14b8a6','#f43f5e','#84cc16','#ec4899'] },
+  lunch: { aName: '主食', bName: '菜品', aIcons: ['🍚','🍜','🥟','🥪','🌯'], bIcons: ['🥩','🍗','🥬','🐟','🥚'], aColors: ['#f59e0b','#ef4444','#22c55e','#3b82f6','#a855f7'], bColors: ['#dc2626','#f97316','#16a34a','#0ea5e9','#8b5cf6'] },
+  path: { aName: '出发路线', bName: '到达路线', aIcons: ['A','B','C','D','E'], bIcons: ['X','Y','Z','W','V'], aColors: ['#3b82f6','#22c55e','#f59e0b','#ef4444','#a855f7'], bColors: ['#f97316','#14b8a6','#ec4899','#6366f1','#84cc16'] }
+};
+
+function initCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = 520, h = 360;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  draw();
+}
+
+function draw() {
+  const w = 520, h = 360;
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, w, h);
+
+  const s = SCENES[scene];
+  const leftX = 80, rightX = w - 80;
+  const startY = 40, endY = h - 30;
+  const aGap = Math.min(60, (endY - startY) / (nA + 1));
+  const totalBHeight = (nB - 1) * Math.min(45, (endY - startY) / nB);
+  const aStartY = startY + ((endY - startY) - (nA - 1) * aGap) / 2;
+
+  // title
+  ctx.fillStyle = '#64748b';
+  ctx.font = '12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(s.aName, leftX, startY - 8);
+  ctx.fillText(s.bName, rightX, startY - 8);
+
+  // draw A items
+  for (let i = 0; i < nA; i++) {
+    const y = aStartY + i * aGap;
+    // icon circle
+    ctx.fillStyle = s.aColors[i % s.aColors.length];
+    ctx.beginPath(); ctx.arc(leftX, y, 22, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = '18px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(s.aIcons[i % s.aIcons.length], leftX, y);
+
+    // draw B items and lines
+    const bGap = totalBHeight / Math.max(nB - 1, 1);
+    const bStartY = aStartY + ((nA - 1) * aGap) / 2 - totalBHeight / 2;
+    for (let j = 0; j < nB; j++) {
+      const by = bStartY + j * bGap;
+      // draw line
+      ctx.strokeStyle = s.aColors[i % s.aColors.length] + '40';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(leftX + 24, y); ctx.lineTo(rightX - 24, by); ctx.stroke();
+
+      // B circle (draw once per j, last A loop)
+      if (i === nA - 1) {
+        ctx.fillStyle = s.bColors[j % s.bColors.length];
+        ctx.beginPath(); ctx.arc(rightX, by, 22, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = '18px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(s.bIcons[j % s.bIcons.length], rightX, by);
+
+        // label
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '10px sans-serif';
+        ctx.textBaseline = 'top';
+        ctx.fillText(`${j + 1}`, rightX, by + 24);
+      }
+    }
+
+    // A label
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10px sans-serif';
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${i + 1}`, leftX, y + 24);
+  }
+
+  // combination count in center
+  const total = nA * nB;
+  ctx.fillStyle = '#f97316';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`${nA}×${nB}=${total}种`, w / 2, startY - 8);
+
+  ctx.textBaseline = 'alphabetic';
+}
+
+function updateCount() {
+  nA = parseInt(document.getElementById('sliderA').value);
+  nB = parseInt(document.getElementById('sliderB').value);
+  document.getElementById('countA').textContent = nA;
+  document.getElementById('countB').textContent = nB;
+  updateResult();
+  draw();
+}
+
+function updateResult() {
+  const s = SCENES[scene];
+  const total = nA * nB;
+  document.getElementById('formulaText').textContent = `${nA} 个${s.aName} × ${nB} 个${s.bName}`;
+  document.getElementById('totalText').textContent = `= ${total} 种搭配`;
+  document.getElementById('detailText').textContent = `每个${s.aName}有${nB}种选择，共${nA}×${nB}=${total}种`;
+}
+
+function switchScene(name) {
+  scene = name;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  updateResult();
+  draw();
+}
+
+function loadPreset(name, a, b) {
+  scene = name;
+  nA = a; nB = b;
+  document.getElementById('sliderA').value = a;
+  document.getElementById('sliderB').value = b;
+  document.getElementById('countA').textContent = a;
+  document.getElementById('countB').textContent = b;
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.includes(name === 'clothes' ? '衣服' : name === 'lunch' ? '午餐' : '路线'));
+  });
+  updateResult();
+  draw();
+}
+
+function resetAll() {
+  loadPreset('clothes', 2, 3);
+}
+
+initCanvas();
+updateResult();
+</script>
+</body>
+</html>

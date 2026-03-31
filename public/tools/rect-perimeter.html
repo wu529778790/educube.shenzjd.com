@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>长方形和正方形·周长 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+  <style>
+    .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; }
+    .canvas-area { padding:24px; overflow-y:auto; background:linear-gradient(135deg,#eff6ff,#e0f2fe); display:flex; flex-direction:column; align-items:center; }
+    .control-panel { background:#f8fafc; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:12px; overflow:auto; }
+    .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+    .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+    .divider { height:1px; background:#e2e8f0; }
+    .info-box { background:#fff; border:1px solid #bfdbfe; border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.9; color:#334155; }
+    .info-box strong { color:#0EA5E9; }
+    .slider-row { display:flex; align-items:center; gap:8px; }
+    .slider-row input[type=range] { flex:1; }
+    .slider-row .val { font-size:14px; font-weight:700; color:#0EA5E9; min-width:30px; text-align:right; }
+    canvas { border-radius:12px; background:#fff; }
+    .formula-box { background:linear-gradient(135deg,#3B82F6,#0EA5E9); color:#fff; border-radius:12px; padding:14px 20px; text-align:center; margin-top:12px; font-weight:700; font-size:15px; line-height:1.8; }
+    .preset-btn { padding:8px 0; border-radius:8px; font-size:13px; font-weight:600; background:#fff; border:1.5px solid #e2e8f0; cursor:pointer; transition:all .15s; }
+    .preset-btn:hover { border-color:#0EA5E9; color:#0EA5E9; }
+    .mode-btn { padding:6px 14px; border-radius:8px; border:1.5px solid #e2e8f0; background:#fff; font-size:13px; cursor:pointer; font-weight:600; transition:all .15s; }
+    .mode-btn.active { background:#3B82F6; color:#fff; border-color:#3B82F6; }
+    .mode-tab { display:flex; gap:6px; margin-bottom:12px; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">▭ 长方形和正方形·周长</div>
+      <div class="edu-toolbar-subtitle">上册 · 第七单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div class="mode-tab">
+          <button class="mode-btn active" id="modeRect" onclick="setMode('rect')">长方形</button>
+          <button class="mode-btn" id="modeSquare" onclick="setMode('square')">正方形</button>
+        </div>
+        <canvas id="cvs" width="420" height="280"></canvas>
+        <div class="formula-box" id="formulaBox"></div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">长（厘米）</div>
+          <div class="slider-row"><input type="range" id="slL" min="1" max="20" value="6" oninput="update()"/><span class="val" id="vlL">6</span></div>
+        </div>
+        <div class="ctrl-section" id="widthSection">
+          <div class="ctrl-label">宽（厘米）</div>
+          <div class="slider-row"><input type="range" id="slW" min="1" max="20" value="4" oninput="update()"/><span class="val" id="vlW">4</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设形状</div>
+          <button class="preset-btn" onclick="loadPreset(21,15)">课本封面 (21×15)</button>
+          <button class="preset-btn" onclick="loadPreset(12,6)">课桌面 (12×6)</button>
+          <button class="preset-btn" onclick="loadPreset(10,8)">相框 (10×8)</button>
+          <button class="preset-btn" onclick="loadSquare(8)">正方形地砖 (边长8)</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <strong>周长公式</strong><br/>
+          ● 长方形：P = (长+宽)×2<br/>
+          ● 正方形：P = 边长×4<br/>
+          ● 周长是围成图形一周的长度<br/>
+          ● 单位：厘米(cm)、分米(dm)、米(m)
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const cvs = document.getElementById('cvs');
+const ctx = cvs.getContext('2d');
+let mode = 'rect';
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('modeRect').classList.toggle('active', m === 'rect');
+  document.getElementById('modeSquare').classList.toggle('active', m === 'square');
+  document.getElementById('widthSection').style.display = m === 'square' ? 'none' : '';
+  update();
+}
+
+function update() {
+  let l = parseInt(document.getElementById('slL').value);
+  const w = mode === 'square' ? l : parseInt(document.getElementById('slW').value);
+  if (mode === 'square') { document.getElementById('slW').value = l; }
+  document.getElementById('vlL').textContent = l;
+  document.getElementById('vlW').textContent = w;
+  draw(l, w);
+  showFormula(l, w);
+}
+
+function draw(l, w) {
+  const W = cvs.width, H = cvs.height;
+  ctx.clearRect(0, 0, W, H);
+  const scale = Math.min((W - 140) / l, (H - 120) / w, 30);
+  const rw = l * scale, rh = w * scale;
+  const rx = (W - rw) / 2, ry = (H - rh) / 2;
+
+  // Shadow
+  ctx.fillStyle = '#e2e8f0';
+  ctx.fillRect(rx + 4, ry + 4, rw, rh);
+
+  // Fill
+  ctx.fillStyle = '#dbeafe';
+  ctx.fillRect(rx, ry, rw, rh);
+
+  // Border with gradient stroke
+  ctx.strokeStyle = '#3B82F6';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(rx, ry, rw, rh);
+
+  // Corner dots
+  [[rx,ry],[rx+rw,ry],[rx+rw,ry+rh],[rx,ry+rh]].forEach(([x,y]) => {
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2);
+    ctx.fillStyle = '#3B82F6'; ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+  });
+
+  // Dimension labels
+  ctx.fillStyle = '#1e293b'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  // Top: length
+  ctx.fillText(`${l} cm`, rx + rw/2, ry - 16);
+  drawArrow(ctx, rx, ry - 8, rx + rw, ry - 8);
+  // Right: width
+  ctx.save(); ctx.translate(rx + rw + 20, ry + rh/2);
+  ctx.rotate(Math.PI/2); ctx.fillText(`${w} cm`, 0, 0); ctx.restore();
+  drawArrow(ctx, rx + rw + 12, ry, rx + rw + 12, ry + rh);
+
+  // Perimeter highlight on edges
+  const peri = mode === 'square' ? l * 4 : (l + w) * 2;
+  ctx.fillStyle = '#0EA5E9'; ctx.font = 'bold 13px sans-serif';
+  ctx.fillText(`周长 = ${peri} cm`, rx + rw/2, ry + rh/2);
+}
+
+function drawArrow(ctx, x1, y1, x2, y2) {
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+  ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1; ctx.setLineDash([4,3]); ctx.stroke();
+  ctx.setLineDash([]);
+  // arrowheads
+  const sz = 5, dx = x2-x1, dy = y2-y1, len = Math.sqrt(dx*dx+dy*dy);
+  if (len < 10) return;
+  const ux = dx/len, uy = dy/len;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x1+sz*(ux+uy*0.5), y1+sz*(uy-ux*0.5));
+  ctx.moveTo(x1,y1); ctx.lineTo(x1+sz*(ux-uy*0.5), y1+sz*(uy+ux*0.5));
+  ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-sz*(ux-uy*0.5), y2-sz*(uy+ux*0.5));
+  ctx.moveTo(x2,y2); ctx.lineTo(x2-sz*(ux+uy*0.5), y2-sz*(uy-ux*0.5));
+  ctx.stroke();
+}
+
+function showFormula(l, w) {
+  const box = document.getElementById('formulaBox');
+  if (mode === 'square') {
+    const p = l * 4;
+    box.innerHTML = `正方形周长<br/>P = 边长 × 4 = ${l} × 4 = <span style="font-size:22px">${p}</span> cm`;
+  } else {
+    const s = l + w, p = s * 2;
+    box.innerHTML = `长方形周长<br/>P = (长 + 宽) × 2 = (${l} + ${w}) × 2 = ${s} × 2 = <span style="font-size:22px">${p}</span> cm`;
+  }
+}
+
+function loadPreset(l, w) { setMode('rect'); document.getElementById('slL').value = l; document.getElementById('slW').value = w; update(); }
+function loadSquare(s) { setMode('square'); document.getElementById('slL').value = s; update(); }
+function resetAll() { setMode('rect'); document.getElementById('slL').value = 6; document.getElementById('slW').value = 4; update(); }
+update();
+</script>
+</body>
+</html>

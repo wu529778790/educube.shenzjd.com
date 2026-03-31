@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>复式统计表 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 280px; height: 100%; }
+    .canvas-area { padding: 16px; overflow-y: auto; background: linear-gradient(135deg, #ecfeff 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; gap: 16px; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #a5f3fc; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #06b6d4; color: #06b6d4; }
+    /* table */
+    .stat-table { border-collapse: collapse; font-size: 13px; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .stat-table th, .stat-table td { border: 1px solid #e2e8f0; padding: 8px 14px; text-align: center; }
+    .stat-table th { background: #06b6d4; color: #fff; font-weight: 700; font-size: 12px; }
+    .stat-table th.group-top { background: #0ea5e9; }
+    .stat-table td input { width: 40px; text-align: center; border: none; font-size: 14px; font-weight: 600; background: transparent; outline: none; font-family: var(--edu-font); }
+    .stat-table td input:focus { background: #ecfeff; border-radius: 4px; }
+    .stat-table .total-row td, .stat-table .total-col { background: #f0fdfa; font-weight: 700; color: #0e7490; }
+    .stat-table .corner-th { background: #0e7490; }
+    /* chart */
+    .chart-wrap { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); width: 100%; max-width: 560px; }
+    .chart-title { font-size: 14px; font-weight: 700; color: #1e293b; text-align: center; margin-bottom: 8px; }
+    .bar-group { display: flex; align-items: flex-end; justify-content: center; gap: 16px; height: 160px; padding: 0 12px; border-bottom: 2px solid #e2e8f0; }
+    .bar-col { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 40px; }
+    .bar-stack { display: flex; flex-direction: column-reverse; gap: 1px; }
+    .bar-seg { border-radius: 3px; min-height: 2px; transition: height 0.3s; }
+    .bar-val { font-size: 10px; font-weight: 700; }
+    .bar-lbl { font-size: 11px; color: #64748b; margin-top: 6px; white-space: nowrap; }
+    .legend { display: flex; justify-content: center; gap: 16px; margin-top: 10px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">📊 复式统计表</div>
+      <div class="edu-toolbar-subtitle">下册 · 第三单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div id="tableArea"></div>
+        <div class="chart-wrap" id="chartArea"></div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设数据</div>
+          <button class="preset-btn" onclick="loadPreset('sport')">班级运动偏好</button>
+          <button class="preset-btn" onclick="loadPreset('food')">最喜欢的食物</button>
+          <button class="preset-btn" onclick="loadPreset('season')">最喜欢的季节</button>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">统计摘要</div>
+          <div class="info-box" id="summary">
+            <div>合计：<strong>—</strong></div>
+            <div>男生最多：<strong>—</strong></div>
+            <div>女生最多：<strong>—</strong></div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>复式统计表</b><br/>
+          ● 可以同时统计两个分类维度<br/>
+          ● 横向和纵向分别表示不同分类<br/>
+          ● 行合计与列合计帮助分析<br/>
+          ● 便于比较不同类别的差异
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const COLORS = ['#3b82f6', '#f43f5e', '#22c55e', '#f97316', '#8b5cf6'];
+
+const PRESETS = {
+  sport: {
+    title: '三(1)班同学最喜欢的运动',
+    groups: ['男生', '女生'],
+    cols: ['足球', '篮球', '乒乓球', '跳绳', '游泳'],
+    data: [[8, 5, 6, 3, 4], [2, 3, 7, 8, 5]]
+  },
+  food: {
+    title: '三(2)班同学最喜欢的食物',
+    groups: ['男生', '女生'],
+    cols: ['米饭', '面条', '汉堡', '水果', '蔬菜'],
+    data: [[10, 6, 8, 4, 2], [7, 5, 4, 9, 5]]
+  },
+  season: {
+    title: '三(1)班同学最喜欢的季节',
+    groups: ['男生', '女生'],
+    cols: ['春天', '夏天', '秋天', '冬天'],
+    data: [[6, 9, 5, 7], [8, 7, 6, 4]]
+  }
+};
+
+let cur = JSON.parse(JSON.stringify(PRESETS.sport));
+
+function buildTable() {
+  const t = cur;
+  const gLen = t.groups.length, cLen = t.cols.length;
+  let html = `<table class="stat-table"><thead><tr>`;
+  html += `<th class="corner-th" rowspan="2" colspan="2">分类</th>`;
+  html += `<th colspan="${cLen}">运动项目</th><th class="total-col" rowspan="2">合计</th></tr><tr>`;
+  t.cols.forEach(c => html += `<th class="group-top">${c}</th>`);
+  html += `</tr></thead><tbody>`;
+  t.data.forEach((row, gi) => {
+    html += `<tr><th>${t.groups[gi]}</th>`;
+    let rowSum = 0;
+    row.forEach((v, ci) => {
+      rowSum += v;
+      html += `<td><input value="${v}" data-g="${gi}" data-c="${ci}" oninput="onEdit(this)"/></td>`;
+    });
+    html += `<td class="total-col">${rowSum}</td></tr>`;
+  });
+  // total row
+  html += `<tr class="total-row"><td>合计</td>`;
+  let grandTotal = 0;
+  for (let ci = 0; ci < cLen; ci++) {
+    let colSum = 0;
+    t.data.forEach(row => colSum += row[ci]);
+    html += `<td>${colSum}</td>`;
+    grandTotal += colSum;
+  }
+  html += `<td style="color:#0e7490;font-size:16px">${grandTotal}</td></tr>`;
+  html += `</tbody></table>`;
+  document.getElementById('tableArea').innerHTML = html;
+}
+
+function onEdit(el) {
+  const g = parseInt(el.dataset.g), c = parseInt(el.dataset.c);
+  cur.data[g][c] = Math.max(0, parseInt(el.value) || 0);
+  buildTable(); buildChart(); buildSummary();
+}
+
+function buildChart() {
+  const t = cur;
+  const maxVal = Math.max(...t.data.flat(), 1);
+  let html = `<div class="chart-title">${t.title}</div><div class="bar-group">`;
+  t.cols.forEach((col, ci) => {
+    html += `<div class="bar-col"><div class="bar-stack">`;
+    t.data.forEach((row, gi) => {
+      const h = (row[ci] / maxVal) * 120;
+      html += `<div class="bar-seg" style="height:${h}px;background:${COLORS[gi % COLORS.length]};width:28px"></div>`;
+    });
+    html += `</div><div class="bar-lbl">${col}</div></div>`;
+  });
+  html += `</div><div class="legend">`;
+  t.groups.forEach((g, gi) => {
+    html += `<div class="legend-item"><div class="legend-dot" style="background:${COLORS[gi]}"></div>${g}</div>`;
+  });
+  html += `</div>`;
+  document.getElementById('chartArea').innerHTML = html;
+}
+
+function buildSummary() {
+  const t = cur;
+  const totals = t.data.map(row => row.reduce((a, b) => a + b, 0));
+  const grandTotal = totals.reduce((a, b) => a + b, 0);
+  const colTotals = t.cols.map((_, ci) => t.data.reduce((s, row) => s + row[ci], 0));
+  const maxBoy = t.cols[ t.data[0].indexOf(Math.max(...t.data[0])) ];
+  const maxGirl = t.cols[ t.data[1].indexOf(Math.max(...t.data[1])) ];
+  document.getElementById('summary').innerHTML =
+    `<div>总人数：<strong>${grandTotal}</strong></div>` +
+    `<div>男生最多：<strong>${maxBoy}（${Math.max(...t.data[0])}人）</strong></div>` +
+    `<div>女生最多：<strong>${maxGirl}（${Math.max(...t.data[1])}人）</strong></div>`;
+}
+
+function loadPreset(key) {
+  cur = JSON.parse(JSON.stringify(PRESETS[key]));
+  buildTable(); buildChart(); buildSummary();
+}
+
+function resetAll() { loadPreset('sport'); }
+
+loadPreset('sport');
+</script>
+</body>
+</html>

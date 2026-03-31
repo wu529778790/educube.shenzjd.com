@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>集合·韦恩图 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+  <style>
+    .main-layout { display:grid; grid-template-columns:1fr 280px; height:100%; }
+    .canvas-area { padding:24px; overflow-y:auto; background:linear-gradient(135deg,#ecfeff,#e0f2fe); display:flex; flex-direction:column; align-items:center; }
+    .control-panel { background:#f8fafc; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:12px; overflow:auto; }
+    .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+    .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+    .divider { height:1px; background:#e2e8f0; }
+    .info-box { background:#fff; border:1px solid #a5f3fc; border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.8; color:#334155; }
+    .info-box strong { color:#0891b2; }
+    canvas { border-radius:12px; background:#fff; }
+    .tag-input { display:flex; gap:6px; }
+    .tag-input input { flex:1; padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; }
+    .tag-input input:focus { border-color:#06B6D4; outline:none; }
+    .tag-input button { padding:6px 12px; border-radius:8px; background:#06B6D4; color:#fff; border:none; font-size:13px; font-weight:600; cursor:pointer; }
+    .tag-list { display:flex; flex-wrap:wrap; gap:4px; min-height:24px; }
+    .tag { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px; font-size:12px; font-weight:600; cursor:default; }
+    .tag-a { background:#cffafe; color:#0e7490; }
+    .tag-b { background:#e0e7ff; color:#4338ca; }
+    .tag .del { cursor:pointer; font-weight:800; margin-left:2px; }
+    .tag .del:hover { color:#ef4444; }
+    .preset-btn { padding:8px 0; border-radius:8px; font-size:13px; font-weight:600; background:#fff; border:1.5px solid #e2e8f0; cursor:pointer; transition:all .15s; }
+    .preset-btn:hover { border-color:#06B6D4; color:#06B6D4; }
+    .stat-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .stat-item { padding:6px 12px; border-radius:8px; font-size:13px; font-weight:700; }
+    .stat-a { background:#cffafe; color:#0e7490; }
+    .stat-b { background:#e0e7ff; color:#4338ca; }
+    .stat-ab { background:#fef3c7; color:#92400e; }
+    .stat-total { background:#dcfce7; color:#166534; }
+    .formula-box { background:linear-gradient(135deg,#06B6D4,#0EA5E9); color:#fff; border-radius:10px; padding:10px 16px; text-align:center; font-weight:700; font-size:14px; margin-top:8px; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">⭕ 集合·韦恩图</div>
+      <div class="edu-toolbar-subtitle">上册 · 数学广角</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="cvs" width="500" height="320"></canvas>
+        <div class="stat-row" id="stats"></div>
+        <div class="formula-box" id="formulaBox"></div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">集合 A（输入后回车添加）</div>
+          <div class="tag-input"><input id="inA" placeholder="输入姓名" onkeydown="if(event.key==='Enter')addA()"/><button onclick="addA()">添加</button></div>
+          <div class="tag-list" id="tagsA"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">集合 B（输入后回车添加）</div>
+          <div class="tag-input"><input id="inB" placeholder="输入姓名" onkeydown="if(event.key==='Enter')addB()"/><button onclick="addB()">添加</button></div>
+          <div class="tag-list" id="tagsB"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设</div>
+          <button class="preset-btn" onclick="loadPreset('sport')">参加运动会</button>
+          <button class="preset-btn" onclick="loadPreset('fruit')">水果偏好调查</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <strong>集合与韦恩图</strong><br/>
+          ● 韦恩图用来表示集合关系<br/>
+          ● 重叠部分是两个集合的交集<br/>
+          ● 总人数 = A + B - 重复<br/>
+          ● 只A = A中减去重复人数<br/>
+          ● 只B = B中减去重复人数
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const cvs = document.getElementById('cvs');
+const ctx = cvs.getContext('2d');
+let setA = ['小明','小红','小刚','小丽'];
+let setB = ['小红','小刚','小华','小强'];
+
+function addA() {
+  const v = document.getElementById('inA').value.trim();
+  if (v && !setA.includes(v)) { setA.push(v); document.getElementById('inA').value = ''; update(); }
+}
+function addB() {
+  const v = document.getElementById('inB').value.trim();
+  if (v && !setB.includes(v)) { setB.push(v); document.getElementById('inB').value = ''; update(); }
+}
+function removeA(i) { setA.splice(i,1); update(); }
+function removeB(i) { setB.splice(i,1); update(); }
+
+function update() {
+  renderTags();
+  draw();
+  showStats();
+}
+
+function renderTags() {
+  document.getElementById('tagsA').innerHTML = setA.map((t,i) =>
+    `<span class="tag tag-a">${t}<span class="del" onclick="removeA(${i})">×</span></span>`).join('');
+  document.getElementById('tagsB').innerHTML = setB.map((t,i) =>
+    `<span class="tag tag-b">${t}<span class="del" onclick="removeB(${i})">×</span></span>`).join('');
+}
+
+function draw() {
+  const W = cvs.width, H = cvs.height;
+  ctx.clearRect(0, 0, W, H);
+  const both = setA.filter(x => setB.includes(x));
+  const onlyA = setA.filter(x => !setB.includes(x));
+  const onlyB = setB.filter(x => !setA.includes(x));
+  const cx1 = W/2 - 70, cx2 = W/2 + 70, cy = H/2, r = 110;
+
+  // Circle A
+  ctx.beginPath(); ctx.arc(cx1, cy, r, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(6,182,212,0.15)'; ctx.fill();
+  ctx.strokeStyle = '#06B6D4'; ctx.lineWidth = 2.5; ctx.stroke();
+
+  // Circle B
+  ctx.beginPath(); ctx.arc(cx2, cy, r, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(99,102,241,0.12)'; ctx.fill();
+  ctx.strokeStyle = '#6366f1'; ctx.lineWidth = 2.5; ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = '#0891b2'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('集合 A', cx1, cy - r - 12);
+  ctx.fillText(`(${setA.length}人)`, cx1, cy - r + 2);
+  ctx.fillStyle = '#4338ca';
+  ctx.fillText('集合 B', cx2, cy - r - 12);
+  ctx.fillText(`(${setB.length}人)`, cx2, cy - r + 2);
+
+  // Items in onlyA region (left)
+  ctx.fillStyle = '#0e7490'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+  onlyA.forEach((t,i) => ctx.fillText(t, cx1 - 40, cy - 20 + i*22));
+
+  // Items in intersection
+  ctx.fillStyle = '#92400e'; ctx.font = 'bold 13px sans-serif';
+  both.forEach((t,i) => ctx.fillText(t, (cx1+cx2)/2, cy - 20 + i*22));
+
+  // Items in onlyB
+  ctx.fillStyle = '#4338ca'; ctx.font = '13px sans-serif';
+  onlyB.forEach((t,i) => ctx.fillText(t, cx2 + 40, cy - 20 + i*22));
+}
+
+function showStats() {
+  const both = setA.filter(x => setB.includes(x));
+  const onlyA = setA.filter(x => !setB.includes(x));
+  const onlyB = setB.filter(x => !setA.includes(x));
+  const total = onlyA.length + onlyB.length + both.length;
+
+  document.getElementById('stats').innerHTML =
+    `<span class="stat-item stat-a">仅A: ${onlyA.length}人</span>` +
+    `<span class="stat-item stat-ab">重叠: ${both.length}人</span>` +
+    `<span class="stat-item stat-b">仅B: ${onlyB.length}人</span>` +
+    `<span class="stat-item stat-total">总计: ${total}人</span>`;
+
+  document.getElementById('formulaBox').innerHTML =
+    `总人数 = ${setA.length} + ${setB.length} - ${both.length} = <span style="font-size:20px">${total}</span> 人`;
+}
+
+function loadPreset(type) {
+  if (type === 'sport') {
+    setA = ['小明','小红','小刚','小丽'];
+    setB = ['小红','小刚','小华','小强'];
+  } else {
+    setA = ['苹果','香蕉','橘子','草莓'];
+    setB = ['香蕉','草莓','西瓜','葡萄','芒果'];
+  }
+  update();
+}
+
+function resetAll() { loadPreset('sport'); }
+update();
+</script>
+</body>
+</html>

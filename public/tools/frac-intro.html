@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>分数的初步认识 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+  <style>
+    .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; }
+    .canvas-area { padding:24px; overflow-y:auto; background:linear-gradient(135deg,#fdf2f8,#fce7f3); display:flex; flex-direction:column; align-items:center; }
+    .control-panel { background:#fdfaf4; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:12px; overflow:auto; }
+    .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+    .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+    .divider { height:1px; background:#e2e8f0; }
+    .info-box { background:#fff; border:1px solid #fbcfe8; border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.8; color:#334155; }
+    .info-box strong { color:#EC4899; }
+    .slider-row { display:flex; align-items:center; gap:8px; }
+    .slider-row input[type=range] { flex:1; }
+    .slider-row .val { font-size:14px; font-weight:700; color:#EC4899; min-width:24px; text-align:right; }
+    canvas { border-radius:12px; background:#fff; }
+    .frac-big { font-size:48px; font-weight:800; font-family:'Courier New',monospace; color:#EC4899; text-align:center; margin:12px 0; }
+    .frac-big .fl { display:block; width:70px; height:4px; background:#334155; border-radius:2px; margin:4px auto; }
+    .compare-row { display:flex; align-items:center; gap:10px; font-size:22px; font-weight:800; font-family:'Courier New',monospace; margin:8px 0; }
+    .compare-row .gt { color:#22c55e; }
+    .compare-row .lt { color:#ef4444; }
+    .compare-row .eq { color:#3b82f6; }
+    .preset-btn { padding:8px 0; border-radius:8px; font-size:13px; font-weight:600; background:#fff; border:1.5px solid #e2e8f0; cursor:pointer; transition:all .15s; }
+    .preset-btn:hover { border-color:#EC4899; color:#EC4899; }
+    .tab-bar { display:flex; gap:6px; margin-bottom:10px; }
+    .tab-btn { padding:6px 12px; border-radius:8px; border:1.5px solid #e2e8f0; background:#fff; font-size:13px; cursor:pointer; font-weight:600; transition:all .15s; }
+    .tab-btn.active { background:#EC4899; color:#fff; border-color:#EC4899; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">½ 分数的初步认识</div>
+      <div class="edu-toolbar-subtitle">上册 · 第八单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="setTab('explore')">认识分数</button>
+          <button class="tab-btn" onclick="setTab('compare')">比较大小</button>
+          <button class="tab-btn" onclick="setTab('add')">简单加法</button>
+        </div>
+        <div id="panelExplore">
+          <div class="tab-bar">
+            <button class="tab-btn active" onclick="setShape('circle')">圆形</button>
+            <button class="tab-btn" onclick="setShape('rect')">长方形</button>
+          </div>
+          <canvas id="cvs" width="400" height="220"></canvas>
+          <div class="frac-big" id="fracDisplay"></div>
+        </div>
+        <div id="panelCompare" style="display:none">
+          <canvas id="cvsCmp" width="420" height="180"></canvas>
+          <div class="compare-row" id="cmpResult"></div>
+        </div>
+        <div id="panelAdd" style="display:none">
+          <canvas id="cvsAdd" width="420" height="180"></canvas>
+          <div class="compare-row" id="addResult" style="color:#EC4899"></div>
+        </div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">分母（分成几份）</div>
+          <div class="slider-row"><input type="range" id="slDen" min="2" max="8" value="4" oninput="update()"/><span class="val" id="vDen">4</span></div>
+        </div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">分子（涂色几份）</div>
+          <div class="slider-row"><input type="range" id="slNum" min="1" max="8" value="3" oninput="update()"/><span class="val" id="vNum">3</span></div>
+        </div>
+        <div id="cmpControls" style="display:none">
+          <div class="divider"></div>
+          <div class="ctrl-section">
+            <div class="ctrl-label">对比分子（同分母）</div>
+            <div class="slider-row"><input type="range" id="slNum2" min="1" max="8" value="1" oninput="update()"/><span class="val" id="vNum2">1</span></div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设分数</div>
+          <button class="preset-btn" onclick="load(2,1)">½</button>
+          <button class="preset-btn" onclick="load(3,1)">⅓</button>
+          <button class="preset-btn" onclick="load(4,1)">¼</button>
+          <button class="preset-btn" onclick="load(4,3)">¾</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <strong>分数的初步认识</strong><br/>
+          ● 把物体平均分成几份<br/>
+          ● 表示其中一份或几份<br/>
+          ● 分母：平均分成的总份数<br/>
+          ● 分子：取出的份数<br/>
+          ● 同分母比较：分子大的分数大<br/>
+          ● 同分母加法：分母不变，分子相加
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const cvs = document.getElementById('cvs');
+const ctx = cvs.getContext('2d');
+let tab = 'explore', shape = 'circle';
+
+function setTab(t) {
+  tab = t;
+  document.querySelectorAll('.tab-bar')[0].querySelectorAll('.tab-btn').forEach((b,i) =>
+    b.classList.toggle('active', ['explore','compare','add'][i] === t));
+  document.getElementById('panelExplore').style.display = t==='explore' ? '' : 'none';
+  document.getElementById('panelCompare').style.display = t==='compare' ? '' : 'none';
+  document.getElementById('panelAdd').style.display = t==='add' ? '' : 'none';
+  document.getElementById('cmpControls').style.display = t==='compare' ? '' : 'none';
+  update();
+}
+
+function setShape(s) {
+  shape = s;
+  document.querySelectorAll('#panelExplore .tab-btn').forEach((b,i) =>
+    b.classList.toggle('active', ['circle','rect'][i] === s));
+  update();
+}
+
+function update() {
+  const den = parseInt(document.getElementById('slDen').value);
+  let num = parseInt(document.getElementById('slNum').value);
+  if (num > den) { num = den; document.getElementById('slNum').value = den; }
+  document.getElementById('vDen').textContent = den;
+  document.getElementById('vNum').textContent = num;
+
+  if (tab === 'explore') drawExplore(den, num);
+  else if (tab === 'compare') drawCompare(den, num);
+  else drawAdd(den, num);
+}
+
+function drawExplore(den, num) {
+  const W = cvs.width, H = cvs.height;
+  ctx.clearRect(0, 0, W, H);
+  document.getElementById('fracDisplay').innerHTML = `<span>${num}</span><span class="fl"></span><span>${den}</span>`;
+
+  if (shape === 'circle') {
+    const cx = W/2, cy = H/2, r = 85;
+    for (let i = 0; i < den; i++) {
+      const a1 = -Math.PI/2 + (i/den)*Math.PI*2;
+      const a2 = -Math.PI/2 + ((i+1)/den)*Math.PI*2;
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,a1,a2); ctx.closePath();
+      ctx.fillStyle = i < num ? '#f9a8d4' : '#f1f5f9'; ctx.fill();
+      ctx.strokeStyle = '#334155'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+  } else {
+    const rw = 320, rh = 80, rx = (W-rw)/2, ry = (H-rh)/2;
+    for (let i = 0; i < den; i++) {
+      const x = rx + i*(rw/den);
+      ctx.fillStyle = i < num ? '#f9a8d4' : '#f1f5f9';
+      ctx.fillRect(x, ry, rw/den, rh);
+      ctx.strokeStyle = '#334155'; ctx.lineWidth = 1.5;
+      ctx.strokeRect(x, ry, rw/den, rh);
+    }
+  }
+}
+
+function drawCompare(den, num) {
+  const c = document.getElementById('cvsCmp');
+  const cx = c.getContext('2d');
+  const num2 = Math.min(parseInt(document.getElementById('slNum2').value), den);
+  document.getElementById('vNum2').textContent = num2;
+  cx.clearRect(0, 0, c.width, c.height);
+
+  drawBar(cx, 20, 30, 170, 40, den, num, '#f9a8d4', `${num}/${den}`);
+  drawBar(cx, 230, 30, 170, 40, den, num2, '#c4b5fd', `${num2}/${den}`);
+
+  const res = document.getElementById('cmpResult');
+  if (num > num2) res.innerHTML = `<span style="color:#EC4899">${num}/${den}</span> <span class="gt">></span> <span style="color:#7c3aed">${num2}/${den}</span>`;
+  else if (num < num2) res.innerHTML = `<span style="color:#EC4899">${num}/${den}</span> <span class="lt"><</span> <span style="color:#7c3aed">${num2}/${den}</span>`;
+  else res.innerHTML = `<span style="color:#EC4899">${num}/${den}</span> <span class="eq">=</span> <span style="color:#7c3aed">${num2}/${den}</span>`;
+}
+
+function drawAdd(den, num) {
+  const c = document.getElementById('cvsAdd');
+  const cx = c.getContext('2d');
+  const num2 = Math.min(2, den);
+  cx.clearRect(0, 0, c.width, c.height);
+
+  drawBar(cx, 20, 25, 170, 40, den, num, '#f9a8d4', `${num}/${den}`);
+  drawBar(cx, 20, 75, 170, 40, den, num2, '#c4b5fd', `${num2}/${den}`);
+  const sum = num + num2;
+  const sumDen = den;
+  drawBar(cx, 220, 50, 180, 40, sumDen, Math.min(sum, sumDen), '#86efac', `${sum}/${sumDen}`);
+
+  cx.fillStyle = '#64748b'; cx.font = 'bold 20px sans-serif'; cx.textAlign = 'center';
+  cx.fillText('+', 100, 65);
+  cx.fillText('=', 200, 70);
+
+  document.getElementById('addResult').innerHTML = `${num}/${den} + ${num2}/${den} = ${sum}/${sumDen}`;
+}
+
+function drawBar(cx, x, y, w, h, den, num, color, label) {
+  for (let i = 0; i < den; i++) {
+    const bx = x + i*(w/den);
+    cx.fillStyle = i < num ? color : '#f1f5f9';
+    cx.fillRect(bx, y, w/den, h);
+    cx.strokeStyle = '#94a3b8'; cx.lineWidth = 1;
+    cx.strokeRect(bx, y, w/den, h);
+  }
+  cx.fillStyle = '#334155'; cx.font = 'bold 12px sans-serif'; cx.textAlign = 'center';
+  cx.fillText(label, x + w/2, y + h + 16);
+}
+
+function load(d, n) { document.getElementById('slDen').value = d; document.getElementById('slNum').value = n; update(); }
+function resetAll() { load(4, 3); }
+update();
+</script>
+</body>
+</html>

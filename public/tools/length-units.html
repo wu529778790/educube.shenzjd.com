@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>测量·长度单位 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 14px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); }
+    .control-panel { background: #f0fdf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 5px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: .05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 14px; font-weight: 700; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #22c55e; color: #22c55e; }
+    canvas { border-radius: 12px; background: #fff; box-shadow: 0 2px 12px rgba(34,197,94,.1); }
+    .convert-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    .convert-input { width: 90px; padding: 8px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 18px; font-weight: 800; text-align: center; font-family: 'Courier New', monospace; }
+    .convert-input:focus { outline: none; border-color: #22c55e; }
+    .unit-select { padding: 8px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; }
+    .result-table { background: #fff; border: 2px solid #22c55e; border-radius: 12px; padding: 14px 18px; width: 100%; max-width: 420px; }
+    .result-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 14px; border-bottom: 1px solid #f1f5f9; }
+    .result-row:last-child { border-bottom: none; }
+    .result-row .unit-name { font-weight: 700; color: #334155; }
+    .result-row .unit-val { font-weight: 800; color: #22c55e; font-family: 'Courier New', monospace; }
+    .slider-row { display: flex; align-items: center; gap: 8px; }
+    .slider-row input[type="range"] { flex: 1; }
+    .slider-val { font-size: 14px; font-weight: 700; min-width: 60px; text-align: center; color: #22c55e; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div class="edu-toolbar-title">📏 测量·长度单位</div>
+    <div class="edu-toolbar-subtitle">上册 · 第三单元</div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="barCanvas" width="520" height="180"></canvas>
+        <div class="slider-row" style="width:100%;max-width:520px">
+          <span style="font-size:12px;font-weight:700;color:#64748b;width:60px">对比长度</span>
+          <input type="range" id="slLength" min="1" max="1000" value="100" oninput="drawBars()" />
+          <span class="slider-val" id="lengthLabel">100 mm</span>
+        </div>
+        <div class="convert-row">
+          <input class="convert-input" id="cvValue" value="1" />
+          <select class="unit-select" id="cvUnit">
+            <option value="km">千米(km)</option><option value="m">米(m)</option>
+            <option value="dm">分米(dm)</option><option value="cm" selected>厘米(cm)</option><option value="mm">毫米(mm)</option>
+          </select>
+          <button class="edu-btn edu-btn-primary" onclick="doConvert()">换算</button>
+        </div>
+        <div class="result-table" id="resultTable"></div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">常用换算</div>
+          <button class="preset-btn" onclick="loadCv(1,'km')">1 千米</button>
+          <button class="preset-btn" onclick="loadCv(1,'m')">1 米</button>
+          <button class="preset-btn" onclick="loadCv(5,'dm')">5 分米</button>
+          <button class="preset-btn" onclick="loadCv(100,'mm')">100 毫米</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>长度单位关系</b><br/>
+          ● 1 千米(km) = 1000 米<br/>
+          ● 1 米(m) = 10 分米<br/>
+          ● 1 分米(dm) = 10 厘米<br/>
+          ● 1 厘米(cm) = 10 毫米<br/>
+          ● 1 米 = 100 厘米 = 1000 毫米
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const canvas = document.getElementById('barCanvas');
+const ctx = canvas.getContext('2d');
+const UNITS = [
+  { key:'mm', label:'毫米(mm)', factor:1, color:'#94a3b8' },
+  { key:'cm', label:'厘米(cm)', factor:10, color:'#22c55e' },
+  { key:'dm', label:'分米(dm)', factor:100, color:'#3b82f6' },
+  { key:'m',  label:'米(m)',   factor:1000, color:'#f97316' },
+  { key:'km', label:'千米(km)', factor:1000000, color:'#ef4444' },
+];
+
+function toMM(val, unit) {
+  const u = UNITS.find(x => x.key === unit);
+  return val * (u ? u.factor : 1);
+}
+
+function drawBars() {
+  const len = +document.getElementById('slLength').value;
+  ctx.clearRect(0, 0, 520, 180);
+  const maxPx = 460, barH = 24, startY = 14;
+  UNITS.forEach((u, i) => {
+    const y = startY + i * (barH + 10);
+    // 标签
+    ctx.fillStyle = '#64748b'; ctx.font = '600 11px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(u.label, 50, y + 16);
+    // 条形
+    let barW;
+    if (u.key === 'km') barW = Math.min(maxPx, len / 1000000 * maxPx * 200);
+    else if (u.key === 'm') barW = Math.min(maxPx, len / 1000 * maxPx);
+    else barW = Math.min(maxPx, (len / u.factor) * maxPx / 10);
+    barW = Math.max(2, barW);
+    ctx.fillStyle = u.color;
+    ctx.beginPath(); ctx.roundRect(56, y, barW, barH, 4); ctx.fill();
+    // 数值
+    ctx.fillStyle = '#1e293b'; ctx.font = '700 12px "Courier New", monospace'; ctx.textAlign = 'left';
+    ctx.fillText((len / u.factor).toFixed(u.factor >= 1000 ? 6 : u.factor >= 100 ? 3 : 1).replace(/\.?0+$/, '') + ' ' + u.key, 56 + barW + 6, y + 16);
+  });
+  document.getElementById('lengthLabel').textContent = len + ' mm';
+}
+
+function doConvert() {
+  const val = parseFloat(document.getElementById('cvValue').value) || 0;
+  const unit = document.getElementById('cvUnit').value;
+  const mm = toMM(val, unit);
+  const el = document.getElementById('resultTable');
+  let html = '';
+  UNITS.forEach(u => {
+    const converted = mm / u.factor;
+    const isCurrent = u.key === unit;
+    html += `<div class="result-row" style="${isCurrent ? 'background:#f0fdf4;font-weight:800' : ''}">
+      <span class="unit-name">${u.label}</span>
+      <span class="unit-val">${formatNum(converted)}</span></div>`;
+  });
+  el.innerHTML = html;
+  document.getElementById('slLength').value = Math.min(1000, mm);
+  drawBars();
+}
+
+function formatNum(n) {
+  if (Number.isInteger(n)) return n.toLocaleString();
+  if (n < 0.001) return '0';
+  return parseFloat(n.toPrecision(8)).toString();
+}
+
+function loadCv(val, unit) {
+  document.getElementById('cvValue').value = val;
+  document.getElementById('cvUnit').value = unit;
+  doConvert();
+}
+
+function resetAll() {
+  document.getElementById('cvValue').value = 1;
+  document.getElementById('cvUnit').value = 'cm';
+  document.getElementById('slLength').value = 100;
+  document.getElementById('resultTable').innerHTML = '';
+  drawBars();
+}
+
+drawBars();
+</script>
+</body>
+</html>

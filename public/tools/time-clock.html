@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>时、分、秒 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 16px; background: linear-gradient(135deg, #fff7ed 0%, #fef3c7 100%); }
+    .control-panel { background: #fff7ed; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 5px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: .05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #fed7aa; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    canvas { border-radius: 50%; box-shadow: 0 4px 20px rgba(249,115,22,.12); background: #fff; }
+    .digital-display { background: #1e293b; color: #f97316; font-size: 32px; font-weight: 800; font-family: 'Courier New', monospace; padding: 10px 28px; border-radius: 12px; letter-spacing: .08em; }
+    .calc-area { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    .calc-input { width: 70px; padding: 6px 8px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 16px; font-weight: 700; text-align: center; font-family: 'Courier New', monospace; }
+    .calc-input:focus { outline: none; border-color: #f97316; }
+    .calc-result { font-size: 18px; font-weight: 700; color: #1e293b; min-height: 28px; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 14px; font-weight: 700; font-family: 'Courier New', monospace; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #f97316; color: #f97316; }
+    .slider-row { display: flex; align-items: center; gap: 8px; }
+    .slider-row input[type="range"] { flex: 1; }
+    .slider-val { font-size: 14px; font-weight: 700; min-width: 30px; text-align: center; color: #f97316; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div class="edu-toolbar-title">🕐 时、分、秒</div>
+    <div class="edu-toolbar-subtitle">上册 · 第一单元</div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="resetAll()">重置</button>
+      <button class="edu-btn edu-btn-accent" id="btnRun" onclick="toggleRun()">▶ 运行</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="clockCanvas" width="320" height="320"></canvas>
+        <div class="digital-display" id="digitalTime">00:00:00</div>
+        <div class="calc-area">
+          <span style="font-size:13px;font-weight:600;color:#64748b">时间计算：</span>
+          <input class="calc-input" id="calcBase" value="00:00" placeholder="时:分" />
+          <select id="calcOp" style="padding:5px 8px;border-radius:8px;border:1.5px solid #e2e8f0;font-weight:700">
+            <option value="+">＋</option><option value="-">－</option>
+          </select>
+          <input class="calc-input" id="calcMin" value="0" placeholder="分钟" style="width:56px" />
+          <span style="font-size:13px;color:#64748b">分钟</span>
+          <button class="edu-btn edu-btn-primary" onclick="calcTime()">计算</button>
+        </div>
+        <div class="calc-result" id="calcResult"></div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">设置时间</div>
+          <div class="slider-row"><span style="font-size:12px;width:28px">时</span><input type="range" id="slHour" min="0" max="23" value="0" oninput="setFromSliders()" /><span class="slider-val" id="valH">0</span></div>
+          <div class="slider-row"><span style="font-size:12px;width:28px">分</span><input type="range" id="slMin" min="0" max="59" value="0" oninput="setFromSliders()" /><span class="slider-val" id="valM">0</span></div>
+          <div class="slider-row"><span style="font-size:12px;width:28px">秒</span><input type="range" id="slSec" min="0" max="59" value="0" oninput="setFromSliders()" /><span class="slider-val" id="valS">0</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设时间</div>
+          <button class="preset-btn" onclick="loadTime(8,30,0)">08:30:00</button>
+          <button class="preset-btn" onclick="loadTime(12,0,0)">12:00:00</button>
+          <button class="preset-btn" onclick="loadTime(15,45,30)">15:45:30</button>
+          <button class="preset-btn" onclick="loadTime(22,10,5)">22:10:05</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>时间知识</b><br/>
+          ● 1 时 = 60 分<br/>
+          ● 1 分 = 60 秒<br/>
+          ● 1 时 = 3600 秒<br/>
+          ● 钟面上有12个大格，60个小格<br/>
+          ● 时针走1大格=1时，分针走1小格=1分
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const canvas = document.getElementById('clockCanvas');
+const ctx = canvas.getContext('2d');
+const W = 320, H = 320, cx = W/2, cy = H/2, R = 140;
+let hours = 0, minutes = 0, seconds = 0, running = false, timer = null;
+
+function drawClock() {
+  ctx.clearRect(0, 0, W, H);
+  // 外圈
+  ctx.beginPath(); ctx.arc(cx, cy, R+8, 0, Math.PI*2);
+  ctx.fillStyle = '#fff7ed'; ctx.fill();
+  ctx.beginPath(); ctx.arc(cx, cy, R+4, 0, Math.PI*2);
+  ctx.fillStyle = '#fff'; ctx.fill();
+  ctx.lineWidth = 3; ctx.strokeStyle = '#f97316'; ctx.stroke();
+  // 刻度
+  for (let i = 0; i < 60; i++) {
+    const a = (i/60)*Math.PI*2 - Math.PI/2;
+    const isBig = i % 5 === 0;
+    const r1 = R - (isBig ? 18 : 10), r2 = R - 2;
+    ctx.beginPath(); ctx.moveTo(cx + r1*Math.cos(a), cy + r1*Math.sin(a));
+    ctx.lineTo(cx + r2*Math.cos(a), cy + r2*Math.sin(a));
+    ctx.lineWidth = isBig ? 3 : 1; ctx.strokeStyle = isBig ? '#1e293b' : '#94a3b8'; ctx.stroke();
+  }
+  // 数字
+  ctx.fillStyle = '#1e293b'; ctx.font = '700 16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let i = 1; i <= 12; i++) {
+    const a = (i/12)*Math.PI*2 - Math.PI/2;
+    ctx.fillText(i, cx + (R-32)*Math.cos(a), cy + (R-32)*Math.sin(a));
+  }
+  // 时针
+  const hAngle = ((hours%12 + minutes/60)/12)*Math.PI*2 - Math.PI/2;
+  drawHand(hAngle, R*0.5, 6, '#1e293b');
+  // 分针
+  const mAngle = ((minutes + seconds/60)/60)*Math.PI*2 - Math.PI/2;
+  drawHand(mAngle, R*0.7, 4, '#f97316');
+  // 秒针
+  const sAngle = (seconds/60)*Math.PI*2 - Math.PI/2;
+  drawHand(sAngle, R*0.78, 2, '#ef4444');
+  // 中心圆
+  ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI*2);
+  ctx.fillStyle = '#f97316'; ctx.fill();
+  // 数字时间
+  document.getElementById('digitalTime').textContent = pad(hours)+':'+pad(minutes)+':'+pad(seconds);
+}
+
+function drawHand(angle, len, w, color) {
+  ctx.beginPath(); ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + len*Math.cos(angle), cy + len*Math.sin(angle));
+  ctx.lineWidth = w; ctx.strokeStyle = color; ctx.lineCap = 'round'; ctx.stroke();
+}
+
+function pad(n) { return String(Math.floor(n)).padStart(2, '0'); }
+
+function setFromSliders() {
+  hours = +document.getElementById('slHour').value;
+  minutes = +document.getElementById('slMin').value;
+  seconds = +document.getElementById('slSec').value;
+  updateLabels(); drawClock();
+}
+
+function updateLabels() {
+  document.getElementById('valH').textContent = hours;
+  document.getElementById('valM').textContent = minutes;
+  document.getElementById('valS').textContent = seconds;
+}
+
+function loadTime(h, m, s) {
+  hours = h; minutes = m; seconds = s;
+  document.getElementById('slHour').value = h;
+  document.getElementById('slMin').value = m;
+  document.getElementById('slSec').value = s;
+  updateLabels(); drawClock();
+}
+
+function toggleRun() {
+  running = !running;
+  const btn = document.getElementById('btnRun');
+  if (running) {
+    btn.textContent = '⏸ 暂停';
+    timer = setInterval(() => { seconds++; if(seconds>=60){seconds=0;minutes++;} if(minutes>=60){minutes=0;hours++;} if(hours>=24)hours=0; document.getElementById('slHour').value=hours; document.getElementById('slMin').value=minutes; document.getElementById('slSec').value=seconds; updateLabels(); drawClock(); }, 1000);
+  } else {
+    btn.textContent = '▶ 运行';
+    clearInterval(timer);
+  }
+}
+
+function calcTime() {
+  const base = document.getElementById('calcBase').value.split(':');
+  let bh = parseInt(base[0])||0, bm = parseInt(base[1])||0;
+  const op = document.getElementById('calcOp').value;
+  const dm = parseInt(document.getElementById('calcMin').value)||0;
+  let totalMin = bh*60 + bm + (op==='+' ? dm : -dm);
+  if (totalMin < 0) totalMin += 24*60;
+  totalMin = totalMin % (24*60);
+  const rh = Math.floor(totalMin/60), rm = totalMin%60;
+  document.getElementById('calcResult').innerHTML =
+    `<span style="color:#f97316">${pad(bh)}:${pad(bm)}</span> ${op==='+'?'＋':'－'} ${dm}分 = <span style="color:#ea580c">${pad(rh)}:${pad(rm)}</span>`;
+}
+
+function resetAll() {
+  if(running) toggleRun();
+  hours = minutes = seconds = 0;
+  document.getElementById('slHour').value = 0;
+  document.getElementById('slMin').value = 0;
+  document.getElementById('slSec').value = 0;
+  document.getElementById('calcResult').textContent = '';
+  updateLabels(); drawClock();
+}
+
+drawClock();
+</script>
+</body>
+</html>

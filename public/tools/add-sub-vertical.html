@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>万以内加减法竖式 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+  <style>
+    .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; }
+    .canvas-area { padding:24px; overflow-y:auto; background:linear-gradient(135deg,#f0fdf4,#dcfce7); display:flex; flex-direction:column; align-items:center; }
+    .control-panel { background:#f8fafc; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:12px; overflow:auto; }
+    .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+    .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+    .divider { height:1px; background:#e2e8f0; }
+    .info-box { background:#fff; border:1px solid #bbf7d0; border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.8; color:#334155; }
+    .info-box strong { color:#059669; }
+    .input-row { display:flex; align-items:center; gap:8px; justify-content:center; margin-bottom:16px; }
+    .num-in { width:90px; padding:8px 10px; border:2px solid #e2e8f0; border-radius:8px; font-size:20px; font-weight:800; font-family:'Courier New',monospace; text-align:center; }
+    .num-in:focus { border-color:#22C55E; outline:none; }
+    .op-sel { font-size:20px; font-weight:800; border:2px solid #22C55E; border-radius:8px; padding:6px 12px; background:#f0fdf4; color:#059669; cursor:pointer; }
+    .calc-btn { padding:8px 20px; border-radius:8px; font-size:14px; font-weight:700; background:#22C55E; color:#fff; border:none; cursor:pointer; }
+    .calc-btn:hover { background:#16a34a; }
+    .step-btns { display:flex; gap:8px; justify-content:center; margin:10px 0; }
+    .step-btn { padding:6px 14px; border-radius:8px; border:1.5px solid #e2e8f0; background:#fff; font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; }
+    .step-btn:hover { border-color:#22C55E; color:#22C55E; }
+    .step-info { text-align:center; font-size:14px; font-weight:600; color:#334155; min-height:22px; margin-bottom:8px; }
+
+    /* Vertical calc */
+    .vc { display:flex; flex-direction:column; align-items:flex-end; font-family:'Courier New',monospace; font-size:28px; font-weight:700; margin:0 auto; }
+    .vc-row { display:flex; gap:2px; min-height:40px; align-items:center; }
+    .vc-cell { width:32px; height:38px; display:flex; align-items:center; justify-content:center; border-radius:4px; transition:all .3s; }
+    .vc-cell.hl { background:#bbf7d0; color:#166534; }
+    .vc-cell.done { color:#334155; }
+    .vc-cell.result { background:#dcfce7; color:#166534; }
+    .vc-op { color:#64748b; margin-right:8px; min-width:24px; text-align:center; }
+    .vc-line { width:100%; height:3px; background:#1e293b; margin:6px 0; }
+    .vc-carry { font-size:14px; color:#ef4444; font-weight:800; height:20px; display:flex; align-items:center; justify-content:center; }
+
+    .preset-btn { padding:8px 0; border-radius:8px; font-size:13px; font-weight:600; background:#fff; border:1.5px solid #e2e8f0; cursor:pointer; transition:all .15s; }
+    .preset-btn:hover { border-color:#22C55E; color:#22C55E; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">📝 万以内加减法竖式</div>
+      <div class="edu-toolbar-subtitle">上册 · 第四单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div class="input-row">
+          <input type="number" class="num-in" id="inA" value="356" min="0" max="9999"/>
+          <select class="op-sel" id="opSel"><option value="+">+</option><option value="−">−</option></select>
+          <input type="number" class="num-in" id="inB" value="478" min="0" max="9999"/>
+          <button class="calc-btn" onclick="calculate()">计算</button>
+        </div>
+        <div class="step-btns">
+          <button class="step-btn" onclick="prevStep()">上一步</button>
+          <button class="step-btn" onclick="nextStep()">下一步</button>
+          <button class="step-btn" onclick="showAll()">显示全部</button>
+        </div>
+        <div class="step-info" id="stepInfo">点击"下一步"开始分步计算</div>
+        <div class="vc" id="vcArea"></div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设例题</div>
+          <button class="preset-btn" onclick="load(356,478,'+')">356 + 478</button>
+          <button class="preset-btn" onclick="load(803,457,'+')">803 + 457</button>
+          <button class="preset-btn" onclick="load(920,687,'−')">920 - 687</button>
+          <button class="preset-btn" onclick="load(1500,876,'−')">1500 - 876</button>
+          <button class="preset-btn" onclick="load(2678+1332,2678,'+')">4010 - 1332</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <strong>竖式计算要点</strong><br/>
+          ● 相同数位对齐<br/>
+          ● 从个位算起<br/>
+          ● 加法：满十进一（进1）<br/>
+          ● 减法：不够减向前借一（借1）<br/>
+          ● 借一当十再减
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+let numA = 356, numB = 478, op = '+';
+let step = 0, maxSteps = 0, digits = 0;
+let carryLines = [], resultDigits = [], colSteps = [];
+
+function load(a, b, o) {
+  document.getElementById('inA').value = a;
+  document.getElementById('inB').value = b;
+  document.getElementById('opSel').value = o;
+  calculate();
+}
+
+function calculate() {
+  numA = parseInt(document.getElementById('inA').value) || 0;
+  numB = parseInt(document.getElementById('inB').value) || 0;
+  numA = Math.max(0, Math.min(9999, numA));
+  numB = Math.max(0, Math.min(9999, numB));
+  op = document.getElementById('opSel').value;
+
+  const aStr = String(numA), bStr = String(numB);
+  digits = Math.max(aStr.length, bStr.length);
+  const padA = aStr.padStart(digits, '0');
+  const padB = bStr.padStart(digits, '0');
+
+  carryLines = [];
+  resultDigits = [];
+  colSteps = [];
+  let carry = 0;
+
+  for (let i = digits - 1; i >= 0; i--) {
+    const da = parseInt(padA[i]), db = parseInt(padB[i]);
+    let res, carryMark = '', note = '';
+    if (op === '+') {
+      const sum = da + db + carry;
+      res = sum % 10;
+      carry = Math.floor(sum / 10);
+      if (carry > 0) { carryMark = `进${carry}`; note = `${da}+${db}${carry>1?'+'+(carry-1):''}=${sum}，写${res}进${carry}`; }
+      else note = `${da}+${db}=${sum}`;
+    } else {
+      let borrowed = carry;
+      let top = da - borrowed;
+      let borrowMark = '';
+      if (top < db) { top += 10; borrowMark = '借1'; carry = 1; }
+      else { carry = 0; }
+      res = top - db;
+      note = borrowed > 0 ? `被借1后${da-1}，${top}-${db}=${res}` : `${top}-${db}=${res}`;
+      if (borrowMark) { carryMark = '借1'; note = `${da}不够减，借1当10，${top}-${db}=${res}`; }
+    }
+    resultDigits.unshift(res);
+    colSteps.push({ col: i, note, carryMark, res });
+    carryLines.unshift(carry > 0 ? carryMark : '');
+  }
+  if (op === '+' && carry > 0) {
+    resultDigits.unshift(carry);
+    colSteps.push({ col: -1, note: `进位${carry}`, carryMark: '', res: carry });
+  }
+
+  maxSteps = colSteps.length;
+  step = 0;
+  document.getElementById('stepInfo').textContent = '点击"下一步"开始分步计算';
+  render();
+}
+
+function nextStep() { if (step < maxSteps) { step++; updateInfo(); render(); } }
+function prevStep() { if (step > 0) { step--; updateInfo(); render(); } }
+function showAll() { step = maxSteps; updateInfo(); render(); }
+function updateInfo() {
+  if (step === 0) document.getElementById('stepInfo').textContent = '点击"下一步"开始分步计算';
+  else if (step <= colSteps.length) {
+    const c = colSteps[step - 1];
+    const pos = ['个位','十位','百位','千位','万位'][digits - 1 - c.col] || '';
+    document.getElementById('stepInfo').textContent = `第${step}步：算${pos}——${c.note}`;
+  }
+}
+
+function render() {
+  const box = document.getElementById('vcArea');
+  const aStr = String(numA).padStart(digits, '0');
+  const bStr = String(numB).padStart(digits, '0');
+  const rStr = resultDigits.join('');
+  const maxW = Math.max(aStr.length, bStr.length, rStr.length);
+  const isHighlight = (step > 0);
+
+  let html = '';
+
+  // Carry line
+  html += '<div class="vc-row">';
+  html += '<div style="min-width:32px"></div>';
+  for (let i = 0; i < maxW; i++) {
+    const ci = i + (rStr.length - digits);
+    const mark = step > 0 && ci >= 0 && ci < carryLines.length ? carryLines[ci] : '';
+    html += `<div class="vc-carry">${mark}</div>`;
+  }
+  html += '</div>';
+
+  // Row A
+  html += '<div class="vc-row">';
+  html += '<div style="min-width:32px"></div>';
+  for (let i = 0; i < maxW - aStr.length; i++) html += '<div class="vc-cell"></div>';
+  for (let i = 0; i < aStr.length; i++) {
+    const isCur = isHighlight && i >= digits - step && step <= digits;
+    html += `<div class="vc-cell ${isCur ? 'hl' : 'done'}">${aStr[i]}</div>`;
+  }
+  html += '</div>';
+
+  // Row B with op
+  html += '<div class="vc-row">';
+  html += `<div class="vc-op">${op}</div>`;
+  for (let i = 0; i < maxW - bStr.length; i++) html += '<div class="vc-cell"></div>';
+  for (let i = 0; i < bStr.length; i++) {
+    const isCur = isHighlight && i >= digits - step && step <= digits;
+    html += `<div class="vc-cell ${isCur ? 'hl' : 'done'}">${bStr[i]}</div>`;
+  }
+  html += '</div>';
+
+  // Line
+  html += '<div class="vc-line"></div>';
+
+  // Result row
+  html += '<div class="vc-row">';
+  html += '<div style="min-width:32px"></div>';
+  for (let i = 0; i < rStr.length; i++) {
+    const digitIndex = i;
+    const revealCol = rStr.length - 1 - i;
+    const revealed = step >= digits - revealCol && step > 0;
+    const isExtra = digitIndex < rStr.length - digits; // overflow digit
+    const show = isExtra ? step > digits : revealed;
+    html += `<div class="vc-cell ${show ? 'result' : ''}">${show ? rStr[i] : ''}</div>`;
+  }
+  html += '</div>';
+
+  box.innerHTML = html;
+}
+
+function resetAll() { load(356, 478, '+'); }
+calculate();
+</script>
+</body>
+</html>

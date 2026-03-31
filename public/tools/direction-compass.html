@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>位置与方向（一） — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 280px; height: 100%; }
+    .canvas-area { padding: 16px; overflow: hidden; background: linear-gradient(135deg, #fff7ed 0%, #fdfaf4 100%); position: relative; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #fed7aa; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #f97316; color: #f97316; }
+    .dir-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+    .dir-btn { padding: 6px 0; border-radius: 6px; font-size: 12px; font-weight: 700; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; text-align: center; }
+    .dir-btn:hover, .dir-btn.active { border-color: #f97316; color: #f97316; background: #fff7ed; }
+    .move-info { background: #fff; border: 2px solid #f97316; border-radius: 10px; padding: 10px 12px; text-align: center; font-size: 13px; font-weight: 600; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">🧭 位置与方向（一）</div>
+      <div class="edu-toolbar-subtitle">下册 · 第一单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-accent" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="canvas" style="width:100%;height:100%"></canvas>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择方向（点击方向盘或按钮）</div>
+          <div class="dir-grid">
+            <div class="dir-btn" data-dir="西北" onclick="setDir(this)">西北</div>
+            <div class="dir-btn" data-dir="北" onclick="setDir(this)">北</div>
+            <div class="dir-btn" data-dir="东北" onclick="setDir(this)">东北</div>
+            <div class="dir-btn" data-dir="西" onclick="setDir(this)">西</div>
+            <div style="text-align:center;font-size:16px;line-height:32px">●</div>
+            <div class="dir-btn" data-dir="东" onclick="setDir(this)">东</div>
+            <div class="dir-btn" data-dir="西南" onclick="setDir(this)">西南</div>
+            <div class="dir-btn" data-dir="南" onclick="setDir(this)">南</div>
+            <div class="dir-btn" data-dir="东南" onclick="setDir(this)">东南</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">移动步数</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="range" id="steps" min="1" max="5" value="3" style="flex:1" oninput="updateStepDisplay()">
+            <span id="stepVal" style="font-weight:700;font-size:14px;min-width:28px;text-align:center">3</span>
+          </div>
+          <button class="edu-btn edu-btn-primary" style="width:100%;justify-content:center" onclick="doMove()">移动</button>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">当前位置</div>
+          <div class="move-info" id="posInfo">起点 (0, 0)</div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设路线</div>
+          <button class="preset-btn" onclick="loadPreset('east3')">向东走3格</button>
+          <button class="preset-btn" onclick="loadPreset('ne2')">向东北走2格</button>
+          <button class="preset-btn" onclick="loadPreset('tour')">北2 → 东3 → 南1</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>方向知识</b><br/>
+          ● 东与西相对，南与北相对<br/>
+          ● 地图上：上北下南，左西右东<br/>
+          ● 东北：东和北之间<br/>
+          ● 东南：东和南之间<br/>
+          ● 西北：西和北之间<br/>
+          ● 西南：西和南之间
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="../edu-lib/edu-tools.js"></script>
+<script>
+const canvas = document.getElementById('canvas');
+const DIRS = { '东':[1,0], '南':[0,-1], '西':[-1,0], '北':[0,1], '东北':[1,1], '东南':[1,-1], '西北':[-1,1], '西南':[-1,-1] };
+const DIR_ANGLES = { '东':0, '东北':45, '北':90, '西北':135, '西':180, '西南':225, '南':270, '东南':315 };
+let curDir = null, cx = 0, cy = 0, trail = [], gridSize, centerX, centerY;
+
+function initCanvas() {
+  const { ctx, w, h } = setupCanvas(canvas);
+  centerX = w / 2; centerY = h / 2;
+  gridSize = Math.min(w, h) / 14;
+  render();
+}
+
+function render() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  const ctx = canvas.getContext('2d');
+  ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#f8fafc'; ctx.fillRect(0, 0, w, h);
+
+  // grid
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 0.5;
+  for (let x = centerX % gridSize; x < w; x += gridSize) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+  for (let y = centerY % gridSize; y < h; y += gridSize) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+
+  // axes
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(centerX,0); ctx.lineTo(centerX,h); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,centerY); ctx.lineTo(w,centerY); ctx.stroke();
+
+  // direction labels
+  ctx.fillStyle = '#1a3a5c'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('北', centerX, 16); ctx.fillText('南', centerX, h - 6);
+  ctx.fillText('东', w - 10, centerY + 5); ctx.fillText('西', 12, centerY + 5);
+  ctx.font = '12px sans-serif'; ctx.fillStyle = '#64748b';
+  ctx.fillText('东北', w - 22, 18); ctx.fillText('东南', w - 22, h - 6);
+  ctx.fillText('西北', 20, 18); ctx.fillText('西南', 20, h - 6);
+
+  // trail lines
+  if (trail.length > 1) {
+    ctx.strokeStyle = '#f97316'; ctx.lineWidth = 2; ctx.setLineDash([]);
+    ctx.beginPath();
+    for (let i = 0; i < trail.length; i++) {
+      const px = centerX + trail[i][0] * gridSize;
+      const py = centerY - trail[i][1] * gridSize;
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+
+  // trail dots
+  trail.forEach((t, i) => {
+    const px = centerX + t[0] * gridSize;
+    const py = centerY - t[1] * gridSize;
+    ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2);
+    ctx.fillStyle = i === trail.length - 1 ? '#f97316' : '#fed7aa';
+    ctx.fill();
+  });
+
+  // compass rose at origin
+  const cr = 28;
+  ctx.beginPath(); ctx.arc(centerX, centerY, cr, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff7ed'; ctx.fill();
+  ctx.strokeStyle = '#f97316'; ctx.lineWidth = 2; ctx.stroke();
+  for (const [d, a] of Object.entries(DIR_ANGLES)) {
+    const rad = a * Math.PI / 180;
+    const tx = centerX + Math.sin(rad) * (cr - 8);
+    const ty = centerY - Math.cos(rad) * (cr - 8);
+    ctx.fillStyle = '#64748b'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(d.charAt(0), tx, ty + 3);
+  }
+
+  // arrow for current direction
+  if (curDir) {
+    const rad = DIR_ANGLES[curDir] * Math.PI / 180;
+    const px = centerX + cx * gridSize;
+    const py = centerY - cy * gridSize;
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(px + Math.sin(rad) * 30, py - Math.cos(rad) * 30);
+    ctx.strokeStyle = '#f97316'; ctx.lineWidth = 3; ctx.setLineDash([4,3]); ctx.stroke(); ctx.setLineDash([]);
+    // arrowhead
+    const ax = px + Math.sin(rad) * 30, ay = py - Math.cos(rad) * 30;
+    ctx.beginPath(); ctx.arc(ax, ay, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#f97316'; ctx.fill();
+  }
+
+  // current position marker
+  const mx = centerX + cx * gridSize, my = centerY - cy * gridSize;
+  ctx.beginPath(); ctx.arc(mx, my, 10, 0, Math.PI * 2);
+  ctx.fillStyle = '#f97316'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('我', mx, my + 3);
+
+  ctx.restore();
+}
+
+function setDir(el) {
+  curDir = el.dataset.dir;
+  document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+function updateStepDisplay() {
+  document.getElementById('stepVal').textContent = document.getElementById('steps').value;
+}
+
+function doMove() {
+  if (!curDir) return;
+  const steps = parseInt(document.getElementById('steps').value);
+  const [dx, dy] = DIRS[curDir];
+  if (trail.length === 0) trail.push([cx, cy]);
+  cx += dx * steps; cy += dy * steps;
+  trail.push([cx, cy]);
+  document.getElementById('posInfo').innerHTML = `(${cx}, ${cy})<br/><span style="font-size:11px;color:#64748b">${curDir}${steps}格 → 到达(${cx},${cy})</span>`;
+  render();
+}
+
+function loadPreset(type) {
+  cx = 0; cy = 0; trail = []; curDir = null;
+  document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
+  trail.push([0, 0]);
+  if (type === 'east3') {
+    curDir = '东'; cx = 3; trail.push([3, 0]);
+    document.querySelector('[data-dir="东"]').classList.add('active');
+  } else if (type === 'ne2') {
+    curDir = '东北'; cx = 2; cy = 2; trail.push([2, 2]);
+    document.querySelector('[data-dir="东北"]').classList.add('active');
+  } else if (type === 'tour') {
+    trail.push([0, 2]); trail.push([3, 2]); trail.push([3, 1]);
+    cx = 3; cy = 1; curDir = '南';
+  }
+  document.getElementById('posInfo').innerHTML = `(${cx}, ${cy})`;
+  render();
+}
+
+function resetAll() {
+  cx = 0; cy = 0; trail = []; curDir = null;
+  document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('posInfo').innerHTML = '起点 (0, 0)';
+  render();
+}
+
+canvas.addEventListener('click', function(e) {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  // check if click is near compass
+  const dist = Math.sqrt((mx - centerX) ** 2 + (my - centerY) ** 2);
+  if (dist > 35) return;
+  // find closest direction
+  let angle = Math.atan2(mx - centerX, -(my - centerY)) * 180 / Math.PI;
+  if (angle < 0) angle += 360;
+  const snap = Math.round(angle / 45) % 8 * 45;
+  for (const [d, a] of Object.entries(DIR_ANGLES)) {
+    if (a === snap) {
+      document.querySelectorAll('.dir-btn').forEach(b => { b.classList.remove('active'); if (b.dataset.dir === d) b.classList.add('active'); });
+      curDir = d; render(); return;
+    }
+  }
+});
+
+window.addEventListener('resize', initCanvas);
+initCanvas();
+</script>
+</body>
+</html>

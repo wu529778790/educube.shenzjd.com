@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>面积的认识 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 16px; overflow-y: auto; background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #f0fdf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .preset-btn { padding: 7px 0; border-radius: 8px; font-size: 13px; font-weight: 700; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; width: 100%; }
+    .preset-btn:hover { border-color: #22c55e; color: #16a34a; }
+    canvas { border-radius: 10px; cursor: pointer; }
+    .stat-bar { display: flex; gap: 16px; align-items: center; background: #fff; border: 1.5px solid #bbf7d0; border-radius: 10px; padding: 8px 16px; margin-top: 10px; font-size: 13px; font-weight: 600; }
+    .stat-bar span { color: #16a34a; font-weight: 800; }
+    .compare-row { display: flex; gap: 20px; align-items: flex-start; margin-top: 10px; }
+    .shape-card { background: #fff; border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px; text-align: center; }
+    .shape-card.active { border-color: #22c55e; }
+    .shape-card .label { font-size: 12px; color: #64748b; margin-top: 4px; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">🔲 面积的认识</div>
+      <div class="edu-toolbar-subtitle">三年级下册 · 第五单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="clearGrid()">清空画布</button>
+      <button class="edu-btn edu-btn-primary" onclick="toggleMode()">切换模式</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="gridCanvas"></canvas>
+        <div class="stat-bar" id="statBar">
+          <div>已放置: <span id="countDisplay">0</span> 个 1cm² 方格</div>
+          <div>面积: <span id="areaDisplay">0</span> cm²</div>
+          <div>周长: <span id="perimDisplay">0</span> cm</div>
+        </div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">画布模式</div>
+          <button class="preset-btn" id="modeFree" style="background:#f0fdf4;border-color:#22c55e;color:#16a34a" onclick="setMode('free')">自由绘制</button>
+          <button class="preset-btn" id="modeRect" onclick="setMode('rect')">长方形</button>
+          <button class="preset-btn" id="modeSquare" onclick="setMode('square')">正方形</button>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section" id="dimSection" style="display:none">
+          <div class="ctrl-label">调整大小</div>
+          <div style="font-size:12px;color:#64748b">长: <span id="lenVal">4</span> cm</div>
+          <input type="range" id="lenSlider" min="1" max="10" value="4" style="width:100%" oninput="updateDim()"/>
+          <div style="font-size:12px;color:#64748b" id="widthLabel">宽: <span id="widVal">3</span> cm</div>
+          <input type="range" id="widSlider" min="1" max="10" value="3" style="width:100%" oninput="updateDim()"/>
+        </div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">面积公式</div>
+          <div class="info-box">
+            <b>长方形面积</b><br/>
+            面积 = 长 × 宽<br/>
+            S = a × b<br/><br/>
+            <b>正方形面积</b><br/>
+            面积 = 边长 × 边长<br/>
+            S = a × a = a²
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">面积 vs 周长</div>
+          <div class="info-box">
+            <b>面积</b>：物体表面的大小<br/>
+            <b>周长</b>：物体一圈的长度<br/><br/>
+            面积相同，周长不一定相同！<br/>
+            周长相同，面积也不一定相同！
+          </div>
+        </div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">面积单位</div>
+          <div class="info-box">
+            ● 1 平方厘米 (cm²) = 边长1cm的正方形<br/>
+            ● 1 平方分米 (dm²) = 边长1dm的正方形<br/>
+            ● 1 平方米 (m²) = 边长1m的正方形
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const canvas = document.getElementById('gridCanvas');
+const ctx = canvas.getContext('2d');
+let mode = 'free';
+let cells = new Set();
+let COLS = 12, ROWS = 10, CELL = 40;
+
+function initCanvas() {
+  const area = document.querySelector('.canvas-area');
+  const w = Math.min(area.clientWidth - 40, COLS * CELL + 4);
+  const h = Math.min(area.clientHeight - 80, ROWS * CELL + 4);
+  COLS = Math.floor(w / CELL);
+  ROWS = Math.floor(h / CELL);
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = (COLS * CELL + 4) * dpr;
+  canvas.height = (ROWS * CELL + 4) * dpr;
+  canvas.style.width = (COLS * CELL + 4) + 'px';
+  canvas.style.height = (ROWS * CELL + 4) + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  draw();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, COLS * CELL + 4, ROWS * CELL + 4);
+  // grid lines
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 1;
+  for (let r = 0; r <= ROWS; r++) {
+    ctx.beginPath(); ctx.moveTo(2, 2 + r * CELL); ctx.lineTo(2 + COLS * CELL, 2 + r * CELL); ctx.stroke();
+  }
+  for (let c = 0; c <= COLS; c++) {
+    ctx.beginPath(); ctx.moveTo(2 + c * CELL, 2); ctx.lineTo(2 + c * CELL, 2 + ROWS * CELL); ctx.stroke();
+  }
+  // filled cells
+  cells.forEach(key => {
+    const [c, r] = key.split(',').map(Number);
+    ctx.fillStyle = 'rgba(34,197,94,0.3)';
+    ctx.fillRect(2 + c * CELL, 2 + r * CELL, CELL, CELL);
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(2 + c * CELL, 2 + r * CELL, CELL, CELL);
+    ctx.fillStyle = '#16a34a';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('1cm²', 2 + c * CELL + CELL / 2, 2 + r * CELL + CELL / 2);
+  });
+  updateStats();
+}
+
+function updateStats() {
+  const count = cells.size;
+  document.getElementById('countDisplay').textContent = count;
+  document.getElementById('areaDisplay').textContent = count;
+  let perimeter = 0;
+  cells.forEach(key => {
+    const [c, r] = key.split(',').map(Number);
+    if (!cells.has(`${c-1},${r}`)) perimeter++;
+    if (!cells.has(`${c+1},${r}`)) perimeter++;
+    if (!cells.has(`${c},${r-1}`)) perimeter++;
+    if (!cells.has(`${c},${r+1}`)) perimeter++;
+  });
+  document.getElementById('perimDisplay').textContent = perimeter;
+}
+
+canvas.addEventListener('click', e => {
+  if (mode !== 'free') return;
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left - 2;
+  const y = e.clientY - rect.top - 2;
+  const c = Math.floor(x / CELL);
+  const r = Math.floor(y / CELL);
+  if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return;
+  const key = `${c},${r}`;
+  if (cells.has(key)) cells.delete(key); else cells.add(key);
+  draw();
+});
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.preset-btn').forEach(b => { b.style.background = '#fff'; b.style.borderColor = '#e2e8f0'; b.style.color = ''; });
+  const btn = document.getElementById('mode' + m.charAt(0).toUpperCase() + m.slice(1));
+  if (btn) { btn.style.background = '#f0fdf4'; btn.style.borderColor = '#22c55e'; btn.style.color = '#16a34a'; }
+  document.getElementById('dimSection').style.display = m !== 'free' ? '' : 'none';
+  document.getElementById('widthLabel').style.display = m === 'square' ? 'none' : '';
+  document.getElementById('widSlider').style.display = m === 'square' ? 'none' : '';
+  if (m !== 'free') updateDim(); else { cells.clear(); draw(); }
+}
+
+function toggleMode() {
+  const modes = ['free', 'rect', 'square'];
+  const idx = (modes.indexOf(mode) + 1) % modes.length;
+  setMode(modes[idx]);
+}
+
+function updateDim() {
+  const len = parseInt(document.getElementById('lenSlider').value);
+  let wid = mode === 'square' ? len : parseInt(document.getElementById('widSlider').value);
+  document.getElementById('lenVal').textContent = len;
+  document.getElementById('widVal').textContent = wid;
+  cells.clear();
+  for (let r = 0; r < wid; r++) for (let c = 0; c < len; c++) cells.add(`${c},${r}`);
+  draw();
+}
+
+function clearGrid() { cells.clear(); draw(); }
+
+window.addEventListener('resize', initCanvas);
+initCanvas();
+</script>
+</body>
+</html>

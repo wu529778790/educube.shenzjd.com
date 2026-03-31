@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>万以内的加法和减法 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 16px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); }
+    .control-panel { background: #eff6ff; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 5px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: .05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 14px; font-weight: 700; font-family: 'Courier New', monospace; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+    .num-input { width: 100px; padding: 8px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 20px; font-weight: 800; text-align: center; font-family: 'Courier New', monospace; }
+    .num-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
+    .op-select { padding: 8px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 22px; font-weight: 800; cursor: pointer; }
+    .op-select:focus { outline: none; border-color: #3b82f6; }
+    .calc-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; }
+    /* 竖式 */
+    .vertical-calc { background: #fff; border: 2px solid #3b82f6; border-radius: 14px; padding: 24px 36px; font-family: 'Courier New', monospace; min-width: 220px; }
+    .vc-row { display: flex; justify-content: flex-end; gap: 0; line-height: 1.9; }
+    .vc-cell { width: 36px; text-align: center; font-size: 28px; font-weight: 800; color: #1e293b; }
+    .vc-cell.carry { color: #ef4444; font-size: 16px; font-weight: 700; height: 22px; line-height: 1.2; }
+    .vc-cell.borrow { color: #f59e0b; font-size: 16px; font-weight: 700; height: 22px; line-height: 1.2; }
+    .vc-op { font-size: 28px; font-weight: 800; color: #3b82f6; width: 36px; text-align: center; }
+    .vc-line { border-top: 3px solid #1e293b; margin: 4px 0; }
+    .vc-cell.result-highlight { color: #3b82f6; }
+    .verify-box { background: #fff; border: 2px solid #22c55e; border-radius: 10px; padding: 12px 16px; font-size: 14px; line-height: 1.8; color: #334155; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div class="edu-toolbar-title">➕ 万以内的加法和减法</div>
+    <div class="edu-toolbar-subtitle">上册 · 第二单元</div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="clearAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div class="calc-row">
+          <input class="num-input" id="numA" value="356" maxlength="4" />
+          <select class="op-select" id="opSelect"><option value="+">＋</option><option value="-">－</option></select>
+          <input class="num-input" id="numB" value="478" maxlength="4" />
+          <button class="edu-btn edu-btn-primary" onclick="doCalc()" style="font-size:16px;font-weight:800">＝</button>
+        </div>
+        <div class="vertical-calc" id="verticalCalc" style="display:none"></div>
+        <div class="verify-box" id="verifyBox" style="display:none"></div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设例题</div>
+          <button class="preset-btn" onclick="loadEx(356,478,'+')">356 + 478</button>
+          <button class="preset-btn" onclick="loadEx(1000,367,'-')">1000 − 367</button>
+          <button class="preset-btn" onclick="loadEx(837,265,'+')">837 + 265</button>
+          <button class="preset-btn" onclick="loadEx(2000,846,'-')">2000 − 846</button>
+          <button class="preset-btn" onclick="loadEx(654,328,'+')">654 + 328</button>
+          <button class="preset-btn" onclick="loadEx(1500,673,'-')">1500 − 673</button>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">随机练习</div>
+          <button class="edu-btn edu-btn-accent" onclick="randomEx()" style="width:100%">生成随机题目</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>竖式计算要点</b><br/>
+          ● 相同数位对齐<br/>
+          ● 从个位算起<br/>
+          ● 加法：满十进一（进位标红）<br/>
+          ● 减法：不够减则借一当十（借位标黄）<br/>
+          ● 验算：加法用减法，减法用加法
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function loadEx(a, b, op) {
+  document.getElementById('numA').value = a;
+  document.getElementById('numB').value = b;
+  document.getElementById('opSelect').value = op;
+  doCalc();
+}
+
+function randomEx() {
+  const op = Math.random() > 0.5 ? '+' : '-';
+  let a = Math.floor(Math.random()*9000)+100;
+  let b = Math.floor(Math.random()*9000)+100;
+  if (op === '-' && a < b) [a, b] = [b, a];
+  loadEx(a, b, op);
+}
+
+function doCalc() {
+  const a = parseInt(document.getElementById('numA').value) || 0;
+  const b = parseInt(document.getElementById('numB').value) || 0;
+  const op = document.getElementById('opSelect').value;
+  if (a < 0 || a > 9999 || b < 0 || b > 9999) return;
+  if (op === '-' && a < b) { alert('被减数不能小于减数！'); return; }
+  const result = op === '+' ? a + b : a - b;
+  const maxLen = Math.max(String(a).length, String(b).length, String(Math.abs(result)).length);
+  const sa = String(a).padStart(maxLen, ' ');
+  const sb = String(b).padStart(maxLen, ' ');
+  const sr = String(result).padStart(maxLen, ' ');
+  // 竖式HTML
+  let html = '';
+  // 进位/借位行
+  html += '<div class="vc-row">';
+  for (let i = 0; i < maxLen; i++) {
+    const cls = op === '+' ? 'carry' : 'borrow';
+    const mark = getCarryBorrow(a, b, op, i, maxLen);
+    html += `<div class="vc-cell ${cls}">${mark}</div>`;
+  }
+  html += '</div>';
+  // 第一个数
+  html += '<div class="vc-row">';
+  for (let i = 0; i < maxLen; i++) html += `<div class="vc-cell">${sa[i]===' '?'':sa[i]}</div>`;
+  html += '</div>';
+  // 运算符 + 第二个数
+  html += '<div class="vc-row">';
+  html += `<div class="vc-op">${op==='+'?'＋':'－'}</div>`;
+  for (let i = 0; i < maxLen; i++) html += `<div class="vc-cell">${sb[i]===' '?'':sb[i]}</div>`;
+  html += '</div>';
+  // 横线
+  html += '<div class="vc-line"></div>';
+  // 结果
+  html += '<div class="vc-row">';
+  for (let i = 0; i < maxLen; i++) html += `<div class="vc-cell result-highlight">${sr[i]}</div>`;
+  html += '</div>';
+  document.getElementById('verticalCalc').innerHTML = html;
+  document.getElementById('verticalCalc').style.display = '';
+  // 验算
+  let verify = '';
+  if (op === '+') {
+    verify = `验算：${result} − ${b} = ${result - b} ${result-b===a ? '✓ 正确' : ''}`;
+  } else {
+    verify = `验算：${b} + ${result} = ${b + result} ${b+result===a ? '✓ 正确' : ''}`;
+  }
+  document.getElementById('verifyBox').innerHTML = verify;
+  document.getElementById('verifyBox').style.display = '';
+}
+
+function getCarryBorrow(a, b, op, pos, maxLen) {
+  const dA = Math.floor(a / Math.pow(10, maxLen-1-pos)) % 10;
+  const dB = Math.floor(b / Math.pow(10, maxLen-1-pos)) % 10;
+  if (op === '+') {
+    // 进位：从右到左检查
+    let carry = 0;
+    for (let i = maxLen-1; i >= 0; i--) {
+      const da = Math.floor(a / Math.pow(10, maxLen-1-i)) % 10;
+      const db = Math.floor(b / Math.pow(10, maxLen-1-i)) % 10;
+      const sum = da + db + carry;
+      if (i === pos && carry > 0) return carry > 0 ? '·' + carry : '';
+      carry = sum >= 10 ? 1 : 0;
+    }
+    return '';
+  } else {
+    // 借位：从右到左检查
+    let borrow = 0;
+    for (let i = maxLen-1; i >= 0; i--) {
+      const da = Math.floor(a / Math.pow(10, maxLen-1-i)) % 10 - borrow;
+      const db = Math.floor(b / Math.pow(10, maxLen-1-i)) % 10;
+      if (i === pos && borrow > 0) return '·';
+      borrow = da < db ? 1 : 0;
+    }
+    return '';
+  }
+}
+
+function clearAll() {
+  document.getElementById('numA').value = '';
+  document.getElementById('numB').value = '';
+  document.getElementById('verticalCalc').style.display = 'none';
+  document.getElementById('verifyBox').style.display = 'none';
+}
+</script>
+</body>
+</html>
