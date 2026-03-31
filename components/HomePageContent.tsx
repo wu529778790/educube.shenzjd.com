@@ -96,7 +96,7 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
     <div className="min-h-screen" style={{ background: "var(--edu-cream)" }}>
       {/* 顶栏：品牌 + 当前路径 */}
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div
               className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold shrink-0"
@@ -116,7 +116,7 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
           </div>
           <Link
             href="/generate"
-            className="ml-auto inline-flex items-center gap-1 text-sm font-semibold px-3 py-1.5 rounded-lg text-white transition-colors shrink-0"
+            className="inline-flex items-center gap-1 text-sm font-semibold px-3 py-1.5 rounded-lg text-white transition-colors shrink-0"
             style={{ background: "linear-gradient(135deg, #8B5CF6, #6D28D9)" }}
           >
             AI 生成
