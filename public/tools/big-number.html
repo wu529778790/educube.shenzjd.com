@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>大数的认识 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #fff7ed 0%, #fdfaf4 100%); }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 14px; font-weight: 700; font-family: 'Courier New', monospace; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #f97316; color: #f97316; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #fed7aa; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+
+    /* 数位表 */
+    .digit-table { display: flex; justify-content: center; gap: 2px; margin-bottom: 20px; flex-wrap: wrap; }
+    .digit-col { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 54px; }
+    .digit-col .group-label { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; color: #fff; }
+    .digit-col.yi .group-label { background: #ef4444; }
+    .digit-col.wan .group-label { background: #f97316; }
+    .digit-col.ge .group-label { background: #0ea5e9; }
+    .digit-col .pos-label { font-size: 11px; color: #64748b; }
+    .digit-col .digit-value { width: 54px; height: 54px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; font-family: 'Courier New', monospace; background: #fff; border: 2px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .digit-col .digit-value.active { border-color: #f97316; background: #fff7ed; box-shadow: 0 0 0 3px rgba(249,115,22,.15); }
+    .digit-col .digit-controls { display: flex; gap: 4px; }
+    .digit-col .digit-btn { width: 26px; height: 26px; border-radius: 6px; border: 1px solid #e2e8f0; background: #fff; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #475569; transition: all .15s; }
+    .digit-col .digit-btn:hover { background: #f97316; color: #fff; border-color: #f97316; }
+    .digit-col .unit-label { font-size: 10px; color: #94a3b8; }
+
+    /* 读法 */
+    .reading-box { background: #fff; border: 2px solid #f97316; border-radius: 12px; padding: 16px 20px; text-align: center; margin-bottom: 16px; }
+    .reading-box .label { font-size: 12px; color: #64748b; margin-bottom: 6px; }
+    .reading-box .value { font-size: 22px; font-weight: 800; color: #1e293b; letter-spacing: 0.05em; }
+
+    /* 大数显示 */
+    .number-display { text-align: center; margin-bottom: 16px; }
+    .number-display .big-num { font-size: 36px; font-weight: 800; font-family: 'Courier New', monospace; letter-spacing: 0.08em; }
+    .number-display .big-num .digit-highlight { color: #f97316; text-decoration: underline; text-underline-offset: 4px; }
+    .number-display .big-num .comma { color: #94a3b8; margin: 0 2px; }
+
+    /* 比较模式 */
+    .compare-area { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px; }
+    .compare-num { font-size: 28px; font-weight: 800; font-family: 'Courier New', monospace; background: #fff; padding: 8px 16px; border-radius: 10px; border: 2px solid #e2e8f0; min-width: 140px; text-align: center; }
+    .compare-btn { width: 48px; height: 48px; border-radius: 50%; font-size: 22px; font-weight: 800; border: 2px solid #e2e8f0; background: #fff; cursor: pointer; transition: all .15s; display: flex; align-items: center; justify-content: center; }
+    .compare-btn:hover { border-color: #f97316; }
+    .compare-btn.selected { background: #f97316; color: #fff; border-color: #f97316; }
+    .compare-result { text-align: center; font-size: 16px; font-weight: 700; margin-top: 8px; min-height: 24px; }
+
+    /* 四舍五入 */
+    .round-section { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+    .round-result { font-size: 20px; font-weight: 800; color: #f97316; }
+
+    .section-title { font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 8px; text-align: center; }
+    .tab-bar { display: flex; gap: 8px; margin-bottom: 16px; justify-content: center; }
+    .tab-btn { padding: 6px 16px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .tab-btn.active { background: #f97316; color: #fff; border-color: #f97316; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div class="edu-toolbar-title">🔢 大数的认识</div>
+    <div class="edu-toolbar-subtitle">上册 · 第一单元</div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <!-- 模式切换 -->
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="switchMode('explore')">数位探索</button>
+          <button class="tab-btn" onclick="switchMode('compare')">比较大小</button>
+          <button class="tab-btn" onclick="switchMode('round')">四舍五入</button>
+        </div>
+
+        <!-- 数位探索模式 -->
+        <div id="mode-explore">
+          <div class="section-title">拖动箭头调整每个数位上的数字</div>
+          <div class="digit-table" id="digitTable"></div>
+          <div class="number-display"><div class="big-num" id="bigNumber"></div></div>
+          <div class="reading-box">
+            <div class="label">读法</div>
+            <div class="value" id="readingText">零</div>
+          </div>
+        </div>
+
+        <!-- 比较大小模式 -->
+        <div id="mode-compare" style="display:none">
+          <div class="section-title">比较两个大数的大小</div>
+          <div class="compare-area">
+            <div class="compare-num" id="cmpA"></div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <button class="compare-btn" onclick="selectCmp('>')">&#62;</button>
+              <button class="compare-btn" onclick="selectCmp('=')">=</button>
+              <button class="compare-btn" onclick="selectCmp('<')">&#60;</button>
+            </div>
+            <div class="compare-num" id="cmpB"></div>
+          </div>
+          <div class="compare-result" id="cmpResult"></div>
+        </div>
+
+        <!-- 四舍五入模式 -->
+        <div id="mode-round" style="display:none">
+          <div class="section-title">将大数四舍五入到指定数位</div>
+          <div class="number-display"><div class="big-num" id="roundBigNum"></div></div>
+          <div class="round-section">
+            <button class="preset-btn" style="width:auto;padding:6px 14px" onclick="roundTo('wan')">精确到万位</button>
+            <button class="preset-btn" style="width:auto;padding:6px 14px" onclick="roundTo('shiwan')">精确到十万位</button>
+            <button class="preset-btn" style="width:auto;padding:6px 14px" onclick="roundTo('baiwan')">精确到百万位</button>
+            <button class="preset-btn" style="width:auto;padding:6px 14px" onclick="roundTo('yi')">精确到亿位</button>
+          </div>
+          <div class="reading-box" style="margin-top:16px">
+            <div class="label">四舍五入结果</div>
+            <div class="value" id="roundResult">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设大数</div>
+          <button class="preset-btn" onclick="loadNumber([0,0,0,0,5,0,0,0,0])">五千万</button>
+          <button class="preset-btn" onclick="loadNumber([1,2,3,4,5,6,7,8,9])">123456789</button>
+          <button class="preset-btn" onclick="loadNumber([8,0,0,0,9,0,0,0,0])">八亿零九百万</button>
+          <button class="preset-btn" onclick="loadNumber([3,0,4,0,0,5,0,6,0])">三亿零四百万零五百六十</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>大数知识</b><br/>
+          ● 个级：个、十、百、千<br/>
+          ● 万级：万、十万、百万、千万<br/>
+          ● 亿级：亿、十亿、百亿、千亿<br/>
+          ● 每级末尾的 0 不读，中间连续的 0 只读一个"零"
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+// 数位定义：从高位到低位
+const POSITIONS = [
+  { key:'baiyi',    label:'百亿', unit:'百亿', group:'yi',  factor:1e10 },
+  { key:'shiyi',    label:'十亿', unit:'十亿', group:'yi',  factor:1e9  },
+  { key:'yi',       label:'亿',   unit:'亿',   group:'yi',  factor:1e8  },
+  { key:'qianwan',  label:'千万', unit:'千万', group:'wan', factor:1e7  },
+  { key:'baiwan',   label:'百万', unit:'百万', group:'wan', factor:1e6  },
+  { key:'shiwan',   label:'十万', unit:'十万', group:'wan', factor:1e5  },
+  { key:'wan',      label:'万',   unit:'万',   group:'wan', factor:1e4  },
+  { key:'qian',     label:'千',   unit:'千',   group:'ge',  factor:1e3  },
+  { key:'bai',      label:'百',   unit:'百',   group:'ge',  factor:1e2  },
+  { key:'shi',      label:'十',   unit:'十',   group:'ge',  factor:1e1  },
+  { key:'ge',       label:'个',   unit:'个',   group:'ge',  factor:1e0  },
+];
+
+let digits = [0,0,0,0,0,0,0,0,0,0,0]; // 11位：百亿~个
+let activePos = 2; // 默认亿位
+let currentMode = 'explore';
+let cmpNumbers = [0, 0];
+let selectedCmp = '';
+
+// 数字转中文
+const CN = ['零','一','二','三','四','五','六','七','八','九'];
+
+function switchMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', ['explore','compare','round'][i] === mode);
+  });
+  document.getElementById('mode-explore').style.display = mode === 'explore' ? '' : 'none';
+  document.getElementById('mode-compare').style.display = mode === 'compare' ? '' : 'none';
+  document.getElementById('mode-round').style.display = mode === 'round' ? '' : 'none';
+  if (mode === 'compare') generateCompare();
+  if (mode === 'round') renderRoundBigNum();
+}
+
+// 构建数位表
+function buildDigitTable() {
+  const container = document.getElementById('digitTable');
+  container.innerHTML = '';
+  // 按级分组渲染
+  const groups = [
+    { name:'亿级', cls:'yi', indices:[0,1,2] },
+    { name:'万级', cls:'wan', indices:[3,4,5,6] },
+    { name:'个级', cls:'ge', indices:[7,8,9,10] },
+  ];
+  groups.forEach(g => {
+    g.indices.forEach((idx, gi) => {
+      const pos = POSITIONS[idx];
+      const col = document.createElement('div');
+      col.className = `digit-col ${g.cls}`;
+      // 级标签（每组第一个显示）
+      const gl = document.createElement('div');
+      gl.className = 'group-label';
+      gl.textContent = gi === 0 ? g.name : '';
+      col.appendChild(gl);
+      // 位名
+      const pl = document.createElement('div');
+      pl.className = 'pos-label';
+      pl.textContent = pos.label;
+      col.appendChild(pl);
+      // 数字值
+      const dv = document.createElement('div');
+      dv.className = 'digit-value' + (idx === activePos ? ' active' : '');
+      dv.textContent = digits[idx];
+      dv.onclick = () => { activePos = idx; renderAll(); };
+      col.appendChild(dv);
+      // 控制按钮
+      const dc = document.createElement('div');
+      dc.className = 'digit-controls';
+      const up = document.createElement('button');
+      up.className = 'digit-btn';
+      up.textContent = '▲';
+      up.onclick = () => changeDigit(idx, 1);
+      const dn = document.createElement('button');
+      dn.className = 'digit-btn';
+      dn.textContent = '▼';
+      dn.onclick = () => changeDigit(idx, -1);
+      dc.appendChild(up);
+      dc.appendChild(dn);
+      col.appendChild(dc);
+      container.appendChild(col);
+    });
+  });
+}
+
+function changeDigit(pos, delta) {
+  activePos = pos;
+  digits[pos] = (digits[pos] + delta + 10) % 10;
+  renderAll();
+}
+
+function getNumberValue() {
+  let n = 0;
+  for (let i = 0; i < 11; i++) n = n * 10 + digits[i];
+  return n;
+}
+
+function formatNumber() {
+  let s = digits.join('');
+  // 加逗号分隔（从右到左每4位）
+  let parts = [];
+  for (let i = s.length; i > 0; i -= 4) {
+    parts.unshift(s.substring(Math.max(0, i-4), i));
+  }
+  return parts.join(',');
+}
+
+function renderBigNumber() {
+  const el = document.getElementById('bigNumber');
+  const formatted = formatNumber();
+  let html = '';
+  for (let i = 0; i < formatted.length; i++) {
+    const ch = formatted[i];
+    if (ch === ',') {
+      html += '<span class="comma">,</span>';
+    } else {
+      const dIdx = i - Math.floor(i/5); // adjust for commas
+      html += `<span class="${true ? '' : 'digit-highlight'}">${ch}</span>`;
+    }
+  }
+  el.innerHTML = html;
+}
+
+function renderReading() {
+  const el = document.getElementById('readingText');
+  el.textContent = readChinese(digits);
+}
+
+function readChinese(d) {
+  // d: array of 11 digits [百亿,...,个]
+  // 分级处理
+  const yiPart  = d.slice(0, 3);  // 亿级
+  const wanPart = d.slice(3, 7);  // 万级
+  const gePart  = d.slice(7, 11); // 个级
+
+  let result = '';
+  const yiVal = yiPart.reduce((a,b) => a*10+b, 0);
+  const wanVal = wanPart.reduce((a,b) => a*10+b, 0);
+  const geVal = gePart.reduce((a,b) => a*10+b, 0);
+
+  if (yiVal > 0) {
+    result += readFourDigits(yiPart) + '亿';
+  }
+  if (wanVal > 0) {
+    // 亿级非零但万级不足四位时补零
+    if (yiVal > 0 && wanPart[0] === 0) result += '零';
+    result += readFourDigits(wanPart) + '万';
+  } else if (yiVal > 0 && geVal > 0) {
+    result += '零';
+  }
+  if (geVal > 0) {
+    if (wanVal > 0 && gePart[0] === 0) result += '零';
+    result += readFourDigits(gePart);
+  }
+  if (!result) result = '零';
+  return result;
+}
+
+function readFourDigits(arr) {
+  // arr: 4-digit array
+  let s = '';
+  let hasNonZero = false;
+  for (let i = 0; i < arr.length; i++) {
+    const d = arr[i];
+    const units = ['千','百','十',''];
+    if (d !== 0) {
+      if (hasNonZero === false && i > 0 && d !== 0) {
+        // 首个非零位不需要补零
+      }
+      s += CN[d] + units[i];
+      hasNonZero = true;
+    } else if (hasNonZero) {
+      // 检查后面是否还有非零
+      let rest = arr.slice(i+1).some(x => x !== 0);
+      if (rest) s += '零';
+    }
+  }
+  return s;
+}
+
+function loadNumber(arr) {
+  digits = arr.slice();
+  activePos = 2;
+  renderAll();
+  if (currentMode === 'round') { renderRoundBigNum(); document.getElementById('roundResult').textContent = '—'; }
+}
+
+function resetAll() {
+  digits = [0,0,0,0,0,0,0,0,0,0,0];
+  activePos = 2;
+  selectedCmp = '';
+  document.getElementById('roundResult').textContent = '—';
+  renderAll();
+}
+
+function renderAll() {
+  buildDigitTable();
+  renderBigNumber();
+  renderReading();
+}
+
+// ---- 比较大小 ----
+function generateCompare() {
+  // 生成两个大数
+  const rand = () => Math.floor(Math.random() * 9 + 1);
+  const randDigit = () => Math.floor(Math.random() * 10);
+  const genNum = () => {
+    const len = Math.random() > 0.5 ? 9 : 8; // 8或9位数
+    let arr = [rand()];
+    for (let i = 1; i < len; i++) arr.push(randDigit());
+    return arr.reduce((a,b) => a*10+b, 0);
+  };
+  cmpNumbers = [genNum(), genNum()];
+  selectedCmp = '';
+  document.querySelectorAll('.compare-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('cmpResult').textContent = '';
+  document.getElementById('cmpA').textContent = cmpNumbers[0].toLocaleString();
+  document.getElementById('cmpB').textContent = cmpNumbers[1].toLocaleString();
+}
+
+function selectCmp(op) {
+  selectedCmp = op;
+  document.querySelectorAll('.compare-btn').forEach(b => {
+    b.classList.toggle('selected', b.textContent.trim() === op);
+  });
+  const correct = (op === '>' && cmpNumbers[0] > cmpNumbers[1])
+               || (op === '=' && cmpNumbers[0] === cmpNumbers[1])
+               || (op === '<' && cmpNumbers[0] < cmpNumbers[1]);
+  const el = document.getElementById('cmpResult');
+  if (correct) {
+    el.style.color = '#22c55e';
+    el.textContent = '✓ 正确！' + cmpNumbers[0].toLocaleString() + ' ' + op + ' ' + cmpNumbers[1].toLocaleString();
+  } else {
+    el.style.color = '#ef4444';
+    el.textContent = '✗ 再想想，注意从最高位开始比较';
+  }
+}
+
+// ---- 四舍五入 ----
+function renderRoundBigNum() {
+  const el = document.getElementById('roundBigNum');
+  const formatted = formatNumber();
+  el.innerHTML = formatted.split('').map(ch =>
+    ch === ',' ? '<span class="comma">,</span>' : `<span>${ch}</span>`
+  ).join('');
+}
+
+function roundTo(posKey) {
+  const posIdx = POSITIONS.findIndex(p => p.key === posKey);
+  const factor = POSITIONS[posKey].factor * 10; // 精确到该位 = 看下一位
+  const val = getNumberValue();
+  const rounded = Math.round(val / POSITIONS[posKey].factor) * POSITIONS[posKey].factor;
+  const el = document.getElementById('roundResult');
+  el.textContent = rounded.toLocaleString();
+}
+
+// 初始化
+renderAll();
+</script>
+</body>
+</html>

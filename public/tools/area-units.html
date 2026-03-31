@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>公顷和平方千米 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #f0fdf4 0%, #fdfaf4 100%); }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 14px; font-weight: 700; font-family: 'Courier New', monospace; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #22c55e; color: #22c55e; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .section-title { font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 12px; text-align: center; }
+
+    /* 关系图 */
+    .relation-chain { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 24px; }
+    .relation-node { background: #fff; border: 2px solid #22c55e; border-radius: 12px; padding: 12px 24px; text-align: center; min-width: 180px; }
+    .relation-node .name { font-size: 18px; font-weight: 800; color: #1e293b; }
+    .relation-node .size { font-size: 13px; color: #64748b; margin-top: 2px; }
+    .relation-arrow { font-size: 20px; color: #22c55e; font-weight: 800; }
+    .relation-arrow .factor { font-size: 13px; color: #64748b; margin-left: 8px; font-weight: 600; }
+
+    /* 方格可视化 */
+    .grid-visual { display: flex; justify-content: center; margin-bottom: 24px; }
+    .grid-visual canvas { border-radius: 12px; }
+
+    /* 换算器 */
+    .converter { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+    .converter input { width: 100px; padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 16px; font-weight: 700; font-family: 'Courier New', monospace; text-align: center; }
+    .converter input:focus { border-color: #22c55e; outline: none; }
+    .converter select { padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-weight: 600; background: #fff; cursor: pointer; }
+    .converter .equals { font-size: 24px; font-weight: 800; color: #22c55e; }
+    .converter .result { font-size: 20px; font-weight: 800; color: #1e293b; background: #f0fdf4; padding: 8px 16px; border-radius: 8px; border: 1.5px solid #bbf7d0; min-width: 120px; text-align: center; }
+
+    /* 生活实例 */
+    .examples { display: flex; flex-direction: column; gap: 10px; }
+    .example-card { display: flex; align-items: center; gap: 12px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; }
+    .example-card .icon { font-size: 28px; }
+    .example-card .info { flex: 1; }
+    .example-card .info .title { font-size: 13px; font-weight: 700; color: #1e293b; }
+    .example-card .info .desc { font-size: 11px; color: #64748b; }
+    .example-card .area-badge { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 700; color: #16a34a; white-space: nowrap; }
+
+    .tab-bar { display: flex; gap: 8px; margin-bottom: 16px; justify-content: center; }
+    .tab-btn { padding: 6px 16px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .tab-btn.active { background: #22c55e; color: #fff; border-color: #22c55e; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div class="edu-toolbar-title">📐 公顷和平方千米</div>
+    <div class="edu-toolbar-subtitle">上册 · 第二单元</div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="switchTab('relation')">单位关系</button>
+          <button class="tab-btn" onclick="switchTab('converter')">换算工具</button>
+          <button class="tab-btn" onclick="switchTab('examples')">生活实例</button>
+        </div>
+
+        <!-- 单位关系 -->
+        <div id="tab-relation">
+          <div class="section-title">面积单位之间的关系</div>
+          <div class="relation-chain">
+            <div class="relation-node">
+              <div class="name">1 平方米 (m²)</div>
+              <div class="size">边长 1 米的正方形</div>
+            </div>
+            <div class="relation-arrow">↓ <span class="factor">×10000</span></div>
+            <div class="relation-node">
+              <div class="name">1 公顷</div>
+              <div class="size">100m × 100m = 10000 m²</div>
+            </div>
+            <div class="relation-arrow">↓ <span class="factor">×100</span></div>
+            <div class="relation-node">
+              <div class="name">1 平方千米 (km²)</div>
+              <div class="size">1000m × 1000m = 100 公顷 = 1000000 m²</div>
+            </div>
+          </div>
+          <div class="section-title">方格模型 — 1 公顷</div>
+          <div class="grid-visual">
+            <canvas id="gridCanvas" width="400" height="400"></canvas>
+          </div>
+          <div style="text-align:center;font-size:12px;color:#64748b;margin-top:-12px">
+            每个 10×10 小方格代表 1000 m²，整图代表 10000 m² = 1 公顷
+          </div>
+        </div>
+
+        <!-- 换算工具 -->
+        <div id="tab-converter" style="display:none">
+          <div class="section-title">面积单位换算</div>
+          <div class="converter">
+            <input type="number" id="convInput" value="1" oninput="convert()" />
+            <select id="convFrom" onchange="convert()">
+              <option value="m2">m² (平方米)</option>
+              <option value="ha" selected>公顷</option>
+              <option value="km2">km² (平方千米)</option>
+            </select>
+            <span class="equals">=</span>
+            <div class="result" id="convResult">10000 m²</div>
+          </div>
+          <div id="convAll" style="display:flex;flex-direction:column;gap:8px;align-items:center;"></div>
+        </div>
+
+        <!-- 生活实例 -->
+        <div id="tab-examples" style="display:none">
+          <div class="section-title">生活中的面积</div>
+          <div class="examples">
+            <div class="example-card"><div class="icon">🏫</div><div class="info"><div class="title">一个标准教室</div><div class="desc">约 50 m²</div></div><div class="area-badge">50 m²</div></div>
+            <div class="example-card"><div class="icon">⚽</div><div class="info"><div class="title">标准足球场</div><div class="desc">约 105m × 68m</div></div><div class="area-badge">≈ 0.7 公顷</div></div>
+            <div class="example-card"><div class="icon">🏗️</div><div class="info"><div class="title">天安门广场</div><div class="desc">约 440000 m²</div></div><div class="area-badge">44 公顷</div></div>
+            <div class="example-card"><div class="icon">🌳</div><div class="info"><div class="title">故宫</div><div class="desc">约 720000 m²</div></div><div class="area-badge">72 公顷</div></div>
+            <div class="example-card"><div class="icon">🏞️</div><div class="info"><div class="title">北京海淀区</div><div class="desc">约 431 km²</div></div><div class="area-badge">431 km²</div></div>
+            <div class="example-card"><div class="icon">🗺️</div><div class="info"><div class="title">北京市</div><div class="desc">约 16410 km²</div></div><div class="area-badge">16410 km²</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">方格模型</div>
+          <button class="preset-btn" onclick="drawGrid(10)">1 公顷 (10×10)</button>
+          <button class="preset-btn" onclick="drawGrid(5)">5000 m²</button>
+          <button class="preset-btn" onclick="drawGrid(1)">1000 m²</button>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">快速换算</div>
+          <button class="preset-btn" onclick="quickConvert(1,'ha')">1 公顷 → m²</button>
+          <button class="preset-btn" onclick="quickConvert(1,'km2')">1 km² → 公顷</button>
+          <button class="preset-btn" onclick="quickConvert(5,'ha')">5 公顷 → m²</button>
+          <button class="preset-btn" onclick="quickConvert(3,'km2')">3 km² → m²</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>面积单位换算</b><br/>
+          ● 1 公顷 = 10000 平方米<br/>
+          ● 1 平方千米 = 100 公顷<br/>
+          ● 1 平方千米 = 1000000 平方米<br/>
+          ● 公顷符号：ha
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+let currentTab = 'relation';
+const canvas = document.getElementById('gridCanvas');
+const ctx = canvas.getContext('2d');
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', ['relation','converter','examples'][i] === tab);
+  });
+  document.getElementById('tab-relation').style.display = tab === 'relation' ? '' : 'none';
+  document.getElementById('tab-converter').style.display = tab === 'converter' ? '' : 'none';
+  document.getElementById('tab-examples').style.display = tab === 'examples' ? '' : 'none';
+  if (tab === 'relation') drawGrid(10);
+}
+
+function drawGrid(n) {
+  const dpr = window.devicePixelRatio || 1;
+  const size = 400;
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const pad = 20;
+  const drawSize = size - pad * 2;
+  const cellSize = drawSize / 10;
+
+  // 背景
+  ctx.fillStyle = '#f0fdf4';
+  ctx.fillRect(0, 0, size, size);
+
+  // 画10×10网格
+  ctx.strokeStyle = '#d1d5db';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 10; i++) {
+    ctx.beginPath();
+    ctx.moveTo(pad + i * cellSize, pad);
+    ctx.lineTo(pad + i * cellSize, pad + drawSize);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(pad, pad + i * cellSize);
+    ctx.lineTo(pad + drawSize, pad + i * cellSize);
+    ctx.stroke();
+  }
+
+  // 填充选中的格子
+  ctx.fillStyle = 'rgba(34,197,94,0.25)';
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < 10; c++) {
+      ctx.fillRect(pad + c * cellSize, pad + r * cellSize, cellSize, cellSize);
+    }
+  }
+
+  // 高亮边界
+  ctx.strokeStyle = '#22c55e';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(pad, pad, drawSize, drawSize);
+
+  // 标注
+  ctx.fillStyle = '#1e293b';
+  ctx.font = '13px "Microsoft YaHei", sans-serif';
+  ctx.textAlign = 'center';
+  // 顶部标注
+  ctx.fillText('100 m', pad + drawSize / 2, pad - 6);
+  // 左侧标注
+  ctx.save();
+  ctx.translate(pad - 6, pad + drawSize / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('100 m', 0, 0);
+  ctx.restore();
+
+  // 面积标注
+  ctx.fillStyle = '#16a34a';
+  ctx.font = 'bold 16px "Microsoft YaHei", sans-serif';
+  ctx.textAlign = 'center';
+  const area = n * 1000;
+  ctx.fillText(area.toLocaleString() + ' m²', size / 2, size - 4);
+}
+
+function convert() {
+  const val = parseFloat(document.getElementById('convInput').value) || 0;
+  const from = document.getElementById('convFrom').value;
+  let m2 = val;
+  if (from === 'ha') m2 = val * 10000;
+  else if (from === 'km2') m2 = val * 1000000;
+
+  const ha = m2 / 10000;
+  const km2 = m2 / 1000000;
+
+  document.getElementById('convResult').innerHTML =
+    m2.toLocaleString() + ' m²';
+
+  const all = document.getElementById('convAll');
+  all.innerHTML = `
+    <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 20px;font-size:15px;font-weight:700;width:80%;text-align:center">
+      = ${m2.toLocaleString()} 平方米
+    </div>
+    <div style="background:#fff;border:1.5px solid #bbf7d0;border-radius:10px;padding:10px 20px;font-size:15px;font-weight:700;width:80%;text-align:center">
+      = ${ha.toLocaleString()} 公顷
+    </div>
+    <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 20px;font-size:15px;font-weight:700;width:80%;text-align:center">
+      = ${km2.toLocaleString()} 平方千米
+    </div>
+  `;
+}
+
+function quickConvert(val, unit) {
+  switchTab('converter');
+  document.getElementById('convInput').value = val;
+  document.getElementById('convFrom').value = unit;
+  convert();
+}
+
+// 初始化
+drawGrid(10);
+convert();
+</script>
+</body>
+</html>

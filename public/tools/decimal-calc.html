@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>小数的加法和减法 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #f0fdfa 0%, #fdfaf4 100%); }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 14px; font-weight: 700; font-family: 'Courier New', monospace; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #14b8a6; color: #14b8a6; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #99f6e4; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .section-title { font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 12px; text-align: center; }
+
+    /* 输入 */
+    .input-area { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .num-input { width: 100px; padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 20px; font-weight: 800; font-family: 'Courier New', monospace; text-align: center; background: #fff; }
+    .num-input:focus { border-color: #14b8a6; outline: none; }
+    .op-select { padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 20px; font-weight: 800; background: #fff; cursor: pointer; }
+    .calc-btn { padding: 8px 20px; border-radius: 8px; font-size: 14px; font-weight: 700; background: #14b8a6; color: #fff; border: none; cursor: pointer; }
+    .calc-btn:hover { background: #0d9488; }
+
+    /* 小数对齐演示 */
+    .align-demo { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
+    .align-row { display: flex; align-items: center; gap: 2px; font-family: 'Courier New', monospace; font-size: 28px; font-weight: 800; }
+    .align-cell { width: 30px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
+    .align-cell.integer { background: #f0fdfa; }
+    .align-cell.decimal { background: #ccfbf1; }
+    .align-cell.dot { background: #14b8a6; color: #fff; width: 16px; border-radius: 8px; }
+    .align-cell.carry { background: #fef2f2; color: #ef4444; font-size: 16px; }
+    .align-cell.borrow { background: #fef2f2; color: #ef4444; font-size: 16px; }
+    .align-cell.result { background: #d1fae5; color: #166534; }
+    .align-cell.highlight { box-shadow: 0 0 0 2px #14b8a6; }
+    .align-line { width: 100%; height: 2px; background: #1e293b; margin: 4px 0; }
+    .align-label { font-size: 13px; color: #64748b; font-weight: 600; margin-right: 8px; min-width: 36px; text-align: right; }
+    .align-op { font-size: 20px; color: #64748b; margin-right: 8px; min-width: 20px; text-align: center; }
+
+    /* 分步控制 */
+    .step-controls { display: flex; justify-content: center; gap: 10px; margin-bottom: 12px; }
+    .step-btn { padding: 6px 16px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .step-btn:hover { border-color: #14b8a6; color: #14b8a6; }
+    .step-info { text-align: center; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 12px; min-height: 24px; }
+
+    /* 数轴 */
+    .number-line-area { display: flex; justify-content: center; margin-bottom: 20px; }
+    .number-line-area canvas { border-radius: 12px; }
+
+    /* 对齐提示 */
+    .align-tip { text-align: center; font-size: 13px; color: #14b8a6; font-weight: 700; margin-bottom: 16px; padding: 8px; background: #f0fdfa; border-radius: 8px; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div class="edu-toolbar-title">± 小数的加法和减法</div>
+    <div class="edu-toolbar-subtitle">下册 · 第六单元</div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div class="input-area">
+          <input type="text" class="num-input" id="inputA" value="3.45" />
+          <select class="op-select" id="opSelect">
+            <option value="+">+</option>
+            <option value="-">−</option>
+          </select>
+          <input type="text" class="num-input" id="inputB" value="1.28" />
+          <button class="calc-btn" onclick="calculate()">计算</button>
+        </div>
+
+        <div class="section-title">竖式计算（小数点对齐）</div>
+        <div class="align-tip">关键：把小数点对齐，相同数位对齐</div>
+        <div class="step-controls">
+          <button class="step-btn" onclick="prevStep()">上一步</button>
+          <button class="step-btn" onclick="nextStep()">下一步</button>
+          <button class="step-btn" onclick="showAll()">显示全部</button>
+        </div>
+        <div class="step-info" id="stepInfo">点击"下一步"开始分步计算</div>
+        <div class="align-demo" id="alignDemo"></div>
+
+        <div class="section-title">数轴演示</div>
+        <div class="number-line-area">
+          <canvas id="lineCanvas" width="560" height="100"></canvas>
+        </div>
+      </div>
+
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">加法例题</div>
+          <button class="preset-btn" onclick="loadExample('3.45','1.28','+')">3.45 + 1.28</button>
+          <button class="preset-btn" onclick="loadExample('2.6','4.73','+')">2.6 + 4.73</button>
+          <button class="preset-btn" onclick="loadExample('5.07','3.85','+')">5.07 + 3.85</button>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">减法例题</div>
+          <button class="preset-btn" onclick="loadExample('8.34','2.16','-')">8.34 − 2.16</button>
+          <button class="preset-btn" onclick="loadExample('5.0','2.74','-')">5.0 − 2.74</button>
+          <button class="preset-btn" onclick="loadExample('10.0','3.67','-')">10.0 − 3.67</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>计算要点</b><br/>
+          ● 小数点对齐（不是末位对齐）<br/>
+          ● 相同数位上的数相加减<br/>
+          ● 满十进一，退一当十<br/>
+          ● 得数的小数点要与上面的小数点对齐<br/>
+          ● 小数末尾的0可以去掉
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+let valA = '3.45', valB = '1.28', op = '+';
+let currentStep = 0;
+const maxSteps = 4;
+
+function loadExample(a, b, o) {
+  document.getElementById('inputA').value = a;
+  document.getElementById('inputB').value = b;
+  document.getElementById('opSelect').value = o;
+  calculate();
+}
+
+function calculate() {
+  valA = document.getElementById('inputA').value;
+  valB = document.getElementById('inputB').value;
+  op = document.getElementById('opSelect').value;
+  currentStep = 0;
+  document.getElementById('stepInfo').textContent = '点击"下一步"开始分步计算';
+  renderVertical();
+  drawNumberLine();
+}
+
+function nextStep() {
+  if (currentStep < maxSteps) currentStep++;
+  updateStepInfo();
+  renderVertical();
+}
+function prevStep() {
+  if (currentStep > 0) currentStep--;
+  updateStepInfo();
+  renderVertical();
+}
+function showAll() {
+  currentStep = maxSteps;
+  updateStepInfo();
+  renderVertical();
+}
+
+function updateStepInfo() {
+  const infos = [
+    '点击"下一步"开始分步计算',
+    '第一步：对齐小数点',
+    '第二步：从最低位开始计算',
+    '第三步：处理进位/退位',
+    '完成！对齐小数点，写出结果',
+  ];
+  document.getElementById('stepInfo').textContent = infos[currentStep];
+}
+
+function parseDecimal(s) {
+  const parts = s.split('.');
+  const intPart = parts[0] || '0';
+  const decPart = parts[1] || '';
+  return { intPart, decPart, digits: intPart.split('').concat(decPart.split('')), decLen: decPart.length };
+}
+
+function renderVertical() {
+  const container = document.getElementById('alignDemo');
+  const pa = parseDecimal(valA);
+  const pb = parseDecimal(valB);
+  const maxDecLen = Math.max(pa.decLen, pb.decLen);
+
+  // 补齐小数位
+  const aDigits = pa.intPart.split('').concat(pa.decPart.padEnd(maxDecLen, '0').split(''));
+  const bDigits = pb.intPart.split('').concat(pb.decPart.padEnd(maxDecLen, '0').split(''));
+
+  const totalLen = aDigits.length;
+  const dotPos = pa.intPart.length; // 小数点的位置
+
+  // 计算结果
+  const numA = parseFloat(valA) || 0;
+  const numB = parseFloat(valB) || 0;
+  const result = op === '+' ? numA + numB : numA - numB;
+  const rStr = result.toFixed(maxDecLen).replace(/\.?0+$/, '').replace(/\.$/, '');
+  const rp = parseDecimal(rStr || '0');
+  const rDigits = rp.intPart.split('').concat(rp.decPart.padEnd(maxDecLen, '0').split(''));
+
+  let html = '';
+
+  // 第一行：被加/减数
+  html += '<div class="align-row"><div class="align-label"></div>';
+  for (let i = 0; i < totalLen; i++) {
+    if (i === dotPos) html += '<div class="align-cell dot">.</div>';
+    const cls = i < dotPos ? 'integer' : 'decimal';
+    const hl = currentStep === 1 ? ' highlight' : '';
+    html += `<div class="align-cell ${cls}${hl}">${aDigits[i]}</div>`;
+  }
+  html += '</div>';
+
+  // 第二行：操作符 + 加/减数
+  html += `<div class="align-row"><div class="align-op">${op === "+" ? "+" : "−"}</div>`;
+  for (let i = 0; i < totalLen; i++) {
+    if (i === dotPos) html += '<div class="align-cell dot">.</div>';
+    const cls = i < dotPos ? 'integer' : 'decimal';
+    const hl = currentStep === 1 ? ' highlight' : '';
+    html += `<div class="align-cell ${cls}${hl}">${bDigits[i]}</div>`;
+  }
+  html += '</div>';
+
+  // 分隔线
+  html += '<div style="width:100%;display:flex;justify-content:center"><div style="width:' + (totalLen * 34 + 44) + 'px"><div class="align-line"></div></div></div>';
+
+  // 结果行
+  if (currentStep >= 2) {
+    html += '<div class="align-row"><div class="align-label">=</div>';
+    for (let i = 0; i < totalLen; i++) {
+      if (i === dotPos) html += '<div class="align-cell dot">.</div>';
+      const hl = currentStep >= 3 ? ' result' : '';
+      html += `<div class="align-cell${hl}">${rDigits[i] || ''}</div>`;
+    }
+    html += '</div>';
+  }
+
+  if (currentStep >= 4) {
+    html += `<div style="margin-top:8px;font-size:16px;font-weight:700;color:#14b8a6;text-align:center">${valA} ${op === '+' ? '+' : '−'} ${valB} = ${result}</div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+function drawNumberLine() {
+  const canvas = document.getElementById('lineCanvas');
+  const dpr = window.devicePixelRatio || 1;
+  const w = 560, h = 100;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const numA = parseFloat(valA) || 0;
+  const numB = parseFloat(valB) || 0;
+  const result = op === '+' ? numA + numB : numA - numB;
+
+  const pad = 50;
+  const lineY = 50;
+  const lineW = w - pad * 2;
+
+  // 确定范围
+  const min = Math.min(numA, numB, result) - 1;
+  const max = Math.max(numA, numB, result) + 1;
+  const range = max - min;
+
+  const toX = (v) => pad + ((v - min) / range) * lineW;
+
+  // 背景
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, w, h);
+
+  // 数轴
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(pad - 10, lineY);
+  ctx.lineTo(w - pad + 10, lineY);
+  ctx.stroke();
+  // 箭头
+  ctx.beginPath();
+  ctx.moveTo(w - pad + 10, lineY);
+  ctx.lineTo(w - pad + 2, lineY - 5);
+  ctx.lineTo(w - pad + 2, lineY + 5);
+  ctx.closePath();
+  ctx.fillStyle = '#334155';
+  ctx.fill();
+
+  // 刻度
+  const step = range <= 5 ? 0.5 : range <= 20 ? 2 : 5;
+  ctx.fillStyle = '#64748b';
+  ctx.font = '11px "Microsoft YaHei", sans-serif';
+  ctx.textAlign = 'center';
+  for (let v = Math.ceil(min / step) * step; v <= max; v += step) {
+    const x = toX(v);
+    ctx.beginPath();
+    ctx.moveTo(x, lineY - 4);
+    ctx.lineTo(x, lineY + 4);
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    if (v % 1 === 0 || step < 1) {
+      ctx.fillText(Number.isInteger(v) ? v.toString() : v.toFixed(1), x, lineY + 18);
+    }
+  }
+
+  // 画A点
+  const xA = toX(numA);
+  ctx.beginPath();
+  ctx.arc(xA, lineY, 6, 0, Math.PI * 2);
+  ctx.fillStyle = '#3b82f6';
+  ctx.fill();
+  ctx.fillStyle = '#3b82f6';
+  ctx.font = 'bold 13px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(valA, xA, lineY - 14);
+
+  // 画运算箭头
+  const xR = toX(result);
+  ctx.beginPath();
+  ctx.moveTo(xA, lineY - 6);
+  ctx.lineTo(xR, lineY - 6);
+  ctx.strokeStyle = '#14b8a6';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 3]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // 箭头
+  const dir = xR > xA ? 1 : -1;
+  ctx.beginPath();
+  ctx.moveTo(xR, lineY - 6);
+  ctx.lineTo(xR - dir * 6, lineY - 10);
+  ctx.lineTo(xR - dir * 6, lineY - 2);
+  ctx.closePath();
+  ctx.fillStyle = '#14b8a6';
+  ctx.fill();
+
+  // 标注
+  const midX = (xA + xR) / 2;
+  ctx.fillStyle = '#14b8a6';
+  ctx.font = 'bold 12px "Microsoft YaHei", sans-serif';
+  ctx.textAlign = 'center';
+  const label = op === '+' ? `+${valB}` : `−${valB}`;
+  ctx.fillText(label, midX, lineY - 22);
+
+  // 结果点
+  ctx.beginPath();
+  ctx.arc(xR, lineY, 6, 0, Math.PI * 2);
+  ctx.fillStyle = '#14b8a6';
+  ctx.fill();
+  ctx.fillStyle = '#0d9488';
+  ctx.font = 'bold 13px "Courier New", monospace';
+  ctx.fillText(`=${result}`, xR, lineY + 32);
+}
+
+// 初始化
+calculate();
+</script>
+</body>
+</html>

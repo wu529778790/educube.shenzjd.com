@@ -27,6 +27,38 @@ export const tools: Tool[] = [
   // 上册
   // ================================================================
   {
+    id: "big-number",
+    name: "大数的认识",
+    subtitle: "大数的认识",
+    chapter: "上册 · 第一单元",
+    semester: "上册",
+    unitNum: 1,
+    publisherId: "pep",
+    gradeId: "p4",
+    subjectId: "math",
+    description:
+      "交互式数位表，从个位到亿位逐位调整，实时显示大数的读法、写法、比较大小和四舍五入。",
+    tags: ["大数", "数位", "读写", "比较"],
+    gradient: ["#F97316", "#EA580C"],
+    icon: "🔢",
+  },
+  {
+    id: "area-units",
+    name: "公顷和平方千米",
+    subtitle: "公顷和平方千米",
+    chapter: "上册 · 第二单元",
+    semester: "上册",
+    unitNum: 2,
+    publisherId: "pep",
+    gradeId: "p4",
+    subjectId: "math",
+    description:
+      "可视化展示面积单位之间的关系，方格模型对照，单位换算与生活实例对比。",
+    tags: ["公顷", "平方千米", "面积单位", "换算"],
+    gradient: ["#22C55E", "#16A34A"],
+    icon: "📐",
+  },
+  {
     id: "angle-measure",
     name: "量角器与角度测量",
     subtitle: "角的度量",
@@ -105,6 +137,22 @@ export const tools: Tool[] = [
     tags: ["统计图", "条形图", "数据分析"],
     gradient: ["#06B6D4", "#0EA5E9"],
     icon: "📊",
+  },
+  {
+    id: "multi-digit",
+    name: "三位数乘两位数",
+    subtitle: "三位数乘两位数",
+    chapter: "上册 · 第四单元",
+    semester: "上册",
+    unitNum: 4,
+    publisherId: "pep",
+    gradeId: "p4",
+    subjectId: "math",
+    description:
+      "输入三位数和两位数，逐步展示竖式计算过程和面积模型，理解乘法分配律在乘法中的应用。",
+    tags: ["乘法", "竖式", "面积模型"],
+    gradient: ["#3B82F6", "#2563EB"],
+    icon: "✖",
   },
 
   // ================================================================
@@ -237,6 +285,22 @@ export const tools: Tool[] = [
     tags: ["小数比较", "数轴", "大小关系"],
     gradient: ["#14B8A6", "#06B6D4"],
     icon: "↔",
+  },
+  {
+    id: "decimal-calc",
+    name: "小数的加法和减法",
+    subtitle: "小数的加法和减法",
+    chapter: "下册 · 第六单元",
+    semester: "下册",
+    unitNum: 6,
+    publisherId: "pep",
+    gradeId: "p4",
+    subjectId: "math",
+    description:
+      "小数加减法竖式演示，小数点对齐可视化，分步计算动画，理解进位和退位。",
+    tags: ["小数加减", "竖式", "对齐"],
+    gradient: ["#14B8A6", "#0D9488"],
+    icon: "±",
   },
   {
     id: "triangle-classify",
