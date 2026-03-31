@@ -39,20 +39,57 @@ export async function generateToolHtml(
   systemPrompt: string,
   userPrompt: string,
 ): Promise<string> {
-  const provider = getProvider();
-  if (provider === "anthropic") return callAnthropic(systemPrompt, userPrompt);
-  return callOpenAI(systemPrompt, userPrompt);
+  return generateChatText(systemPrompt, userPrompt, {
+    maxTokens: parseInt(process.env.AI_MAX_TOKENS || "16000"),
+    temperature: 0.3,
+  });
 }
 
-async function callOpenAI(sys: string, user: string): Promise<string> {
+/** 短文本（如需求整理），默认更少 token、略低温度 */
+export async function generateRefinedSpec(
+  systemPrompt: string,
+  userPrompt: string,
+): Promise<string> {
+  const cap = Math.min(
+    4096,
+    parseInt(process.env.AI_MAX_TOKENS || "16000"),
+  );
+  return generateChatText(systemPrompt, userPrompt, {
+    maxTokens: Math.min(2048, cap),
+    temperature: 0.2,
+  });
+}
+
+interface ChatOptions {
+  maxTokens: number;
+  temperature: number;
+}
+
+async function generateChatText(
+  systemPrompt: string,
+  userPrompt: string,
+  options: ChatOptions,
+): Promise<string> {
+  const provider = getProvider();
+  if (provider === "anthropic") {
+    return callAnthropic(systemPrompt, userPrompt, options);
+  }
+  return callOpenAI(systemPrompt, userPrompt, options);
+}
+
+async function callOpenAI(
+  sys: string,
+  user: string,
+  options: ChatOptions,
+): Promise<string> {
   const res = await getOpenAI().chat.completions.create({
     model: process.env.AI_MODEL || "gpt-4o",
     messages: [
       { role: "system", content: sys },
       { role: "user", content: user },
     ],
-    max_tokens: parseInt(process.env.AI_MAX_TOKENS || "16000"),
-    temperature: 0.3,
+    max_tokens: options.maxTokens,
+    temperature: options.temperature,
   });
 
   const content = res.choices[0]?.message?.content;
@@ -60,12 +97,17 @@ async function callOpenAI(sys: string, user: string): Promise<string> {
   return content;
 }
 
-async function callAnthropic(sys: string, user: string): Promise<string> {
+async function callAnthropic(
+  sys: string,
+  user: string,
+  options: ChatOptions,
+): Promise<string> {
   const res = await getAnthropicClient().messages.create({
     model: process.env.AI_MODEL || "claude-sonnet-4-20250514",
-    max_tokens: parseInt(process.env.AI_MAX_TOKENS || "16000"),
+    max_tokens: options.maxTokens,
     system: sys,
     messages: [{ role: "user", content: user }],
+    temperature: options.temperature,
   });
 
   if (!res.content || res.content.length === 0) {

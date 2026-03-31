@@ -4,24 +4,20 @@
  * 策略：不依赖正则黑名单（容易绕过），而是：
  * 1. 验证基本 HTML 结构
  * 2. 移除危险标签（iframe, object, embed, form, link[external], script[external]）
- * 3. 移除所有 on* 事件属性
+ * 3. 默认移除所有 on* 事件属性；生成教具时可保留（preserveInlineEventHandlers）
  * 4. 移除 javascript: / data: URL
  * 5. 在 script 内容中检测危险 API（兜底）
  */
 
 /* ── 危险标签（完全移除） ── */
+/* 教具页面依赖 button、input、select、textarea、meta(charset)；勿列入危险标签 */
 const DANGEROUS_TAGS = new Set([
   "iframe",
   "object",
   "embed",
   "applet",
   "form",
-  "input",
-  "button",
-  "select",
-  "textarea",
   "base",
-  "meta",
   "link", // 会在下面单独处理允许 edu-base.css 的 link
 ]);
 
@@ -42,8 +38,16 @@ const FORBIDDEN_API = [
   "navigator.",
 ];
 
+export interface SanitizeHtmlOptions {
+  /** 为 true 时不剥离 onclick 等属性（教立方教具依赖内联事件） */
+  preserveInlineEventHandlers?: boolean;
+}
+
 /** 清洗 AI 输出的 HTML，返回处理后的 HTML 或抛出错误 */
-export function sanitizeHtml(raw: string): string {
+export function sanitizeHtml(
+  raw: string,
+  options?: SanitizeHtmlOptions,
+): string {
   let html = raw.trim();
 
   // ── 0. 去除 markdown 代码围栏 ──
@@ -62,8 +66,10 @@ export function sanitizeHtml(raw: string): string {
     throw new Error("AI 输出未使用 edu-tool 结构");
   }
 
-  // ── 3. 移除 on* 事件属性（onclick, onerror, onload, onmouseover...） ──
-  html = html.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+  // ── 3. 移除 on* 事件属性（生成教具需保留 onclick 等） ──
+  if (!options?.preserveInlineEventHandlers) {
+    html = html.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+  }
 
   // ── 4. 移除 javascript: 和 data: URL ──
   html = html.replace(

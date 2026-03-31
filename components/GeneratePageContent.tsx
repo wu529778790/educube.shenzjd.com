@@ -5,70 +5,38 @@ import { grades, subjects } from "@/data/curriculum";
 import type { Tool } from "@/data/tools";
 import Link from "next/link";
 
-/* 可选的渐变色方案 */
-const GRADIENT_OPTIONS: { label: string; value: [string, string] }[] = [
-  { label: "蓝", value: ["#3B82F6", "#2563EB"] },
-  { label: "橙", value: ["#F97316", "#EA580C"] },
-  { label: "绿", value: ["#22C55E", "#16A34A"] },
-  { label: "紫", value: ["#8B5CF6", "#7C3AED"] },
-  { label: "粉", value: ["#EC4899", "#F43F5E"] },
-  { label: "青", value: ["#06B6D4", "#0EA5E9"] },
-  { label: "黄", value: ["#EAB308", "#D97706"] },
-];
-
-const ICON_OPTIONS = [
-  "📐",
-  "📏",
-  "🔢",
-  "📊",
-  "✖",
-  "➗",
-  "➕",
-  "🔬",
-  "📖",
-  "✏️",
-  "🧮",
-];
+const BTN_GRADIENT = "linear-gradient(135deg, #3B82F6, #2563EB)";
 
 export default function GeneratePageContent() {
-  const [name, setName] = useState("");
   const [gradeId, setGradeId] = useState("p5");
   const [subjectId, setSubjectId] = useState("math");
-  const [chapter, setChapter] = useState("");
   const [description, setDescription] = useState("");
-  const [gradient, setGradient] = useState<[string, string]>([
-    "#3B82F6",
-    "#2563EB",
-  ]);
-  const [icon, setIcon] = useState("📐");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [previewHtml, setPreviewHtml] = useState("");
   const [savedTool, setSavedTool] = useState<Tool | null>(null);
+  const [refinedSpec, setRefinedSpec] = useState("");
 
   async function handleGenerate() {
-    if (!name.trim() || !description.trim()) {
-      setError("请填写教具名称和功能描述");
+    if (!description.trim()) {
+      setError("请填写需求描述");
       return;
     }
     setError("");
     setLoading(true);
     setPreviewHtml("");
     setSavedTool(null);
+    setRefinedSpec("");
 
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: name.trim(),
           grade: gradeId,
           subject: subjectId,
-          chapter: chapter.trim() || "自定义",
           description: description.trim(),
-          gradient,
-          icon,
         }),
       });
 
@@ -81,6 +49,9 @@ export default function GeneratePageContent() {
 
       setPreviewHtml(data.html);
       setSavedTool(data.tool);
+      if (typeof data.refinedSpec === "string") {
+        setRefinedSpec(data.refinedSpec);
+      }
     } catch {
       setError("网络错误，请检查连接后重试");
     } finally {
@@ -91,6 +62,7 @@ export default function GeneratePageContent() {
   function handleReset() {
     setPreviewHtml("");
     setSavedTool(null);
+    setRefinedSpec("");
     setError("");
   }
 
@@ -99,9 +71,10 @@ export default function GeneratePageContent() {
   const subjectName =
     subjects.find((s) => s.id === subjectId)?.name ?? subjectId;
 
+  const previewTitle = savedTool?.name ?? "预览";
+
   return (
     <div className="min-h-screen" style={{ background: "var(--edu-cream)" }}>
-      {/* 顶栏 */}
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
           <div className="flex items-center gap-3">
@@ -137,29 +110,15 @@ export default function GeneratePageContent() {
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* 左侧：表单 */}
           <div className="space-y-4">
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
               <h2 className="text-base font-bold text-slate-800">
-                填写教具信息
+                描述你的教具需求
               </h2>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                用口语写清楚「要教什么、希望怎么操作」。系统会先整理成标准需求说明，再生成页面；无需填写名称、章节或配色。
+              </p>
 
-              {/* 教具名称 */}
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">
-                  教具名称
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="如：质数与合数"
-                  maxLength={50}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
-                />
-              </div>
-
-              {/* 年级 + 学科 */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1.5">
@@ -195,92 +154,35 @@ export default function GeneratePageContent() {
                 </div>
               </div>
 
-              {/* 章节 */}
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-1.5">
-                  章节（可选）
-                </label>
-                <input
-                  type="text"
-                  value={chapter}
-                  onChange={(e) => setChapter(e.target.value)}
-                  placeholder="如：上册 · 第三单元"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
-                />
-              </div>
-
-              {/* 功能描述 */}
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">
-                  功能描述
+                  需求描述
                 </label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="描述教具应展示的知识点和交互方式，如：展示三角形按角分类的过程，拖拽顶点改变三角形形状，自动判断锐角/直角/钝角三角形"
-                  maxLength={500}
-                  rows={4}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 resize-none"
+                  placeholder="例如：做一个认识长方体和正方体的教具，能拖拽改变长宽高的滑块，立体图形用简单透视画出来，并显示体积公式。"
+                  maxLength={800}
+                  rows={8}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 resize-y min-h-[160px]"
                 />
                 <p className="text-xs text-slate-400 mt-1 text-right">
-                  {description.length}/500
+                  {description.length}/800
                 </p>
-              </div>
-
-              {/* 配色 */}
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">
-                  配色
-                </label>
-                <div className="flex gap-2">
-                  {GRADIENT_OPTIONS.map((g) => (
-                    <button
-                      key={g.label}
-                      type="button"
-                      onClick={() => setGradient(g.value)}
-                      className="w-8 h-8 rounded-full border-2 transition-all"
-                      style={{
-                        background: `linear-gradient(135deg, ${g.value[0]}, ${g.value[1]})`,
-                        borderColor:
-                          gradient[0] === g.value[0]
-                            ? "#334155"
-                            : "transparent",
-                        transform:
-                          gradient[0] === g.value[0]
-                            ? "scale(1.15)"
-                            : "scale(1)",
-                      }}
-                      title={g.label}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* 图标 */}
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">
-                  图标
-                </label>
-                <div className="flex gap-2 flex-wrap">
-                  {ICON_OPTIONS.map((ic) => (
-                    <button
-                      key={ic}
-                      type="button"
-                      onClick={() => setIcon(ic)}
-                      className={`w-9 h-9 rounded-lg border text-lg flex items-center justify-center transition-all ${
-                        icon === ic
-                          ? "border-slate-800 bg-slate-100 scale-110"
-                          : "border-slate-200 hover:border-slate-300"
-                      }`}
-                    >
-                      {ic}
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
 
-            {/* 操作按钮 */}
+            {refinedSpec && (
+              <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
+                <p className="text-xs font-bold text-slate-600 mb-2">
+                  AI 整理后的需求（用于生成页面）
+                </p>
+                <pre className="text-xs text-slate-700 whitespace-pre-wrap font-sans leading-relaxed max-h-40 overflow-y-auto">
+                  {refinedSpec}
+                </pre>
+              </div>
+            )}
+
             <div className="flex gap-3">
               <button
                 type="button"
@@ -288,9 +190,7 @@ export default function GeneratePageContent() {
                 disabled={loading}
                 className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
-                  background: loading
-                    ? "#94a3b8"
-                    : `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`,
+                  background: loading ? "#94a3b8" : BTN_GRADIENT,
                 }}
               >
                 {loading ? (
@@ -310,7 +210,7 @@ export default function GeneratePageContent() {
                         strokeLinecap="round"
                       />
                     </svg>
-                    正在生成...
+                    正在整理需求并生成页面…
                   </span>
                 ) : (
                   "生成教具"
@@ -327,20 +227,18 @@ export default function GeneratePageContent() {
               )}
             </div>
 
-            {/* 错误信息 */}
             {error && (
               <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {error}
               </div>
             )}
 
-            {/* 生成成功后的操作 */}
             {savedTool && (
               <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3">
                 <p className="text-sm font-semibold text-green-800 mb-2">
                   教具生成成功！
                 </p>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Link
                     href={`/tools/${savedTool.id}`}
                     target="_blank"
@@ -359,20 +257,17 @@ export default function GeneratePageContent() {
             )}
           </div>
 
-          {/* 右侧：预览 */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-slate-100 flex items-center gap-2">
+            <div className="px-4 py-2.5 border-b border-slate-100 flex items-center gap-2 min-w-0">
               <span
-                className="w-2.5 h-2.5 rounded-full"
+                className="w-2.5 h-2.5 rounded-full shrink-0"
                 style={{
-                  background: previewHtml
-                    ? "#22c55e"
-                    : "#94a3b8",
+                  background: previewHtml ? "#22c55e" : "#94a3b8",
                 }}
               />
-              <span className="text-xs font-medium text-slate-500">
+              <span className="text-xs font-medium text-slate-500 truncate">
                 {previewHtml
-                  ? `${gradeName} · ${subjectName} · ${name || "预览"}`
+                  ? `${gradeName} · ${subjectName} · ${previewTitle}`
                   : "预览区域（生成后显示）"}
               </span>
             </div>
@@ -381,10 +276,10 @@ export default function GeneratePageContent() {
                 <PreviewIframe html={previewHtml} />
               ) : (
                 <div className="h-full flex items-center justify-center text-slate-300">
-                  <div className="text-center">
+                  <div className="text-center px-4">
                     <div className="text-4xl mb-3">📐</div>
-                    <p className="text-sm">
-                      填写左侧表单后点击「生成教具」
+                    <p className="text-sm text-slate-400">
+                      选择年级与学科，写清需求后点击「生成教具」
                     </p>
                   </div>
                 </div>
@@ -397,10 +292,9 @@ export default function GeneratePageContent() {
   );
 }
 
-/** 用 blob URL 渲染 HTML 预览（自动释放） */
 function PreviewIframe({ html }: { html: string }) {
   const url = useMemo(() => {
-    const blob = new Blob([html], { type: "text/html" });
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
     return URL.createObjectURL(blob);
   }, [html]);
 
