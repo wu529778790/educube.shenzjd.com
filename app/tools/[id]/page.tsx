@@ -1,5 +1,6 @@
 import { getPathLabel } from "@/data/curriculum";
 import { getToolById, tools } from "@/data/tools";
+import { loadGeneratedTools } from "@/data/generated-tools";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 
@@ -11,20 +12,34 @@ export async function generateStaticParams() {
   return tools.map((tool) => ({ id: tool.id }));
 }
 
+async function findTool(id: string) {
+  const staticTool = getToolById(id);
+  if (staticTool) return { tool: staticTool, isGenerated: false };
+  const generated = await loadGeneratedTools();
+  const genTool = generated.find((t) => t.id === id);
+  if (genTool) return { tool: genTool, isGenerated: true };
+  return null;
+}
+
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params;
-  const tool = getToolById(id);
-  if (!tool) return {};
+  const result = await findTool(id);
+  if (!result) return {};
   return {
-    title: `${tool.name} — 教立方 EduCube`,
-    description: tool.description,
+    title: `${result.tool.name} — 教立方 EduCube`,
+    description: result.tool.description,
   };
 }
 
 export default async function ToolPage({ params }: PageProps) {
   const { id } = await params;
-  const tool = getToolById(id);
-  if (!tool) notFound();
+  const result = await findTool(id);
+  if (!result) notFound();
+
+  const { tool, isGenerated } = result;
+  const iframeSrc = isGenerated
+    ? `/tools/gen/${id}.html`
+    : `/tools/${id}.html`;
 
   return (
     <div className="flex flex-col h-screen bg-slate-900">
@@ -74,7 +89,7 @@ export default async function ToolPage({ params }: PageProps) {
             按 F11 全屏
           </span>
           <a
-            href={`/tools/${id}.html`}
+            href={iframeSrc}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 text-xs text-slate-300 bg-slate-700 hover:bg-slate-600 hover:text-white px-3 py-1.5 rounded transition-colors"
@@ -95,7 +110,7 @@ export default async function ToolPage({ params }: PageProps) {
       {/* 教具 iframe */}
       <div className="flex-1 overflow-hidden">
         <iframe
-          src={`/tools/${id}.html`}
+          src={iframeSrc}
           className="w-full h-full border-0"
           title={tool.name}
           sandbox="allow-scripts allow-same-origin"

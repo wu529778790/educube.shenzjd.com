@@ -11,6 +11,7 @@ import {
   subjects,
 } from "@/data/curriculum";
 import ToolGrid from "./ToolGrid";
+import Link from "next/link";
 
 type SemesterFilter = "all" | Semester;
 
@@ -101,6 +102,13 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
               </p>
             </div>
           </div>
+          <Link
+            href="/generate"
+            className="ml-auto inline-flex items-center gap-1 text-sm font-semibold px-3 py-1.5 rounded-lg text-white transition-colors shrink-0"
+            style={{ background: "linear-gradient(135deg, #8B5CF6, #6D28D9)" }}
+          >
+            AI 生成
+          </Link>
         </div>
       </header>
 
