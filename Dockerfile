@@ -14,7 +14,7 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-# --- 生产层（Next.js standalone 官方推荐布局，勿用 find 定位 server.js，避免命中 node_modules 内同名文件）---
+# --- 生产层 ---
 FROM base AS runner
 WORKDIR /app
 
@@ -26,6 +26,10 @@ ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# 创建生成工具的持久化目录，并赋予 nextjs 用户写入权限
+RUN mkdir -p /app/data /app/public/tools/gen && \
+    chown -R nextjs:nodejs /app/data /app/public/tools/gen
+
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
@@ -33,5 +37,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 USER nextjs
 
 EXPOSE 3000
+
+# 持久化生成工具的卷（容器重启后数据不丢失）
+# 启动时挂载：docker run -v educube-data:/app/data -v educube-gen:/app/public/tools/gen educube
+VOLUME ["/app/data", "/app/public/tools/gen"]
 
 CMD ["node", "server.js"]
