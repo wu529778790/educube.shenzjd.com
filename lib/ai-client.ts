@@ -26,8 +26,10 @@ function getOpenAI(): OpenAI {
 
 function getAnthropicClient(): Anthropic {
   if (!_anthropicClient) {
+    const baseURL = process.env.AI_BASE_URL?.trim();
     _anthropicClient = new Anthropic({
       apiKey: process.env.AI_API_KEY,
+      ...(baseURL ? { baseURL } : {}),
     });
   }
   return _anthropicClient;
