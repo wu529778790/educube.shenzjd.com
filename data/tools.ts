@@ -1489,7 +1489,7 @@ export function filterToolsByCatalog(
   return list.filter(
     (t) =>
       t.publisherId === publisherId &&
-      t.gradeId === gradeId &&
+      (gradeId === "all" || t.gradeId === gradeId) &&
       t.subjectId === subjectId,
   );
 }

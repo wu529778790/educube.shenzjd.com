@@ -61,10 +61,14 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
     ).length;
 
   const countForGrade = (gid: string) =>
-    tools.filter(
-      (t) =>
-        t.publisherId === publisherId && t.gradeId === gid && t.subjectId === subjectId,
-    ).length;
+    gid === "all"
+      ? tools.filter(
+          (t) => t.publisherId === publisherId && t.subjectId === subjectId,
+        ).length
+      : tools.filter(
+          (t) =>
+            t.publisherId === publisherId && t.gradeId === gid && t.subjectId === subjectId,
+        ).length;
 
   const countForSubject = (sid: string) =>
     tools.filter(
@@ -230,6 +234,25 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
             <div>
               <span className="mb-1.5 block text-[11px] font-bold text-slate-500">年级</span>
               <div className="flex flex-wrap items-center gap-1.5">
+                {(() => {
+                  const n = countForGrade("all");
+                  const active = gradeId === "all";
+                  return (
+                    <button
+                      key="all"
+                      type="button"
+                      onClick={() => setGradeId("all")}
+                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
+                        active
+                          ? "border-blue-600 bg-blue-600 text-white"
+                          : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
+                      }`}
+                    >
+                      全部
+                      <span className={active ? "text-white/80" : "text-slate-400"}>{n}</span>
+                    </button>
+                  );
+                })()}
                 {primaryGrades.map((g) => {
                   const n = countForGrade(g.id);
                   const active = gradeId === g.id;

@@ -74,7 +74,7 @@ export function getPathLabel(
   subjectId: string,
 ): string {
   const pub = getPublisher(publisherId)?.name ?? publisherId;
-  const gr = getGrade(gradeId)?.name ?? gradeId;
+  const gr = gradeId === "all" ? "全部年级" : (getGrade(gradeId)?.name ?? gradeId);
   const sub = getSubject(subjectId)?.name ?? subjectId;
   return `${pub} · ${gr} · ${sub}`;
 }
@@ -82,6 +82,6 @@ export function getPathLabel(
 /** 默认进入页时的路径（当前仅有教具的目录） */
 export const defaultCatalogPath = {
   publisherId: "pep",
-  gradeId: "p4",
+  gradeId: "all",
   subjectId: "math",
 } as const;
