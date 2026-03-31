@@ -113,7 +113,7 @@ export default async function ToolPage({ params }: PageProps) {
           src={iframeSrc}
           className="w-full h-full border-0"
           title={tool.name}
-          sandbox="allow-scripts allow-same-origin"
+          sandbox="allow-scripts"
         />
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { grades, subjects } from "@/data/curriculum";
 import type { Tool } from "@/data/tools";
 import Link from "next/link";
@@ -398,16 +398,23 @@ export default function GeneratePageContent() {
   );
 }
 
-/** 用 blob URL 渲染 HTML 预览 */
+/** 用 blob URL 渲染 HTML 预览（自动释放） */
 function PreviewIframe({ html }: { html: string }) {
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
+  const url = useMemo(() => {
+    const blob = new Blob([html], { type: "text/html" });
+    return URL.createObjectURL(blob);
+  }, [html]);
+
+  useEffect(() => {
+    return () => URL.revokeObjectURL(url);
+  }, [url]);
+
   return (
     <iframe
       src={url}
       className="w-full h-full border-0"
       title="预览"
-      sandbox="allow-scripts allow-same-origin"
+      sandbox="allow-scripts"
     />
   );
 }

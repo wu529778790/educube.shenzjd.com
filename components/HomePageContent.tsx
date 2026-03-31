@@ -56,26 +56,38 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
   const countSemesterUpper = catalogTools.filter((t) => t.semester === "上册").length;
   const countSemesterLower = catalogTools.filter((t) => t.semester === "下册").length;
 
-  const countForPublisher = (pid: string) =>
-    tools.filter(
-      (t) => t.publisherId === pid && t.gradeId === gradeId && t.subjectId === subjectId,
-    ).length;
+  // 预计算各维度的计数，避免在 JSX 中多次 filter
+  const counts = useMemo(() => {
+    const pub = new Map<string, number>();
+    const grade = new Map<string, number>();
+    const sub = new Map<string, number>();
 
-  const countForGrade = (gid: string) =>
-    gid === "all"
-      ? tools.filter(
-          (t) => t.publisherId === publisherId && t.subjectId === subjectId,
-        ).length
-      : tools.filter(
-          (t) =>
-            t.publisherId === publisherId && t.gradeId === gid && t.subjectId === subjectId,
-        ).length;
-
-  const countForSubject = (sid: string) =>
-    tools.filter(
-      (t) =>
-        t.publisherId === publisherId && t.gradeId === gradeId && t.subjectId === sid,
+    for (const t of tools) {
+      if (t.gradeId === gradeId && t.subjectId === subjectId) {
+        pub.set(t.publisherId, (pub.get(t.publisherId) ?? 0) + 1);
+      }
+      if (t.publisherId === publisherId && t.subjectId === subjectId) {
+        if (t.gradeId === gradeId || gradeId === "all") {
+          // for "all" grade count
+        }
+        grade.set(t.gradeId, (grade.get(t.gradeId) ?? 0) + 1);
+      }
+      if (t.publisherId === publisherId && t.gradeId === gradeId) {
+        sub.set(t.subjectId, (sub.get(t.subjectId) ?? 0) + 1);
+      }
+    }
+    // "all" grade count
+    const allGrade = tools.filter(
+      (t) => t.publisherId === publisherId && t.subjectId === subjectId,
     ).length;
+    grade.set("all", allGrade);
+
+    return { pub, grade, sub };
+  }, [tools, publisherId, gradeId, subjectId]);
+
+  const countForPublisher = (pid: string) => counts.pub.get(pid) ?? 0;
+  const countForGrade = (gid: string) => counts.grade.get(gid) ?? 0;
+  const countForSubject = (sid: string) => counts.sub.get(sid) ?? 0;
 
   const primaryGrades = grades.filter((g) => g.stage === "primary");
   const juniorGrades = grades.filter((g) => g.stage === "junior");
