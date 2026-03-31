@@ -3,22 +3,20 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>长方体的认识</title>
+<title>长方体的认识 — 教立方</title>
 <link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
 <style>
   .main-layout { display:grid; grid-template-columns:1fr 280px; height:100%; }
   .canvas-area { position:relative; background:linear-gradient(135deg,#eff6ff,#dbeafe); overflow:hidden; }
-  .control-panel {
-    background:#fff; border-left:1px solid #e2e8f0;
-    padding:16px; display:flex; flex-direction:column; gap:12px; overflow:auto;
-  }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:16px; display:flex; flex-direction:column; gap:12px; overflow:auto; }
   .ctrl-section { display:flex; flex-direction:column; gap:6px; }
   .ctrl-label { font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.05em; }
   .divider { height:1px; background:#e2e8f0; }
-  .info-box {
-    background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px;
-    padding:10px 12px; font-size:12px; color:#64748b; line-height:1.9;
-  }
+  .info-box { background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:10px 12px; font-size:12px; color:#64748b; line-height:1.9; }
   .info-box strong { color:#2563EB; }
   .slider-row { display:flex; align-items:center; gap:8px; }
   .slider-row label { font-size:12px; font-weight:600; color:#64748b; min-width:30px; }
@@ -30,14 +28,19 @@
     transition:all .15s; font-family:var(--edu-font); text-align:center;
   }
   .highlight-btn.active { background:#3B82F6; color:#fff; border-color:#3B82F6; }
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
 </style>
 </head>
 <body>
 <div class="edu-tool">
   <div class="edu-toolbar">
-    <div style="display:flex;align-items:center;gap:10px;">
+    <div style="display:flex;align-items:center;gap:10px">
       <span class="edu-toolbar-title">📦 长方体的认识</span>
-      <span class="edu-toolbar-subtitle">五下·第三单元</span>
+      <span class="edu-toolbar-subtitle">五下 · 第三单元</span>
     </div>
     <div class="edu-toolbar-actions">
       <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
@@ -46,19 +49,20 @@
   <div class="edu-content">
     <div class="main-layout">
       <div class="canvas-area">
-        <canvas id="main-canvas" class="edu-canvas-full"></canvas>
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
       </div>
       <div class="control-panel">
         <div class="ctrl-section">
           <div class="ctrl-label">调整尺寸</div>
-          <div class="slider-row"><label>长</label><input type="range" id="sl" min="2" max="8" value="5" oninput="update()"/><span class="val" id="vl">5</span></div>
-          <div class="slider-row"><label>宽</label><input type="range" id="sw" min="2" max="6" value="3" oninput="update()"/><span class="val" id="vw">3</span></div>
-          <div class="slider-row"><label>高</label><input type="range" id="sh" min="2" max="6" value="4" oninput="update()"/><span class="val" id="vh">4</span></div>
+          <div class="slider-row"><label>长</label><input type="range" id="sl" min="2" max="8" value="5" step="0.5" oninput="rebuild()"/><span class="val" id="vl">5</span></div>
+          <div class="slider-row"><label>宽</label><input type="range" id="sw" min="2" max="6" value="3" step="0.5" oninput="rebuild()"/><span class="val" id="vw">3</span></div>
+          <div class="slider-row"><label>高</label><input type="range" id="sh" min="2" max="6" value="4" step="0.5" oninput="rebuild()"/><span class="val" id="vh">4</span></div>
         </div>
         <div class="divider"></div>
         <div class="ctrl-section">
           <div class="ctrl-label">高亮显示</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
             <button class="highlight-btn" id="hb-vertex" onclick="setHighlight('vertex')">顶点</button>
             <button class="highlight-btn" id="hb-edge" onclick="setHighlight('edge')">棱</button>
             <button class="highlight-btn" id="hb-face" onclick="setHighlight('face')">面</button>
@@ -67,7 +71,7 @@
         <div class="divider"></div>
         <div class="ctrl-section">
           <div class="ctrl-label">基本特征</div>
-          <div class="info-box" id="info-box">
+          <div class="info-box">
             <div>顶点数：<strong>8</strong> 个</div>
             <div>棱数：<strong>12</strong> 条</div>
             <div>面数：<strong>6</strong> 个</div>
@@ -76,170 +80,157 @@
         <div class="divider"></div>
         <div class="ctrl-section">
           <div class="ctrl-label">棱长明细</div>
-          <div class="info-box" id="edge-detail" style="font-size:11px;"></div>
+          <div class="info-box" id="edge-detail" style="font-size:11px"></div>
         </div>
         <div class="divider"></div>
         <div class="ctrl-section">
           <div class="ctrl-label">面积明细</div>
-          <div class="info-box" id="face-detail" style="font-size:11px;"></div>
+          <div class="info-box" id="face-detail" style="font-size:11px"></div>
         </div>
       </div>
     </div>
   </div>
 </div>
-<script src="../edu-lib/edu-tools.js"></script>
 <script>
-const canvas = document.getElementById('main-canvas');
-const ctx = canvas.getContext('2d');
-let W, H, highlight = '';
+var _s, _scene, _camera, _renderer, _controls;
+var _cuboid, _edges, _vertexGroup, _faceGroup, _labelGroup;
+var _highlight = '';
 
-function setHighlight(h) {
-  highlight = highlight === h ? '' : h;
-  ['vertex','edge','face'].forEach(k => {
-    document.getElementById('hb-' + k).classList.toggle('active', highlight === k);
-  });
-  render();
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xf0f5ff, camX: 6, camY: 5, camZ: 6 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 12, 12);
+  _s = { scene: _scene };
+  rebuild();
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
 }
 
-function update() {
-  const l = parseInt(document.getElementById('sl').value);
-  const w = parseInt(document.getElementById('sw').value);
-  const h = parseInt(document.getElementById('sh').value);
+function rebuild() {
+  var l = parseFloat(document.getElementById('sl').value);
+  var w = parseFloat(document.getElementById('sw').value);
+  var h = parseFloat(document.getElementById('sh').value);
   document.getElementById('vl').textContent = l;
   document.getElementById('vw').textContent = w;
   document.getElementById('vh').textContent = h;
-
-  const edgeHtml = `
-    <div>长棱(4条)：<strong>${l}×4=${l*4}</strong></div>
-    <div>宽棱(4条)：<strong>${w}×4=${w*4}</strong></div>
-    <div>高棱(4条)：<strong>${h}×4=${h*4}</strong></div>
-    <div>棱长总和：<strong>${(l+w+h)*4}</strong></div>`;
-  document.getElementById('edge-detail').innerHTML = edgeHtml;
-
-  const lw=l*w, lh=l*h, wh=w*h;
-  const faceHtml = `
-    <div>上/下面：<strong>${l}×${w}=${lw}</strong></div>
-    <div>前/后面：<strong>${l}×${h}=${lh}</strong></div>
-    <div>左/右面：<strong>${w}×${h}=${wh}</strong></div>
-    <div>表面积：<strong>2(${lw}+${lh}+${wh})=${2*(lw+lh+wh)}</strong></div>`;
-  document.getElementById('face-detail').innerHTML = faceHtml;
-  render();
+  updateInfo(l, w, h);
+  buildCuboid(l, w, h);
 }
 
-function render() {
-  const dpr = window.devicePixelRatio || 1;
-  W = canvas.clientWidth; H = canvas.clientHeight;
-  canvas.width = W * dpr; canvas.height = H * dpr;
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, W, H);
+function buildCuboid(l, w, h) {
+  // 清除旧对象
+  if (_cuboid) { _scene.remove(_cuboid); _scene.remove(_edges); }
+  if (_vertexGroup) _scene.remove(_vertexGroup);
+  if (_faceGroup) _scene.remove(_faceGroup);
+  if (_labelGroup) _scene.remove(_labelGroup);
 
-  const l = parseInt(document.getElementById('sl').value);
-  const w = parseInt(document.getElementById('sw').value);
-  const h = parseInt(document.getElementById('sh').value);
-  const scale = Math.min((W - 200) / (l + w), (H - 200) / (h + w * 0.6), 45);
+  var halfL = l / 2, halfW = w / 2, halfH = h / 2;
 
-  // Isometric projection helpers
-  const ox = W / 2 - (l - w) * scale * 0.4;
-  const oy = H / 2 + h * scale * 0.3;
-  function proj(x, y, z) {
-    return [ox + (x - y) * scale * 0.7, oy - z * scale + (x + y) * scale * 0.25];
-  }
-
-  // 8 vertices
-  const V = [
-    proj(0,0,0), proj(l,0,0), proj(l,w,0), proj(0,w,0),
-    proj(0,0,h), proj(l,0,h), proj(l,w,h), proj(0,w,h)
-  ];
-  const labels = ['A','B','C','D','E','F','G','H'];
-
-  // 6 faces (vertex indices)
-  const faces = [
-    { idx: [0,1,2,3], label: '底面', color: '#3B82F620' },
-    { idx: [4,5,6,7], label: '顶面', color: '#3B82F630' },
-    { idx: [0,1,5,4], label: '前面', color: '#2563EB25' },
-    { idx: [2,3,7,6], label: '后面', color: '#2563EB15' },
-    { idx: [0,3,7,4], label: '左面', color: '#1d4ed820' },
-    { idx: [1,2,6,5], label: '右面', color: '#1d4ed820' },
-  ];
-
-  // 12 edges (vertex pairs)
-  const edges = [
-    [0,1],[1,2],[2,3],[3,0], // bottom
-    [4,5],[5,6],[6,7],[7,4], // top
-    [0,4],[1,5],[2,6],[3,7], // vertical
-  ];
-
-  // Draw faces
-  if (highlight === 'face') {
-    faces.forEach(f => {
-      ctx.beginPath();
-      f.idx.forEach((vi, i) => { const p = V[vi]; i === 0 ? ctx.moveTo(p[0], p[1]) : ctx.lineTo(p[0], p[1]); });
-      ctx.closePath();
-      ctx.fillStyle = '#3B82F650';
-      ctx.fill();
-      // Label at center
-      const cx = f.idx.reduce((s, vi) => s + V[vi][0], 0) / 4;
-      const cy = f.idx.reduce((s, vi) => s + V[vi][1], 0) / 4;
-      ctx.fillStyle = '#2563EB'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(f.label, cx, cy);
-    });
-  }
-
-  // Draw edges
-  edges.forEach(([a, b]) => {
-    ctx.beginPath(); ctx.moveTo(V[a][0], V[a][1]); ctx.lineTo(V[b][0], V[b][1]);
-    ctx.strokeStyle = highlight === 'edge' ? '#3B82F6' : '#1e293b';
-    ctx.lineWidth = highlight === 'edge' ? 3 : 2;
-    ctx.stroke();
+  // 长方体网格
+  var geo = new THREE.BoxGeometry(l, h, w);
+  var mat = new THREE.MeshLambertMaterial({
+    color: 0x3B82F6, transparent: true, opacity: 0.35,
   });
+  _cuboid = new THREE.Mesh(geo, mat);
+  _cuboid.castShadow = true;
+  _scene.add(_cuboid);
 
-  // Draw edge lengths on highlighted edges
-  if (highlight === 'edge') {
-    const edgeLabels = [
-      {a:0,b:1,text:`长=${l}`},{a:1,b:2,text:`宽=${w}`},{a:0,b:4,text:`高=${h}`},
-      {a:3,b:2,text:`长=${l}`},{a:0,b:3,text:`宽=${w}`},{a:1,b:5,text:`高=${h}`},
-      {a:2,b:6,text:`高=${h}`},{a:3,b:7,text:`高=${h}`},
-      {a:4,b:5,text:`长=${l}`},{a:5,b:6,text:`宽=${w}`},{a:6,b:7,text:`长=${l}`},{a:7,b:4,text:`宽=${w}`},
-    ];
-    edgeLabels.forEach(e => {
-      const mx = (V[e.a][0] + V[e.b][0]) / 2;
-      const my = (V[e.a][1] + V[e.b][1]) / 2;
-      ctx.fillStyle = '#fff'; ctx.fillRect(mx - 16, my - 8, 32, 14);
-      ctx.fillStyle = '#2563EB'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(e.text, mx, my + 3);
-    });
-  }
+  // 边框
+  _edges = Edu3D.edges(geo, 0x1e3a5c);
+  _edges.visible = _highlight !== 'face';
+  _scene.add(_edges);
 
-  // Draw vertices
-  V.forEach((p, i) => {
-    const r = highlight === 'vertex' ? 8 : 4;
-    ctx.beginPath(); ctx.arc(p[0], p[1], r, 0, Math.PI * 2);
-    ctx.fillStyle = highlight === 'vertex' ? '#3B82F6' : '#2563EB';
-    ctx.fill();
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-    if (highlight === 'vertex') {
-      ctx.fillStyle = '#1e293b'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(labels[i], p[0], p[1] - 14);
-    }
+  // 顶点球
+  _vertexGroup = new THREE.Group();
+  var verts = [
+    [-halfL, -halfH, -halfW], [halfL, -halfH, -halfW],
+    [halfL, -halfH, halfW], [-halfL, -halfH, halfW],
+    [-halfL, halfH, -halfW], [halfL, halfH, -halfW],
+    [halfL, halfH, halfW], [-halfL, halfH, halfW],
+  ];
+  var labels = ['A','B','C','D','E','F','G','H'];
+  verts.forEach(function(v, i) {
+    var sg = new THREE.SphereGeometry(0.08, 12, 12);
+    var sm = new THREE.MeshLambertMaterial({ color: 0x2563EB });
+    var sp = new THREE.Mesh(sg, sm);
+    sp.position.set(v[0], v[1], v[2]);
+    _vertexGroup.add(sp);
+
+    var label = Edu3D.textSprite(labels[i], { color: '#1e293b', scale: 0.4 });
+    label.position.set(v[0] * 1.15, v[1] * 1.15, v[2] * 1.15);
+    _vertexGroup.add(label);
   });
+  _vertexGroup.visible = _highlight === 'vertex';
+  _scene.add(_vertexGroup);
 
-  // Title
-  ctx.fillStyle = '#1e293b'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText(`长方体 (${l} × ${w} × ${h})`, W / 2, 28);
+  // 高亮面
+  _faceGroup = new THREE.Group();
+  var faceData = [
+    { pos: [0, halfH, 0], rot: [0, 0, 0], label: '上面 ' + l + '×' + w },
+    { pos: [0, -halfH, 0], rot: [0, 0, 0], label: '下面 ' + l + '×' + w },
+    { pos: [0, 0, halfW], rot: [-Math.PI/2, 0, 0], label: '后面 ' + l + '×' + h },
+    { pos: [0, 0, -halfW], rot: [Math.PI/2, 0, 0], label: '前面 ' + l + '×' + h },
+    { pos: [-halfL, 0, 0], rot: [0, 0, Math.PI/2], label: '左面 ' + w + '×' + h },
+    { pos: [halfL, 0, 0], rot: [0, 0, -Math.PI/2], label: '右面 ' + w + '×' + h },
+  ];
+  var faceColors = [0x60a5fa, 0x60a5fa, 0x3b82f6, 0x3b82f6, 0x2563eb, 0x2563eb];
+  faceData.forEach(function(f, i) {
+    var fg = new THREE.PlaneGeometry(l * 0.9, w * 0.9);
+    var fm = new THREE.MeshBasicMaterial({ color: faceColors[i], transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+    var fp = new THREE.Mesh(fg, fm);
+    fp.position.set(f.pos[0], f.pos[1], f.pos[2]);
+    fp.rotation.set(f.rot[0], f.rot[1], f.rot[2]);
+    _faceGroup.add(fp);
+
+    var lb = Edu3D.textSprite(f.label, { color: '#1e40af', scale: 0.5 });
+    lb.position.set(f.pos[0] * 1.3, f.pos[1] * 1.3, f.pos[2] * 1.3);
+    _faceGroup.add(lb);
+  });
+  _faceGroup.visible = _highlight === 'face';
+  _scene.add(_faceGroup);
+}
+
+function updateInfo(l, w, h) {
+  document.getElementById('edge-detail').innerHTML =
+    '<div>长棱(4条)：<strong>' + l + '×4=' + (l * 4) + '</strong></div>' +
+    '<div>宽棱(4条)：<strong>' + w + '×4=' + (w * 4) + '</strong></div>' +
+    '<div>高棱(4条)：<strong>' + h + '×4=' + (h * 4) + '</strong></div>' +
+    '<div>棱长总和：<strong>' + ((l + w + h) * 4) + '</strong></div>';
+
+  var lw = l * w, lh = l * h, wh = w * h;
+  document.getElementById('face-detail').innerHTML =
+    '<div>上/下面：<strong>' + l + '×' + w + '=' + lw + '</strong></div>' +
+    '<div>前/后面：<strong>' + l + '×' + h + '=' + lh + '</strong></div>' +
+    '<div>左/右面：<strong>' + w + '×' + h + '=' + wh + '</strong></div>' +
+    '<div>表面积：<strong>2(' + lw + '+' + lh + '+' + wh + ')=' + (2 * (lw + lh + wh)) + '</strong></div>';
+}
+
+function setHighlight(h) {
+  _highlight = _highlight === h ? '' : h;
+  ['vertex', 'edge', 'face'].forEach(function(k) {
+    document.getElementById('hb-' + k).classList.toggle('active', _highlight === k);
+  });
+  if (_vertexGroup) _vertexGroup.visible = _highlight === 'vertex';
+  if (_faceGroup) _faceGroup.visible = _highlight === 'face';
+  if (_edges) _edges.visible = _highlight !== 'face';
+  if (_cuboid) {
+    _cuboid.material.opacity = _highlight === 'face' ? 0.15 : 0.35;
+  }
 }
 
 function resetAll() {
   document.getElementById('sl').value = 5;
   document.getElementById('sw').value = 3;
   document.getElementById('sh').value = 4;
-  highlight = '';
-  ['vertex','edge','face'].forEach(k => document.getElementById('hb-' + k).classList.remove('active'));
-  update();
+  _highlight = '';
+  ['vertex', 'edge', 'face'].forEach(function(k) {
+    document.getElementById('hb-' + k).classList.remove('active');
+  });
+  rebuild();
 }
 
-window.addEventListener('resize', render);
-update();
-setTimeout(render, 50);
+init();
 </script>
 </body>
 </html>

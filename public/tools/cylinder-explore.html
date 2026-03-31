@@ -1,78 +1,93 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>圆柱的认识 — 教立方</title>
-  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
-  <style>
-    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
-    .canvas-area { padding: 16px; overflow: hidden; background: linear-gradient(135deg, #faf5ff 0%, #fdfaf4 100%); position: relative; }
-    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
-    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
-    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
-    .divider { height: 1px; background: #e2e8f0; }
-    .info-box { background: #fff; border: 1px solid #e9d5ff; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
-    .slider-row { display: flex; align-items: center; gap: 10px; }
-    .slider-row input { flex: 1; }
-    .slider-row .value-display { min-width: 40px; }
-    .prop-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #fff; border-radius: 8px; border: 1px solid #e2e8f0; }
-    .prop-label { font-size: 13px; color: #64748b; }
-    .prop-value { font-size: 14px; font-weight: 700; color: #1e293b; font-family: 'Courier New', monospace; }
-    .tab-bar { display: flex; gap: 6px; margin-bottom: 8px; }
-    .tab-btn { padding: 5px 12px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; }
-    .tab-btn.active { background: #8b5cf6; color: #fff; border-color: #8b5cf6; }
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>圆柱的认识 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 280px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#faf5ff,#fdfaf4); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fdfaf4; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+  .slider-row { display:flex; align-items:center; gap:8px; }
+  .slider-row label { font-size:12px; font-weight:600; color:#64748b; min-width:20px; }
+  .slider-row input[type=range] { flex:1; }
+  .slider-row .val { font-size:14px; font-weight:700; color:#8b5cf6; min-width:36px; text-align:right; }
+  .prop-row { display:flex; justify-content:space-between; align-items:center; padding:6px 10px; background:#fff; border-radius:6px; border:1px solid #e2e8f0; font-size:12px; }
+  .prop-label { color:#64748b; }
+  .prop-value { font-weight:700; color:#1e293b; font-family:'Courier New',monospace; }
+  .info-box { background:#fff; border:1px solid #e9d5ff; border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.8; color:#334155; }
+  .info-box strong { color:#8b5cf6; }
+  .mode-btn {
+    padding:6px 10px; border-radius:8px; font-size:11px; font-weight:600;
+    cursor:pointer; border:1.5px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+  }
+  .mode-btn.active { background:#8b5cf6; color:#fff; border-color:#8b5cf6; }
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
+</style>
 </head>
 <body>
 <div class="edu-tool">
   <div class="edu-toolbar">
     <div style="display:flex;align-items:center;gap:10px">
-      <div class="edu-toolbar-title">🥫 圆柱的认识</div>
-      <div class="edu-toolbar-subtitle">下册 · 第三单元</div>
+      <span class="edu-toolbar-title">🥫 圆柱的认识</span>
+      <span class="edu-toolbar-subtitle">下册 · 第三单元</span>
     </div>
     <div class="edu-toolbar-actions">
-      <button class="edu-btn edu-btn-outline" onclick="toggleUnfold()">展开图</button>
-      <div class="edu-divider"></div>
       <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
     </div>
   </div>
   <div class="edu-content">
     <div class="main-layout">
       <div class="canvas-area">
-        <canvas id="canvas" style="width:100%;height:100%"></canvas>
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
       </div>
-
       <div class="control-panel">
         <div class="ctrl-section">
           <div class="ctrl-label">底面半径 r</div>
-          <div class="slider-row">
-            <input type="range" id="rSlider" min="20" max="100" value="50" oninput="update()"/>
-            <span class="value-display" id="rVal">50</span>
-          </div>
+          <div class="slider-row"><label>r</label><input type="range" id="sr" min="1" max="5" value="2" step="0.5" oninput="rebuild()"/><span class="val" id="vr">2</span></div>
         </div>
         <div class="ctrl-section">
           <div class="ctrl-label">高 h</div>
-          <div class="slider-row">
-            <input type="range" id="hSlider" min="30" max="200" value="100" oninput="update()"/>
-            <span class="value-display" id="hVal">100</span>
+          <div class="slider-row"><label>h</label><input type="range" id="sh" min="1" max="8" value="4" step="0.5" oninput="rebuild()"/><span class="val" id="vh">4</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">显示模式</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <button class="mode-btn active" id="mb-solid" onclick="setMode('solid')">实体</button>
+            <button class="mode-btn" id="mb-wire" onclick="setMode('wire')">线框</button>
+            <button class="mode-btn" id="mb-expand" onclick="setMode('expand')">展开</button>
           </div>
         </div>
         <div class="divider"></div>
         <div class="ctrl-section">
           <div class="ctrl-label">属性</div>
-          <div class="prop-row"><span class="prop-label">半径 r</span><span class="prop-value" id="pR">50</span></div>
-          <div class="prop-row"><span class="prop-label">直径 d</span><span class="prop-value" id="pD">100</span></div>
-          <div class="prop-row"><span class="prop-label">高 h</span><span class="prop-value" id="pH">100</span></div>
-          <div class="prop-row"><span class="prop-label">底面周长 C=2πr</span><span class="prop-value" id="pC">314.2</span></div>
-          <div class="prop-row"><span class="prop-label">侧面积 S侧=2πrh</span><span class="prop-value" id="pSL">31415.9</span></div>
-          <div class="prop-row"><span class="prop-label">底面积 S底=πr²</span><span class="prop-value" id="pSB">7854.0</span></div>
-          <div class="prop-row"><span class="prop-label">表面积 S=2πr(r+h)</span><span class="prop-value" id="pS">47123.9</span></div>
-          <div class="prop-row"><span class="prop-label">体积 V=πr²h</span><span class="prop-value" id="pV">785398.2</span></div>
+          <div class="prop-row"><span class="prop-label">半径 r</span><span class="prop-value" id="pR">2</span></div>
+          <div class="prop-row"><span class="prop-label">直径 d</span><span class="prop-value" id="pD">4</span></div>
+          <div class="prop-row"><span class="prop-label">高 h</span><span class="prop-value" id="pH">4</span></div>
+          <div class="prop-row"><span class="prop-label">底面周长 C=2πr</span><span class="prop-value" id="pC">12.6</span></div>
+          <div class="prop-row"><span class="prop-label">侧面积 S侧=2πrh</span><span class="prop-value" id="pSL">50.3</span></div>
+          <div class="prop-row"><span class="prop-label">底面积 S底=πr²</span><span class="prop-value" id="pSB">12.6</span></div>
+          <div class="prop-row"><span class="prop-label">表面积 S</span><span class="prop-value" id="pS">75.4</span></div>
+          <div class="prop-row"><span class="prop-label">体积 V=πr²h</span><span class="prop-value" id="pV">50.3</span></div>
         </div>
         <div class="divider"></div>
         <div class="info-box">
-          <b>圆柱知识</b><br/>
+          <strong>圆柱知识</strong><br/>
           ● 上下底面是完全相同的圆<br/>
           ● 侧面展开是长方形（长=底面周长）<br/>
           ● 侧面积 = 底面周长 × 高<br/>
@@ -83,182 +98,146 @@
     </div>
   </div>
 </div>
-<script src="../edu-lib/edu-tools.js"></script>
 <script>
-const canvas = document.getElementById('canvas');
-let R = 50, H = 100;
-let showUnfold = false;
-let rotAngle = 0;
+var _scene, _camera, _renderer, _controls;
+var _cylMesh, _cylEdges, _labelGroup, _expandGroup;
+var _mode = 'solid';
 
-function update() {
-  R = parseInt(document.getElementById('rSlider').value);
-  H = parseInt(document.getElementById('hSlider').value);
-  document.getElementById('rVal').textContent = R;
-  document.getElementById('hVal').textContent = H;
-  document.getElementById('pR').textContent = R;
-  document.getElementById('pD').textContent = R * 2;
-  document.getElementById('pH').textContent = H;
-  document.getElementById('pC').textContent = (2 * Math.PI * R).toFixed(1);
-  document.getElementById('pSL').textContent = (2 * Math.PI * R * H).toFixed(1);
-  document.getElementById('pSB').textContent = (Math.PI * R * R).toFixed(1);
-  document.getElementById('pS').textContent = (2 * Math.PI * R * (R + H)).toFixed(1);
-  document.getElementById('pV').textContent = (Math.PI * R * R * H).toFixed(1);
-  render();
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xfaf5ff, camX: 8, camY: 5, camZ: 8 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 12, 12);
+
+  _labelGroup = new THREE.Group();
+  _scene.add(_labelGroup);
+  _expandGroup = new THREE.Group();
+  _scene.add(_expandGroup);
+
+  rebuild();
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
 }
 
-function toggleUnfold() { showUnfold = !showUnfold; render(); }
+function rebuild() {
+  var radius = parseFloat(document.getElementById('sr').value);
+  var height = parseFloat(document.getElementById('sh').value);
+  document.getElementById('vr').textContent = radius;
+  document.getElementById('vh').textContent = height;
 
-function render() {
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  const w = rect.width, h = rect.height;
-  const ctx = canvas.getContext('2d');
-  ctx.save();
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, w, h);
+  if (_cylMesh) { _scene.remove(_cylMesh); _scene.remove(_cylEdges); }
+  while (_labelGroup.children.length) _labelGroup.remove(_labelGroup.children[0]);
+  while (_expandGroup.children.length) _expandGroup.remove(_expandGroup.children[0]);
 
-  if (showUnfold) {
-    drawUnfold(ctx, w, h);
-  } else {
-    drawCylinder(ctx, w, h);
+  // 圆柱
+  var cylGeo = new THREE.CylinderGeometry(radius, radius, height, 32);
+  var cylMat = new THREE.MeshLambertMaterial({ color: 0x8b5cf6, transparent: true, opacity: 0.5 });
+  _cylMesh = new THREE.Mesh(cylGeo, cylMat);
+  _cylMesh.position.y = height / 2;
+  _cylMesh.castShadow = true;
+  _scene.add(_cylMesh);
+
+  _cylEdges = Edu3D.edges(cylGeo, 0x6d28d9);
+  _cylEdges.position.copy(_cylMesh.position);
+  _cylEdges.visible = _mode === 'wire';
+  _scene.add(_cylEdges);
+
+  // 标注
+  var hLabel = Edu3D.textSprite('h=' + height, { color: '#ef4444', scale: 0.5 });
+  hLabel.position.set(radius + 1, height / 2, 0);
+  _labelGroup.add(hLabel);
+
+  var rLabel = Edu3D.textSprite('r=' + radius, { color: '#22c55e', scale: 0.4 });
+  rLabel.position.set(radius / 2, height + 0.6, 0);
+  _labelGroup.add(rLabel);
+
+  // 展开组（侧面矩形 + 上下圆）
+  if (_mode === 'expand') {
+    var circumference = 2 * Math.PI * radius;
+    var scaleX = 1 / Math.max(circumference, 0.01);
+    var scaleY = 1 / Math.max(height, 0.01);
+    var scale = Math.min(scaleX, scaleY) * 4;
+
+    // 侧面展开（矩形）
+    var rectW = circumference * scale;
+    var rectH = height * scale;
+    var rectShape = new THREE.Shape();
+    rectShape.moveTo(-rectW / 2, -rectH / 2);
+    rectShape.lineTo(rectW / 2, -rectH / 2);
+    rectShape.lineTo(rectW / 2, rectH / 2);
+    rectShape.lineTo(-rectW / 2, rectH / 2);
+    rectShape.closePath();
+    var rectGeo = new THREE.ShapeGeometry(rectShape);
+    var rectMat = new THREE.MeshBasicMaterial({ color: 0x8b5cf6, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
+    var rectMesh = new THREE.Mesh(rectGeo, rectMat);
+    rectMesh.position.set(0, 0.02, -5);
+    rectMesh.rotation.x = -Math.PI / 2;
+    _expandGroup.add(rectMesh);
+
+    var rectEdge = new THREE.EdgesGeometry(rectGeo);
+    var rectLine = new THREE.LineSegments(rectEdge, new THREE.LineBasicMaterial({ color: 0x8b5cf6 }));
+    rectLine.position.copy(rectMesh.position);
+    rectLine.rotation.copy(rectMesh.rotation);
+    _expandGroup.add(rectLine);
+
+    var rectLabel = Edu3D.textSprite('侧面展开 (长=' + circumference.toFixed(1) + ', 宽=' + height + ')', { color: '#7c3aed', scale: 0.6 });
+    rectLabel.position.set(0, 0.1, -5);
+    _expandGroup.add(rectLabel);
+
+    // 上圆
+    var circGeo = new THREE.CircleGeometry(radius * scale, 32);
+    var circMat1 = new THREE.MeshBasicMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
+    var circ1 = new THREE.Mesh(circGeo, circMat1);
+    circ1.position.set(0, 0.02, -5 + rectW / 2 + radius * scale + 0.5);
+    circ1.rotation.x = -Math.PI / 2;
+    _expandGroup.add(circ1);
+    var circEdge1 = new THREE.EdgesGeometry(circGeo);
+    _expandGroup.add(new THREE.LineSegments(circEdge1, new THREE.LineBasicMaterial({ color: 0x0ea5e9 })).translateX(0).translateY(0).translateZ(0));
+    _expandGroup.children[_expandGroup.children.length - 1].position.copy(circ1.position);
+    _expandGroup.children[_expandGroup.children.length - 1].rotation.copy(circ1.rotation);
   }
 
-  ctx.restore();
+  _expandGroup.visible = _mode === 'expand';
+  _cylMesh.visible = _mode !== 'expand';
+  _cylEdges.visible = _mode === 'wire';
+  _labelGroup.visible = _mode !== 'expand';
+
+  // 更新计算
+  var C = 2 * Math.PI * radius;
+  var Sbase = Math.PI * radius * radius;
+  var Slateral = 2 * Math.PI * radius * height;
+  var S = 2 * Sbase + Slateral;
+  var V = Sbase * height;
+
+  document.getElementById('pR').textContent = radius;
+  document.getElementById('pD').textContent = radius * 2;
+  document.getElementById('pH').textContent = height;
+  document.getElementById('pC').textContent = C.toFixed(1);
+  document.getElementById('pSL').textContent = Slateral.toFixed(1);
+  document.getElementById('pSB').textContent = Sbase.toFixed(1);
+  document.getElementById('pS').textContent = S.toFixed(1);
+  document.getElementById('pV').textContent = V.toFixed(1);
 }
 
-function drawCylinder(ctx, w, h) {
-  const cx = w * 0.45;
-  const cy = h * 0.5;
-  const r = R;
-  const h_ = H;
-  const ellipseH = r * 0.35; // 椭圆扁率
-
-  // 圆柱体身
-  const grad = ctx.createLinearGradient(cx - r, 0, cx + r, 0);
-  grad.addColorStop(0, 'rgba(139,92,246,0.15)');
-  grad.addColorStop(0.5, 'rgba(139,92,246,0.3)');
-  grad.addColorStop(1, 'rgba(139,92,246,0.1)');
-
-  ctx.beginPath();
-  ctx.moveTo(cx - r, cy - h_ / 2);
-  ctx.lineTo(cx - r, cy + h_ / 2);
-  ctx.ellipse(cx, cy + h_ / 2, r, ellipseH, 0, Math.PI, 0, true);
-  ctx.lineTo(cx + r, cy - h_ / 2);
-  ctx.ellipse(cx, cy - h_ / 2, r, ellipseH, 0, 0, Math.PI, true);
-  ctx.closePath();
-  ctx.fillStyle = grad;
-  ctx.fill();
-  ctx.strokeStyle = '#8b5cf6';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  // 底部椭圆
-  ctx.beginPath();
-  ctx.ellipse(cx, cy + h_ / 2, r, ellipseH, 0, 0, Math.PI * 2);
-  ctx.strokeStyle = '#8b5cf6';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([4, 4]);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // 顶部椭圆
-  ctx.beginPath();
-  ctx.ellipse(cx, cy - h_ / 2, r, ellipseH, 0, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(139,92,246,0.15)';
-  ctx.fill();
-  ctx.strokeStyle = '#8b5cf6';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  // 高标注
-  ctx.beginPath();
-  ctx.moveTo(cx + r + 20, cy - h_ / 2);
-  ctx.lineTo(cx + r + 20, cy + h_ / 2);
-  ctx.strokeStyle = '#ef4444';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  ctx.fillStyle = '#ef4444';
-  ctx.font = 'bold 12px sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText('h=' + h_, cx + r + 26, cy + 4);
-
-  // 半径标注
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - h_ / 2);
-  ctx.lineTo(cx + r, cy - h_ / 2);
-  ctx.strokeStyle = '#22c55e';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  ctx.fillStyle = '#22c55e';
-  ctx.textAlign = 'center';
-  ctx.fillText('r=' + R, cx + r / 2, cy - h_ / 2 - 8);
-
-  // 中心点
-  ctx.beginPath();
-  ctx.arc(cx, cy - h_ / 2, 3, 0, Math.PI * 2);
-  ctx.fillStyle = '#8b5cf6';
-  ctx.fill();
-}
-
-function drawUnfold(ctx, w, h) {
-  const scale = Math.min((w - 80) / (2 * Math.PI * R + 2 * R), (h - 80) / (H + 2 * R));
-  const rectW = 2 * Math.PI * R * Math.min(scale, 1.5);
-  const rectH = H * Math.min(scale, 1.5);
-  const circleD = 2 * R * Math.min(scale, 1.5);
-  const ox = w / 2 - rectW / 2;
-  const oy = h / 2 - rectH / 2;
-
-  // 侧面展开（长方形）
-  ctx.strokeStyle = '#8b5cf6';
-  ctx.lineWidth = 2;
-  ctx.fillStyle = 'rgba(139,92,246,0.08)';
-  ctx.fillRect(ox, oy, rectW, rectH);
-  ctx.strokeRect(ox, oy, rectW, rectH);
-
-  ctx.fillStyle = '#8b5cf6';
-  ctx.font = 'bold 13px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('侧面展开（长方形）', ox + rectW / 2, oy - 10);
-  ctx.font = '12px sans-serif';
-  ctx.fillStyle = '#64748b';
-  ctx.fillText('长 = 2πr = ' + (2 * Math.PI * R).toFixed(1), ox + rectW / 2, oy + rectH + 16);
-  ctx.fillText('宽 = h = ' + H, ox - 30, oy + rectH / 2);
-
-  // 顶部圆
-  ctx.beginPath();
-  ctx.arc(ox + rectW / 2, oy - circleD / 2 - 20, circleD / 2, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(14,165,233,0.15)';
-  ctx.fill();
-  ctx.strokeStyle = '#0ea5e9';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.fillStyle = '#0ea5e9';
-  ctx.font = '11px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('上底面', ox + rectW / 2, oy - circleD / 2 - 20 + 4);
-
-  // 底部圆
-  ctx.beginPath();
-  ctx.arc(ox + rectW / 2, oy + rectH + circleD / 2 + 20, circleD / 2, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(34,197,94,0.15)';
-  ctx.fill();
-  ctx.strokeStyle = '#22c55e';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.fillStyle = '#22c55e';
-  ctx.fillText('下底面', ox + rectW / 2, oy + rectH + circleD / 2 + 20 + 4);
+function setMode(m) {
+  _mode = m;
+  ['solid', 'wire', 'expand'].forEach(function (k) {
+    document.getElementById('mb-' + k).classList.toggle('active', k === m);
+  });
+  rebuild();
 }
 
 function resetAll() {
-  R = 50; H = 100;
-  document.getElementById('rSlider').value = 50;
-  document.getElementById('hSlider').value = 100;
-  showUnfold = false;
-  update();
+  document.getElementById('sr').value = 2;
+  document.getElementById('sh').value = 4;
+  _mode = 'solid';
+  ['solid', 'wire', 'expand'].forEach(function (k) {
+    document.getElementById('mb-' + k).classList.toggle('active', k === 'solid');
+  });
+  rebuild();
 }
 
-window.addEventListener('resize', () => { render(); });
-update();
+init();
 </script>
 </body>
 </html>

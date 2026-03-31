@@ -3,17 +3,18 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>观察物体（三）</title>
+<title>观察物体（三）— 教立方</title>
 <link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
 <style>
   .main-layout { display:grid; grid-template-columns:1fr 280px; height:100%; }
   .canvas-area { position:relative; background:linear-gradient(135deg,#f0f7ff,#fdfaf4); overflow:hidden; }
-  .control-panel {
-    background:#fdfaf4; border-left:1px solid #e2e8f0;
-    padding:16px; display:flex; flex-direction:column; gap:12px; overflow:auto;
-  }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fdfaf4; border-left:1px solid #e2e8f0; padding:16px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
   .ctrl-section { display:flex; flex-direction:column; gap:6px; }
-  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.05em; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
   .divider { height:1px; background:#e2e8f0; }
   .preset-btn {
     padding:6px 10px; border-radius:8px; font-size:12px; font-weight:600;
@@ -22,25 +23,24 @@
   }
   .preset-btn:hover { border-color:#3B82F6; }
   .preset-btn.active { background:#3B82F6; color:#fff; border-color:#3B82F6; }
-  .info-box {
-    background:#fff; border:1px solid #e2e8f0; border-radius:10px;
-    padding:10px 12px; font-size:12px; color:#64748b; line-height:1.8;
-  }
+  .info-box { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:8px 10px; font-size:12px; color:#64748b; line-height:1.8; }
   .info-box strong { color:#0EA5E9; }
-  .views-row { display:flex; gap:8px; }
-  .view-card {
-    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:10px;
-    padding:8px; display:flex; flex-direction:column; align-items:center; gap:4px;
-  }
+  .view-card { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:6px; display:flex; flex-direction:column; align-items:center; gap:3px; }
   .view-title { font-size:10px; font-weight:700; color:#1a3a5c; }
+  canvas.view-canvas { border:none; border-radius:4px; background:#f8fafc; display:block; }
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
 </style>
 </head>
 <body>
 <div class="edu-tool">
   <div class="edu-toolbar">
-    <div style="display:flex;align-items:center;gap:10px;">
+    <div style="display:flex;align-items:center;gap:10px">
       <span class="edu-toolbar-title">👀 观察物体（三）</span>
-      <span class="edu-toolbar-subtitle">五下·第一单元</span>
+      <span class="edu-toolbar-subtitle">五下 · 第一单元</span>
     </div>
     <div class="edu-toolbar-actions">
       <button class="edu-btn edu-btn-outline" onclick="clearAll()">清空</button>
@@ -49,192 +49,244 @@
   <div class="edu-content">
     <div class="main-layout">
       <div class="canvas-area">
-        <canvas id="main-canvas" class="edu-canvas-full"></canvas>
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放 · 点击积木操作</div>
       </div>
       <div class="control-panel">
         <div class="ctrl-section">
           <div class="ctrl-label">预设形状</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-            <button class="preset-btn active" onclick="loadPreset('L')">L形</button>
-            <button class="preset-btn" onclick="loadPreset('T')">T形</button>
-            <button class="preset-btn" onclick="loadPreset('Z')">Z形</button>
-            <button class="preset-btn" onclick="loadPreset('U')">U形</button>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <button class="preset-btn active" id="pb-L" onclick="loadPreset('L')">L形</button>
+            <button class="preset-btn" id="pb-T" onclick="loadPreset('T')">T形</button>
+            <button class="preset-btn" id="pb-Z" onclick="loadPreset('Z')">Z形</button>
+            <button class="preset-btn" id="pb-U" onclick="loadPreset('U')">U形</button>
           </div>
         </div>
         <div class="divider"></div>
         <div class="ctrl-section">
           <div class="ctrl-label">三视图</div>
-          <div class="views-row">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
             <div class="view-card">
               <div class="view-title" style="color:#3B82F6;">正视图</div>
-              <canvas id="cv-front" width="80" height="80"></canvas>
+              <canvas class="view-canvas" id="cv-front" width="110" height="70"></canvas>
             </div>
             <div class="view-card">
               <div class="view-title" style="color:#22c55e;">侧视图</div>
-              <canvas id="cv-side" width="80" height="80"></canvas>
+              <canvas class="view-canvas" id="cv-side" width="110" height="70"></canvas>
             </div>
           </div>
-          <div class="views-row">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
             <div class="view-card">
               <div class="view-title" style="color:#f97316;">俯视图</div>
-              <canvas id="cv-top" width="80" height="80"></canvas>
+              <canvas class="view-canvas" id="cv-top" width="110" height="70"></canvas>
             </div>
             <div class="view-card">
               <div class="view-title" style="color:#8b5cf6;">统计</div>
-              <div class="info-box" id="stats-box" style="font-size:11px;line-height:1.6;padding:6px 8px;">
-                <div>积木数：<strong id="block-count">0</strong></div>
-                <div>最高层：<strong id="max-h">0</strong></div>
+              <div class="info-box" style="font-size:11px;line-height:1.5;padding:6px 8px">
+                积木数：<strong id="block-count">0</strong><br/>
+                最高层：<strong id="max-h">0</strong>
               </div>
             </div>
           </div>
         </div>
         <div class="divider"></div>
-        <div class="ctrl-section">
-          <div class="ctrl-label">操作说明</div>
-          <div class="info-box" style="font-size:11px;line-height:1.7;">
-            点击网格<b>添加</b>积木，右键<b>移除</b>积木。<br/>
-            点击已有积木可<b>叠高</b>一层。<br/>
-            左侧3D视图同步显示积木摆放。<br/>
-            三视图随积木变化实时更新。
-          </div>
+        <div class="info-box" style="font-size:11px;line-height:1.7">
+          <strong>操作说明</strong><br/>
+          ● 点击网格空位添加积木<br/>
+          ● 点击已有积木可叠高一层<br/>
+          ● 右键点击移除积木<br/>
+          ● 三视图实时联动更新
         </div>
       </div>
     </div>
   </div>
 </div>
-<script src="../edu-lib/edu-tools.js"></script>
 <script>
-const canvas = document.getElementById('main-canvas');
-const ctx = canvas.getContext('2d');
-const COLS = 4, ROWS = 4, MAX_H = 4;
-let grid = Array.from({length:ROWS}, ()=>Array(COLS).fill(0));
-let W, H;
+var COLS = 4, ROWS = 4, MAX_H = 4;
+var grid = [];
+for (var i = 0; i < ROWS; i++) { grid[i] = []; for (var j = 0; j < COLS; j++) grid[i][j] = 0; }
 
-function loadPreset(t) {
-  grid = Array.from({length:ROWS}, ()=>Array(COLS).fill(0));
-  if(t==='L'){grid[1][0]=1;grid[2][0]=1;grid[2][1]=1;grid[2][2]=1;grid[1][0]=2;}
-  else if(t==='T'){grid[0][1]=1;grid[0][2]=1;grid[1][1]=1;grid[1][2]=1;grid[2][1]=1;}
-  else if(t==='Z'){grid[0][0]=1;grid[0][1]=1;grid[1][1]=1;grid[1][2]=1;grid[2][2]=1;}
-  else if(t==='U'){grid[0][0]=1;grid[0][2]=1;grid[1][0]=1;grid[1][1]=1;grid[1][2]=1;}
-  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
-  event.target.classList.add('active');
-  render();
+var _scene, _camera, _renderer, _controls;
+var _blockGroup, _gridGroup;
+var _raycaster = new THREE.Raycaster();
+var _mouse = new THREE.Vector2();
+
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xf0f7ff, camX: 6, camY: 5, camZ: 6 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 10, 10);
+
+  _blockGroup = new THREE.Group();
+  _scene.add(_blockGroup);
+  _gridGroup = new THREE.Group();
+  _scene.add(_gridGroup);
+
+  buildBaseGrid();
+  loadPreset('L');
+
+  canvas.addEventListener('click', onCanvasClick);
+  canvas.addEventListener('contextmenu', onCanvasRightClick);
+
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
 }
 
-function clearAll(){grid=Array.from({length:ROWS},()=>Array(COLS).fill(0));render();}
-
-canvas.addEventListener('click', e=>{
-  const r=canvas.getBoundingClientRect();
-  const cellW=(W-80)/COLS, cellH=(H-80)/ROWS;
-  const ox=40, oy=40;
-  const c=Math.floor((e.clientX-r.left-ox)/cellW);
-  const row=Math.floor((e.clientY-r.top-oy)/cellH);
-  if(row>=0&&row<ROWS&&c>=0&&c<COLS){
-    if(grid[row][c]>0) grid[row][c]=Math.min(grid[row][c]+1,MAX_H);
-    else grid[row][c]=1;
-    render();
+function buildBaseGrid() {
+  while (_gridGroup.children.length) _gridGroup.remove(_gridGroup.children[0]);
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      var geo = new THREE.PlaneGeometry(0.92, 0.92);
+      var mat = new THREE.MeshBasicMaterial({ color: 0xd1d5db, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+      var plane = new THREE.Mesh(geo, mat);
+      plane.rotation.x = -Math.PI / 2;
+      plane.position.set(c - COLS / 2 + 0.5, 0.01, r - ROWS / 2 + 0.5);
+      plane.userData = { type: 'base', row: r, col: c };
+      _gridGroup.add(plane);
+    }
   }
-});
-canvas.addEventListener('contextmenu', e=>{
-  e.preventDefault();
-  const r=canvas.getBoundingClientRect();
-  const cellW=(W-80)/COLS, cellH=(H-80)/ROWS;
-  const c=Math.floor((e.clientX-r.left-40)/cellW);
-  const row=Math.floor((e.clientY-r.top-40)/cellH);
-  if(row>=0&&row<ROWS&&c>=0&&c<COLS){grid[row][c]=0;render();}
-});
+}
 
-function render(){
-  const dpr=window.devicePixelRatio||1;
-  W=canvas.clientWidth; H=canvas.clientHeight;
-  canvas.width=W*dpr; canvas.height=H*dpr;
-  ctx.scale(dpr,dpr);
-  ctx.clearRect(0,0,W,H);
-  drawMainView();
+function rebuildBlocks() {
+  while (_blockGroup.children.length) _blockGroup.remove(_blockGroup.children[0]);
+
+  var blockGeo = new THREE.BoxGeometry(0.92, 0.92, 0.92);
+  var edgeGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(0.92, 0.92, 0.92));
+  var edgeMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.12 });
+  var colors = [0x60a5fa, 0x3b82f6, 0x2563eb, 0x1d4ed8];
+  var total = 0, maxH = 0;
+
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      var h = grid[r][c];
+      if (h <= 0) continue;
+      for (var l = 0; l < h; l++) {
+        var mat = new THREE.MeshLambertMaterial({ color: colors[l % colors.length] });
+        var mesh = new THREE.Mesh(blockGeo, mat);
+        mesh.position.set(c - COLS / 2 + 0.5, l + 0.46, r - ROWS / 2 + 0.5);
+        mesh.castShadow = true;
+        mesh.userData = { type: 'block', row: r, col: c, layer: l };
+        var wire = new THREE.LineSegments(edgeGeo, edgeMat);
+        mesh.add(wire);
+        _blockGroup.add(mesh);
+      }
+      total += h;
+      maxH = Math.max(maxH, h);
+    }
+  }
+
+  document.getElementById('block-count').textContent = total;
+  document.getElementById('max-h').textContent = maxH;
   drawViews();
 }
 
-function drawMainView(){
-  const cellW=Math.min((W-100)/COLS,(H-100)/ROWS,90);
-  const cellH=cellW;
-  const gw=COLS*cellW, gh=ROWS*cellH;
-  const ox=(W-gw)/2, oy=(H-gh)/2;
-  ctx.font='bold 13px sans-serif'; ctx.fillStyle='#1e293b'; ctx.textAlign='center';
-  ctx.fillText('点击添加积木，右键移除',W/2,oy-12);
-  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
-    const x=ox+c*cellW, y=oy+r*cellH, h=grid[r][c];
-    if(h>0){
-      for(let l=0;l<h;l++){
-        const shade=lerpColor('#3B82F6','#0EA5E9',l/Math.max(h-1,1));
-        ctx.fillStyle=shade; ctx.globalAlpha=0.3+l*0.2;
-        const off=l*4;
-        ctx.fillRect(x+off,y-off,cellW-4,cellH-4);
-        ctx.globalAlpha=1;
-      }
-      ctx.fillStyle='#3B82F6'; ctx.globalAlpha=0.85;
-      ctx.fillRect(x+(h-1)*4,y-(h-1)*4,cellW-4,cellH-4);
-      ctx.globalAlpha=1;
-      ctx.strokeStyle='#2563EB'; ctx.lineWidth=2;
-      ctx.strokeRect(x+(h-1)*4,y-(h-1)*4,cellW-4,cellH-4);
-      ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif'; ctx.textAlign='center';
-      ctx.fillText(h,x+(h-1)*4+(cellW-4)/2,y-(h-1)*4+(cellH-4)/2+5);
-    } else {
-      ctx.fillStyle='#f1f5f9'; ctx.fillRect(x,y,cellW-4,cellH-4);
-      ctx.strokeStyle='#cbd5e1'; ctx.lineWidth=1; ctx.strokeRect(x,y,cellW-4,cellH-4);
-    }
+function getGridPos(event) {
+  var rect = _renderer.domElement.getBoundingClientRect();
+  _mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  _mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  _raycaster.setFromCamera(_mouse, _camera);
+  var targets = _blockGroup.children.concat(_gridGroup.children);
+  var intersects = _raycaster.intersectObjects(targets, false);
+  if (intersects.length === 0) return null;
+  var hit = intersects[0].object;
+  if (hit.userData.type === 'block' || hit.userData.type === 'base') {
+    return { row: hit.userData.row, col: hit.userData.col };
   }
+  return null;
 }
 
-function lerpColor(a,b,t){
-  const pa=parseInt(a.slice(1),16), pb=parseInt(b.slice(1),16);
-  const r1=(pa>>16)&0xff,g1=(pa>>8)&0xff,b1=pa&0xff;
-  const r2=(pb>>16)&0xff,g2=(pb>>8)&0xff,b2=pb&0xff;
-  const r=Math.round(r1+(r2-r1)*t),g=Math.round(g1+(g2-g1)*t),bl=Math.round(b1+(b2-b1)*t);
-  return `rgb(${r},${g},${bl})`;
+function onCanvasClick(event) {
+  var pos = getGridPos(event);
+  if (!pos) return;
+  var r = pos.row, c = pos.col;
+  if (grid[r][c] > 0) grid[r][c] = Math.min(grid[r][c] + 1, MAX_H);
+  else grid[r][c] = 1;
+  rebuildBlocks();
 }
 
-function drawViews(){
-  let total=0,maxH=0;
-  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){total+=grid[r][c];maxH=Math.max(maxH,grid[r][c]);}
-  document.getElementById('block-count').textContent=total;
-  document.getElementById('max-h').textContent=maxH;
-  drawOneView('cv-front','#3B82F6',(c)=>{let m=0;for(let r=0;r<ROWS;r++)m=Math.max(m,grid[r][c]);return m;},COLS);
-  drawOneView('cv-side','#22c55e',(r)=>{let m=0;for(let c=0;c<COLS;c++)m=Math.max(m,grid[r][c]);return m;},ROWS);
+function onCanvasRightClick(event) {
+  event.preventDefault();
+  var pos = getGridPos(event);
+  if (!pos) return;
+  grid[pos.row][pos.col] = 0;
+  rebuildBlocks();
+}
+
+function loadPreset(type) {
+  for (var i = 0; i < ROWS; i++) for (var j = 0; j < COLS; j++) grid[i][j] = 0;
+  if (type === 'L') { grid[1][0] = 2; grid[2][0] = 1; grid[2][1] = 1; grid[2][2] = 1; }
+  else if (type === 'T') { grid[0][1] = 1; grid[0][2] = 1; grid[1][1] = 1; grid[1][2] = 1; grid[2][1] = 1; }
+  else if (type === 'Z') { grid[0][0] = 1; grid[0][1] = 1; grid[1][1] = 1; grid[1][2] = 1; grid[2][2] = 1; }
+  else if (type === 'U') { grid[0][0] = 1; grid[0][2] = 1; grid[1][0] = 1; grid[1][1] = 1; grid[1][2] = 1; }
+  ['L', 'T', 'Z', 'U'].forEach(function (k) {
+    document.getElementById('pb-' + k).classList.toggle('active', k === type);
+  });
+  rebuildBlocks();
+}
+
+function clearAll() {
+  for (var i = 0; i < ROWS; i++) for (var j = 0; j < COLS; j++) grid[i][j] = 0;
+  rebuildBlocks();
+}
+
+// ===== 三视图 =====
+function drawViews() {
+  drawOneView('cv-front', '#3B82F6', '#93c5fd', function (c) {
+    var m = 0; for (var r = 0; r < ROWS; r++) m = Math.max(m, grid[r][c]); return m;
+  }, COLS);
+  drawOneView('cv-side', '#22c55e', '#86efac', function (r) {
+    var m = 0; for (var c = 0; c < COLS; c++) m = Math.max(m, grid[r][c]); return m;
+  }, ROWS);
   drawTopView();
 }
 
-function drawOneView(id,color,fn,count){
-  const cv=document.getElementById(id);
-  const c2=cv.getContext('2d');
-  c2.clearRect(0,0,80,80);
-  const cw=60/count, ch=60/MAX_H, ox=10, base=70;
-  for(let i=0;i<count;i++){
-    const h=fn(i);
-    if(h>0){c2.fillStyle=color+'60';c2.fillRect(ox+i*cw,base-h*ch,cw-2,h*ch);c2.strokeStyle=color;c2.lineWidth=1.5;c2.strokeRect(ox+i*cw,base-h*ch,cw-2,h*ch);}
+function drawOneView(id, strokeColor, fillColor, fn, count) {
+  var cv = document.getElementById(id);
+  var ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  var cw = (cv.width - 20) / count;
+  var ch = (cv.height - 10) / MAX_H;
+  var offX = 10, base = cv.height - 5;
+  for (var i = 0; i < count; i++) {
+    var h = fn(i);
+    if (h > 0) {
+      ctx.fillStyle = fillColor;
+      ctx.fillRect(offX + i * cw, base - h * ch, cw - 2, h * ch);
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(offX + i * cw, base - h * ch, cw - 2, h * ch);
+    }
   }
-  c2.strokeStyle='#cbd5e1';c2.lineWidth=1;c2.beginPath();c2.moveTo(ox,base);c2.lineTo(ox+60,base);c2.stroke();
+  ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(offX, base); ctx.lineTo(offX + count * cw, base); ctx.stroke();
 }
 
-function drawTopView(){
-  const cv=document.getElementById('cv-top');
-  const c2=cv.getContext('2d');
-  c2.clearRect(0,0,80,80);
-  const cw=60/COLS, ch2=60/ROWS, ox=10, oy2=10;
-  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
-    const x=ox+c*cw, y=oy2+r*ch2;
-    if(grid[r][c]>0){
-      const a=0.3+grid[r][c]/MAX_H*0.7;
-      c2.fillStyle=`rgba(249,115,22,${a})`;c2.fillRect(x,y,cw-1,ch2-1);
-      c2.strokeStyle='#f97316';c2.lineWidth=1;c2.strokeRect(x,y,cw-1,ch2-1);
-    } else {
-      c2.strokeStyle='#e2e8f0';c2.lineWidth=.5;c2.strokeRect(x,y,cw-1,ch2-1);
+function drawTopView() {
+  var cv = document.getElementById('cv-top');
+  var ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  var cw = (cv.width - 20) / COLS;
+  var ch = (cv.height - 10) / ROWS;
+  var offX = 10, offY = 5;
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      var x = offX + c * cw;
+      var y = offY + r * ch;
+      if (grid[r][c] > 0) {
+        var a = 0.3 + grid[r][c] / MAX_H * 0.7;
+        ctx.fillStyle = 'rgba(249,115,22,' + a + ')';
+        ctx.fillRect(x, y, cw - 1, ch - 1);
+        ctx.strokeStyle = '#f97316'; ctx.lineWidth = 1;
+        ctx.strokeRect(x, y, cw - 1, ch - 1);
+      } else {
+        ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 0.5;
+        ctx.strokeRect(x, y, cw - 1, ch - 1);
+      }
     }
   }
 }
 
-window.addEventListener('resize',render);
-loadPreset('L');
-setTimeout(render,50);
+init();
 </script>
 </body>
 </html>

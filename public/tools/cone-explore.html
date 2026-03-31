@@ -1,37 +1,47 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>圆锥的认识与体积 — 教立方</title>
-  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
-  <style>
-    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
-    .canvas-area { padding: 16px; overflow: hidden; background: linear-gradient(135deg, #fff7ed 0%, #fdfaf4 100%); position: relative; }
-    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
-    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
-    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
-    .divider { height: 1px; background: #e2e8f0; }
-    .info-box { background: #fff; border: 1px solid #fed7aa; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
-    .slider-row { display: flex; align-items: center; gap: 10px; }
-    .slider-row input { flex: 1; }
-    .slider-row .value-display { min-width: 40px; }
-    .prop-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #fff; border-radius: 8px; border: 1px solid #e2e8f0; }
-    .prop-label { font-size: 13px; color: #64748b; }
-    .prop-value { font-size: 14px; font-weight: 700; color: #1e293b; font-family: 'Courier New', monospace; }
-    .compare-box { background: #fff; border: 2px solid #f97316; border-radius: 12px; padding: 14px; margin-top: 8px; text-align: center; }
-    .compare-box .vs { font-size: 20px; font-weight: 800; color: #f97316; }
-    .compare-box .val { font-size: 14px; font-weight: 700; margin: 4px 0; }
-    .fill-bar { height: 40px; border-radius: 8px; overflow: hidden; background: #f1f5f9; margin: 8px 0; position: relative; }
-    .fill-level { height: 100%; background: linear-gradient(90deg, #f97316, #fb923c); border-radius: 8px; transition: width .5s; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 12px; }
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>圆锥的认识与体积 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 280px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#fff7ed,#fdfaf4); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fdfaf4; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+  .slider-row { display:flex; align-items:center; gap:8px; }
+  .slider-row label { font-size:12px; font-weight:600; color:#64748b; min-width:20px; }
+  .slider-row input[type=range] { flex:1; }
+  .slider-row .val { font-size:14px; font-weight:700; color:#f97316; min-width:36px; text-align:right; }
+  .info-box { background:#fff; border:1px solid #fed7aa; border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.8; color:#334155; }
+  .info-box strong { color:#f97316; }
+  .prop-row { display:flex; justify-content:space-between; align-items:center; padding:6px 10px; background:#fff; border-radius:6px; border:1px solid #e2e8f0; font-size:12px; }
+  .prop-label { color:#64748b; }
+  .prop-value { font-weight:700; color:#1e293b; font-family:'Courier New',monospace; }
+  .compare-box { background:#fff; border:2px solid #f97316; border-radius:12px; padding:12px; text-align:center; }
+  .compare-box .vs { font-size:18px; font-weight:800; color:#f97316; }
+  .fill-bar { height:36px; border-radius:8px; overflow:hidden; background:#f1f5f9; margin:8px 0; position:relative; }
+  .fill-level { height:100%; background:linear-gradient(90deg,#f97316,#fb923c); border-radius:8px; transition:width .5s; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:12px; }
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
+</style>
 </head>
 <body>
 <div class="edu-tool">
   <div class="edu-toolbar">
     <div style="display:flex;align-items:center;gap:10px">
-      <div class="edu-toolbar-title">🍦 圆锥的认识与体积</div>
-      <div class="edu-toolbar-subtitle">下册 · 第三单元</div>
+      <span class="edu-toolbar-title">🍦 圆锥的认识与体积</span>
+      <span class="edu-toolbar-subtitle">下册 · 第三单元</span>
     </div>
     <div class="edu-toolbar-actions">
       <button class="edu-btn edu-btn-accent" onclick="playPour()">倒沙实验</button>
@@ -42,45 +52,40 @@
   <div class="edu-content">
     <div class="main-layout">
       <div class="canvas-area">
-        <canvas id="canvas" style="width:100%;height:100%"></canvas>
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
       </div>
-
       <div class="control-panel">
         <div class="ctrl-section">
           <div class="ctrl-label">底面半径 r</div>
-          <div class="slider-row">
-            <input type="range" id="rSlider" min="15" max="80" value="40" oninput="update()"/>
-            <span class="value-display" id="rVal">40</span>
-          </div>
+          <div class="slider-row"><label>r</label><input type="range" id="sr" min="1" max="5" value="2" step="0.5" oninput="rebuild()"/><span class="val" id="vr">2</span></div>
         </div>
         <div class="ctrl-section">
           <div class="ctrl-label">高 h</div>
-          <div class="slider-row">
-            <input type="range" id="hSlider" min="30" max="180" value="90" oninput="update()"/>
-            <span class="value-display" id="hVal">90</span>
-          </div>
+          <div class="slider-row"><label>h</label><input type="range" id="sh" min="1" max="6" value="3" step="0.5" oninput="rebuild()"/><span class="val" id="vh">3</span></div>
         </div>
         <div class="divider"></div>
         <div class="ctrl-section">
           <div class="ctrl-label">圆锥属性</div>
-          <div class="prop-row"><span class="prop-label">半径 r</span><span class="prop-value" id="pR">40</span></div>
-          <div class="prop-row"><span class="prop-label">高 h</span><span class="prop-value" id="pH">90</span></div>
-          <div class="prop-row"><span class="prop-label">母线 l</span><span class="prop-value" id="pL">98.5</span></div>
-          <div class="prop-row"><span class="prop-label">底面积 πr²</span><span class="prop-value" id="pSB">5026.5</span></div>
-          <div class="prop-row"><span class="prop-label">体积 V=⅓πr²h</span><span class="prop-value" id="pV">150796.4</span></div>
+          <div class="prop-row"><span class="prop-label">半径 r</span><span class="prop-value" id="pR">2</span></div>
+          <div class="prop-row"><span class="prop-label">高 h</span><span class="prop-value" id="pH">3</span></div>
+          <div class="prop-row"><span class="prop-label">母线 l</span><span class="prop-value" id="pL">3.6</span></div>
+          <div class="prop-row"><span class="prop-label">底面积 πr²</span><span class="prop-value" id="pSB">12.6</span></div>
+          <div class="prop-row"><span class="prop-label">体积 V=⅓πr²h</span><span class="prop-value" id="pV">12.6</span></div>
         </div>
         <div class="divider"></div>
         <div class="compare-box">
-          <div style="font-size:12px;color:#64748b">等底等高对比</div>
+          <div style="font-size:11px;color:#64748b">等底等高对比</div>
           <div class="vs">V圆锥 = ⅓ V圆柱</div>
-          <div class="val" style="color:#f97316">圆锥体积 = <span id="cV">150796</span></div>
-          <div class="val" style="color:#3b82f6">圆柱体积 = <span id="cyV">452389</span></div>
+          <div style="font-size:12px;font-weight:700;color:#f97316">圆锥 = <span id="cV">12.6</span></div>
+          <div style="font-size:12px;font-weight:700;color:#3b82f6">圆柱 = <span id="cyV">37.7</span></div>
           <div class="fill-bar">
             <div class="fill-level" id="fillBar" style="width:33.3%">⅓</div>
           </div>
         </div>
+        <div class="divider"></div>
         <div class="info-box">
-          <b>圆锥知识</b><br/>
+          <strong>圆锥知识</strong><br/>
           ● 只有一个底面（圆形）<br/>
           ● 侧面展开是扇形<br/>
           ● 母线 l² = r² + h²<br/>
@@ -91,213 +96,178 @@
     </div>
   </div>
 </div>
-<script src="../edu-lib/edu-tools.js"></script>
 <script>
-const canvas = document.getElementById('canvas');
-let R = 40, H = 90;
-let pourProgress = 0;
-let pourId = null;
+var _scene, _camera, _renderer, _controls;
+var _coneMesh, _cylMesh, _coneEdges, _cylEdges;
+var _axisGroup, _fillGroup;
+var _pourId = null;
+var _pourProgress = 0;
 
-function update() {
-  R = parseInt(document.getElementById('rSlider').value);
-  H = parseInt(document.getElementById('hSlider').value);
-  document.getElementById('rVal').textContent = R;
-  document.getElementById('hVal').textContent = H;
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xfff7ed, camX: 8, camY: 5, camZ: 8 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 12, 12);
 
-  const l = Math.sqrt(R * R + H * H);
-  const Sbase = Math.PI * R * R;
-  const Vcone = Sbase * H / 3;
-  const Vcyl = Sbase * H;
+  _axisGroup = new THREE.Group();
+  _scene.add(_axisGroup);
+  _fillGroup = new THREE.Group();
+  _scene.add(_fillGroup);
 
-  document.getElementById('pR').textContent = R;
-  document.getElementById('pH').textContent = H;
-  document.getElementById('pL').textContent = l.toFixed(1);
-  document.getElementById('pSB').textContent = Sbase.toFixed(1);
-  document.getElementById('pV').textContent = Vcone.toFixed(1);
-  document.getElementById('cV').textContent = Vcone.toFixed(0);
-  document.getElementById('cyV').textContent = Vcyl.toFixed(0);
-
-  render();
+  rebuild();
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls, function () {
+    if (_pourProgress > 0) updatePour();
+  });
 }
 
-function render() {
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  const w = rect.width, h = rect.height;
-  const ctx = canvas.getContext('2d');
-  ctx.save();
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, w, h);
+function rebuild() {
+  var radius = parseFloat(document.getElementById('sr').value);
+  var height = parseFloat(document.getElementById('sh').value);
+  document.getElementById('vr').textContent = radius;
+  document.getElementById('vh').textContent = height;
 
-  drawGrid(ctx, w, h, 30, '#f8f8f8');
+  // 清除旧对象
+  if (_coneMesh) { _scene.remove(_coneMesh); _scene.remove(_coneEdges); }
+  if (_cylMesh) { _scene.remove(_cylMesh); _scene.remove(_cylEdges); }
+  while (_axisGroup.children.length) _axisGroup.remove(_axisGroup.children[0]);
+  while (_fillGroup.children.length) _fillGroup.remove(_fillGroup.children[0]);
 
-  // 圆柱（虚线，右侧）
-  const cylCx = w * 0.65;
-  const cyY = h * 0.55;
-  const r = R;
-  const h_ = H;
-  const eH = r * 0.3;
+  var coneSpacing = radius * 2 + 2;
 
-  // 圆柱轮廓
-  ctx.setLineDash([6, 4]);
-  ctx.strokeStyle = '#94a3b8';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(cylCx - r, cyY - h_ / 2);
-  ctx.lineTo(cylCx - r, cyY + h_ / 2);
-  ctx.ellipse(cylCx, cyY + h_ / 2, r, eH, 0, Math.PI, 0, true);
-  ctx.lineTo(cylCx + r, cyY - h_ / 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.ellipse(cylCx, cyY + h_ / 2, r, eH, 0, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.ellipse(cylCx, cyY - h_ / 2, r, eH, 0, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.setLineDash([]);
+  // 圆锥
+  var coneGeo = new THREE.ConeGeometry(radius, height, 32);
+  var coneMat = new THREE.MeshLambertMaterial({ color: 0xf97316, transparent: true, opacity: 0.7 });
+  _coneMesh = new THREE.Mesh(coneGeo, coneMat);
+  _coneMesh.position.set(-coneSpacing / 2, height / 2, 0);
+  _coneMesh.castShadow = true;
+  _scene.add(_coneMesh);
 
-  // 倒沙进度填充
-  if (pourProgress > 0) {
-    const fillH = h_ * Math.min(pourProgress, 1) / 3;
-    ctx.fillStyle = 'rgba(249,115,22,0.3)';
-    ctx.beginPath();
-    ctx.moveTo(cylCx - r, cyY + h_ / 2 - fillH);
-    ctx.lineTo(cylCx - r, cyY + h_ / 2);
-    ctx.ellipse(cylCx, cyY + h_ / 2, r, eH, 0, Math.PI, 0, true);
-    ctx.lineTo(cylCx + r, cyY + h_ / 2 - fillH);
-    ctx.closePath();
-    ctx.fill();
-  }
+  _coneEdges = Edu3D.edges(coneGeo, 0xc2410c);
+  _coneEdges.position.copy(_coneMesh.position);
+  _scene.add(_coneEdges);
 
-  ctx.fillStyle = '#94a3b8';
-  ctx.font = '12px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('等底等高圆柱', cylCx, cyY - h_ / 2 - 16);
+  // 圆柱（虚线对比）
+  var cylGeo = new THREE.CylinderGeometry(radius, radius, height, 32);
+  var cylMat = new THREE.MeshLambertMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.2 });
+  _cylMesh = new THREE.Mesh(cylGeo, cylMat);
+  _cylMesh.position.set(coneSpacing / 2, height / 2, 0);
+  _scene.add(_cylMesh);
 
-  // 圆锥（左侧）
-  const coneCx = w * 0.3;
-  const coneBase = cyY + h_ / 2;
-  const coneTop = cyY - h_ / 2;
+  _cylEdges = Edu3D.edges(cylGeo, 0x2563eb);
+  _cylEdges.position.copy(_cylMesh.position);
+  _scene.add(_cylEdges);
 
-  // 圆锥填充
-  const grad = ctx.createLinearGradient(coneCx - r, 0, coneCx + r, 0);
-  grad.addColorStop(0, 'rgba(249,115,22,0.2)');
-  grad.addColorStop(0.5, 'rgba(249,115,22,0.35)');
-  grad.addColorStop(1, 'rgba(249,115,22,0.15)');
+  // 标签
+  var coneLabel = Edu3D.textSprite('圆锥', { color: '#f97316', scale: 0.6 });
+  coneLabel.position.set(-coneSpacing / 2, height + 0.8, 0);
+  _axisGroup.add(coneLabel);
 
-  ctx.beginPath();
-  ctx.moveTo(coneCx, coneTop);
-  ctx.lineTo(coneCx - r, coneBase);
-  ctx.ellipse(coneCx, coneBase, r, eH, 0, Math.PI, 0, true);
-  ctx.closePath();
-  ctx.fillStyle = grad;
-  ctx.fill();
-  ctx.strokeStyle = '#f97316';
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  var cylLabel = Edu3D.textSprite('等底等高圆柱', { color: '#3b82f6', scale: 0.5 });
+  cylLabel.position.set(coneSpacing / 2, height + 0.8, 0);
+  _axisGroup.add(cylLabel);
 
-  // 底面椭圆
-  ctx.beginPath();
-  ctx.ellipse(coneCx, coneBase, r, eH, 0, 0, Math.PI * 2);
-  ctx.setLineDash([4, 3]);
-  ctx.strokeStyle = '#f97316';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  ctx.setLineDash([]);
+  // 高线（圆锥）
+  var hLineGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-coneSpacing / 2, 0, 0),
+    new THREE.Vector3(-coneSpacing / 2, height, 0)
+  ]);
+  var hLineMat = new THREE.LineBasicMaterial({ color: 0xef4444 });
+  _axisGroup.add(new THREE.Line(hLineGeo, hLineMat));
 
-  // 高
-  ctx.beginPath();
-  ctx.moveTo(coneCx, coneTop);
-  ctx.lineTo(coneCx, coneBase);
-  ctx.strokeStyle = '#ef4444';
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([4, 3]);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle = '#ef4444';
-  ctx.font = 'bold 12px sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText('h=' + H, coneCx + 6, (coneTop + coneBase) / 2);
+  // 半径线（圆锥底部）
+  var rLineGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-coneSpacing / 2, 0.02, 0),
+    new THREE.Vector3(-coneSpacing / 2 + radius, 0.02, 0)
+  ]);
+  var rLineMat = new THREE.LineBasicMaterial({ color: 0x22c55e });
+  _axisGroup.add(new THREE.Line(rLineGeo, rLineMat));
 
-  // 半径
-  ctx.beginPath();
-  ctx.moveTo(coneCx, coneBase);
-  ctx.lineTo(coneCx + r, coneBase);
-  ctx.strokeStyle = '#22c55e';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  ctx.fillStyle = '#22c55e';
-  ctx.textAlign = 'center';
-  ctx.fillText('r=' + R, coneCx + r / 2, coneBase + eH + 14);
+  // 更新计算
+  var l = Math.sqrt(radius * radius + height * height);
+  var sbase = Math.PI * radius * radius;
+  var vcone = sbase * height / 3;
+  var vcyl = sbase * height;
 
-  // 顶点
-  ctx.beginPath();
-  ctx.arc(coneCx, coneTop, 4, 0, Math.PI * 2);
-  ctx.fillStyle = '#f97316';
-  ctx.fill();
-
-  ctx.fillStyle = '#f97316';
-  ctx.font = 'bold 12px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('圆锥', coneCx, coneTop - 12);
-
-  // 1/3 标注
-  ctx.fillStyle = '#1a3a5c';
-  ctx.font = 'bold 16px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('V圆锥 = ⅓ × V圆柱', w / 2, 30);
-
-  if (pourProgress >= 1) {
-    ctx.fillStyle = '#22c55e';
-    ctx.font = 'bold 14px sans-serif';
-    ctx.fillText('3次倒满！圆锥体积 = 圆柱体积 × ⅓', w / 2, 56);
-  }
-
-  ctx.restore();
+  document.getElementById('pR').textContent = radius;
+  document.getElementById('pH').textContent = height;
+  document.getElementById('pL').textContent = l.toFixed(1);
+  document.getElementById('pSB').textContent = sbase.toFixed(1);
+  document.getElementById('pV').textContent = vcone.toFixed(1);
+  document.getElementById('cV').textContent = vcone.toFixed(1);
+  document.getElementById('cyV').textContent = vcyl.toFixed(1);
 }
 
 function playPour() {
-  if (pourId) clearInterval(pourId);
-  pourProgress = 0;
-  const bar = document.getElementById('fillBar');
+  if (_pourId) clearInterval(_pourId);
+  _pourProgress = 0;
+  while (_fillGroup.children.length) _fillGroup.remove(_fillGroup.children[0]);
+
+  var radius = parseFloat(document.getElementById('sr').value);
+  var height = parseFloat(document.getElementById('sh').value);
+  var coneSpacing = radius * 2 + 2;
+
+  // 填充圆柱
+  var fillGeo = new THREE.CylinderGeometry(radius * 0.95, radius * 0.95, 0.01, 32);
+  var fillMat = new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.4 });
+  var fillMesh = new THREE.Mesh(fillGeo, fillMat);
+  fillMesh.position.set(coneSpacing / 2, 0.005, 0);
+  _fillGroup.add(fillMesh);
+
+  var bar = document.getElementById('fillBar');
   bar.style.width = '0%';
   bar.textContent = '';
+  bar.style.background = 'linear-gradient(90deg,#f97316,#fb923c)';
 
-  pourId = setInterval(() => {
-    pourProgress += 0.02;
-    const pct = Math.min(pourProgress / 3, 1) * 33.3;
-    bar.style.width = pct + '%';
-    if (pourProgress <= 1) bar.textContent = `第1次 ${pct.toFixed(0)}%`;
-    else if (pourProgress <= 2) bar.textContent = `第2次 ${(pct - 1 < 0 ? 0 : (pourProgress-1)/2*100).toFixed(0)}%`;
-    else bar.textContent = `第3次...`;
-
-    render();
-    if (pourProgress >= 3) {
-      clearInterval(pourId);
-      pourProgress = 3;
+  _pourId = setInterval(function () {
+    _pourProgress += 0.03;
+    if (_pourProgress >= 3) {
+      _pourProgress = 3;
+      clearInterval(_pourId);
+      _pourId = null;
       bar.style.width = '100%';
       bar.textContent = '倒满！V圆锥 = ⅓ V圆柱';
-      bar.style.background = 'linear-gradient(90deg, #22c55e, #16a34a)';
-      render();
+      bar.style.background = 'linear-gradient(90deg,#22c55e,#16a34a)';
+    } else {
+      var pct = (_pourProgress / 3 * 100);
+      bar.style.width = pct + '%';
+      var pourNum = Math.ceil(_pourProgress);
+      bar.textContent = '第' + pourNum + '次倒沙 ' + pct.toFixed(0) + '%';
     }
   }, 30);
 }
 
-function resetAll() {
-  R = 40; H = 90;
-  document.getElementById('rSlider').value = 40;
-  document.getElementById('hSlider').value = 90;
-  pourProgress = 0;
-  if (pourId) clearInterval(pourId);
-  const bar = document.getElementById('fillBar');
-  bar.style.width = '33.3%';
-  bar.textContent = '⅓';
-  bar.style.background = 'linear-gradient(90deg, #f97316, #fb923c)';
-  update();
+function updatePour() {
+  if (_fillGroup.children.length === 0) return;
+  var fillMesh = _fillGroup.children[0];
+  var radius = parseFloat(document.getElementById('sr').value);
+  var height = parseFloat(document.getElementById('sh').value);
+  var coneSpacing = radius * 2 + 2;
+
+  var fillH = Math.min(_pourProgress / 3, 1) * height;
+  _fillGroup.remove(fillMesh);
+
+  var fillGeo = new THREE.CylinderGeometry(radius * 0.95, radius * 0.95, Math.max(0.01, fillH), 32);
+  var fillMat = new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.4 });
+  fillMesh = new THREE.Mesh(fillGeo, fillMat);
+  fillMesh.position.set(coneSpacing / 2, fillH / 2, 0);
+  _fillGroup.add(fillMesh);
 }
 
-window.addEventListener('resize', () => { render(); });
-update();
+function resetAll() {
+  document.getElementById('sr').value = 2;
+  document.getElementById('sh').value = 3;
+  _pourProgress = 0;
+  if (_pourId) { clearInterval(_pourId); _pourId = null; }
+  while (_fillGroup.children.length) _fillGroup.remove(_fillGroup.children[0]);
+  var bar = document.getElementById('fillBar');
+  bar.style.width = '33.3%';
+  bar.textContent = '⅓';
+  bar.style.background = 'linear-gradient(90deg,#f97316,#fb923c)';
+  rebuild();
+}
+
+init();
 </script>
 </body>
 </html>

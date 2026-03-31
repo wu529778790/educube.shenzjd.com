@@ -3,183 +3,48 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>积木拼搭三视图联动</title>
+<title>积木拼搭三视图联动 — 教立方</title>
 <link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
 <style>
-  .main-layout {
-    display: grid;
-    grid-template-columns: 1fr 260px;
-    height: 100%;
-    gap: 0;
-  }
-
-  /* 左：积木操作区 */
-  .build-area {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #f0fdf4 0%, #fdfaf4 100%);
-    position: relative;
-    overflow: hidden;
-  }
-
-  /* 积木网格 */
-  #grid-wrapper {
-    position: relative;
-    display: inline-block;
-  }
-
-  #build-grid {
-    display: grid;
-    gap: 3px;
-    cursor: pointer;
-    user-select: none;
-  }
-
-  .grid-cell {
-    width: 52px;
-    height: 52px;
-    border-radius: 6px;
-    background: #e2e8f0;
-    border: 2px solid #cbd5e1;
-    transition: all 0.15s;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    color: #94a3b8;
-    cursor: pointer;
-  }
-  .grid-cell:hover { background: #dbeafe; border-color: #93c5fd; }
-  .grid-cell.filled {
-    background: linear-gradient(135deg, #4f8cff, #3b82f6);
-    border-color: #2563eb;
-    box-shadow: 0 2px 8px rgba(79,140,255,0.35), inset 0 1px 0 rgba(255,255,255,0.3);
-    color: rgba(255,255,255,0.8);
-    font-weight: 700;
-  }
-  .grid-cell.filled::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 60%);
-    border-radius: 4px;
-    pointer-events: none;
-  }
-  .height-badge {
-    position: absolute;
-    top: 3px;
-    right: 5px;
-    font-size: 10px;
-    font-weight: 700;
-    color: rgba(255,255,255,0.9);
-  }
-
-  /* 右：三视图区 */
-  .views-panel {
-    background: #fff;
-    border-left: 1px solid #e2e8f0;
-    display: flex;
-    flex-direction: column;
-    overflow: auto;
-  }
-
-  .view-section {
-    flex: 1;
-    padding: 12px;
-    border-bottom: 1px solid #f1f5f9;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .view-section:last-child { border-bottom: none; }
-
-  .view-title {
-    font-size: 12px;
-    font-weight: 700;
-    color: #1a3a5c;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .view-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 2px;
-  }
-
-  .view-canvas-wrap {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 60px;
-  }
-
-  canvas.view-canvas {
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    background: #f8fafc;
-    display: block;
-  }
-
-  /* 高度控制 */
-  .height-controls {
-    position: absolute;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: rgba(255,255,255,0.94);
-    border: 1px solid #e2e8f0;
-    border-radius: 20px;
-    padding: 8px 16px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-  }
-  .height-controls span { font-size: 12px; color: #64748b; }
-
-  .hint-label {
-    position: absolute;
-    top: 14px;
-    left: 14px;
-    background: rgba(34,197,94,0.12);
-    border: 1px solid rgba(34,197,94,0.3);
-    border-radius: 10px;
-    padding: 6px 12px;
-    font-size: 12px;
-    color: #15803d;
-  }
-
+  .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#f0fdf4,#fdfaf4); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+  .info-box { background:#fff; border:1px solid #bbf7d0; border-radius:10px; padding:8px 10px; font-size:11px; line-height:1.7; color:#334155; }
+  .info-box strong { color:#16a34a; }
   .mode-btn {
-    padding: 5px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    border: 1.5px solid #e2e8f0;
-    background: #fff;
-    color: #64748b;
-    transition: all 0.15s;
-    font-family: var(--edu-font);
+    padding:5px 12px; border-radius:6px; font-size:12px; font-weight:600;
+    cursor:pointer; border:1.5px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font);
   }
-  .mode-btn.add { background: #4f8cff; color: #fff; border-color: #4f8cff; }
-  .mode-btn.remove { background: #ef4444; color: #fff; border-color: #ef4444; }
-  .mode-btn.height { background: #22c55e; color: #fff; border-color: #22c55e; }
+  .mode-btn.active { background:#22c55e; color:#fff; border-color:#22c55e; }
+  .view-section { display:flex; flex-direction:column; gap:4px; }
+  .view-title { font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px; }
+  .view-dot { width:8px; height:8px; border-radius:2px; }
+  canvas.view-canvas { border:1px solid #e2e8f0; border-radius:6px; background:#f8fafc; display:block; }
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
 </style>
 </head>
 <body>
 <div class="edu-tool">
   <div class="edu-toolbar">
-    <div style="display:flex;align-items:center;gap:10px;">
+    <div style="display:flex;align-items:center;gap:10px">
       <span class="edu-toolbar-title">🏗️ 积木拼搭三视图联动</span>
-      <span class="edu-toolbar-subtitle">下册·观察物体</span>
+      <span class="edu-toolbar-subtitle">下册 · 观察物体</span>
     </div>
     <div class="edu-toolbar-actions">
-      <span style="font-size:12px;color:#64748b;">操作模式：</span>
-      <button class="mode-btn add" id="mode-add" onclick="setMode('add')">➕ 添加</button>
+      <span style="font-size:12px;color:#64748b;">操作：</span>
+      <button class="mode-btn active" id="mode-add" onclick="setMode('add')">➕ 添加</button>
       <button class="mode-btn" id="mode-remove" onclick="setMode('remove')">➖ 移除</button>
       <button class="mode-btn" id="mode-height" onclick="setMode('height')">↑ 叠高</button>
       <div class="edu-divider"></div>
@@ -188,271 +53,271 @@
       <button class="edu-btn edu-btn-outline" onclick="clearAll()">清空</button>
     </div>
   </div>
-
   <div class="edu-content">
     <div class="main-layout">
-      <!-- 左侧积木区 -->
-      <div class="build-area">
-        <div class="hint-label" id="mode-hint">点击网格添加积木</div>
-        <div id="grid-wrapper">
-          <div id="build-grid"></div>
-        </div>
-        <div class="height-controls">
-          <span>积木总数：</span>
-          <span class="value-display" id="block-count">0</span>
-          <span>层数（最高）：</span>
-          <span class="value-display" id="max-height">0</span>
-        </div>
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放 · 点击积木操作</div>
       </div>
-
-      <!-- 右侧三视图 -->
-      <div class="views-panel">
-        <div class="view-section">
-          <div class="view-title">
-            <div class="view-dot" style="background:#3b82f6;"></div>
-            正视图（从前面看）
-          </div>
-          <div class="view-canvas-wrap">
-            <canvas class="view-canvas" id="cv-front" width="200" height="80"></canvas>
-          </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">当前模式</div>
+          <div id="mode-hint" style="font-size:12px;color:#16a34a;font-weight:600;">点击空格添加积木</div>
         </div>
-        <div class="view-section">
-          <div class="view-title">
-            <div class="view-dot" style="background:#22c55e;"></div>
-            侧视图（从右侧看）
-          </div>
-          <div class="view-canvas-wrap">
-            <canvas class="view-canvas" id="cv-side" width="200" height="80"></canvas>
-          </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="view-title"><div class="view-dot" style="background:#3b82f6;"></div>正视图（从前面看）</div>
+          <canvas class="view-canvas" id="cv-front" width="230" height="70"></canvas>
         </div>
-        <div class="view-section">
-          <div class="view-title">
-            <div class="view-dot" style="background:#f97316;"></div>
-            俯视图（从上方看）
-          </div>
-          <div class="view-canvas-wrap">
-            <canvas class="view-canvas" id="cv-top" width="200" height="80"></canvas>
-          </div>
+        <div class="ctrl-section">
+          <div class="view-title"><div class="view-dot" style="background:#22c55e;"></div>侧视图（从右侧看）</div>
+          <canvas class="view-canvas" id="cv-side" width="230" height="70"></canvas>
+        </div>
+        <div class="ctrl-section">
+          <div class="view-title"><div class="view-dot" style="background:#f97316;"></div>俯视图（从上方看）</div>
+          <canvas class="view-canvas" id="cv-top" width="230" height="70"></canvas>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <strong>统计</strong><br/>
+          积木总数：<strong id="block-count">0</strong><br/>
+          最高层：<strong id="max-height">0</strong>
+        </div>
+        <div class="info-box" style="border-color:#e2e8f0;">
+          <strong>操作说明</strong><br/>
+          ● 点击网格空位添加积木<br/>
+          ● 点击已有积木可叠高<br/>
+          ● 切换「移除」模式删除<br/>
+          ● 三视图实时联动更新
         </div>
       </div>
     </div>
   </div>
 </div>
-
-<script src="../edu-lib/edu-tools.js"></script>
 <script>
-const COLS = 5;
-const ROWS = 5;
-const MAX_HEIGHT = 5;
+var COLS = 5, ROWS = 5, MAX_H = 5;
+var grid = [];
+for (var i = 0; i < ROWS; i++) { grid[i] = []; for (var j = 0; j < COLS; j++) grid[i][j] = 0; }
+var mode = 'add';
+var _scene, _camera, _renderer, _controls;
+var _blockGroup, _gridGroup;
+var _raycaster = new THREE.Raycaster();
+var _mouse = new THREE.Vector2();
 
-// grid[row][col] = 积木高度（0=无）
-let grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-let mode = 'add';
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xf0fdf4, camX: 7, camY: 6, camZ: 7 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 12, 12);
 
-// 渲染网格
-const buildGrid = document.getElementById('build-grid');
-buildGrid.style.gridTemplateColumns = `repeat(${COLS}, 52px)`;
-buildGrid.style.gridTemplateRows = `repeat(${ROWS}, 52px)`;
+  _blockGroup = new THREE.Group();
+  _scene.add(_blockGroup);
+  _gridGroup = new THREE.Group();
+  _scene.add(_gridGroup);
 
-let cells = [];
-for (let r = 0; r < ROWS; r++) {
-  for (let c = 0; c < COLS; c++) {
-    const cell = document.createElement('div');
-    cell.className = 'grid-cell';
-    cell.dataset.row = r;
-    cell.dataset.col = c;
-    cell.addEventListener('click', () => handleClick(r, c));
-    // 列行标注
-    if (r === ROWS - 1) {
-      const lbl = document.createElement('span');
-      lbl.style.cssText = 'position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:11px;color:#94a3b8;';
-      lbl.textContent = c + 1;
-      cell.appendChild(lbl);
+  buildBaseGrid();
+  rebuildBlocks();
+
+  canvas.addEventListener('click', onCanvasClick);
+
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+
+function buildBaseGrid() {
+  while (_gridGroup.children.length) _gridGroup.remove(_gridGroup.children[0]);
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      var geo = new THREE.PlaneGeometry(0.92, 0.92);
+      var mat = new THREE.MeshBasicMaterial({ color: 0xd1d5db, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+      var plane = new THREE.Mesh(geo, mat);
+      plane.rotation.x = -Math.PI / 2;
+      plane.position.set(c - COLS / 2 + 0.5, 0.01, r - ROWS / 2 + 0.5);
+      plane.userData = { type: 'base', row: r, col: c };
+      _gridGroup.add(plane);
     }
-    buildGrid.appendChild(cell);
-    cells.push(cell);
   }
 }
 
-function getCellEl(r, c) { return cells[r * COLS + c]; }
+function rebuildBlocks() {
+  while (_blockGroup.children.length) _blockGroup.remove(_blockGroup.children[0]);
 
-function handleClick(r, c) {
-  if (mode === 'add') {
-    if (grid[r][c] === 0) grid[r][c] = 1;
-  } else if (mode === 'remove') {
-    grid[r][c] = 0;
-  } else if (mode === 'height') {
-    if (grid[r][c] > 0) grid[r][c] = Math.min(grid[r][c] + 1, MAX_HEIGHT);
-    else grid[r][c] = 1;
+  var blockGeo = new THREE.BoxGeometry(0.92, 0.92, 0.92);
+  var edgeGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(0.92, 0.92, 0.92));
+  var edgeMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.15 });
+
+  var colors = [0x4f8cff, 0x60a5fa, 0x3b82f6, 0x2563eb, 0x1d4ed8];
+  var total = 0, maxH = 0;
+
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      var h = grid[r][c];
+      if (h <= 0) continue;
+      for (var l = 0; l < h; l++) {
+        var mat = new THREE.MeshLambertMaterial({ color: colors[l % colors.length] });
+        var mesh = new THREE.Mesh(blockGeo, mat);
+        mesh.position.set(c - COLS / 2 + 0.5, l + 0.46, r - ROWS / 2 + 0.5);
+        mesh.castShadow = true;
+        mesh.userData = { type: 'block', row: r, col: c, layer: l };
+        var wire = new THREE.LineSegments(edgeGeo, edgeMat);
+        mesh.add(wire);
+        _blockGroup.add(mesh);
+      }
+      total += h;
+      maxH = Math.max(maxH, h);
+    }
   }
-  renderAll();
+
+  document.getElementById('block-count').textContent = total;
+  document.getElementById('max-height').textContent = maxH;
+  drawViews();
+}
+
+function onCanvasClick(event) {
+  var rect = _renderer.domElement.getBoundingClientRect();
+  _mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  _mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+  _raycaster.setFromCamera(_mouse, _camera);
+  var targets = _blockGroup.children.concat(_gridGroup.children);
+  var intersects = _raycaster.intersectObjects(targets, false);
+
+  if (intersects.length === 0) return;
+  var hit = intersects[0].object;
+  var row, col;
+
+  if (hit.userData.type === 'block') {
+    row = hit.userData.row;
+    col = hit.userData.col;
+  } else if (hit.userData.type === 'base') {
+    row = hit.userData.row;
+    col = hit.userData.col;
+  } else return;
+
+  if (mode === 'add') {
+    if (grid[row][col] === 0) grid[row][col] = 1;
+  } else if (mode === 'remove') {
+    grid[row][col] = 0;
+  } else if (mode === 'height') {
+    if (grid[row][col] > 0) grid[row][col] = Math.min(grid[row][col] + 1, MAX_H);
+    else grid[row][col] = 1;
+  }
+  rebuildBlocks();
 }
 
 function setMode(m) {
   mode = m;
-  ['add','remove','height'].forEach(k => {
-    const btn = document.getElementById('mode-' + k);
-    btn.className = 'mode-btn ' + (k === m ? k : '');
+  ['add', 'remove', 'height'].forEach(function (k) {
+    document.getElementById('mode-' + k).classList.toggle('active', k === m);
   });
-  const hints = { add: '点击网格添加积木', remove: '点击积木移除', height: '点击积木叠高一层' };
+  var hints = { add: '点击空格添加积木', remove: '点击积木移除', height: '点击积木叠高一层' };
   document.getElementById('mode-hint').textContent = hints[m];
 }
 
-function renderGrid() {
-  let total = 0, maxH = 0;
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      const h = grid[r][c];
-      const el = getCellEl(r, c);
-      el.className = 'grid-cell' + (h > 0 ? ' filled' : '');
-      // 高度标注
-      const badge = el.querySelector('.height-badge');
-      if (badge) badge.remove();
-      if (h > 1) {
-        const b = document.createElement('div');
-        b.className = 'height-badge';
-        b.textContent = h;
-        el.appendChild(b);
-      }
-      if (h > 0) total++;
-      maxH = Math.max(maxH, h);
-    }
-  }
-  document.getElementById('block-count').textContent = total;
-  document.getElementById('max-height').textContent = maxH;
-}
-
 // ===== 三视图绘制 =====
-function drawFrontView() {
-  // 正视图：从前（row=ROWS-1）向后看，每列的最大高度
-  // x 轴 = col，y 轴 = height
-  const ctx = document.getElementById('cv-front').getContext('2d');
-  const W = 200, H = 80;
-  ctx.clearRect(0, 0, W, H);
-
-  const cellW = Math.floor((W - 20) / COLS);
-  const cellH = Math.floor((H - 10) / MAX_HEIGHT);
-  const offX = 10, baseY = H - 5;
-
-  // 每列最高
-  for (let c = 0; c < COLS; c++) {
-    let maxH = 0;
-    for (let r = 0; r < ROWS; r++) maxH = Math.max(maxH, grid[r][c]);
-    if (maxH > 0) {
-      ctx.fillStyle = '#93c5fd';
-      ctx.strokeStyle = '#3b82f6';
-      ctx.lineWidth = 1.5;
-      const x = offX + c * cellW;
-      const h = maxH * cellH;
-      ctx.fillRect(x, baseY - h, cellW - 2, h);
-      ctx.strokeRect(x, baseY - h, cellW - 2, h);
-    }
-  }
-  // 基线
-  ctx.strokeStyle = '#cbd5e1';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(offX, baseY);
-  ctx.lineTo(offX + COLS * cellW, baseY);
-  ctx.stroke();
-}
-
-function drawSideView() {
-  // 侧视图：从右（col=COLS-1）向左看，每行的最大高度
-  const ctx = document.getElementById('cv-side').getContext('2d');
-  const W = 200, H = 80;
-  ctx.clearRect(0, 0, W, H);
-
-  const cellW = Math.floor((W - 20) / ROWS);
-  const cellH = Math.floor((H - 10) / MAX_HEIGHT);
-  const offX = 10, baseY = H - 5;
-
-  for (let r = 0; r < ROWS; r++) {
-    let maxH = 0;
-    for (let c = 0; c < COLS; c++) maxH = Math.max(maxH, grid[r][c]);
-    if (maxH > 0) {
-      ctx.fillStyle = '#86efac';
-      ctx.strokeStyle = '#22c55e';
-      ctx.lineWidth = 1.5;
-      const x = offX + r * cellW;
-      const h = maxH * cellH;
-      ctx.fillRect(x, baseY - h, cellW - 2, h);
-      ctx.strokeRect(x, baseY - h, cellW - 2, h);
-    }
-  }
-  ctx.strokeStyle = '#cbd5e1';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(offX, baseY);
-  ctx.lineTo(offX + ROWS * cellW, baseY);
-  ctx.stroke();
-}
-
-function drawTopView() {
-  // 俯视图：从上往下看，有积木的格子显示出来，高度用颜色深浅表示
-  const ctx = document.getElementById('cv-top').getContext('2d');
-  const W = 200, H = 80;
-  ctx.clearRect(0, 0, W, H);
-
-  const cellW = Math.floor((W - 20) / COLS);
-  const cellH = Math.floor((H - 10) / ROWS);
-  const offX = 10, offY = 5;
-
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      const h = grid[r][c];
-      const x = offX + c * cellW;
-      const y = offY + r * cellH;
-      if (h > 0) {
-        const alpha = 0.3 + (h / MAX_HEIGHT) * 0.7;
-        ctx.fillStyle = `rgba(249,115,22,${alpha})`;
-        ctx.strokeStyle = '#f97316';
-        ctx.lineWidth = 1.5;
-        ctx.fillRect(x, y, cellW - 2, cellH - 2);
-        ctx.strokeRect(x, y, cellW - 2, cellH - 2);
-        // 显示高度数字
-        if (h > 1) {
-          ctx.fillStyle = '#fff';
-          ctx.font = 'bold 10px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(h, x + (cellW - 2) / 2, y + (cellH - 2) / 2);
-        }
-      } else {
-        ctx.strokeStyle = '#e2e8f0';
-        ctx.lineWidth = 0.5;
-        ctx.strokeRect(x, y, cellW - 2, cellH - 2);
-      }
-    }
-  }
-}
-
-function renderAll() {
-  renderGrid();
+function drawViews() {
   drawFrontView();
   drawSideView();
   drawTopView();
 }
 
-function loadPreset(type) {
-  grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-  if (type === 'L') {
-    grid[1][1]=1; grid[2][1]=1; grid[3][1]=1; grid[3][2]=1; grid[3][3]=1;
-    grid[1][1]=2;
-  } else if (type === 'T') {
-    grid[1][1]=1; grid[1][2]=1; grid[1][3]=1;
-    grid[2][2]=1; grid[3][2]=1;
-    grid[1][2]=2; grid[2][2]=2;
+function drawFrontView() {
+  var cv = document.getElementById('cv-front');
+  var ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  var cellW = Math.floor((cv.width - 20) / COLS);
+  var cellH = Math.floor((cv.height - 10) / MAX_H);
+  var offX = 10, baseY = cv.height - 5;
+  for (var c = 0; c < COLS; c++) {
+    var mh = 0;
+    for (var r = 0; r < ROWS; r++) mh = Math.max(mh, grid[r][c]);
+    if (mh > 0) {
+      ctx.fillStyle = '#93c5fd';
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 1.5;
+      var x = offX + c * cellW;
+      var h = mh * cellH;
+      ctx.fillRect(x, baseY - h, cellW - 2, h);
+      ctx.strokeRect(x, baseY - h, cellW - 2, h);
+    }
   }
-  renderAll();
+  ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(offX, baseY); ctx.lineTo(offX + COLS * cellW, baseY); ctx.stroke();
+}
+
+function drawSideView() {
+  var cv = document.getElementById('cv-side');
+  var ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  var cellW = Math.floor((cv.width - 20) / ROWS);
+  var cellH = Math.floor((cv.height - 10) / MAX_H);
+  var offX = 10, baseY = cv.height - 5;
+  for (var r = 0; r < ROWS; r++) {
+    var mh = 0;
+    for (var c = 0; c < COLS; c++) mh = Math.max(mh, grid[r][c]);
+    if (mh > 0) {
+      ctx.fillStyle = '#86efac';
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 1.5;
+      var x = offX + r * cellW;
+      var h = mh * cellH;
+      ctx.fillRect(x, baseY - h, cellW - 2, h);
+      ctx.strokeRect(x, baseY - h, cellW - 2, h);
+    }
+  }
+  ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(offX, baseY); ctx.lineTo(offX + ROWS * cellW, baseY); ctx.stroke();
+}
+
+function drawTopView() {
+  var cv = document.getElementById('cv-top');
+  var ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  var cellW = Math.floor((cv.width - 20) / COLS);
+  var cellH = Math.floor((cv.height - 10) / ROWS);
+  var offX = 10, offY = 5;
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      var h = grid[r][c];
+      var x = offX + c * cellW;
+      var y = offY + r * cellH;
+      if (h > 0) {
+        var a = 0.3 + (h / MAX_H) * 0.7;
+        ctx.fillStyle = 'rgba(249,115,22,' + a + ')';
+        ctx.strokeStyle = '#f97316';
+        ctx.lineWidth = 1.5;
+        ctx.fillRect(x, y, cellW - 2, cellH - 2);
+        ctx.strokeRect(x, y, cellW - 2, cellH - 2);
+        if (h > 1) {
+          ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(h, x + (cellW - 2) / 2, y + (cellH - 2) / 2);
+        }
+      } else {
+        ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 0.5;
+        ctx.strokeRect(x, y, cellW - 2, cellH - 2);
+      }
+    }
+  }
+}
+
+function loadPreset(type) {
+  for (var i = 0; i < ROWS; i++) for (var j = 0; j < COLS; j++) grid[i][j] = 0;
+  if (type === 'L') {
+    grid[1][1] = 2; grid[2][1] = 1; grid[3][1] = 1; grid[3][2] = 1; grid[3][3] = 1;
+  } else if (type === 'T') {
+    grid[1][1] = 2; grid[1][2] = 1; grid[1][3] = 1;
+    grid[2][2] = 2; grid[3][2] = 1;
+  }
+  rebuildBlocks();
 }
 
 function clearAll() {
-  grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-  renderAll();
+  for (var i = 0; i < ROWS; i++) for (var j = 0; j < COLS; j++) grid[i][j] = 0;
+  rebuildBlocks();
 }
 
-renderAll();
+init();
 </script>
 </body>
 </html>
