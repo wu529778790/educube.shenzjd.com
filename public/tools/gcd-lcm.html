@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>最大公因数与最小公倍数</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 300px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#faf5ff,#f3e8ff); overflow:hidden; }
+  .control-panel {
+    background:#fff; border-left:1px solid #e2e8f0;
+    padding:16px; display:flex; flex-direction:column; gap:12px; overflow:auto;
+  }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+  .num-input {
+    width:100%; padding:8px 12px; border:2px solid #e2e8f0; border-radius:8px;
+    font-size:16px; font-weight:700; color:#7C3AED; text-align:center;
+    font-family:var(--edu-font); outline:none;
+  }
+  .num-input:focus { border-color:#8B5CF6; }
+  .info-box {
+    background:#faf5ff; border:1px solid #e9d5ff; border-radius:10px;
+    padding:10px 12px; font-size:12px; color:#64748b; line-height:1.9;
+  }
+  .info-box strong { color:#7C3AED; }
+  .result-big { font-size:24px; font-weight:800; color:#7C3AED; text-align:center; }
+  .tab-btn {
+    padding:7px 10px; border-radius:8px; font-size:12px; font-weight:600;
+    cursor:pointer; border:1.5px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+  }
+  .tab-btn.active { background:#8B5CF6; color:#fff; border-color:#8B5CF6; }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="edu-toolbar-title">📐 最大公因数与最小公倍数</span>
+      <span class="edu-toolbar-subtitle">五下·第二单元</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="main-canvas" class="edu-canvas-full"></canvas>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">输入两个数</div>
+          <div style="display:flex;gap:8px;">
+            <input class="num-input" id="num1" type="number" min="1" max="200" value="12" oninput="update()"/>
+            <input class="num-input" id="num2" type="number" min="1" max="200" value="18" oninput="update()"/>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">显示模式</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <button class="tab-btn active" id="tb-gcd" onclick="setMode('gcd')">最大公因数</button>
+            <button class="tab-btn" id="tb-lcm" onclick="setMode('lcm')">最小公倍数</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section" id="gcd-section">
+          <div class="result-big" id="gcd-result">6</div>
+          <div class="info-box" id="gcd-detail"></div>
+        </div>
+        <div class="ctrl-section" id="lcm-section" style="display:none;">
+          <div class="result-big" id="lcm-result">36</div>
+          <div class="info-box" id="lcm-detail"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">知识卡片</div>
+          <div class="info-box" style="background:#fff;border-color:#e2e8f0;font-size:11px;line-height:1.7;">
+            <strong>最大公因数(GCD)</strong>：两个数公有因数中最大的一个。<br/>
+            <strong>最小公倍数(LCM)</strong>：两个数公有倍数中最小的一个。<br/>
+            <strong>短除法</strong>：同时除以公有的质因数，直到互质。<br/>
+            GCD &times; LCM = a &times; b
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="../edu-lib/edu-tools.js"></script>
+<script>
+const canvas = document.getElementById('main-canvas');
+const ctx = canvas.getContext('2d');
+let W, H, mode = 'gcd';
+
+function getFactors(n) { const f = []; for (let i = 1; i <= n; i++) if (n % i === 0) f.push(i); return f; }
+function getMultiples(n, max) { const m = []; for (let i = 1; i * n <= max; i++) m.push(n * i); return m; }
+function gcd(a, b) { while (b) { [a, b] = [b, a % b]; } return a; }
+function lcm(a, b) { return (a * b) / gcd(a, b); }
+
+function shortDivision(a, b) {
+  const steps = [];
+  let x = a, y = b;
+  let divisor = 2, product = 1;
+  while (x > 1 || y > 1) {
+    if (x % divisor === 0 && y % divisor === 0) {
+      steps.push({ divisor, x, y });
+      x /= divisor; y /= divisor; product *= divisor;
+    } else if (x % divisor === 0) {
+      x /= divisor; product *= divisor;
+    } else if (y % divisor === 0) {
+      y /= divisor; product *= divisor;
+    } else {
+      divisor++;
+    }
+  }
+  return steps;
+}
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('tb-gcd').classList.toggle('active', m === 'gcd');
+  document.getElementById('tb-lcm').classList.toggle('active', m === 'lcm');
+  document.getElementById('gcd-section').style.display = m === 'gcd' ? '' : 'none';
+  document.getElementById('lcm-section').style.display = m === 'lcm' ? '' : 'none';
+  update();
+}
+
+function update() {
+  const a = Math.max(1, parseInt(document.getElementById('num1').value) || 1);
+  const b = Math.max(1, parseInt(document.getElementById('num2').value) || 1);
+  const g = gcd(a, b), l = lcm(a, b);
+  const fa = getFactors(a), fb = getFactors(b);
+  const common = fa.filter(f => fb.includes(f));
+  const steps = shortDivision(a, b);
+
+  document.getElementById('gcd-result').textContent = g;
+  document.getElementById('lcm-result').textContent = l;
+
+  let gcdHtml = `<div>${a} 的因数：${fa.map(f => `<strong>${common.includes(f) ? f : f}</strong>`).join(', ')}</div>`;
+  gcdHtml += `<div>${b} 的因数：${fb.join(', ')}</div>`;
+  gcdHtml += `<div>公因数：<strong>${common.join(', ')}</strong></div>`;
+  gcdHtml += `<div>最大公因数 = <strong>${g}</strong></div>`;
+  gcdHtml += `<div style="margin-top:4px;">短除法：${steps.map(s => `<strong>${s.divisor}</strong>`).join(' → ') || '互质'}`;
+  if (steps.length) gcdHtml += ` → 余 ${a / g}, ${b / g}`;
+  gcdHtml += `</div>`;
+  document.getElementById('gcd-detail').innerHTML = gcdHtml;
+
+  const ma = getMultiples(a, l * 2), mb = getMultiples(b, l * 2);
+  const commonM = ma.filter(m => mb.includes(m));
+  let lcmHtml = `<div>${a} 的倍数：${ma.slice(0, 8).join(', ')}...</div>`;
+  lcmHtml += `<div>${b} 的倍数：${mb.slice(0, 8).join(', ')}...</div>`;
+  lcmHtml += `<div>公倍数：<strong>${commonM.slice(0, 5).join(', ')}...</strong></div>`;
+  lcmHtml += `<div>最小公倍数 = <strong>${l}</strong></div>`;
+  document.getElementById('lcm-detail').innerHTML = lcmHtml;
+
+  render();
+}
+
+function render() {
+  const dpr = window.devicePixelRatio || 1;
+  W = canvas.clientWidth; H = canvas.clientHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  const a = Math.max(1, parseInt(document.getElementById('num1').value) || 1);
+  const b = Math.max(1, parseInt(document.getElementById('num2').value) || 1);
+  const g = gcd(a, b), l = lcm(a, b);
+
+  if (mode === 'gcd') drawGCD(a, b, g);
+  else drawLCM(a, b, l);
+}
+
+function drawGCD(a, b, g) {
+  const maxN = Math.max(a, b), cs = Math.min((W - 100) / maxN, (H - 160) / 2, 30);
+  const rH = cs + 30, ox = (W - maxN * cs) / 2, by = 50;
+  ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = '#1e293b'; ctx.textAlign = 'center';
+  ctx.fillText('矩形图示最大公因数', W / 2, 30);
+  // bar a
+  ctx.fillStyle = '#8B5CF640'; ctx.fillRect(ox, by, a * cs, cs);
+  ctx.strokeStyle = '#8B5CF6'; ctx.lineWidth = 1.5; ctx.strokeRect(ox, by, a * cs, cs);
+  for (let i = 1; i < a / g; i++) { ctx.strokeStyle = '#7C3AED'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ox + i * g * cs, by); ctx.lineTo(ox + i * g * cs, by + cs); ctx.stroke(); }
+  ctx.fillStyle = '#7C3AED'; ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText(`${a} = ${a / g} × ${g}`, ox + a * cs + 10, by + cs / 2 + 4);
+  // bar b
+  ctx.fillStyle = '#a78bfa40'; ctx.fillRect(ox, by + rH, b * cs, cs);
+  ctx.strokeStyle = '#a78bfa'; ctx.lineWidth = 1.5; ctx.strokeRect(ox, by + rH, b * cs, cs);
+  for (let i = 1; i < b / g; i++) { ctx.strokeStyle = '#7C3AED'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ox + i * g * cs, by + rH); ctx.lineTo(ox + i * g * cs, by + rH + cs); ctx.stroke(); }
+  ctx.fillStyle = '#7C3AED'; ctx.font = '12px sans-serif';
+  ctx.fillText(`${b} = ${b / g} × ${g}`, ox + b * cs + 10, by + rH + cs / 2 + 4);
+  ctx.fillStyle = '#7C3AED'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(`GCD(${a}, ${b}) = ${g}`, W / 2, by + rH * 2 + 30);
+  drawShortDivision(a, b, by + rH * 2 + 60);
+}
+
+function drawShortDivision(a, b, startY) {
+  const steps = shortDivision(a, b);
+  if (!steps.length) {
+    ctx.fillStyle = '#64748b'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(`${a} 和 ${b} 互质，GCD = 1`, W / 2, startY + 20);
+    return;
+  }
+  ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = '#1e293b'; ctx.textAlign = 'center';
+  ctx.fillText('短除法过程', W / 2, startY);
+
+  const colW = 80, rowH = 28;
+  let x = W / 2 - (steps.length + 1) * colW / 2;
+  let ca = a, cb = b;
+  for (let i = 0; i < steps.length; i++) {
+    const s = steps[i];
+    ctx.fillStyle = '#7C3AED'; ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(s.divisor, x + colW / 2, startY + 25);
+    ctx.fillStyle = '#64748b'; ctx.font = '13px sans-serif';
+    ctx.fillText(ca, x + colW / 2, startY + 50);
+    ctx.fillText(cb, x + colW / 2, startY + 70);
+    ca /= s.divisor; cb /= s.divisor;
+    // Arrow
+    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x + colW - 5, startY + 55);
+    ctx.lineTo(x + colW + 5, startY + 55); ctx.stroke();
+    x += colW;
+  }
+  ctx.fillStyle = '#1e293b'; ctx.font = 'bold 13px sans-serif';
+  ctx.fillText(ca, x + colW / 2, startY + 50);
+  ctx.fillText(cb, x + colW / 2, startY + 70);
+}
+
+function drawLCM(a, b, l) {
+  ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = '#1e293b'; ctx.textAlign = 'center';
+  ctx.fillText('最小公倍数图示', W / 2, 30);
+  const maxM = Math.min(l * 3, 200), cs = Math.min((W - 100) / maxM, 8);
+  const ox = (W - maxM * cs) / 2;
+  const ma = getMultiples(a, maxM);
+  ctx.fillStyle = '#8B5CF6'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText(`${a} 的倍数`, ox - 90, 60);
+  for (let i = 0; i < maxM; i++) {
+    const im = ma.includes(i + 1), ic = (i + 1) % a === 0 && (i + 1) % b === 0;
+    ctx.fillStyle = ic ? '#7C3AED' : im ? '#8B5CF640' : '#f1f5f9';
+    ctx.fillRect(ox + i * cs, 48, cs - 1, 20);
+    if (ic && (i + 1) % l === 0) { ctx.fillStyle = '#7C3AED'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(i + 1, ox + i * cs + cs / 2, 42); }
+  }
+  const mb = getMultiples(b, maxM);
+  ctx.fillStyle = '#a78bfa'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText(`${b} 的倍数`, ox - 90, 100);
+  for (let i = 0; i < maxM; i++) {
+    const im = mb.includes(i + 1), ic = (i + 1) % a === 0 && (i + 1) % b === 0;
+    ctx.fillStyle = ic ? '#7C3AED' : im ? '#a78bfa40' : '#f1f5f9';
+    ctx.fillRect(ox + i * cs, 88, cs - 1, 20);
+    if (ic && (i + 1) % l === 0) { ctx.fillStyle = '#7C3AED'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(i + 1, ox + i * cs + cs / 2, 82); }
+  }
+  ctx.fillStyle = '#7C3AED'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(`LCM(${a}, ${b}) = ${l}`, W / 2, 140);
+  drawShortDivision(a, b, 170);
+}
+
+function resetAll() {
+  document.getElementById('num1').value = 12;
+  document.getElementById('num2').value = 18;
+  setMode('gcd');
+}
+
+window.addEventListener('resize', render);
+update();
+setTimeout(render, 50);
+</script>
+</body>
+</html>

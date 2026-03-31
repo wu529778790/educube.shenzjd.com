@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>位置·数对 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #f0f9ff 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #bae6fd; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    canvas { border-radius: 12px; cursor: crosshair; }
+    .input-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+    .input-row input { width: 50px; text-align: center; font-size: 16px; font-weight: 700; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 6px; }
+    .point-list { width: 100%; max-width: 420px; }
+    .point-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; margin: 4px 0; font-size: 14px; font-weight: 600; }
+    .point-item .pt-label { font-weight: 800; min-width: 20px; }
+    .point-item button { margin-left: auto; background: none; border: none; color: #ef4444; cursor: pointer; font-size: 16px; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #0ea5e9; color: #0ea5e9; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">📍 位置·数对</div>
+      <div class="edu-toolbar-subtitle">上册 · 第二单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-accent" onclick="addPoint()">添加点</button>
+      <button class="edu-btn edu-btn-outline" onclick="clearAll()">清空</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="cvs" width="420" height="420"></canvas>
+        <div class="point-list" id="pointList"></div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">添加点（列, 行）</div>
+          <div class="input-row">
+            <span style="font-weight:700;font-size:14px">(</span>
+            <input type="number" id="colIn" min="1" max="8" value="3"/>
+            <span style="font-weight:700;font-size:14px">,</span>
+            <input type="number" id="rowIn" min="1" max="8" value="5"/>
+            <span style="font-weight:700;font-size:14px">)</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设图形</div>
+          <button class="preset-btn" onclick="loadPreset('tri')">三角形</button>
+          <button class="preset-btn" onclick="loadPreset('rect')">长方形</button>
+          <button class="preset-btn" onclick="loadPreset('diamond')">菱形</button>
+          <button class="preset-btn" onclick="loadPreset('arrow')">箭头</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>数对知识</b><br/>
+          ● 用 (列, 行) 表示位置<br/>
+          ● 列：从左往右数<br/>
+          ● 行：从下往上数<br/>
+          ● (3,5) 表示第3列第5行<br/>
+          ● 点击网格可直接添加点
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const GRID = 8, PAD = 40, CELL = 44;
+const colors = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#06b6d4'];
+let points = [];
+
+const cvs = document.getElementById('cvs');
+const ctx = cvs.getContext('2d');
+
+cvs.addEventListener('click', e => {
+  const rect = cvs.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  const col = Math.round((x - PAD) / CELL);
+  const row = Math.round((PAD + (GRID - 1) * CELL - y) / CELL) + 1;
+  const c = col + 1;
+  if (c >= 1 && c <= GRID && row >= 1 && row <= GRID) {
+    points.push({ col: c, row: row });
+    render();
+  }
+});
+
+function draw() {
+  const W = cvs.width, H = cvs.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= GRID; i++) {
+    ctx.beginPath(); ctx.moveTo(PAD, PAD + i * CELL); ctx.lineTo(PAD + GRID * CELL, PAD + i * CELL); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(PAD + i * CELL, PAD); ctx.lineTo(PAD + i * CELL, PAD + GRID * CELL); ctx.stroke();
+  }
+
+  // Labels
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'center';
+  for (let i = 1; i <= GRID; i++) {
+    ctx.fillText(i, PAD + (i - 0.5) * CELL, H - 12);
+    ctx.fillText(i, 14, PAD + (GRID - i + 0.5) * CELL + 4);
+  }
+  ctx.fillText('列', PAD + GRID * CELL / 2, H - 0);
+  ctx.save(); ctx.translate(12, PAD + GRID * CELL / 2); ctx.rotate(-Math.PI / 2); ctx.fillText('行', 0, 0); ctx.restore();
+
+  // Lines connecting points
+  if (points.length >= 2) {
+    ctx.beginPath();
+    ctx.strokeStyle = '#0ea5e9';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    points.forEach((p, i) => {
+      const x = PAD + (p.col - 0.5) * CELL, y = PAD + (GRID - p.row + 0.5) * CELL;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Points
+  points.forEach((p, i) => {
+    const x = PAD + (p.col - 0.5) * CELL, y = PAD + (GRID - p.row + 0.5) * CELL;
+    const c = colors[i % colors.length];
+    ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2);
+    ctx.fillStyle = c; ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(String.fromCharCode(65 + i), x, y + 4);
+    ctx.fillStyle = c; ctx.font = 'bold 11px sans-serif';
+    ctx.fillText(`(${p.col},${p.row})`, x, y - 18);
+  });
+}
+
+function renderList() {
+  const el = document.getElementById('pointList');
+  el.innerHTML = points.map((p, i) =>
+    `<div class="point-item"><span class="pt-label" style="color:${colors[i % colors.length]}">${String.fromCharCode(65 + i)}</span><span>(${p.col}, ${p.row})</span><button onclick="removePoint(${i})">✕</button></div>`
+  ).join('');
+}
+
+function render() { draw(); renderList(); }
+
+function addPoint() {
+  const col = parseInt(document.getElementById('colIn').value);
+  const row = parseInt(document.getElementById('rowIn').value);
+  if (col >= 1 && col <= GRID && row >= 1 && row <= GRID) {
+    points.push({ col, row });
+    render();
+  }
+}
+
+function removePoint(i) { points.splice(i, 1); render(); }
+
+function clearAll() { points = []; render(); }
+
+function loadPreset(type) {
+  points = [];
+  if (type === 'tri') points = [{col:2,row:2},{col:6,row:2},{col:4,row:6}];
+  else if (type === 'rect') points = [{col:2,row:2},{col:6,row:2},{col:6,row:5},{col:2,row:5}];
+  else if (type === 'diamond') points = [{col:4,row:2},{col:7,row:4},{col:4,row:6},{col:1,row:4}];
+  else if (type === 'arrow') points = [{col:3,row:2},{col:5,row:2},{col:5,row:4},{col:7,row:4},{col:4,row:7},{col:1,row:4},{col:3,row:4}];
+  render();
+}
+
+render();
+</script>
+</body>
+</html>

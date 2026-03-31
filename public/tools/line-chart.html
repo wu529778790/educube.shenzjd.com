@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>折线统计图 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #f0fdfa 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #99f6e4; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    canvas { border-radius: 12px; background: #fff; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .data-table th, .data-table td { border: 1px solid #e2e8f0; padding: 4px 8px; text-align: center; }
+    .data-table input { width: 45px; text-align: center; font-size: 14px; font-weight: 700; border: none; font-family: 'Courier New', monospace; }
+    .series-toggle { display: flex; gap: 8px; margin: 6px 0; }
+    .series-btn { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1.5px solid; cursor: pointer; background: #fff; }
+    .series-btn.on { color: #fff; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 12px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; text-align: left; padding-left: 10px; }
+    .preset-btn:hover { border-color: #06b6d4; color: #06b6d4; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">📈 折线统计图</div>
+      <div class="edu-toolbar-subtitle">下册 · 第七单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="cvs" width="480" height="300"></canvas>
+        <table class="data-table" id="dataTable"></table>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">系列</div>
+          <div class="series-toggle">
+            <button class="series-btn on" id="s1Btn" style="border-color:#06b6d4;background:#06b6d4" onclick="toggleSeries(1)">系列 A</button>
+            <button class="series-btn" id="s2Btn" style="border-color:#f97316;border-color:#f97316" onclick="toggleSeries(2)">系列 B</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设数据</div>
+          <button class="preset-btn" onclick="loadPreset('temp')">某地月均气温</button>
+          <button class="preset-btn" onclick="loadPreset('sales')">商店月销售额</button>
+          <button class="preset-btn" onclick="loadPreset('height')">学生身高变化</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>折线统计图</b><br/>
+          ● 用折线表示数据变化趋势<br/>
+          ● 适合展示随时间变化的数据<br/>
+          ● 可以同时画两条线对比<br/>
+          ● 上升=增长，下降=减少
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const cvs = document.getElementById('cvs');
+const ctx = cvs.getContext('2d');
+let showS2 = false;
+const labels = ['1月','2月','3月','4月','5月','6月'];
+let s1 = [2, 5, 12, 18, 24, 30];
+let s2 = [8, 10, 15, 20, 18, 25];
+
+function toggleSeries(n) {
+  if (n === 2) {
+    showS2 = !showS2;
+    const btn = document.getElementById('s2Btn');
+    btn.classList.toggle('on', showS2);
+    btn.style.background = showS2 ? '#f97316' : '#fff';
+    btn.style.color = showS2 ? '#fff' : '#f97316';
+  }
+  render();
+}
+
+function render() {
+  buildTable();
+  draw();
+}
+
+function buildTable() {
+  const el = document.getElementById('dataTable');
+  let html = '<tr><th></th>';
+  labels.forEach(l => html += `<th>${l}</th>`);
+  html += '</tr><tr><td style="color:#06b6d4;font-weight:700">A</td>';
+  s1.forEach((v, i) => html += `<td><input value="${v}" onchange="s1[${i}]=parseFloat(this.value);draw()"/></td>`);
+  html += '</tr>';
+  if (showS2) {
+    html += '<tr><td style="color:#f97316;font-weight:700">B</td>';
+    s2.forEach((v, i) => html += `<td><input value="${v}" onchange="s2[${i}]=parseFloat(this.value);draw()"/></td>`);
+    html += '</tr>';
+  }
+  el.innerHTML = html;
+}
+
+function draw() {
+  const W = cvs.width, H = cvs.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { l: 50, r: 20, t: 30, b: 50 };
+  const gw = W - pad.l - pad.r, gh = H - pad.t - pad.b;
+
+  const allVals = [...s1, ...(showS2 ? s2 : [])];
+  const minV = Math.min(...allVals), maxV = Math.max(...allVals);
+  const range = maxV - minV || 1;
+  const step = range <= 10 ? 1 : range <= 50 ? 5 : 10;
+  const yMin = Math.floor(minV / step) * step;
+  const yMax = Math.ceil(maxV / step) * step;
+  const yRange = yMax - yMin || 1;
+
+  // Y axis
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1;
+  for (let v = yMin; v <= yMax; v += step) {
+    const y = pad.t + gh - ((v - yMin) / yRange) * gh;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + gw, y); ctx.stroke();
+    ctx.fillStyle = '#64748b'; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(v, pad.l - 6, y + 4);
+  }
+
+  // X labels
+  ctx.textAlign = 'center';
+  labels.forEach((l, i) => {
+    const x = pad.l + (i / (labels.length - 1)) * gw;
+    ctx.fillStyle = '#64748b'; ctx.fillText(l, x, H - pad.b + 20);
+  });
+
+  function drawLine(data, color) {
+    ctx.beginPath();
+    data.forEach((v, i) => {
+      const x = pad.l + (i / (data.length - 1)) * gw;
+      const y = pad.t + gh - ((v - yMin) / yRange) * gh;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.stroke();
+
+    data.forEach((v, i) => {
+      const x = pad.l + (i / (data.length - 1)) * gw;
+      const y = pad.t + gh - ((v - yMin) / yRange) * gh;
+      ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = color; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(v, x, y - 10);
+    });
+  }
+
+  drawLine(s1, '#06b6d4');
+  if (showS2) drawLine(s2, '#f97316');
+}
+
+function loadPreset(type) {
+  if (type === 'temp') { labels.forEach((_, i) => labels[i] = `${i+1}月`); s1 = [2, 5, 12, 18, 24, 30]; s2 = [8, 10, 15, 20, 18, 25]; }
+  else if (type === 'sales') { const m = ['1月','2月','3月','4月','5月','6月']; m.forEach((v, i) => labels[i] = v); s1 = [120, 150, 180, 160, 200, 240]; s2 = [100, 130, 160, 170, 190, 210]; }
+  else { const m = ['6岁','7岁','8岁','9岁','10岁','11岁']; m.forEach((v, i) => labels[i] = v); s1 = [115, 122, 128, 135, 140, 148]; s2 = [112, 118, 125, 132, 138, 145]; }
+  render();
+}
+
+function resetAll() { showS2 = false; loadPreset('temp'); }
+render();
+</script>
+</body>
+</html>

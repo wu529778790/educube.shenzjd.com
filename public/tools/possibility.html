@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>可能性 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #faf5ff 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #e9d5ff; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .ball-box { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin: 12px 0; }
+    .ball { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.15); transition: transform .2s; }
+    .ball.highlight { transform: scale(1.3); box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+    .color-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+    .color-row input { width: 50px; text-align: center; font-size: 16px; font-weight: 700; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 4px; }
+    .color-dot { width: 20px; height: 20px; border-radius: 50%; }
+    .prob-card { background: #fff; border: 2px solid #8b5cf6; border-radius: 14px; padding: 16px; width: 100%; max-width: 460px; }
+    .prob-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 15px; }
+    .prob-bar { height: 24px; border-radius: 12px; overflow: hidden; display: flex; margin-top: 8px; }
+    .trial-card { background: #fff; border: 2px solid #22c55e; border-radius: 14px; padding: 16px; width: 100%; max-width: 460px; margin-top: 12px; }
+    .trial-result { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+    .trial-stat { text-align: center; padding: 8px 16px; background: #f8fafc; border-radius: 10px; }
+    .trial-stat .num { font-size: 24px; font-weight: 800; }
+    .trial-stat .pct { font-size: 13px; color: #64748b; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #8b5cf6; color: #8b5cf6; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">🎲 可能性</div>
+      <div class="edu-toolbar-subtitle">上册 · 第四单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="drawOne()">摸一次</button>
+      <button class="edu-btn edu-btn-accent" onclick="drawMany()">摸100次</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div style="font-size:16px;font-weight:700;color:#334155">袋中球：</div>
+        <div class="ball-box" id="ballBox"></div>
+        <div style="font-size:20px;font-weight:800;color:#8b5cf6;min-height:30px" id="drawResult"></div>
+        <div class="prob-card" id="probCard"></div>
+        <div class="trial-card" id="trialCard"></div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">设置球的个数</div>
+          <div class="color-row"><div class="color-dot" style="background:#ef4444"></div><span style="font-weight:700">红球</span><input type="number" id="redN" value="3" min="0" max="10" oninput="updateBalls()"/></div>
+          <div class="color-row"><div class="color-dot" style="background:#3b82f6"></div><span style="font-weight:700">蓝球</span><input type="number" id="blueN" value="2" min="0" max="10" oninput="updateBalls()"/></div>
+          <div class="color-row"><div class="color-dot" style="background:#22c55e"></div><span style="font-weight:700">绿球</span><input type="number" id="greenN" value="1" min="0" max="10" oninput="updateBalls()"/></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设</div>
+          <button class="preset-btn" onclick="loadPreset(3,2,1)">3红2蓝1绿</button>
+          <button class="preset-btn" onclick="loadPreset(1,1,0)">1红1蓝</button>
+          <button class="preset-btn" onclick="loadPreset(5,0,0)">5个全红</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>可能性知识</b><br/>
+          ● 可能性大小用分数表示<br/>
+          ● P(红) = 红球数 ÷ 总球数<br/>
+          ● 事件发生的概率在0~1之间<br/>
+          ● 试验次数越多越接近理论概率
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const ballColors = { red: '#ef4444', blue: '#3b82f6', green: '#22c55e' };
+const ballNames = { red: '红', blue: '蓝', green: '绿' };
+let trials = [];
+
+function updateBalls() {
+  const r = parseInt(document.getElementById('redN').value) || 0;
+  const b = parseInt(document.getElementById('blueN').value) || 0;
+  const g = parseInt(document.getElementById('greenN').value) || 0;
+  const total = r + b + g;
+
+  const box = document.getElementById('ballBox');
+  let html = '';
+  for (let i = 0; i < r; i++) html += `<div class="ball" style="background:#ef4444">红</div>`;
+  for (let i = 0; i < b; i++) html += `<div class="ball" style="background:#3b82f6">蓝</div>`;
+  for (let i = 0; i < g; i++) html += `<div class="ball" style="background:#22c55e">绿</div>`;
+  if (total === 0) html = '<div style="color:#94a3b8">请添加球</div>';
+  box.innerHTML = html;
+
+  // Probability card
+  const card = document.getElementById('probCard');
+  if (total === 0) { card.innerHTML = '<div style="text-align:center;color:#94a3b8">无球</div>'; return; }
+  card.innerHTML = `
+    <div style="font-size:15px;font-weight:700;margin-bottom:8px">理论概率（共${total}个球）</div>
+    ${r ? `<div class="prob-row"><span style="color:#ef4444;font-weight:700">红球</span><span>${r}/${total} = ${(r/total*100).toFixed(1)}%</span></div>` : ''}
+    ${b ? `<div class="prob-row"><span style="color:#3b82f6;font-weight:700">蓝球</span><span>${b}/${total} = ${(b/total*100).toFixed(1)}%</span></div>` : ''}
+    ${g ? `<div class="prob-row"><span style="color:#22c55e;font-weight:700">绿球</span><span>${g}/${total} = ${(g/total*100).toFixed(1)}%</span></div>` : ''}
+    <div class="prob-bar">
+      ${r ? `<div style="width:${r/total*100}%;background:#ef4444;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">${r}</div>` : ''}
+      ${b ? `<div style="width:${b/total*100}%;background:#3b82f6;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">${b}</div>` : ''}
+      ${g ? `<div style="width:${g/total*100}%;background:#22c55e;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">${g}</div>` : ''}
+    </div>
+  `;
+}
+
+function drawOne() {
+  const r = parseInt(document.getElementById('redN').value) || 0;
+  const b = parseInt(document.getElementById('blueN').value) || 0;
+  const g = parseInt(document.getElementById('greenN').value) || 0;
+  const total = r + b + g;
+  if (total === 0) return;
+
+  const rand = Math.random() * total;
+  let color;
+  if (rand < r) color = 'red';
+  else if (rand < r + b) color = 'blue';
+  else color = 'green';
+
+  trials.push(color);
+  document.getElementById('drawResult').innerHTML = `摸到 <span style="color:${ballColors[color]}">${ballNames[color]}球</span>！`;
+
+  // Highlight ball
+  const balls = document.querySelectorAll('.ball');
+  const idx = color === 'red' ? Math.floor(Math.random() * r) : color === 'blue' ? r + Math.floor(Math.random() * b) : r + b + Math.floor(Math.random() * g);
+  balls.forEach((el, i) => el.classList.toggle('highlight', i === idx));
+  setTimeout(() => balls.forEach(el => el.classList.remove('highlight')), 500);
+
+  updateTrialCard();
+}
+
+function drawMany() {
+  for (let i = 0; i < 100; i++) drawOne();
+}
+
+function updateTrialCard() {
+  const r = parseInt(document.getElementById('redN').value) || 0;
+  const b = parseInt(document.getElementById('blueN').value) || 0;
+  const g = parseInt(document.getElementById('greenN').value) || 0;
+  const total = trials.length;
+  if (total === 0) { document.getElementById('trialCard').innerHTML = '<div style="text-align:center;color:#94a3b8">点击"摸一次"开始试验</div>'; return; }
+
+  const rc = trials.filter(c => c === 'red').length;
+  const bc = trials.filter(c => c === 'blue').length;
+  const gc = trials.filter(c => c === 'green').length;
+
+  document.getElementById('trialCard').innerHTML = `
+    <div style="font-size:15px;font-weight:700;margin-bottom:8px">试验统计（共${total}次）</div>
+    <div class="trial-result">
+      ${r ? `<div class="trial-stat"><div class="num" style="color:#ef4444">${rc}</div><div class="pct">${(rc/total*100).toFixed(1)}%</div><div style="font-size:11px;color:#94a3b8">理论${(r/(r+b+g)*100).toFixed(1)}%</div></div>` : ''}
+      ${b ? `<div class="trial-stat"><div class="num" style="color:#3b82f6">${bc}</div><div class="pct">${(bc/total*100).toFixed(1)}%</div><div style="font-size:11px;color:#94a3b8">理论${(b/(r+b+g)*100).toFixed(1)}%</div></div>` : ''}
+      ${g ? `<div class="trial-stat"><div class="num" style="color:#22c55e">${gc}</div><div class="pct">${(gc/total*100).toFixed(1)}%</div><div style="font-size:11px;color:#94a3b8">理论${(g/(r+b+g)*100).toFixed(1)}%</div></div>` : ''}
+    </div>
+  `;
+}
+
+function loadPreset(r, b, g) {
+  document.getElementById('redN').value = r;
+  document.getElementById('blueN').value = b;
+  document.getElementById('greenN').value = g;
+  trials = [];
+  updateBalls();
+  updateTrialCard();
+}
+
+function resetAll() { trials = []; document.getElementById('drawResult').textContent = ''; loadPreset(3, 2, 1); }
+updateBalls();
+updateTrialCard();
+</script>
+</body>
+</html>

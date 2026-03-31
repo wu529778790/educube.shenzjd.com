@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>因数与倍数</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 300px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#f0fdf4,#ecfdf5); overflow:hidden; }
+  .control-panel {
+    background:#fff; border-left:1px solid #e2e8f0;
+    padding:16px; display:flex; flex-direction:column; gap:12px; overflow:auto;
+  }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+  .num-input {
+    width:100%; padding:8px 12px; border:2px solid #e2e8f0; border-radius:8px;
+    font-size:16px; font-weight:700; color:#16A34A; text-align:center;
+    font-family:var(--edu-font); outline:none; transition:border-color .2s;
+  }
+  .num-input:focus { border-color:#22C55E; }
+  .info-box {
+    background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px;
+    padding:10px 12px; font-size:12px; color:#64748b; line-height:1.9;
+  }
+  .info-box strong { color:#16A34A; }
+  .tag {
+    display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px;
+    font-weight:600; margin:2px; background:#dcfce7; color:#16A34A;
+  }
+  .tag.common { background:#fef3c7; color:#D97706; }
+  .pair-row { display:flex; align-items:center; gap:4px; margin:2px 0; font-size:12px; }
+  .pair-arrow { color:#94a3b8; }
+  .result-title { font-size:13px; font-weight:700; color:#1e293b; margin-bottom:4px; }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="edu-toolbar-title">🔢 因数与倍数</span>
+      <span class="edu-toolbar-subtitle">五下·第二单元</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="main-canvas" class="edu-canvas-full"></canvas>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">输入一个数（求因数）</div>
+          <input class="num-input" id="num1" type="number" min="1" max="200" value="12" oninput="update()"/>
+          <div id="factors-result" class="info-box"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">输入一个数（求倍数）</div>
+          <input class="num-input" id="num2" type="number" min="1" max="50" value="6" oninput="update()"/>
+          <div class="info-box">
+            <div class="result-title"><span id="num2-label">6</span> 的前 10 个倍数</div>
+            <div id="multiples-result"></div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">公因数对比</div>
+          <div style="display:flex;gap:8px;">
+            <input class="num-input" id="num3" type="number" min="1" max="200" value="12" style="font-size:14px;" oninput="update()"/>
+            <input class="num-input" id="num4" type="number" min="1" max="200" value="18" style="font-size:14px;" oninput="update()"/>
+          </div>
+          <div id="common-result" class="info-box"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">知识卡片</div>
+          <div class="info-box" style="background:#fff;border-color:#e2e8f0;font-size:11px;line-height:1.7;">
+            <strong>因数</strong>：若 a&times;b=c，则 a、b 是 c 的因数。<br/>
+            <strong>倍数</strong>：若 a&times;b=c，则 c 是 a 的倍数。<br/>
+            <strong>公因数</strong>：两个数共有的因数。<br/>
+            一个数的因数个数<b>有限</b>，倍数个数<b>无限</b>。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="../edu-lib/edu-tools.js"></script>
+<script>
+const canvas = document.getElementById('main-canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function getFactors(n) {
+  const factors = [];
+  for (let i = 1; i <= n; i++) if (n % i === 0) factors.push(i);
+  return factors;
+}
+
+function getFactorPairs(n) {
+  const pairs = [];
+  for (let i = 1; i * i <= n; i++) {
+    if (n % i === 0) pairs.push([i, n / i]);
+  }
+  return pairs;
+}
+
+function getMultiples(n, count) {
+  const m = [];
+  for (let i = 1; i <= count; i++) m.push(n * i);
+  return m;
+}
+
+function update() {
+  const n1 = Math.max(1, parseInt(document.getElementById('num1').value) || 1);
+  const n2 = Math.max(1, parseInt(document.getElementById('num2').value) || 1);
+  const n3 = Math.max(1, parseInt(document.getElementById('num3').value) || 1);
+  const n4 = Math.max(1, parseInt(document.getElementById('num4').value) || 1);
+
+  // Factors
+  const factors = getFactors(n1);
+  const pairs = getFactorPairs(n1);
+  let fhtml = `<div class="result-title">${n1} 的因数（共 ${factors.length} 个）</div>`;
+  fhtml += factors.map(f => `<span class="tag">${f}</span>`).join('');
+  fhtml += `<div style="margin-top:6px;" class="result-title">因数对</div>`;
+  pairs.forEach(p => {
+    fhtml += `<div class="pair-row"><span class="tag">${p[0]}</span><span class="pair-arrow">&times;</span><span class="tag">${p[1]}</span><span class="pair-arrow">= ${n1}</span></div>`;
+  });
+  document.getElementById('factors-result').innerHTML = fhtml;
+
+  // Multiples
+  const mults = getMultiples(n2, 10);
+  document.getElementById('num2-label').textContent = n2;
+  document.getElementById('multiples-result').innerHTML = mults.map(m => `<span class="tag">${m}</span>`).join('');
+
+  // Common factors
+  const f3 = getFactors(n3), f4 = getFactors(n4);
+  const common = f3.filter(f => f4.includes(f));
+  let chtml = `<div class="result-title">${n3} 和 ${n4} 的公因数</div>`;
+  chtml += `<div style="margin-bottom:4px;">${n3} 的因数：${f3.map(f => `<span class="tag${common.includes(f)?' common':''}">${f}</span>`).join('')}</div>`;
+  chtml += `<div>${n4} 的因数：${f4.map(f => `<span class="tag${common.includes(f)?' common':''}">${f}</span>`).join('')}</div>`;
+  chtml += `<div style="margin-top:4px;">公因数：${common.map(f => `<span class="tag common">${f}</span>`).join('')}</div>`;
+  chtml += `<div>最大公因数：<strong>${Math.max(...common)}</strong></div>`;
+  document.getElementById('common-result').innerHTML = chtml;
+
+  render();
+}
+
+function render() {
+  const dpr = window.devicePixelRatio || 1;
+  W = canvas.clientWidth; H = canvas.clientHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  const n1 = Math.max(1, parseInt(document.getElementById('num1').value) || 1);
+  const factors = getFactors(n1);
+  const pairs = getFactorPairs(n1);
+
+  // Draw factor pair bars
+  ctx.font = 'bold 14px sans-serif';
+  ctx.fillStyle = '#1e293b';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${n1} 的因数对可视化`, W / 2, 40);
+
+  const barMaxW = W - 120;
+  const barH = 32;
+  const startY = 70;
+  const colors = ['#22C55E', '#16A34A', '#15803d', '#4ade80', '#86efac'];
+
+  pairs.forEach((p, i) => {
+    const y = startY + i * (barH + 14);
+    const a = p[0], b = p[1];
+    const ratioA = a / n1, ratioB = b / n1;
+    const wA = barMaxW * ratioA, wB = barMaxW * ratioB;
+    const xA = 60;
+
+    // Bar A
+    ctx.fillStyle = '#22C55E50';
+    ctx.fillRect(xA, y, wA, barH / 2 - 2);
+    ctx.fillStyle = '#16A34A';
+    ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(a, xA + wA + 6, y + barH / 4 + 3);
+
+    // Bar B
+    ctx.fillStyle = '#4ade8050';
+    ctx.fillRect(xA, y + barH / 2 + 2, wB, barH / 2 - 2);
+    ctx.fillStyle = '#15803d';
+    ctx.fillText(b, xA + wB + 6, y + barH * 3 / 4 + 4);
+
+    // Multiply sign
+    ctx.fillStyle = '#64748b'; ctx.textAlign = 'right';
+    ctx.fillText('= ' + n1, xA - 8, y + barH / 2 + 3);
+  });
+
+  // Draw number grid at bottom
+  const gridSize = Math.min(Math.ceil(Math.sqrt(n1)), 10);
+  const cellSize = Math.min((W - 80) / gridSize, (H - startY - pairs.length * (barH + 14) - 60) / gridSize, 40);
+  const gridW = gridSize * cellSize;
+  const gridStartX = (W - gridW) / 2;
+  const gridStartY = startY + pairs.length * (barH + 14) + 30;
+  let idx = 0;
+
+  for (let r = 0; r < gridSize && idx < n1; r++) {
+    for (let c = 0; c < gridSize && idx < n1; c++) {
+      const x = gridStartX + c * cellSize, y = gridStartY + r * cellSize;
+      const num = idx + 1;
+      const isFactor = factors.includes(num);
+      ctx.fillStyle = isFactor ? '#22C55E40' : '#f1f5f9';
+      ctx.fillRect(x, y, cellSize - 2, cellSize - 2);
+      ctx.strokeStyle = isFactor ? '#16A34A' : '#e2e8f0';
+      ctx.lineWidth = isFactor ? 2 : 1;
+      ctx.strokeRect(x, y, cellSize - 2, cellSize - 2);
+      ctx.fillStyle = isFactor ? '#16A34A' : '#94a3b8';
+      ctx.font = (isFactor ? 'bold ' : '') + Math.max(10, cellSize * 0.3) + 'px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(num, x + (cellSize - 2) / 2, y + (cellSize - 2) / 2 + 4);
+      idx++;
+    }
+  }
+}
+
+function resetAll() {
+  document.getElementById('num1').value = 12;
+  document.getElementById('num2').value = 6;
+  document.getElementById('num3').value = 12;
+  document.getElementById('num4').value = 18;
+  update();
+}
+
+window.addEventListener('resize', render);
+update();
+setTimeout(render, 50);
+</script>
+</body>
+</html>

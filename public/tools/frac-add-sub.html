@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>分数加减法 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #eff6ff 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    canvas { border-radius: 12px; background: #fff; }
+    .input-row { display: flex; align-items: center; gap: 10px; justify-content: center; margin: 12px 0; }
+    .frac-in { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .frac-in input { width: 50px; text-align: center; font-size: 20px; font-weight: 800; border: 2px solid #e2e8f0; border-radius: 8px; padding: 4px; font-family: 'Courier New', monospace; }
+    .frac-in .fl { width: 50px; height: 3px; background: #334155; border-radius: 2px; }
+    .op-select { font-size: 20px; font-weight: 800; border: 2px solid #3b82f6; border-radius: 8px; padding: 4px 10px; background: #eff6ff; color: #3b82f6; cursor: pointer; }
+    .step-card { background: #fff; border: 2px solid #3b82f6; border-radius: 14px; padding: 20px; width: 100%; max-width: 480px; }
+    .step-line { margin: 6px 0; font-size: 16px; line-height: 2; font-family: 'Courier New', monospace; }
+    .step-line .hl { color: #3b82f6; font-weight: 700; }
+    .step-line .op { color: #ef4444; font-weight: 700; }
+    .result-box { background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 14px; text-align: center; margin-top: 12px; }
+    .result-big { font-size: 28px; font-weight: 800; color: #22c55e; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">± 分数加减法</div>
+      <div class="edu-toolbar-subtitle">下册 · 第五单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="solve()">计算</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div class="input-row">
+          <div class="frac-in"><input type="number" id="n1" value="1" min="0" oninput="solve()"/><div class="fl"></div><input type="number" id="d1" value="4" min="1" oninput="solve()"/></div>
+          <select class="op-select" id="op" onchange="solve()"><option value="+">+</option><option value="−">−</option></select>
+          <div class="frac-in"><input type="number" id="n2" value="1" min="0" oninput="solve()"/><div class="fl"></div><input type="number" id="d2" value="3" min="1" oninput="solve()"/></div>
+          <span style="font-size:24px;font-weight:800;color:#94a3b8">=</span>
+          <span style="font-size:24px;font-weight:800;color:#22c55e" id="quickRes">?</span>
+        </div>
+        <canvas id="cvs" width="440" height="100"></canvas>
+        <div class="step-card" id="stepCard"></div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设</div>
+          <button class="preset-btn" onclick="load(1,4,1,3,'+')">¼ + ⅓</button>
+          <button class="preset-btn" onclick="load(3,8,1,4,'+')">⅜ + ¼</button>
+          <button class="preset-btn" onclick="load(5,6,1,4,'−')">⅚ − ¼</button>
+          <button class="preset-btn" onclick="load(7,10,2,5,'+')">7/10 + ⅖</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>分数加减法</b><br/>
+          ● 同分母：分母不变，分子相加减<br/>
+          ● 异分母：先通分，再加减<br/>
+          ● 结果要化成最简分数<br/>
+          ● 是假分数时化成带分数
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const cvs = document.getElementById('cvs');
+const ctx = cvs.getContext('2d');
+function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { [a, b] = [b, a % b]; } return a; }
+
+function drawBars(n1, d1, n2, d2, rn, rd) {
+  const W = cvs.width, H = cvs.height;
+  ctx.clearRect(0, 0, W, H);
+  const bw = 180, bh = 30, gap = 10, pad = 20;
+
+  // Bar 1
+  const v1 = n1 / d1;
+  ctx.fillStyle = '#dbeafe'; ctx.fillRect(pad, 15, bw, bh);
+  ctx.fillStyle = '#3b82f6'; ctx.fillRect(pad, 15, bw * v1, bh);
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1; ctx.strokeRect(pad, 15, bw, bh);
+  ctx.fillStyle = '#334155'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(`${n1}/${d1}`, pad + bw / 2, 10);
+
+  // Bar 2
+  const op = document.getElementById('op').value;
+  const v2 = n2 / d2;
+  ctx.fillStyle = '#fef3c7'; ctx.fillRect(pad, 60, bw, bh);
+  ctx.fillStyle = '#eab308'; ctx.fillRect(pad, 60, bw * v2, bh);
+  ctx.strokeRect(pad, 60, bw, bh);
+  ctx.fillText(`${n2}/${d2}`, pad + bw / 2, 55);
+
+  // Result
+  const vr = rn / rd;
+  const rx = pad + bw + 30;
+  ctx.fillStyle = '#dcfce7'; ctx.fillRect(rx, 37, bw, bh);
+  ctx.fillStyle = '#22c55e'; ctx.fillRect(rx, 37, bw * Math.min(vr, 1), bh);
+  ctx.strokeStyle = '#94a3b8'; ctx.strokeRect(rx, 37, bw, bh);
+  ctx.fillText(`${rn}/${rd}`, rx + bw / 2, 32);
+}
+
+function solve() {
+  const n1 = parseInt(document.getElementById('n1').value) || 0;
+  const d1 = parseInt(document.getElementById('d1').value) || 1;
+  const n2 = parseInt(document.getElementById('n2').value) || 0;
+  const d2 = parseInt(document.getElementById('d2').value) || 1;
+  const op = document.getElementById('op').value;
+
+  if (d1 === 0 || d2 === 0) return;
+
+  const g = gcd(d1, d2);
+  const lcd = d1 * d2 / g;
+  const cn1 = n1 * (lcd / d1);
+  const cn2 = n2 * (lcd / d2);
+  const resultNum = op === '+' ? cn1 + cn2 : cn1 - cn2;
+  const resultDen = lcd;
+  const rg = gcd(Math.abs(resultNum), resultDen);
+  const rn = resultNum / rg, rd = resultDen / rg;
+
+  document.getElementById('quickRes').textContent = rd === 1 ? `${rn}` : `${rn}/${rd}`;
+
+  const card = document.getElementById('stepCard');
+  const sameDen = d1 === d2;
+  let html = `<div style="font-size:16px;font-weight:700;margin-bottom:8px">计算过程</div>`;
+
+  if (!sameDen) {
+    html += `<div class="step-line"><span class="op">通分：</span>公分母 = ${lcd}</div>`;
+    html += `<div class="step-line">${n1}/${d1} = <span class="hl">${cn1}/${lcd}</span>，${n2}/${d2} = <span class="hl">${cn2}/${lcd}</span></div>`;
+  }
+
+  const finalN = sameDen ? (op === '+' ? n1 + n2 : n1 - n2) : resultNum;
+  const finalD = sameDen ? d1 : lcd;
+  html += `<div class="step-line">${sameDen ? n1 : cn1}/${finalD} ${op} ${sameDen ? n2 : cn2}/${finalD} = <span class="hl">${finalN}/${finalD}</span></div>`;
+
+  if (rg > 1 && finalN !== 0) {
+    html += `<div class="step-line"><span class="op">约分：</span>÷${rg} → <span class="hl">${rn}/${rd}</span></div>`;
+  }
+
+  // Mixed number
+  if (Math.abs(rn) > rd && rd !== 0) {
+    const whole = Math.floor(Math.abs(rn) / rd);
+    const rem = Math.abs(rn) % rd;
+    const sign = rn < 0 ? '−' : '';
+    const mixed = rem === 0 ? `${sign}${whole}` : `${sign}${whole}又${rem}/${rd}`;
+    html += `<div class="step-line"><span class="op">化带分数：</span><span class="hl">${mixed}</span></div>`;
+  }
+
+  html += `<div class="result-box"><div class="result-big">${rd === 1 ? rn : rn + '/' + rd}</div></div>`;
+  card.innerHTML = html;
+
+  drawBars(n1, d1, n2, d2, rn, rd);
+}
+
+function load(a, b, c, d, op) {
+  document.getElementById('n1').value = a; document.getElementById('d1').value = b;
+  document.getElementById('n2').value = c; document.getElementById('d2').value = d;
+  document.getElementById('op').value = op;
+  solve();
+}
+
+function resetAll() { load(1, 4, 1, 3, '+'); }
+solve();
+</script>
+</body>
+</html>

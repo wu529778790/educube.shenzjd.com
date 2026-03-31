@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>分数的意义 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #fff7ed 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #fed7aa; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-row input { flex: 1; }
+    .slider-row .value-display { min-width: 40px; font-weight: 700; }
+    canvas { border-radius: 12px; background: #fff; }
+    .frac-display { font-size: 48px; font-weight: 800; font-family: 'Courier New', monospace; color: #f97316; text-align: center; margin: 16px 0; }
+    .frac-display .frac-line { display: block; width: 80px; height: 4px; background: #334155; border-radius: 2px; margin: 4px auto; }
+    .equiv-row { display: flex; gap: 12px; font-size: 16px; font-weight: 700; justify-content: center; margin: 8px 0; }
+    .equiv-row span { padding: 4px 12px; background: #fff; border-radius: 8px; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #f97316; color: #f97316; }
+    .shape-tab { display: flex; gap: 6px; }
+    .shape-btn { padding: 6px 12px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 13px; cursor: pointer; font-weight: 600; transition: all .15s; }
+    .shape-btn.active { background: #f97316; color: #fff; border-color: #f97316; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">½ 分数的意义</div>
+      <div class="edu-toolbar-subtitle">下册 · 第四单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div class="shape-tab">
+          <button class="shape-btn active" onclick="switchShape('circle')">圆形</button>
+          <button class="shape-btn" onclick="switchShape('rect')">长方形</button>
+          <button class="shape-btn" onclick="switchShape('line')">数轴</button>
+        </div>
+        <canvas id="cvs" width="400" height="240"></canvas>
+        <div class="frac-display" id="fracDisplay"></div>
+        <div class="equiv-row" id="equivRow"></div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">分母（分几份）</div>
+          <div class="slider-row"><input type="range" id="denSlider" min="2" max="12" value="4" oninput="update()"/><span class="value-display" id="denVal">4</span></div>
+        </div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">分子（取几份）</div>
+          <div class="slider-row"><input type="range" id="numSlider" min="1" max="12" value="3" oninput="update()"/><span class="value-display" id="numVal">3</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设</div>
+          <button class="preset-btn" onclick="load(2,1)">½</button>
+          <button class="preset-btn" onclick="load(4,3)">¾</button>
+          <button class="preset-btn" onclick="load(5,2)">⅖</button>
+          <button class="preset-btn" onclick="load(8,5)">⅝</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>分数的意义</b><br/>
+          ● 把单位"1"平均分成若干份<br/>
+          ● 表示其中一份或几份的数<br/>
+          ● 分母：平均分成的份数<br/>
+          ● 分子：取出的份数<br/>
+          ● 分数单位：几分之一
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const cvs = document.getElementById('cvs');
+const ctx = cvs.getContext('2d');
+let shape = 'circle';
+
+function switchShape(s) {
+  shape = s;
+  document.querySelectorAll('.shape-btn').forEach((b, i) => b.classList.toggle('active', ['circle','rect','line'][i] === s));
+  update();
+}
+
+function update() {
+  const den = parseInt(document.getElementById('denSlider').value);
+  const num = parseInt(document.getElementById('numSlider').value);
+  if (num > den) { document.getElementById('numSlider').value = den; return update(); }
+  document.getElementById('denVal').textContent = den;
+  document.getElementById('numVal').textContent = num;
+
+  draw(den, num);
+  document.getElementById('fracDisplay').innerHTML = `<span>${num}</span><span class="frac-line"></span><span>${den}</span>`;
+  const pct = (num / den * 100).toFixed(1);
+  const dec = (num / den).toFixed(4);
+  document.getElementById('equivRow').innerHTML = `<span style="color:#f97316">${num}/${den}</span><span style="color:#3b82f6">${dec}</span><span style="color:#22c55e">${pct}%</span>`;
+}
+
+function draw(den, num) {
+  const W = cvs.width, H = cvs.height;
+  ctx.clearRect(0, 0, W, H);
+
+  if (shape === 'circle') {
+    const cx = W / 2, cy = H / 2, r = 90;
+    // Draw slices
+    for (let i = 0; i < den; i++) {
+      const a1 = -Math.PI / 2 + (i / den) * Math.PI * 2;
+      const a2 = -Math.PI / 2 + ((i + 1) / den) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, a1, a2);
+      ctx.closePath();
+      ctx.fillStyle = i < num ? '#fdba74' : '#f1f5f9';
+      ctx.fill();
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  } else if (shape === 'rect') {
+    const rw = 320, rh = 80, rx = (W - rw) / 2, ry = (H - rh) / 2;
+    for (let i = 0; i < den; i++) {
+      const x = rx + i * (rw / den);
+      ctx.fillStyle = i < num ? '#fdba74' : '#f1f5f9';
+      ctx.fillRect(x, ry, rw / den, rh);
+      ctx.strokeStyle = '#334155'; ctx.lineWidth = 1.5;
+      ctx.strokeRect(x, ry, rw / den, rh);
+    }
+  } else {
+    // Number line
+    const pad = 40, lineY = H / 2, len = W - pad * 2;
+    ctx.beginPath(); ctx.moveTo(pad, lineY); ctx.lineTo(pad + len, lineY);
+    ctx.strokeStyle = '#334155'; ctx.lineWidth = 2; ctx.stroke();
+    // Arrow
+    ctx.beginPath(); ctx.moveTo(pad + len, lineY); ctx.lineTo(pad + len - 8, lineY - 5); ctx.lineTo(pad + len - 8, lineY + 5); ctx.fillStyle = '#334155'; ctx.fill();
+
+    for (let i = 0; i <= den; i++) {
+      const x = pad + (i / den) * len;
+      ctx.beginPath(); ctx.moveTo(x, lineY - 8); ctx.lineTo(x, lineY + 8); ctx.strokeStyle = '#334155'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = '#64748b'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(i === 0 ? '0' : i === den ? '1' : `${i}/${den}`, x, lineY + 22);
+    }
+    // Highlight
+    if (num > 0) {
+      const x1 = pad, x2 = pad + (num / den) * len;
+      ctx.fillStyle = 'rgba(251,146,60,0.3)';
+      ctx.fillRect(x1, lineY - 8, x2 - x1, 16);
+      ctx.beginPath(); ctx.arc(x2, lineY, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#f97316'; ctx.fill();
+    }
+  }
+}
+
+function load(d, n) { document.getElementById('denSlider').value = d; document.getElementById('numSlider').value = n; update(); }
+function resetAll() { load(4, 3); }
+update();
+</script>
+</body>
+</html>

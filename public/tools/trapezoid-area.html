@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>梯形面积 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #fefce8 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-row input { flex: 1; }
+    .slider-row .value-display { min-width: 40px; font-weight: 700; }
+    canvas { border-radius: 12px; background: #fff; }
+    .formula-card { background: #fff; border: 2px solid #eab308; border-radius: 14px; padding: 16px; width: 100%; max-width: 440px; margin-top: 16px; text-align: center; }
+    .formula-big { font-size: 22px; font-weight: 800; color: #eab308; font-family: 'Courier New', monospace; }
+    .step-box { background: #fefce8; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; width: 100%; max-width: 440px; margin-top: 12px; font-size: 14px; line-height: 2; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #eab308; color: #eab308; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">⏢ 梯形面积</div>
+      <div class="edu-toolbar-subtitle">上册 · 第六单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-accent" onclick="animateDup()">复制翻转</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="cvs" width="440" height="300"></canvas>
+        <div class="formula-card" id="calcCard"></div>
+        <div class="step-box" id="stepBox"></div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">上底 a（cm）</div>
+          <div class="slider-row"><input type="range" id="topSlider" min="2" max="10" value="4" oninput="update()"/><span class="value-display" id="topVal">4</span></div>
+        </div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">下底 b（cm）</div>
+          <div class="slider-row"><input type="range" id="botSlider" min="3" max="12" value="8" oninput="update()"/><span class="value-display" id="botVal">8</span></div>
+        </div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">高 h（cm）</div>
+          <div class="slider-row"><input type="range" id="hSlider" min="2" max="10" value="5" oninput="update()"/><span class="value-display" id="hVal">5</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设</div>
+          <button class="preset-btn" onclick="load(4,8,5)">上4 下8 高5</button>
+          <button class="preset-btn" onclick="load(3,6,4)">上3 下6 高4</button>
+          <button class="preset-btn" onclick="load(5,10,6)">上5 下10 高6</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>梯形面积公式</b><br/>
+          ● 取两个完全相同的梯形<br/>
+          ● 把其中一个旋转180°<br/>
+          ● 拼成平行四边形<br/>
+          ● 底 = 上底 + 下底<br/>
+          ● S = (a+b)×h÷2
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const cvs = document.getElementById('cvs');
+const ctx = cvs.getContext('2d');
+let animProg = 0, animating = false;
+
+function update() {
+  const a = parseFloat(document.getElementById('topSlider').value);
+  const b = parseFloat(document.getElementById('botSlider').value);
+  const h = parseFloat(document.getElementById('hSlider').value);
+  document.getElementById('topVal').textContent = a;
+  document.getElementById('botVal').textContent = b;
+  document.getElementById('hVal').textContent = h;
+  draw(a, b, h, animProg);
+  calc(a, b, h);
+}
+
+function draw(a, b, h, prog) {
+  const W = cvs.width, H = cvs.height;
+  const cx = W / 2, cy = H / 2;
+  const s = 22;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const bs = b * s, as = a * s, hs = h * s;
+  const offset = (bs - as) / 2;
+
+  // Trapezoid vertices
+  const p1 = { x: cx - bs / 2, y: cy + hs / 2 };     // bottom-left
+  const p2 = { x: cx + bs / 2, y: cy + hs / 2 };     // bottom-right
+  const p3 = { x: cx + as / 2, y: cy - hs / 2 };     // top-right
+  const p4 = { x: cx - as / 2, y: cy - hs / 2 };     // top-left
+
+  // Draw trapezoid
+  ctx.beginPath();
+  ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y);
+  ctx.closePath();
+  ctx.fillStyle = '#fef9c3';
+  ctx.fill();
+  ctx.strokeStyle = '#eab308';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = '#eab308'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(`下底 b = ${b}`, (p1.x + p2.x) / 2, p1.y + 20);
+  ctx.fillText(`上底 a = ${a}`, (p3.x + p4.x) / 2, p4.y - 10);
+  ctx.save(); ctx.translate(p1.x - 12, (p1.y + p4.y) / 2); ctx.rotate(-Math.PI / 2);
+  ctx.fillStyle = '#ef4444'; ctx.fillText(`高 h = ${h}`, 0, 0); ctx.restore();
+
+  // Height line
+  ctx.beginPath();
+  ctx.moveTo(p4.x, p4.y); ctx.lineTo(p4.x, p1.y);
+  ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
+
+  // Duplicate (rotated 180°)
+  if (prog > 0) {
+    const p = Math.min(prog, 1);
+    // The flipped copy: rotate 180° around bottom-right vertex p2
+    // Rotated vertices
+    const r1 = { x: 2 * p2.x - p1.x, y: 2 * p2.y - p1.y };
+    const r2 = { x: p2.x, y: p2.y };
+    const r3 = { x: 2 * p2.x - p3.x, y: 2 * p2.y - p3.y };
+    const r4 = { x: 2 * p2.x - p4.x, y: 2 * p2.y - p4.y };
+
+    // Interpolate from original to rotated position
+    const from = [p1, p2, p3, p4];
+    const to = [r1, r2, r3, r4];
+
+    ctx.globalAlpha = p;
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const fx = from[i].x + (to[i].x - from[i].x) * p;
+      const fy = from[i].y + (to[i].y - from[i].y) * p;
+      i === 0 ? ctx.moveTo(fx, fy) : ctx.lineTo(fx, fy);
+    }
+    ctx.closePath();
+    ctx.fillStyle = '#dbeafe';
+    ctx.fill();
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    if (p >= 0.95) {
+      ctx.fillStyle = '#334155'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(`= 平行四边形 (底 = ${a + b})`, cx + bs / 4, cy + hs / 2 + 38);
+    }
+  }
+}
+
+function calc(a, b, h) {
+  const area = (a + b) * h / 2;
+  document.getElementById('calcCard').innerHTML = `
+    <div style="font-size:14px;color:#64748b;margin-bottom:4px">梯形面积</div>
+    <div class="formula-big">S = (${a}+${b})×${h}÷2 = ${area} cm²</div>
+  `;
+  document.getElementById('stepBox').innerHTML = `
+    <div style="font-weight:700;margin-bottom:6px">公式推导</div>
+    <div>① 取两个完全相同的梯形</div>
+    <div>② 把其中一个旋转180°</div>
+    <div>③ 拼成底 = ${a}+${b} = ${a+b}、高 = ${h} 的平行四边形</div>
+    <div>④ 平行四边形面积 = ${a+b} × ${h} = ${(a+b)*h}</div>
+    <div>⑤ <b style="color:#eab308">梯形面积 = ${(a+b)*h} ÷ 2 = ${area} cm²</b></div>
+  `;
+}
+
+function animateDup() {
+  if (animating) return;
+  animating = true;
+  let t = 0;
+  function step() {
+    t += 0.02;
+    if (t >= 1) { t = 1; animating = false; }
+    animProg = t;
+    const a = parseFloat(document.getElementById('topSlider').value);
+    const b = parseFloat(document.getElementById('botSlider').value);
+    const h = parseFloat(document.getElementById('hSlider').value);
+    draw(a, b, h, t);
+    if (t < 1) requestAnimationFrame(step);
+  }
+  step();
+}
+
+function load(a, b, h) {
+  document.getElementById('topSlider').value = a;
+  document.getElementById('botSlider').value = b;
+  document.getElementById('hSlider').value = h;
+  animProg = 0;
+  update();
+}
+
+function resetAll() { animProg = 0; load(4, 8, 5); }
+update();
+</script>
+</body>
+</html>

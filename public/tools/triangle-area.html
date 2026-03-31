@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>三角形面积 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #eff6ff 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-row input { flex: 1; }
+    .slider-row .value-display { min-width: 40px; font-weight: 700; }
+    canvas { border-radius: 12px; background: #fff; }
+    .formula-card { background: #fff; border: 2px solid #3b82f6; border-radius: 14px; padding: 16px; width: 100%; max-width: 440px; margin-top: 16px; text-align: center; }
+    .formula-big { font-size: 24px; font-weight: 800; color: #3b82f6; font-family: 'Courier New', monospace; }
+    .step-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px; width: 100%; max-width: 440px; margin-top: 12px; font-size: 14px; line-height: 2; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">△ 三角形面积</div>
+      <div class="edu-toolbar-subtitle">上册 · 第六单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-accent" onclick="animateDup()">复制翻转</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="cvs" width="440" height="300"></canvas>
+        <div class="formula-card" id="calcCard"></div>
+        <div class="step-box" id="stepBox"></div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">底（cm）</div>
+          <div class="slider-row"><input type="range" id="baseSlider" min="2" max="12" value="8" oninput="update()"/><span class="value-display" id="baseVal">8</span></div>
+        </div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">高（cm）</div>
+          <div class="slider-row"><input type="range" id="heightSlider" min="2" max="10" value="5" oninput="update()"/><span class="value-display" id="heightVal">5</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设</div>
+          <button class="preset-btn" onclick="load(8,5)">底8 高5</button>
+          <button class="preset-btn" onclick="load(6,4)">底6 高4</button>
+          <button class="preset-btn" onclick="load(10,6)">底10 高6</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>面积公式推导</b><br/>
+          ● 取两个完全相同的三角形<br/>
+          ● 把其中一个旋转180°<br/>
+          ● 拼成一个平行四边形<br/>
+          ● 平行四边形面积 = 底×高<br/>
+          ● 三角形面积 = 底×高÷2
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const cvs = document.getElementById('cvs');
+const ctx = cvs.getContext('2d');
+let animProg = 0, animating = false;
+
+function update() {
+  const base = parseFloat(document.getElementById('baseSlider').value);
+  const height = parseFloat(document.getElementById('heightSlider').value);
+  document.getElementById('baseVal').textContent = base;
+  document.getElementById('heightVal').textContent = height;
+  draw(base, height, animProg);
+  calc(base, height);
+}
+
+function draw(base, height, prog) {
+  const W = cvs.width, H = cvs.height;
+  const cx = W / 2, cy = H / 2;
+  const s = 24;
+  const b = base * s, h = height * s;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Original triangle (bottom-left area)
+  const ox = cx - b / 2, oy = cy + 10;
+  // Triangle: base at bottom, apex at top-center
+  const t1 = { x: ox, y: oy };
+  const t2 = { x: ox + b, y: oy };
+  const t3 = { x: ox + b / 2, y: oy - h };
+
+  // Draw original triangle
+  ctx.beginPath();
+  ctx.moveTo(t1.x, t1.y); ctx.lineTo(t2.x, t2.y); ctx.lineTo(t3.x, t3.y); ctx.closePath();
+  ctx.fillStyle = '#dbeafe';
+  ctx.fill();
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = '#3b82f6'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(`底 = ${base}`, (t1.x + t2.x) / 2, t1.y + 20);
+  ctx.save(); ctx.translate(t3.x - 12, (t3.y + t1.y) / 2); ctx.rotate(-Math.PI/2);
+  ctx.fillStyle = '#ef4444'; ctx.fillText(`高 = ${height}`, 0, 0); ctx.restore();
+
+  // Duplicate triangle (rotated and moved)
+  if (prog > 0) {
+    const p = Math.min(prog, 1);
+    // The duplicate starts rotated 180° around the right edge midpoint
+    // Final position: forms parallelogram above
+    const midRight = { x: (t2.x + t3.x) / 2, y: (t2.y + t3.y) / 2 };
+    // Duplicate vertices (flipped)
+    const d1 = { x: t2.x, y: t2.y };
+    const d2 = { x: t1.x, y: t1.y };
+    const d3 = { x: t1.x + b / 2, y: t1.y - h }; // = t3 reflected
+
+    // Actually, let's just show the rotated copy appearing and moving to form parallelogram
+    // Target position for the copy
+    const target = [
+      { x: t2.x + b / 2, y: t2.y - h },  // was t3 → goes to parallelogram top-right
+      { x: t2.x, y: t2.y },                // was t2 → stays
+      { x: t1.x + b, y: t1.y }             // was t1 → goes to bottom-right
+    ];
+
+    // Simple interpolation from original position
+    const from = [t3, t2, t1];
+    const to = target;
+
+    ctx.globalAlpha = p;
+    ctx.beginPath();
+    for (let i = 0; i < 3; i++) {
+      const fx = from[i].x + (to[i].x - from[i].x) * p;
+      const fy = from[i].y + (to[i].y - from[i].y) * p;
+      i === 0 ? ctx.moveTo(fx, fy) : ctx.lineTo(fx, fy);
+    }
+    ctx.closePath();
+    ctx.fillStyle = '#fef3c7';
+    ctx.fill();
+    ctx.strokeStyle = '#eab308';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    if (p >= 0.95) {
+      ctx.fillStyle = '#334155'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('= 平行四边形', cx, oy - h - 16);
+    }
+  }
+}
+
+function calc(base, height) {
+  const area = base * height / 2;
+  document.getElementById('calcCard').innerHTML = `
+    <div style="font-size:14px;color:#64748b;margin-bottom:4px">三角形面积</div>
+    <div class="formula-big">S = ${base} × ${height} ÷ 2 = ${area} cm²</div>
+  `;
+  document.getElementById('stepBox').innerHTML = `
+    <div style="font-weight:700;margin-bottom:6px">公式推导</div>
+    <div>① 取两个完全相同的三角形</div>
+    <div>② 将其中一个旋转180°</div>
+    <div>③ 拼成底${base}cm、高${height}cm的平行四边形</div>
+    <div>④ 平行四边形面积 = ${base} × ${height} = ${base * height}</div>
+    <div>⑤ <b style="color:#3b82f6">三角形面积 = ${base * height} ÷ 2 = ${area} cm²</b></div>
+  `;
+}
+
+function animateDup() {
+  if (animating) return;
+  animating = true;
+  let t = 0;
+  function step() {
+    t += 0.02;
+    if (t >= 1) { t = 1; animating = false; }
+    animProg = t;
+    const base = parseFloat(document.getElementById('baseSlider').value);
+    const height = parseFloat(document.getElementById('heightSlider').value);
+    draw(base, height, t);
+    if (t < 1) requestAnimationFrame(step);
+  }
+  step();
+}
+
+function load(b, h) {
+  document.getElementById('baseSlider').value = b;
+  document.getElementById('heightSlider').value = h;
+  animProg = 0;
+  update();
+}
+
+function resetAll() { animProg = 0; load(8, 5); }
+update();
+</script>
+</body>
+</html>

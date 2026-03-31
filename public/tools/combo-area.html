@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>组合图形面积 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #fff7ed 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #fed7aa; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    canvas { border-radius: 12px; background: #fff; cursor: pointer; }
+    .result-card { background: #fff; border: 2px solid #f97316; border-radius: 14px; padding: 16px; width: 100%; max-width: 440px; margin-top: 16px; }
+    .result-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
+    .result-total { font-size: 22px; font-weight: 800; color: #f97316; text-align: center; margin-top: 8px; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #f97316; color: #f97316; }
+    .method-tag { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">🔷 组合图形面积</div>
+      <div class="edu-toolbar-subtitle">上册 · 第六单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="cvs" width="440" height="320"></canvas>
+        <div class="result-card" id="resultCard"></div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择图形</div>
+          <button class="preset-btn" onclick="loadShape('lshape')">L 形</button>
+          <button class="preset-btn" onclick="loadShape('house')">房子形</button>
+          <button class="preset-btn" onclick="loadShape('arrow')">箭头形</button>
+          <button class="preset-btn" onclick="loadShape('tshape')">T 形</button>
+          <button class="preset-btn" onclick="loadShape('flag')">旗帜形</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box" id="infoBox">
+          <b>解题方法</b><br/>
+          ● <b>分割法</b>：把组合图形分成几个简单图形<br/>
+          ● <b>添补法</b>：补成大图形再减去多余部分<br/>
+          ● 各部分面积相加（分割法）<br/>
+          ● 大面积减小面积（添补法）
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const cvs = document.getElementById('cvs');
+const ctx = cvs.getContext('2d');
+const S = 28; // scale
+
+const shapes = {
+  lshape: {
+    name: 'L 形',
+    method: '分割法（分成两个长方形）',
+    parts: [
+      { type: 'rect', x: 0, y: 0, w: 3, h: 6, color: '#fed7aa', label: '①' },
+      { type: 'rect', x: 3, y: 3, w: 4, h: 3, color: '#bfdbfe', label: '②' },
+    ],
+    total: (3*6 + 4*3),
+    calc: '① 3×6=18  ② 4×3=12  总面积=18+12=30'
+  },
+  house: {
+    name: '房子形',
+    method: '分割法（长方形 + 三角形）',
+    parts: [
+      { type: 'rect', x: 1, y: 3, w: 6, h: 4, color: '#fed7aa', label: '①' },
+      { type: 'tri', x: 1, y: 0, w: 6, h: 3, color: '#bbf7d0', label: '②' },
+    ],
+    total: (6*4 + 6*3/2),
+    calc: '① 6×4=24  ② 6×3÷2=9  总面积=24+9=33'
+  },
+  arrow: {
+    name: '箭头形',
+    method: '分割法（长方形 + 两个三角形）',
+    parts: [
+      { type: 'rect', x: 3, y: 2, w: 2, h: 6, color: '#fed7aa', label: '①' },
+      { type: 'tri', x: 1, y: 0, w: 3, h: 2, color: '#e9d5ff', label: '②' },
+      { type: 'tri', x: 4, y: 0, w: 3, h: 2, color: '#fce7f3', label: '③' },
+    ],
+    total: (2*6 + 3*2/2 + 3*2/2),
+    calc: '① 2×6=12  ② 3×2÷2=3  ③ 3×2÷2=3  总面积=12+3+3=18'
+  },
+  tshape: {
+    name: 'T 形',
+    method: '分割法（分成两个长方形）',
+    parts: [
+      { type: 'rect', x: 0, y: 0, w: 8, h: 2, color: '#fed7aa', label: '①' },
+      { type: 'rect', x: 3, y: 2, w: 2, h: 5, color: '#bfdbfe', label: '②' },
+    ],
+    total: (8*2 + 2*5),
+    calc: '① 8×2=16  ② 2×5=10  总面积=16+10=26'
+  },
+  flag: {
+    name: '旗帜形',
+    method: '添补法（大长方形 − 缺口）',
+    parts: [
+      { type: 'rect', x: 0, y: 0, w: 5, h: 7, color: '#fed7aa', label: '大' },
+      { type: 'rect', x: 3, y: 4, w: 2, h: 3, color: '#fecaca', label: '−', subtract: true },
+    ],
+    total: (5*7 - 2*3),
+    calc: '大 5×7=35  − 缺口 2×3=6  总面积=35−6=29'
+  }
+};
+
+let currentShape = 'lshape';
+
+function draw() {
+  const shape = shapes[currentShape];
+  const W = cvs.width, H = cvs.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = '#f1f5f9';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 10; i++) {
+    ctx.beginPath(); ctx.moveTo(40 + i * S, 20); ctx.lineTo(40 + i * S, H - 20); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(40, 20 + i * S); ctx.lineTo(W - 20, 20 + i * S); ctx.stroke();
+  }
+
+  shape.parts.forEach(p => {
+    const x = 40 + p.x * S, y = 20 + p.y * S;
+    const w = p.w * S, h = p.h * S;
+
+    ctx.beginPath();
+    if (p.type === 'rect') {
+      ctx.rect(x, y, w, h);
+    } else {
+      ctx.moveTo(x + w / 2, y);
+      ctx.lineTo(x + w, y + h);
+      ctx.lineTo(x, y + h);
+      ctx.closePath();
+    }
+    ctx.fillStyle = p.subtract ? '#fff' : p.color;
+    ctx.fill();
+    ctx.strokeStyle = p.subtract ? '#ef4444' : '#334155';
+    ctx.lineWidth = 2;
+    if (p.subtract) ctx.setLineDash([6, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Label
+    ctx.fillStyle = '#334155';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.label, x + w / 2, y + h / 2 + 6);
+
+    // Dimensions
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillStyle = '#64748b';
+    if (p.type === 'rect') {
+      ctx.fillText(p.w + '', x + w / 2, y - 4);
+      ctx.save(); ctx.translate(x - 4, y + h / 2); ctx.rotate(-Math.PI / 2);
+      ctx.fillText(p.h + '', 0, 0); ctx.restore();
+    } else {
+      ctx.fillText(p.w + '', x + w / 2, y + h + 14);
+    }
+  });
+
+  // Update result
+  document.getElementById('resultCard').innerHTML = `
+    <div style="font-size:16px;font-weight:700;margin-bottom:8px">${shape.name} · ${shape.method}</div>
+    <div style="font-size:14px;line-height:2;color:#334155">${shape.calc.split('  ').map(s => `<div>${s}</div>`).join('')}</div>
+    <div class="result-total">总面积 = ${shape.total} cm²</div>
+  `;
+}
+
+function loadShape(s) { currentShape = s; draw(); }
+function resetAll() { loadShape('lshape'); }
+draw();
+</script>
+</body>
+</html>

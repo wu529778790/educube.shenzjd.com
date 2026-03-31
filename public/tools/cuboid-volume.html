@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>长方体表面积与体积</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 280px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#faf5ff,#ede9fe); overflow:hidden; }
+  .control-panel {
+    background:#fff; border-left:1px solid #e2e8f0;
+    padding:16px; display:flex; flex-direction:column; gap:12px; overflow:auto;
+  }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+  .slider-row { display:flex; align-items:center; gap:8px; }
+  .slider-row label { font-size:12px; font-weight:600; color:#64748b; min-width:30px; }
+  .slider-row input[type=range] { flex:1; }
+  .slider-row .val { font-size:14px; font-weight:700; color:#6D28D9; min-width:24px; text-align:right; }
+  .info-box {
+    background:#faf5ff; border:1px solid #e9d5ff; border-radius:10px;
+    padding:10px 12px; font-size:12px; color:#64748b; line-height:1.9;
+  }
+  .info-box strong { color:#6D28D9; }
+  .result-big { font-size:20px; font-weight:800; color:#6D28D9; text-align:center; margin:4px 0; }
+  .tab-btn {
+    padding:7px 10px; border-radius:8px; font-size:12px; font-weight:600;
+    cursor:pointer; border:1.5px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+  }
+  .tab-btn.active { background:#8B5CF6; color:#fff; border-color:#8B5CF6; }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="edu-toolbar-title">🧊 长方体表面积与体积</span>
+      <span class="edu-toolbar-subtitle">五下·第三单元</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" id="btn-unfold" onclick="toggleUnfold()">展开动画</button>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="main-canvas" class="edu-canvas-full"></canvas>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">调整尺寸</div>
+          <div class="slider-row"><label>长</label><input type="range" id="sl" min="1" max="6" value="4" oninput="update()"/><span class="val" id="vl">4</span></div>
+          <div class="slider-row"><label>宽</label><input type="range" id="sw" min="1" max="5" value="3" oninput="update()"/><span class="val" id="vw">3</span></div>
+          <div class="slider-row"><label>高</label><input type="range" id="sh" min="1" max="5" value="2" oninput="update()"/><span class="val" id="vh">2</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">显示模式</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <button class="tab-btn active" id="tb-3d" onclick="setView('3d')">立体图</button>
+            <button class="tab-btn" id="tb-unfold" onclick="setView('unfold')">展开图</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">计算结果</div>
+          <div class="info-box" id="calc-result"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">单位立方体填充</div>
+          <div class="info-box" id="fill-info" style="font-size:11px;line-height:1.7;"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">公式</div>
+          <div class="info-box" style="background:#fff;border-color:#e2e8f0;font-size:11px;line-height:1.7;">
+            <strong>表面积</strong> = 2(长&times;宽 + 长&times;高 + 宽&times;高)<br/>
+            <strong>体积</strong> = 长 &times; 宽 &times; 高<br/>
+            长方体有 6 个面，相对的两个面相等。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="../edu-lib/edu-tools.js"></script>
+<script>
+const canvas = document.getElementById('main-canvas');
+const ctx = canvas.getContext('2d');
+let W, H, viewMode = '3d', unfoldT = 0, animTimer = null;
+
+function setView(m) {
+  viewMode = m;
+  document.getElementById('tb-3d').classList.toggle('active', m === '3d');
+  document.getElementById('tb-unfold').classList.toggle('active', m === 'unfold');
+  render();
+}
+
+function toggleUnfold() {
+  if (animTimer) { clearInterval(animTimer); animTimer = null; }
+  const target = viewMode === '3d' ? 'unfold' : '3d';
+  const start = viewMode === '3d' ? 0 : 1;
+  const end = viewMode === '3d' ? 1 : 0;
+  viewMode = 'unfold';
+  document.getElementById('tb-3d').classList.remove('active');
+  document.getElementById('tb-unfold').classList.add('active');
+  let t = start;
+  animTimer = setInterval(() => {
+    t += (end - start) * 0.05;
+    if ((end > start && t >= end) || (end < start && t <= end)) {
+      t = end; clearInterval(animTimer); animTimer = null;
+      if (t <= 0) { viewMode = '3d'; document.getElementById('tb-3d').classList.add('active'); document.getElementById('tb-unfold').classList.remove('active'); }
+    }
+    unfoldT = t;
+    render();
+  }, 16);
+}
+
+function update() {
+  const l = parseInt(document.getElementById('sl').value);
+  const w = parseInt(document.getElementById('sw').value);
+  const h = parseInt(document.getElementById('sh').value);
+  document.getElementById('vl').textContent = l;
+  document.getElementById('vw').textContent = w;
+  document.getElementById('vh').textContent = h;
+
+  const lw = l*w, lh = l*h, wh = w*h;
+  const sa = 2*(lw+lh+wh);
+  const vol = l*w*h;
+
+  document.getElementById('calc-result').innerHTML = `
+    <div>长=${l}，宽=${w}，高=${h}</div>
+    <div>表面积 = 2(${lw}+${lh}+${wh})</div>
+    <div class="result-big">${sa}</div>
+    <div>体积 = ${l}&times;${w}&times;${h}</div>
+    <div class="result-big">${vol}</div>`;
+
+  document.getElementById('fill-info').innerHTML = `
+    需要 <strong>${vol}</strong> 个单位立方体<br/>
+    每层 ${l}&times;${w} = <strong>${l*w}</strong> 个<br/>
+    共 ${h} 层`;
+  render();
+}
+
+function render() {
+  const dpr = window.devicePixelRatio || 1;
+  W = canvas.clientWidth; H = canvas.clientHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  const l = parseInt(document.getElementById('sl').value);
+  const w = parseInt(document.getElementById('sw').value);
+  const h = parseInt(document.getElementById('sh').value);
+
+  if (viewMode === '3d' || unfoldT <= 0) draw3D(l, w, h);
+  else if (unfoldT >= 1) drawUnfold(l, w, h);
+  else drawTransition(l, w, h);
+}
+
+function draw3D(l, w, h) {
+  const scale = Math.min((W - 160) / (l + w + 2), (H - 160) / (h + w * 0.6 + 2), 50);
+  const ox = W / 2, oy = H / 2 + h * scale * 0.15;
+  function proj(x, y, z) {
+    return [ox + (x - y) * scale * 0.65, oy - z * scale + (x + y) * scale * 0.22];
+  }
+  const V = [proj(0,0,0),proj(l,0,0),proj(l,w,0),proj(0,w,0),proj(0,0,h),proj(l,0,h),proj(l,w,h),proj(0,w,h)];
+
+  // Faces with colors
+  const faceColors = ['#8B5CF630','#8B5CF640','#6D28D925','#6D28D918','#7C3AED20','#7C3AED20'];
+  const faceIdx = [[0,1,5,4],[2,3,7,6],[0,1,2,3],[4,5,6,7],[0,3,7,4],[1,2,6,5]];
+  const faceNames = ['前面','后面','底面','顶面','左面','右面'];
+
+  faceIdx.forEach((fi, i) => {
+    ctx.beginPath();
+    fi.forEach((vi, j) => { j===0 ? ctx.moveTo(V[vi][0],V[vi][1]) : ctx.lineTo(V[vi][0],V[vi][1]); });
+    ctx.closePath();
+    ctx.fillStyle = faceColors[i]; ctx.fill();
+    ctx.strokeStyle = '#6D28D9'; ctx.lineWidth = 2; ctx.stroke();
+  });
+
+  // Dashed hidden edges
+  const hidden = [[0,3],[3,7],[0,4]]; // simplified
+  // Draw unit cube grid on front face
+  if (l <= 6 && w <= 5 && h <= 5) {
+    ctx.strokeStyle = '#8B5CF640'; ctx.lineWidth = 0.5;
+    // Grid on front face (x, z plane at y=0)
+    for (let i = 1; i < l; i++) {
+      const a = proj(i,0,0), b = proj(i,0,h);
+      ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+    }
+    for (let j = 1; j < h; j++) {
+      const a = proj(0,0,j), b = proj(l,0,j);
+      ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+    }
+  }
+
+  // Labels
+  ctx.fillStyle = '#6D28D9'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(`长方体 ${l}×${w}×${h}`, W / 2, 28);
+
+  // Dimension labels
+  const p1 = proj(l/2,0,0), p2 = proj(0,0,-0.5);
+  ctx.fillStyle = '#6D28D9'; ctx.font = '12px sans-serif';
+  ctx.fillText(`长=${l}`, p1[0], p1[1] + 20);
+  const p3 = proj(l+0.5,0,h/2);
+  ctx.fillText(`高=${h}`, p3[0]+20, p3[1]);
+  const p4 = proj(l,w/2,h);
+  ctx.fillText(`宽=${w}`, p4[0]+30, p4[1]);
+}
+
+function drawUnfold(l, w, h) {
+  const unit = Math.min((W - 80) / (2*l + 2*w), (H - 80) / (2*h + l), 45);
+  // Cross layout: center=bottom, top=top, left=left, right=right, above-top=back
+  const cx = W / 2, cy = H / 2;
+
+  const faces = [
+    { x:cx-l*unit/2, y:cy-w*unit/2, w:l*unit, h:w*unit, label:`底面 ${l}×${w}`, color:'#8B5CF630' },
+    { x:cx-l*unit/2, y:cy-w*unit/2-h*unit, w:l*unit, h:h*unit, label:`前面 ${l}×${h}`, color:'#7C3AED25' },
+    { x:cx-l*unit/2, y:cy+w*unit/2, w:l*unit, h:h*unit, label:`后面 ${l}×${h}`, color:'#7C3AED25' },
+    { x:cx-l*unit/2-w*unit, y:cy-w*unit/2, w:w*unit, h:l*unit, label:`左面 ${w}×${l}`, color:'#6D28D920', rotate:true },
+    { x:cx+l*unit/2, y:cy-w*unit/2, w:w*unit, h:l*unit, label:`右面 ${w}×${l}`, color:'#6D28D920', rotate:true },
+    { x:cx-l*unit/2, y:cy-w*unit/2-h*unit-h*unit, w:l*unit, h:h*unit, label:`顶面 ${l}×${w}`, color:'#8B5CF640' },
+  ];
+
+  ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = '#1e293b'; ctx.textAlign = 'center';
+  ctx.fillText('长方体展开图', W / 2, 24);
+
+  faces.forEach(f => {
+    ctx.fillStyle = f.color;
+    ctx.fillRect(f.x, f.y, f.w, f.h);
+    ctx.strokeStyle = '#6D28D9'; ctx.lineWidth = 2;
+    ctx.strokeRect(f.x, f.y, f.w, f.h);
+    ctx.fillStyle = '#6D28D9'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(f.label, f.x + f.w/2, f.y + f.h/2 + 4);
+  });
+
+  // Fold lines (dashed)
+  ctx.setLineDash([5, 3]); ctx.strokeStyle = '#8B5CF650'; ctx.lineWidth = 1;
+  // horizontal fold lines
+  [cy - w*unit/2, cy + w*unit/2, cy - w*unit/2 - h*unit, cy - w*unit/2 - h*unit*2].forEach(y => {
+    ctx.beginPath(); ctx.moveTo(cx - l*unit/2 - w*unit, y); ctx.lineTo(cx + l*unit/2 + w*unit, y); ctx.stroke();
+  });
+  ctx.setLineDash([]);
+}
+
+function drawTransition(l, w, h) {
+  // During transition, interpolate between 3D and unfolded
+  ctx.globalAlpha = 1 - unfoldT;
+  draw3D(l, w, h);
+  ctx.globalAlpha = unfoldT;
+  drawUnfold(l, w, h);
+  ctx.globalAlpha = 1;
+}
+
+function resetAll() {
+  document.getElementById('sl').value = 4;
+  document.getElementById('sw').value = 3;
+  document.getElementById('sh').value = 2;
+  viewMode = '3d'; unfoldT = 0;
+  document.getElementById('tb-3d').classList.add('active');
+  document.getElementById('tb-unfold').classList.remove('active');
+  update();
+}
+
+window.addEventListener('resize', render);
+update();
+setTimeout(render, 50);
+</script>
+</body>
+</html>
