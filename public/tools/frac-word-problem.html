@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>分数应用题 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 280px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #fefce8 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .problem-card { background: #fff; border: 2px solid #eab308; border-radius: 16px; padding: 20px; width: 100%; max-width: 520px; }
+    .problem-text { font-size: 16px; line-height: 1.8; color: #334155; }
+    .problem-text .keyword { color: #eab308; font-weight: 800; }
+    .problem-text .fraction { color: #3b82f6; font-weight: 800; }
+    .tab-bar { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; justify-content: center; }
+    .tab-btn { padding: 6px 14px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .tab-btn.active { background: #eab308; color: #fff; border-color: #eab308; }
+    .bar-model { width: 100%; max-width: 520px; margin: 16px 0; }
+    .bar-label { font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; }
+    .bar-track { height: 44px; border-radius: 8px; overflow: hidden; display: flex; position: relative; border: 2px solid #e2e8f0; }
+    .bar-seg { display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; border-right: 1px solid rgba(255,255,255,.3); min-width: 20px; }
+    .bar-seg:last-child { border-right: none; }
+    .bar-unknown { background: repeating-linear-gradient(45deg, #fbbf24, #fbbf24 4px, #f59e0b 4px, #f59e0b 8px) !important; }
+    .bar-brace { display: flex; justify-content: space-between; font-size: 12px; color: #64748b; margin-top: 4px; font-weight: 600; }
+    .solve-box { background: #fff; border: 2px solid #22c55e; border-radius: 14px; padding: 20px; width: 100%; max-width: 520px; }
+    .solve-step { margin: 8px 0; font-size: 15px; line-height: 1.8; }
+    .solve-step .highlight { background: #f0fdf4; padding: 2px 8px; border-radius: 6px; font-weight: 700; color: #22c55e; }
+    .answer-box { background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 14px; text-align: center; margin-top: 12px; }
+    .answer-val { font-size: 28px; font-weight: 800; color: #22c55e; }
+    .input-group { display: flex; align-items: center; gap: 8px; margin: 10px 0; flex-wrap: wrap; justify-content: center; }
+    .input-group label { font-size: 14px; font-weight: 600; min-width: 60px; }
+    .input-group input { width: 80px; text-align: center; font-size: 18px; font-weight: 700; border: 2px solid #e2e8f0; border-radius: 8px; padding: 6px; font-family: 'Courier New', monospace; }
+    .input-group input:focus { border-color: #eab308; outline: none; }
+    .input-group span { font-size: 16px; font-weight: 700; color: #64748b; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 12px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; text-align: left; padding-left: 10px; }
+    .preset-btn:hover { border-color: #eab308; color: #eab308; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">📝 分数应用题</div>
+      <div class="edu-toolbar-subtitle">上册 · 第一单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="solve()">求解</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="switchType('part-of-whole')">求部分</button>
+          <button class="tab-btn" onclick="switchType('find-whole')">求总量</button>
+          <button class="tab-btn" onclick="switchType('more-than')">多/少问题</button>
+          <button class="tab-btn" onclick="switchType('engineering')">工程问题</button>
+        </div>
+
+        <div class="problem-card" id="problemCard"></div>
+
+        <div class="bar-model" id="barModel"></div>
+
+        <div class="solve-box" id="solveBox"></div>
+      </div>
+
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">自定义参数</div>
+          <div id="paramInputs"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">经典例题</div>
+          <div id="presetList"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>解题关键</b><br/>
+          ● 找到单位"1"的量<br/>
+          ● 求部分：总量×分率<br/>
+          ● 求总量：部分÷分率<br/>
+          ● "比A多⅓"= A×(1+⅓)<br/>
+          ● "比A少¼"= A×(1−¼)<br/>
+          ● 工程问题：1÷效率之和
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+let currentType = 'part-of-whole';
+let params = { whole: 120, fracNum: 2, fracDen: 5 };
+
+const presets = {
+  'part-of-whole': [
+    { label: '图书角120本，借出⅖', w: 120, fn: 2, fd: 5 },
+    { label: '600吨粮食，运走⅔', w: 600, fn: 2, fd: 3 },
+    { label: '全长360米，修了⅚', w: 360, fn: 5, fd: 6 },
+  ],
+  'find-whole': [
+    { label: '读了⅗正好120页', w: 120, fn: 3, fd: 5 },
+    { label: '卖出⅔是240千克', w: 240, fn: 2, fd: 3 },
+    { label: '用去⅞还剩50元', w: 50, fn: 1, fd: 8 },
+  ],
+  'more-than': [
+    { label: '比计划多⅕，实际240', w: 240, fn: 1, fd: 5 },
+    { label: '比上周少¼，本周300', w: 300, fn: 1, fd: 4 },
+    { label: '男生比女生多⅓，女生90', w: 90, fn: 1, fd: 3 },
+  ],
+  'engineering': [
+    { label: '甲10天乙15天合做', fn: 1, fd: 10, fn2: 1, fd2: 15 },
+    { label: '甲12天乙8天合做', fn: 1, fd: 12, fn2: 1, fd2: 8 },
+    { label: '甲20天，乙先做4天', fn: 1, fd: 20, fn2: 1, fd2: 30 },
+  ],
+};
+
+function switchType(type) {
+  currentType = type;
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', ['part-of-whole','find-whole','more-than','engineering'][i] === type);
+  });
+  renderPresets();
+  if (type === 'engineering') {
+    params = { fn: 1, fd: 10, fn2: 1, fd2: 15 };
+  } else {
+    params = { whole: 120, fracNum: 2, fracDen: 5 };
+  }
+  renderInputs();
+  solve();
+}
+
+function renderInputs() {
+  const el = document.getElementById('paramInputs');
+  if (currentType === 'engineering') {
+    el.innerHTML = `
+      <div class="input-group"><label>甲效率</label><input type="number" id="p_fn" value="${params.fn||1}" oninput="solve()"/><span>/</span><input type="number" id="p_fd" value="${params.fd||10}" oninput="solve()"/></div>
+      <div class="input-group"><label>乙效率</label><input type="number" id="p_fn2" value="${params.fn2||1}" oninput="solve()"/><span>/</span><input type="number" id="p_fd2" value="${params.fd2||15}" oninput="solve()"/></div>
+    `;
+  } else {
+    el.innerHTML = `
+      <div class="input-group"><label>总量/部分</label><input type="number" id="p_whole" value="${params.whole||120}" oninput="solve()"/></div>
+      <div class="input-group"><label>分率</label><input type="number" id="p_fn" value="${params.fracNum||2}" oninput="solve()"/><span>/</span><input type="number" id="p_fd" value="${params.fracDen||5}" oninput="solve()"/></div>
+    `;
+  }
+}
+
+function renderPresets() {
+  const list = presets[currentType] || [];
+  const el = document.getElementById('presetList');
+  el.innerHTML = list.map((p, i) =>
+    `<button class="preset-btn" onclick="loadPreset(${i})">${p.label}</button>`
+  ).join('');
+}
+
+function loadPreset(i) {
+  const p = presets[currentType][i];
+  if (currentType === 'engineering') {
+    params = { fn: p.fn, fd: p.fd, fn2: p.fn2, fd2: p.fd2 };
+  } else {
+    params = { whole: p.w, fracNum: p.fn, fracDen: p.fd };
+  }
+  renderInputs();
+  solve();
+}
+
+function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { [a, b] = [b, a % b]; } return a; }
+
+function solve() {
+  const card = document.getElementById('problemCard');
+  const bar = document.getElementById('barModel');
+  const box = document.getElementById('solveBox');
+
+  if (currentType === 'part-of-whole') {
+    const whole = parseFloat(document.getElementById('p_whole')?.value) || 120;
+    const fn = parseInt(document.getElementById('p_fn')?.value) || 2;
+    const fd = parseInt(document.getElementById('p_fd')?.value) || 5;
+    const part = whole * fn / fd;
+
+    card.innerHTML = `<div class="problem-text">总量为 <span class="keyword">${whole}</span>，取其中的 <span class="fraction">${fn}/${fd}</span>，求这部分是多少？</div>`;
+
+    bar.innerHTML = `
+      <div class="bar-label">线段图 · 单位"1" = ${whole}</div>
+      <div class="bar-track">
+        <div class="bar-seg" style="width:${fn/fd*100}%;background:#eab308">${fn}/${fd}</div>
+        <div class="bar-seg" style="width:${(1-fn/fd)*100}%;background:#e2e8f0;color:#64748b">${fd-fn}/${fd}</div>
+      </div>
+      <div class="bar-brace"><span>? = ${part.toFixed(1)}</span><span>${(whole-part).toFixed(1)}</span></div>
+    `;
+
+    box.innerHTML = `
+      <div style="font-size:16px;font-weight:700;margin-bottom:12px">解题过程</div>
+      <div class="solve-step"><b>分析：</b>把 <span class="highlight">${whole}</span> 看作单位"1"</div>
+      <div class="solve-step"><b>列式：</b><span class="highlight">${whole} × ${fn}/${fd}</span></div>
+      <div class="solve-step"><b>计算：</b>= ${whole} × ${fn} ÷ ${fd} = <span class="highlight">${whole * fn} ÷ ${fd}</span></div>
+      <div class="answer-box"><div class="answer-val">${part}</div><div style="font-size:14px;color:#64748b">= ${whole} × ${fn}/${fd}</div></div>
+    `;
+  } else if (currentType === 'find-whole') {
+    const part = parseFloat(document.getElementById('p_whole')?.value) || 120;
+    const fn = parseInt(document.getElementById('p_fn')?.value) || 3;
+    const fd = parseInt(document.getElementById('p_fd')?.value) || 5;
+    const whole = part * fd / fn;
+
+    card.innerHTML = `<div class="problem-text">已知一部分是 <span class="keyword">${part}</span>，它占总量的 <span class="fraction">${fn}/${fd}</span>，求总量是多少？</div>`;
+
+    bar.innerHTML = `
+      <div class="bar-label">线段图 · ? 为单位"1"</div>
+      <div class="bar-track">
+        <div class="bar-seg" style="width:${fn/fd*100}%;background:#3b82f6">${fn}/${fd} = ${part}</div>
+        <div class="bar-seg bar-unknown" style="width:${(1-fn/fd)*100}%;color:#334155">?</div>
+      </div>
+      <div class="bar-brace"><span>${part}</span><span>${(whole-part).toFixed(1)}</span></div>
+    `;
+
+    box.innerHTML = `
+      <div style="font-size:16px;font-weight:700;margin-bottom:12px">解题过程</div>
+      <div class="solve-step"><b>分析：</b>已知 <span class="highlight">${fn}/${fd}</span> 对应 ${part}，求单位"1"</div>
+      <div class="solve-step"><b>列式：</b><span class="highlight">${part} ÷ ${fn}/${fd}</span></div>
+      <div class="solve-step"><b>计算：</b>= ${part} × ${fd}/${fn} = <span class="highlight">${part * fd} ÷ ${fn}</span></div>
+      <div class="answer-box"><div class="answer-val">${whole}</div><div style="font-size:14px;color:#64748b">= ${part} ÷ ${fn}/${fd}</div></div>
+    `;
+  } else if (currentType === 'more-than') {
+    const known = parseFloat(document.getElementById('p_whole')?.value) || 240;
+    const fn = parseInt(document.getElementById('p_fn')?.value) || 1;
+    const fd = parseInt(document.getElementById('p_fd')?.value) || 5;
+    const result = known * (1 + fn / fd);
+
+    card.innerHTML = `<div class="problem-text">一个量是 <span class="keyword">${known}</span>，另一个量比它<span class="fraction">多 ${fn}/${fd}</span>，求另一个量？</div>`;
+
+    bar.innerHTML = `
+      <div class="bar-label">线段图</div>
+      <div class="bar-track">
+        <div class="bar-seg" style="width:${1/(1+fn/fd)*100}%;background:#3b82f6">单位"1" = ${known}</div>
+        <div class="bar-seg" style="width:${fn/fd/(1+fn/fd)*100}%;background:#eab308">多 ${fn}/${fd}</div>
+      </div>
+      <div class="bar-brace"><span>${known}</span><span>${(known*fn/fd).toFixed(1)}</span></div>
+    `;
+
+    box.innerHTML = `
+      <div style="font-size:16px;font-weight:700;margin-bottom:12px">解题过程</div>
+      <div class="solve-step"><b>分析：</b>把 ${known} 看作单位"1"</div>
+      <div class="solve-step"><b>列式：</b><span class="highlight">${known} × (1 + ${fn}/${fd})</span></div>
+      <div class="solve-step"><b>计算：</b>= ${known} × ${(fd+fn)}/${fd} = <span class="highlight">${known*(fd+fn)} ÷ ${fd}</span></div>
+      <div class="answer-box"><div class="answer-val">${result}</div><div style="font-size:14px;color:#64748b">= ${known} × ${(fd+fn)}/${fd}</div></div>
+    `;
+  } else {
+    const fn1 = parseInt(document.getElementById('p_fn')?.value) || 1;
+    const fd1 = parseInt(document.getElementById('p_fd')?.value) || 10;
+    const fn2 = parseInt(document.getElementById('p_fn2')?.value) || 1;
+    const fd2 = parseInt(document.getElementById('p_fd2')?.value) || 15;
+
+    const eff1 = fn1 / fd1;
+    const eff2 = fn2 / fd2;
+    const totalEff = eff1 + eff2;
+    const days = 1 / totalEff;
+
+    const g = gcd(fn1 * fd2 + fn2 * fd1, fd1 * fd2);
+    const combinedN = (fn1 * fd2 + fn2 * fd1) / g;
+    const combinedD = (fd1 * fd2) / g;
+
+    card.innerHTML = `<div class="problem-text">一项工程，甲单独做需 <span class="keyword">${fd1}</span> 天，乙单独做需 <span class="keyword">${fd2}</span> 天，两人合做几天完成？</div>`;
+
+    bar.innerHTML = `
+      <div class="bar-label">工作效率对比</div>
+      <div class="bar-track" style="height:36px;margin-bottom:8px">
+        <div class="bar-seg" style="width:${eff1/totalEff*100}%;background:#3b82f6">甲 ${fn1}/${fd1}</div>
+        <div class="bar-seg" style="width:${eff2/totalEff*100}%;background:#f97316">乙 ${fn2}/${fd2}</div>
+      </div>
+      <div class="bar-track" style="height:36px;background:#22c55e">
+        <div class="bar-seg" style="width:100%;background:#22c55e">合做 ${combinedN}/${combinedD}/天</div>
+      </div>
+    `;
+
+    box.innerHTML = `
+      <div style="font-size:16px;font-weight:700;margin-bottom:12px">解题过程</div>
+      <div class="solve-step"><b>分析：</b>把总工程看作单位"1"</div>
+      <div class="solve-step"><b>甲效率：</b><span class="highlight">1/${fd1}（每天完成 ${fn1}/${fd1}）</span></div>
+      <div class="solve-step"><b>乙效率：</b><span class="highlight">1/${fd2}（每天完成 ${fn2}/${fd2}）</span></div>
+      <div class="solve-step"><b>合做效率：</b><span class="highlight">${fn1}/${fd1} + ${fn2}/${fd2} = ${combinedN}/${combinedD}</span></div>
+      <div class="solve-step"><b>合做天数：</b>1 ÷ ${combinedN}/${combinedD} = <span class="highlight">${combinedD}/${combinedN}</span></div>
+      <div class="answer-box"><div class="answer-val">${days.toFixed(2)} 天</div><div style="font-size:14px;color:#64748b">= ${combinedD}/${combinedN} 天</div></div>
+    `;
+  }
+}
+
+function resetAll() {
+  switchType(currentType);
+}
+
+renderPresets();
+renderInputs();
+solve();
+</script>
+</body>
+</html>

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>分数乘法 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #fef3c7 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 14px; font-weight: 700; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #f97316; color: #f97316; }
+    .fraction-input { display: flex; align-items: center; gap: 6px; font-size: 20px; font-weight: 700; }
+    .frac-box { display: flex; flex-direction: column; align-items: center; min-width: 50px; }
+    .frac-box input { width: 50px; text-align: center; font-size: 18px; font-weight: 700; border: 1.5px solid #e2e8f0; border-radius: 6px; padding: 4px; font-family: 'Courier New', monospace; }
+    .frac-box .frac-line { width: 50px; height: 2px; background: #334155; margin: 2px 0; }
+    .op-symbol { font-size: 24px; font-weight: 800; color: #f97316; }
+    .equals { font-size: 24px; font-weight: 800; color: #22c55e; }
+    .result-display { text-align: center; margin-top: 16px; }
+    .result-display .result-frac { font-size: 32px; font-weight: 800; color: #1e293b; display: flex; align-items: center; justify-content: center; gap: 4px; }
+    .result-display .result-frac .frac-box { font-size: 28px; }
+    .result-display .result-frac .frac-box .frac-line { width: 60px; }
+    /* 面积模型 */
+    .area-model { position: relative; width: 300px; height: 300px; margin: 20px auto; border: 2px solid #334155; background: #fff; border-radius: 4px; }
+    .area-h { position: absolute; top: 0; left: 0; height: 100%; background: rgba(249,115,22,0.25); border-right: 2px dashed #f97316; }
+    .area-v { position: absolute; top: 0; left: 0; width: 100%; background: rgba(14,165,233,0.2); border-bottom: 2px dashed #0ea5e9; }
+    .area-overlap { position: absolute; top: 0; left: 0; background: rgba(34,197,94,0.4); }
+    .area-label { position: absolute; font-size: 14px; font-weight: 700; color: #334155; pointer-events: none; }
+    .step-display { background: #fff; border: 2px solid #f97316; border-radius: 12px; padding: 12px 20px; text-align: center; margin-top: 12px; font-size: 16px; font-weight: 600; color: #334155; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">✖ 分数乘法</div>
+      <div class="edu-toolbar-subtitle">上册 · 第一单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="calculate()">计算</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <!-- 输入区 -->
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+          <div class="fraction-input">
+            <div class="frac-box">
+              <input type="number" id="n1" value="2" min="0" max="99" onchange="calculate()"/>
+              <div class="frac-line"></div>
+              <input type="number" id="d1" value="3" min="1" max="99" onchange="calculate()"/>
+            </div>
+          </div>
+          <div class="op-symbol">×</div>
+          <div class="fraction-input">
+            <div class="frac-box">
+              <input type="number" id="n2" value="3" min="0" max="99" onchange="calculate()"/>
+              <div class="frac-line"></div>
+              <input type="number" id="d2" value="4" min="1" max="99" onchange="calculate()"/>
+            </div>
+          </div>
+          <div class="equals">=</div>
+          <div class="result-display" style="margin-top:0">
+            <div class="result-frac" id="resultFrac"></div>
+          </div>
+        </div>
+
+        <!-- 面积模型 -->
+        <div class="section-title" style="font-size:14px;font-weight:700;color:#334155;margin-bottom:8px">面积模型演示</div>
+        <div class="area-model" id="areaModel">
+          <div class="area-h" id="areaH"></div>
+          <div class="area-v" id="areaV"></div>
+          <div class="area-overlap" id="areaOverlap"></div>
+        </div>
+
+        <!-- 步骤 -->
+        <div class="step-display" id="stepDisplay">点击"计算"查看步骤</div>
+      </div>
+
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设例子</div>
+          <button class="preset-btn" onclick="loadExample(2,3,3,4)">⅔ × ¾</button>
+          <button class="preset-btn" onclick="loadExample(1,2,4,5)">½ × ⅘</button>
+          <button class="preset-btn" onclick="loadExample(3,4,2,3)">¾ × ⅔</button>
+          <button class="preset-btn" onclick="loadExample(1,3,6,1)">⅓ × 6（分数×整数）</button>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">计算步骤</div>
+          <div class="info-box" id="stepsBox">
+            选择分数后点击"计算"，查看详细步骤。
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>分数乘法规则</b><br/>
+          ● 分数×分数：分子×分子 / 分母×分母<br/>
+          ● 分数×整数：分子×整数 / 分母不变<br/>
+          ● 结果需化简为最简分数<br/>
+          ● 面积模型：横向表示第一个分数，纵向表示第二个
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { [a, b] = [b, a % b]; } return a; }
+
+function simplify(n, d) {
+  if (n === 0) return [0, 1];
+  const g = gcd(n, d);
+  return [n / g, d / g];
+}
+
+function loadExample(a, b, c, d_) {
+  document.getElementById('n1').value = a;
+  document.getElementById('d1').value = b;
+  document.getElementById('n2').value = c;
+  document.getElementById('d2').value = d_;
+  calculate();
+}
+
+function calculate() {
+  const n1 = parseInt(document.getElementById('n1').value) || 0;
+  const d1 = parseInt(document.getElementById('d1').value) || 1;
+  const n2 = parseInt(document.getElementById('n2').value) || 0;
+  const d2 = parseInt(document.getElementById('d2').value) || 1;
+
+  const rn = n1 * n2;
+  const rd = d1 * d2;
+  const [sn, sd] = simplify(rn, rd);
+
+  // 显示结果
+  const resEl = document.getElementById('resultFrac');
+  if (sn === 0) {
+    resEl.innerHTML = '<span style="font-size:28px">0</span>';
+  } else if (sd === 1) {
+    resEl.innerHTML = `<span style="font-size:28px">${sn}</span>`;
+  } else {
+    const whole = Math.floor(Math.abs(sn) / sd);
+    const rem = Math.abs(sn) % sd;
+    if (whole > 0 && rem > 0) {
+      const sign = sn < 0 ? '-' : '';
+      resEl.innerHTML = `${sign}${whole}<div class="frac-box"><span>${rem}</span><div class="frac-line"></div><span>${sd}</span></div>`;
+    } else if (whole > 0) {
+      resEl.innerHTML = `<span style="font-size:28px">${sn}</span>`;
+    } else {
+      resEl.innerHTML = `<div class="frac-box"><span>${sn}</span><div class="frac-line"></div><span>${sd}</span></div>`;
+    }
+  }
+
+  // 面积模型
+  updateAreaModel(n1 / d1, n2 / d2, d1, d2);
+
+  // 步骤
+  const stepsBox = document.getElementById('stepsBox');
+  const isWhole = d2 === 1;
+  let steps = '';
+  if (isWhole) {
+    steps = `<b>分数×整数</b><br/>`;
+    steps += `① ${n1}/${d1} × ${n2}<br/>`;
+    steps += `② 分子相乘：${n1} × ${n2} = ${rn}<br/>`;
+    steps += `③ 结果：${rn}/${d1}<br/>`;
+  } else {
+    steps = `<b>分数×分数</b><br/>`;
+    steps += `① ${n1}/${d1} × ${n2}/${d2}<br/>`;
+    steps += `② 分子相乘：${n1} × ${n2} = ${rn}<br/>`;
+    steps += `③ 分母相乘：${d1} × ${d2} = ${rd}<br/>`;
+    steps += `④ 结果：${rn}/${rd}<br/>`;
+  }
+  if (rn !== sn || rd !== sd) {
+    const g = gcd(Math.abs(rn), Math.abs(rd));
+    steps += `⑤ 化简：÷${g} = ${sn}/${sd}`;
+  }
+  stepsBox.innerHTML = steps;
+
+  document.getElementById('stepDisplay').innerHTML =
+    `<span style="color:#f97316">${n1}/${d1}</span> × <span style="color:#0ea5e9">${n2}/${d2}</span> = <span style="color:#22c55e">${sn}/${sd}</span>`;
+}
+
+function updateAreaModel(frac1, frac2, d1, d2) {
+  const model = document.getElementById('areaModel');
+  const size = 300;
+  const w1 = Math.min(frac1, 1) * size;
+  const h2 = Math.min(frac2, 1) * size;
+
+  const areaH = document.getElementById('areaH');
+  areaH.style.width = w1 + 'px';
+  areaH.style.height = size + 'px';
+
+  const areaV = document.getElementById('areaV');
+  areaV.style.height = h2 + 'px';
+  areaV.style.width = size + 'px';
+
+  const areaO = document.getElementById('areaOverlap');
+  areaO.style.width = w1 + 'px';
+  areaO.style.height = h2 + 'px';
+
+  // 清除旧标签
+  model.querySelectorAll('.area-label').forEach(e => e.remove());
+
+  // 分数标注
+  const lbl1 = document.createElement('div');
+  lbl1.className = 'area-label';
+  lbl1.style.left = (w1 / 2 - 10) + 'px';
+  lbl1.style.bottom = '-22px';
+  lbl1.textContent = frac1 < 1 ? `${document.getElementById('n1').value}/${d1}` : '1';
+  model.appendChild(lbl1);
+
+  const lbl2 = document.createElement('div');
+  lbl2.className = 'area-label';
+  lbl2.style.top = (h2 / 2 - 8) + 'px';
+  lbl2.style.right = '-40px';
+  lbl2.textContent = frac2 < 1 ? `${document.getElementById('n2').value}/${d2}` : '1';
+  model.appendChild(lbl2);
+}
+
+function resetAll() {
+  document.getElementById('n1').value = 1;
+  document.getElementById('d1').value = 2;
+  document.getElementById('n2').value = 1;
+  document.getElementById('d2').value = 3;
+  document.getElementById('resultFrac').innerHTML = '';
+  document.getElementById('stepsBox').innerHTML = '选择分数后点击"计算"，查看详细步骤。';
+  document.getElementById('stepDisplay').textContent = '点击"计算"查看步骤';
+  updateAreaModel(0.5, 1/3, 2, 3);
+}
+
+calculate();
+</script>
+</body>
+</html>

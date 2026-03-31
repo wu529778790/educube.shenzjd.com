@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>比例的意义 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #f0fdf4 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 14px; font-weight: 700; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #22c55e; color: #22c55e; }
+    .prop-box { background: #fff; border: 2px solid #22c55e; border-radius: 12px; padding: 16px; text-align: center; width: 100%; max-width: 460px; margin-bottom: 12px; }
+    .prop-expr { font-size: 28px; font-weight: 800; font-family: 'Courier New', monospace; color: #334155; }
+    .prop-expr .colon { color: #22c55e; }
+    .check-result { font-size: 16px; font-weight: 700; margin-top: 8px; }
+    .input-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; justify-content: center; }
+    .input-row input { width: 60px; text-align: center; font-size: 18px; font-weight: 700; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 6px; font-family: 'Courier New', monospace; }
+    .input-row span { font-size: 20px; font-weight: 800; }
+    .solve-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 14px; width: 100%; max-width: 460px; margin-top: 12px; font-size: 14px; line-height: 2; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">📐 比例的意义</div>
+      <div class="edu-toolbar-subtitle">下册 · 第四单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="check()">验证</button>
+      <button class="edu-btn edu-btn-accent" onclick="solveX()">解比例</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div style="font-size:14px;font-weight:700;color:#334155;margin-bottom:8px">输入四个数，判断能否组成比例</div>
+        <div class="input-row">
+          <input type="number" id="a" value="2"/>
+          <span style="color:#22c55e">:</span>
+          <input type="number" id="b" value="3"/>
+          <span style="color:#64748b">=</span>
+          <input type="number" id="c" value="4"/>
+          <span style="color:#22c55e">:</span>
+          <input type="number" id="d" value="6"/>
+        </div>
+
+        <div class="prop-box">
+          <div class="prop-expr" id="propExpr">2<span class="colon">:</span>3 <span style="color:#64748b">=</span> 4<span class="colon">:</span>6</div>
+          <div class="check-result" id="checkResult"></div>
+        </div>
+
+        <!-- 解比例 -->
+        <div style="font-size:14px;font-weight:700;color:#334155;margin-top:8px">解比例（填3个数，第4个用x代替）</div>
+        <div class="input-row">
+          <input type="number" id="sa" value="3"/>
+          <span style="color:#22c55e">:</span>
+          <input type="number" id="sb" value="4"/>
+          <span style="color:#64748b">=</span>
+          <input type="number" id="sc" value="6"/>
+          <span style="color:#22c55e">:</span>
+          <input type="text" id="sd" value="x" style="color:#ef4444"/>
+        </div>
+        <div class="solve-box" id="solveBox"></div>
+      </div>
+
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设比例</div>
+          <button class="preset-btn" onclick="load(2,3,4,6)">2:3 = 4:6</button>
+          <button class="preset-btn" onclick="load(1,2,3,6)">1:2 = 3:6</button>
+          <button class="preset-btn" onclick="load(5,8,10,16)">5:8 = 10:16</button>
+          <button class="preset-btn" onclick="load(3,4,9,12)">3:4 = 9:12</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>比例知识</b><br/>
+          ● 表示两个比相等的式子叫比例<br/>
+          ● a:b = c:d<br/>
+          ● 内项积 = 外项积<br/>
+          &nbsp;&nbsp;a×d = b×c（交叉相乘）<br/>
+          ● 解比例：已知三项求第四项<br/>
+          ● 如果 ad = bc，则可组成比例
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function load(a, b, c, d) {
+  document.getElementById('a').value = a;
+  document.getElementById('b').value = b;
+  document.getElementById('c').value = c;
+  document.getElementById('d').value = d;
+  check();
+}
+
+function check() {
+  const a = parseFloat(document.getElementById('a').value);
+  const b = parseFloat(document.getElementById('b').value);
+  const c = parseFloat(document.getElementById('c').value);
+  const d = parseFloat(document.getElementById('d').value);
+
+  document.getElementById('propExpr').innerHTML =
+    `${a}<span class="colon">:</span>${b} <span style="color:#64748b">=</span> ${c}<span class="colon">:</span>${d}`;
+
+  if (b === 0 || d === 0) {
+    document.getElementById('checkResult').innerHTML = '<span style="color:#ef4444">比的后项不能为0</span>';
+    return;
+  }
+
+  const ratio1 = a / b;
+  const ratio2 = c / d;
+  const outer = a * d;
+  const inner = b * c;
+
+  if (Math.abs(ratio1 - ratio2) < 0.0001) {
+    document.getElementById('checkResult').innerHTML =
+      `<span style="color:#22c55e">✓ 是比例</span><br/><span style="font-size:13px;color:#64748b">${a}/${b} = ${ratio1.toFixed(4)}，${c}/${d} = ${ratio2.toFixed(4)}</span><br/><span style="font-size:13px;color:#64748b">内项积 ${b}×${c}=${inner} = 外项积 ${a}×${d}=${outer}</span>`;
+  } else {
+    document.getElementById('checkResult').innerHTML =
+      `<span style="color:#ef4444">✗ 不是比例</span><br/><span style="font-size:13px;color:#64748b">${a}/${b} = ${ratio1.toFixed(4)} ≠ ${c}/${d} = ${ratio2.toFixed(4)}</span><br/><span style="font-size:13px;color:#64748b">内项积 ${b}×${c}=${inner} ≠ 外项积 ${a}×${d}=${outer}</span>`;
+  }
+}
+
+function solveX() {
+  const sa = parseFloat(document.getElementById('sa').value);
+  const sb = parseFloat(document.getElementById('sb').value);
+  const sc = parseFloat(document.getElementById('sc').value);
+  const sdVal = document.getElementById('sd').value.trim();
+
+  const box = document.getElementById('solveBox');
+  if (sdVal === 'x' || sdVal === 'X') {
+    if (sb === 0 || sa === 0) { box.innerHTML = '<span style="color:#ef4444">比例项不能为0</span>'; return; }
+    const x = sc * sb / sa;
+    box.innerHTML = `<b>解：求第四项 x</b><br/>
+      ① ${sa} : ${sb} = ${sc} : x<br/>
+      ② 外项积 = 内项积：${sa} × x = ${sb} × ${sc}<br/>
+      ③ ${sa} × x = ${sb * sc}<br/>
+      ④ x = ${sb * sc} ÷ ${sa}<br/>
+      ⑤ <span style="color:#22c55e;font-weight:700">x = ${x}</span>`;
+  } else {
+    box.innerHTML = '请在第4个输入框填入 x';
+  }
+}
+
+function resetAll() {
+  load(2, 3, 4, 6);
+  document.getElementById('sa').value = 3;
+  document.getElementById('sb').value = 4;
+  document.getElementById('sc').value = 6;
+  document.getElementById('sd').value = 'x';
+  document.getElementById('solveBox').innerHTML = '';
+}
+
+check();
+</script>
+</body>
+</html>

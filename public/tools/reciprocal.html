@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>倒数的认识 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #fdf2f8 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #fbcfe8; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .number-input { width: 120px; text-align: center; font-size: 24px; font-weight: 800; border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px; font-family: 'Courier New', monospace; transition: border-color .2s; }
+    .number-input:focus { border-color: #ec4899; outline: none; }
+    .frac-input { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .frac-input input { width: 70px; text-align: center; font-size: 22px; font-weight: 800; border: 2px solid #e2e8f0; border-radius: 8px; padding: 6px; font-family: 'Courier New', monospace; }
+    .frac-input .frac-line { width: 70px; height: 3px; background: #334155; border-radius: 2px; }
+    .result-card { background: #fff; border: 2px solid #ec4899; border-radius: 16px; padding: 24px; width: 100%; max-width: 460px; text-align: center; }
+    .result-number { font-size: 36px; font-weight: 800; color: #ec4899; font-family: 'Courier New', monospace; margin: 12px 0; }
+    .equals-sign { font-size: 36px; font-weight: 800; color: #94a3b8; margin: 0 16px; }
+    .multiply-vis { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 16px 0; flex-wrap: wrap; }
+    .num-display { background: #fdf2f8; border: 2px solid #fbcfe8; border-radius: 12px; padding: 12px 20px; font-size: 28px; font-weight: 800; color: #334155; font-family: 'Courier New', monospace; }
+    .num-display .frac-display { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
+    .num-display .frac-display .fd-line { width: 100%; height: 2px; background: #334155; }
+    .mode-tab { display: flex; gap: 8px; margin-bottom: 20px; }
+    .mode-btn { padding: 8px 16px; border-radius: 10px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .mode-btn.active { background: #ec4899; color: #fff; border-color: #ec4899; }
+    .verify-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; width: 100%; max-width: 460px; margin-top: 16px; text-align: center; }
+    .verify-box .product { font-size: 28px; font-weight: 800; color: #22c55e; }
+    .pair-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; max-width: 460px; margin-top: 12px; }
+    .pair-item { background: #fff; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px; text-align: center; font-size: 14px; font-weight: 700; cursor: pointer; transition: all .15s; }
+    .pair-item:hover { border-color: #ec4899; background: #fdf2f8; }
+    .pair-item .pair-arr { color: #94a3b8; font-size: 12px; }
+    .pair-item .pair-result { color: #ec4899; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 14px; font-weight: 700; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #ec4899; color: #ec4899; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">🔄 倒数的认识</div>
+      <div class="edu-toolbar-subtitle">上册 · 第三单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="calculate()">求倒数</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div class="mode-tab">
+          <button class="mode-btn active" onclick="switchMode('int')">整数</button>
+          <button class="mode-btn" onclick="switchMode('frac')">分数</button>
+          <button class="mode-btn" onclick="switchMode('decimal')">小数</button>
+        </div>
+
+        <div id="inputArea"></div>
+
+        <div class="multiply-vis" id="resultVis"></div>
+
+        <div class="verify-box" id="verifyBox"></div>
+
+        <div style="font-size:14px;font-weight:700;color:#334155;margin-top:20px;margin-bottom:8px">常见倒数对照</div>
+        <div class="pair-grid" id="pairGrid"></div>
+      </div>
+
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">快速填入</div>
+          <button class="preset-btn" onclick="fillInt(5)">整数 5</button>
+          <button class="preset-btn" onclick="fillInt(12)">整数 12</button>
+          <button class="preset-btn" onclick="fillFrac(3,4)">分数 ¾</button>
+          <button class="preset-btn" onclick="fillFrac(2,5)">分数 ⅖</button>
+          <button class="preset-btn" onclick="fillDec(0.25)">小数 0.25</button>
+          <button class="preset-btn" onclick="fillDec(1.5)">小数 1.5</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>倒数知识</b><br/>
+          ● 乘积是 1 的两个数互为倒数<br/>
+          ● 求倒数：分子分母颠倒<br/>
+          ● 整数的倒数：整数分之一<br/>
+          ● 1 的倒数是 1<br/>
+          ● 0 没有倒数<br/>
+          ● 带分数先化假分数再颠倒
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+let currentMode = 'int';
+
+function switchMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach((b, i) => {
+    b.classList.toggle('active', ['int','frac','decimal'][i] === mode);
+  });
+  renderInput();
+  calculate();
+}
+
+function renderInput() {
+  const area = document.getElementById('inputArea');
+  if (currentMode === 'int') {
+    area.innerHTML = '<div style="display:flex;align-items:center;gap:12px;justify-content:center"><span style="font-size:16px;font-weight:700;color:#334155">输入整数：</span><input class="number-input" type="number" id="intInput" value="5" oninput="calculate()"/></div>';
+  } else if (currentMode === 'frac') {
+    area.innerHTML = '<div style="display:flex;align-items:center;gap:12px;justify-content:center"><span style="font-size:16px;font-weight:700;color:#334155">输入分数：</span><div class="frac-input"><input type="number" id="fracNum" value="3" oninput="calculate()"/><div class="frac-line"></div><input type="number" id="fracDen" value="4" oninput="calculate()"/></div></div>';
+  } else {
+    area.innerHTML = '<div style="display:flex;align-items:center;gap:12px;justify-content:center"><span style="font-size:16px;font-weight:700;color:#334155">输入小数：</span><input class="number-input" type="number" id="decInput" value="0.25" step="0.01" oninput="calculate()"/></div>';
+  }
+}
+
+function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { [a, b] = [b, a % b]; } return a; }
+
+function fracStr(num, den) {
+  if (den === 1) return `${num}`;
+  return `${num}/${den}`;
+}
+
+function toFrac(val) {
+  if (Number.isInteger(val)) return [val, 1];
+  const s = val.toString();
+  const dec = s.includes('.') ? s.split('.')[1] : '';
+  const d = Math.pow(10, dec.length);
+  const n = Math.round(val * d);
+  const g = gcd(n, d);
+  return [n / g, d / g];
+}
+
+function calculate() {
+  let num, den;
+  if (currentMode === 'int') {
+    const v = parseInt(document.getElementById('intInput')?.value) || 0;
+    num = v; den = 1;
+  } else if (currentMode === 'frac') {
+    num = parseInt(document.getElementById('fracNum')?.value) || 0;
+    den = parseInt(document.getElementById('fracDen')?.value) || 1;
+  } else {
+    const v = parseFloat(document.getElementById('decInput')?.value) || 0;
+    [num, den] = toFrac(v);
+  }
+
+  const vis = document.getElementById('resultVis');
+  const verify = document.getElementById('verifyBox');
+
+  if (num === 0 || den === 0) {
+    vis.innerHTML = '<div class="num-display">0</div><span class="equals-sign">×</span><span style="font-size:20px;color:#ef4444;font-weight:700">0 没有倒数！</span>';
+    verify.innerHTML = '<span style="color:#ef4444;font-weight:700">0 没有倒数，因为 0 × 任何数都等于 0</span>';
+    return;
+  }
+
+  const g = gcd(Math.abs(num), Math.abs(den));
+  const sn = num / g, sd = den / g;
+  const rn = sd, rd = sn;
+
+  const origStr = fracStr(sn, sd);
+  const recipStr = fracStr(rn, rd);
+
+  vis.innerHTML = `
+    <div class="num-display">${origStr}</div>
+    <span class="equals-sign">×</span>
+    <div class="num-display" style="border-color:#ec4899;color:#ec4899">${recipStr}</div>
+    <span class="equals-sign">=</span>
+    <div class="num-display" style="background:#f0fdf4;border-color:#22c55e;color:#22c55e">1</div>
+  `;
+
+  verify.innerHTML = `
+    <div style="font-size:14px;color:#64748b;margin-bottom:4px">验证：乘积 = ${origStr} × ${recipStr}</div>
+    <div class="product">= ${sn * rn}/${sd * rd} = 1 ✓</div>
+    <div style="font-size:13px;color:#64748b;margin-top:4px">${origStr} 和 ${recipStr} 互为倒数</div>
+  `;
+}
+
+function fillInt(v) { switchMode('int'); setTimeout(() => { document.getElementById('intInput').value = v; calculate(); }, 50); }
+function fillFrac(n, d) { switchMode('frac'); setTimeout(() => { document.getElementById('fracNum').value = n; document.getElementById('fracDen').value = d; calculate(); }, 50); }
+function fillDec(v) { switchMode('decimal'); setTimeout(() => { document.getElementById('decInput').value = v; calculate(); }, 50); }
+
+function resetAll() {
+  switchMode('int');
+  setTimeout(() => { document.getElementById('intInput').value = 5; calculate(); }, 50);
+}
+
+function buildPairGrid() {
+  const pairs = [[2,1],[3,1],[4,1],[5,1],[3,2],[5,3],[4,3],[7,2],[5,4],[8,3],[6,5],[9,4]];
+  const grid = document.getElementById('pairGrid');
+  grid.innerHTML = pairs.map(([n, d]) => {
+    const g = gcd(n, d);
+    const sn = n / g, sd = d / g;
+    const orig = fracStr(sn, sd);
+    const recip = fracStr(sd, sn);
+    return `<div class="pair-item" onclick="fillFrac(${sn},${sd})">${orig}<div class="pair-arr">↓ 颠倒</div><div class="pair-result">${recip}</div></div>`;
+  }).join('');
+}
+
+renderInput();
+calculate();
+buildPairGrid();
+</script>
+</body>
+</html>

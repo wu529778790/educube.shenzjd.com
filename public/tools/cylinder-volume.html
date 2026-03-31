@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>圆柱的表面积与体积 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 280px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #faf5ff 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #e9d5ff; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-row input { flex: 1; }
+    .slider-row .value-display { min-width: 40px; }
+    .formula-card { background: #fff; border: 2px solid #8b5cf6; border-radius: 12px; padding: 16px; width: 100%; max-width: 440px; margin: 8px 0; }
+    .formula-line { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+    .formula-line:last-child { border-bottom: none; }
+    .formula-name { color: #64748b; }
+    .formula-calc { font-family: 'Courier New', monospace; font-weight: 700; color: #334155; }
+    .formula-result { font-weight: 800; color: #8b5cf6; min-width: 80px; text-align: right; }
+    .bar-visual { width: 100%; max-width: 440px; height: 30px; border-radius: 15px; overflow: hidden; display: flex; margin: 6px 0; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">📐 圆柱的表面积与体积</div>
+      <div class="edu-toolbar-subtitle">下册 · 第三单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div style="font-size:16px;font-weight:700;color:#334155;margin-bottom:8px">调整参数实时计算</div>
+
+        <div class="formula-card" id="calcCard"></div>
+
+        <!-- 面积占比 -->
+        <div style="width:100%;max-width:440px;margin-top:8px">
+          <div style="font-size:13px;font-weight:700;color:#334155;margin-bottom:4px">表面积组成</div>
+          <div class="bar-visual" id="areaBar"></div>
+          <div style="display:flex;gap:16px;font-size:12px;margin-top:4px">
+            <span style="color:#8b5cf6">■ 侧面积</span>
+            <span style="color:#0ea5e9">■ 上底面</span>
+            <span style="color:#22c55e">■ 下底面</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">底面半径 r（cm）</div>
+          <div class="slider-row">
+            <input type="range" id="rSlider" min="1" max="20" value="5" oninput="calculate()"/>
+            <span class="value-display" id="rVal">5</span>
+          </div>
+        </div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">高 h（cm）</div>
+          <div class="slider-row">
+            <input type="range" id="hSlider" min="1" max="30" value="10" oninput="calculate()"/>
+            <span class="value-display" id="hVal">10</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>圆柱公式</b><br/>
+          ● 底面周长 C = 2πr<br/>
+          ● 底面积 S底 = πr²<br/>
+          ● 侧面积 S侧 = 2πrh<br/>
+          ● 表面积 S = 2πr² + 2πrh<br/>
+          &nbsp;&nbsp;= 2πr(r + h)<br/>
+          ● 体积 V = πr²h<br/>
+          ● 体积 = 底面积 × 高
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function calculate() {
+  const r = parseFloat(document.getElementById('rSlider').value);
+  const h = parseFloat(document.getElementById('hSlider').value);
+  document.getElementById('rVal').textContent = r;
+  document.getElementById('hVal').textContent = h;
+
+  const C = 2 * Math.PI * r;
+  const Sbase = Math.PI * r * r;
+  const Slateral = 2 * Math.PI * r * h;
+  const S = 2 * Sbase + Slateral;
+  const V = Math.PI * r * r * h;
+
+  const card = document.getElementById('calcCard');
+  card.innerHTML = `
+    <div class="formula-line"><span class="formula-name">底面周长 C</span><span class="formula-calc">2π×${r}</span><span class="formula-result">${C.toFixed(2)}</span></div>
+    <div class="formula-line"><span class="formula-name">底面积 S底</span><span class="formula-calc">π×${r}²</span><span class="formula-result">${Sbase.toFixed(2)}</span></div>
+    <div class="formula-line"><span class="formula-name">侧面积 S侧</span><span class="formula-calc">2π×${r}×${h}</span><span class="formula-result">${Slateral.toFixed(2)}</span></div>
+    <div class="formula-line" style="background:#faf5ff;border-radius:6px;padding:8px"><span class="formula-name" style="font-weight:700">表面积 S</span><span class="formula-calc">2πr(r+h)</span><span class="formula-result" style="font-size:16px">${S.toFixed(2)}</span></div>
+    <div class="formula-line" style="background:#f0fdf4;border-radius:6px;padding:8px"><span class="formula-name" style="font-weight:700">体积 V</span><span class="formula-calc">π×${r}²×${h}</span><span class="formula-result" style="font-size:16px;color:#22c55e">${V.toFixed(2)}</span></div>
+  `;
+
+  // 面积占比条
+  const bar = document.getElementById('areaBar');
+  const total = S;
+  const slPct = (Slateral / total * 100);
+  const s1Pct = (Sbase / total * 100);
+  const s2Pct = (Sbase / total * 100);
+  bar.innerHTML = `
+    <div style="width:${slPct}%;background:#8b5cf6;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600">侧面积 ${slPct.toFixed(0)}%</div>
+    <div style="width:${s1Pct}%;background:#0ea5e9;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600">上${s1Pct.toFixed(0)}%</div>
+    <div style="width:${s2Pct}%;background:#22c55e;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600">下${s2Pct.toFixed(0)}%</div>`;
+}
+
+function resetAll() {
+  document.getElementById('rSlider').value = 5;
+  document.getElementById('hSlider').value = 10;
+  calculate();
+}
+
+calculate();
+</script>
+</body>
+</html>

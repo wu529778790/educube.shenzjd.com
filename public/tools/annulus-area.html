@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>圆环面积 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #faf5ff 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #e9d5ff; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-row input { flex: 1; }
+    .slider-row .value-display { min-width: 40px; font-weight: 700; }
+    canvas { border-radius: 16px; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    .formula-card { background: #fff; border: 2px solid #8b5cf6; border-radius: 14px; padding: 20px; width: 100%; max-width: 460px; margin-top: 16px; }
+    .formula-line { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 15px; }
+    .formula-line:last-child { border-bottom: none; }
+    .f-name { color: #64748b; font-weight: 600; }
+    .f-calc { font-family: 'Courier New', monospace; font-weight: 700; color: #334155; font-size: 14px; }
+    .f-result { font-weight: 800; color: #8b5cf6; min-width: 80px; text-align: right; }
+    .highlight { background: #faf5ff; border-radius: 8px; padding: 10px; }
+    .step-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; width: 100%; max-width: 460px; margin-top: 12px; font-size: 14px; line-height: 2; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #8b5cf6; color: #8b5cf6; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">⭕ 圆环面积</div>
+      <div class="edu-toolbar-subtitle">上册 · 第五单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="cvs" width="400" height="400"></canvas>
+
+        <div class="formula-card" id="calcCard"></div>
+
+        <div class="step-box" id="stepBox"></div>
+      </div>
+
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">外圆半径 R（cm）</div>
+          <div class="slider-row">
+            <input type="range" id="rSlider" min="2" max="15" value="8" oninput="update()"/>
+            <span class="value-display" id="rVal">8</span>
+          </div>
+        </div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">内圆半径 r（cm）</div>
+          <div class="slider-row">
+            <input type="range" id="innerSlider" min="1" max="14" value="4" oninput="update()"/>
+            <span class="value-display" id="innerVal">4</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设</div>
+          <button class="preset-btn" onclick="load(10,4)">R=10, r=4</button>
+          <button class="preset-btn" onclick="load(8,3)">R=8, r=3</button>
+          <button class="preset-btn" onclick="load(6,2)">R=6, r=2</button>
+          <button class="preset-btn" onclick="load(12,6)">R=12, r=6</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>圆环面积公式</b><br/>
+          ● S环 = πR² − πr²<br/>
+          ● S环 = π(R² − r²)<br/>
+          ● 圆环 = 大圆面积 − 小圆面积<br/>
+          ● R 为外圆半径，r 为内圆半径<br/>
+          ● R &gt; r 才能形成圆环
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const cvs = document.getElementById('cvs');
+const ctx = cvs.getContext('2d');
+
+function update() {
+  let R = parseFloat(document.getElementById('rSlider').value);
+  let r = parseFloat(document.getElementById('innerSlider').value);
+
+  // Ensure R > r
+  if (r >= R) {
+    r = R - 1;
+    document.getElementById('innerSlider').value = r;
+  }
+  document.getElementById('innerSlider').max = R - 1;
+
+  document.getElementById('rVal').textContent = R;
+  document.getElementById('innerVal').textContent = r;
+
+  draw(R, r);
+  calc(R, r);
+}
+
+function draw(R, r) {
+  const W = cvs.width, H = cvs.height;
+  const cx = W / 2, cy = H / 2;
+  const scale = Math.min(W, H) / 36;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Draw outer circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, R * scale, 0, Math.PI * 2);
+  ctx.fillStyle = '#f3e8ff';
+  ctx.fill();
+  ctx.strokeStyle = '#8b5cf6';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Draw inner circle (cut out)
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * scale, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.strokeStyle = '#a855f7';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Annulus shading
+  ctx.beginPath();
+  ctx.arc(cx, cy, R * scale, 0, Math.PI * 2);
+  ctx.arc(cx, cy, r * scale, 0, Math.PI * 2, true);
+  ctx.fillStyle = 'rgba(139, 92, 246, 0.15)';
+  ctx.fill();
+
+  // Draw radius lines
+  // Outer radius
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + R * scale, cy);
+  ctx.strokeStyle = '#8b5cf6';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = '#8b5cf6';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`R=${R}`, cx + R * scale / 2, cy - 10);
+
+  // Inner radius
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx, cy - r * scale);
+  ctx.strokeStyle = '#a855f7';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 3]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = '#a855f7';
+  ctx.fillText(`r=${r}`, cx + 14, cy - r * scale / 2);
+
+  // Center dot
+  ctx.beginPath();
+  ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#334155';
+  ctx.fill();
+}
+
+function calc(R, r) {
+  const Souter = Math.PI * R * R;
+  const Sinner = Math.PI * r * r;
+  const Sannulus = Souter - Sinner;
+  const Sformula = Math.PI * (R * R - r * r);
+
+  const card = document.getElementById('calcCard');
+  card.innerHTML = `
+    <div class="formula-line"><span class="f-name">外圆面积 S大</span><span class="f-calc">π×${R}²</span><span class="f-result">${Souter.toFixed(2)}</span></div>
+    <div class="formula-line"><span class="f-name">内圆面积 S小</span><span class="f-calc">π×${r}²</span><span class="f-result">${Sinner.toFixed(2)}</span></div>
+    <div class="formula-line highlight"><span class="f-name" style="font-weight:700">圆环面积 S环</span><span class="f-calc">π(${R}²−${r}²)</span><span class="f-result" style="font-size:18px">${Sannulus.toFixed(2)}</span></div>
+  `;
+
+  const step = document.getElementById('stepBox');
+  step.innerHTML = `
+    <div style="font-size:15px;font-weight:700;margin-bottom:8px">计算过程</div>
+    <div><b>方法一：相减</b></div>
+    <div>S = πR² − πr²</div>
+    <div>S = ${Souter.toFixed(2)} − ${Sinner.toFixed(2)}</div>
+    <div>S = <b style="color:#8b5cf6">${Sannulus.toFixed(2)} cm²</b></div>
+    <div style="margin-top:8px"><b>方法二：提取公因数</b></div>
+    <div>S = π(R² − r²)</div>
+    <div>S = π(${R*R} − ${r*r})</div>
+    <div>S = π × ${R*R - r*r}</div>
+    <div>S = <b style="color:#8b5cf6">${Sformula.toFixed(2)} cm²</b></div>
+  `;
+}
+
+function load(R, r) {
+  document.getElementById('rSlider').value = R;
+  document.getElementById('innerSlider').value = r;
+  update();
+}
+
+function resetAll() { load(8, 4); }
+
+update();
+</script>
+</body>
+</html>

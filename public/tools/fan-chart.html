@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>扇形统计图 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 280px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #ecfdf5 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #06b6d4; color: #06b6d4; }
+    .data-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+    .data-row input { width: 60px; text-align: center; font-size: 14px; font-weight: 600; border: 1.5px solid #e2e8f0; border-radius: 6px; padding: 4px; }
+    .data-row .color-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+    .data-row .name { width: 50px; font-size: 12px; font-weight: 600; }
+    .data-row .pct { font-size: 12px; color: #64748b; min-width: 40px; }
+    canvas#chart { max-width: 400px; max-height: 400px; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">🍕 扇形统计图</div>
+      <div class="edu-toolbar-subtitle">上册 · 第七单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="drawChart()">绘制</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="chart" width="400" height="400"></canvas>
+        <div id="legend" style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;justify-content:center"></div>
+      </div>
+
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">数据输入</div>
+          <div id="dataInputs"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设数据</div>
+          <button class="preset-btn" onclick="loadPreset('sport')">课外活动喜好</button>
+          <button class="preset-btn" onclick="loadPreset('traffic')">出行方式</button>
+          <button class="preset-btn" onclick="loadPreset('fruit')">水果喜好</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>扇形统计图知识</b><br/>
+          ● 用圆表示总数，扇形表示各部分<br/>
+          ● 扇形面积占总面积的百分比 = 该部分占总数的百分比<br/>
+          ● 圆心角 = 百分比 × 360°<br/>
+          ● 所有百分比之和 = 100%
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const COLORS = ['#ef4444','#3b82f6','#22c55e','#f97316','#8b5cf6','#eab308','#06b6d4','#ec4899'];
+let data = [
+  { name: '足球', value: 12 },
+  { name: '篮球', value: 8 },
+  { name: '游泳', value: 6 },
+  { name: '跑步', value: 4 },
+  { name: '其他', value: 10 },
+];
+
+function buildInputs() {
+  const el = document.getElementById('dataInputs');
+  el.innerHTML = '';
+  data.forEach((d, i) => {
+    const row = document.createElement('div');
+    row.className = 'data-row';
+    row.innerHTML = `<div class="color-dot" style="background:${COLORS[i%COLORS.length]}"></div>
+      <input type="text" class="name" value="${d.name}" onchange="data[${i}].name=this.value"/>
+      <input type="number" value="${d.value}" min="0" max="999" onchange="data[${i}].value=parseInt(this.value)||0"/>
+      <span class="pct" id="pct${i}"></span>`;
+    el.appendChild(row);
+  });
+}
+
+function drawChart() {
+  const canvas = document.getElementById('chart');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = 400 * dpr;
+  canvas.height = 400 * dpr;
+  canvas.style.width = '400px';
+  canvas.style.height = '400px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const total = data.reduce((s, d) => s + d.value, 0);
+  if (total === 0) return;
+
+  const cx = 200, cy = 200, r = 150;
+  let startAngle = -Math.PI / 2;
+
+  // 清除
+  ctx.clearRect(0, 0, 400, 400);
+
+  data.forEach((d, i) => {
+    const pct = d.value / total;
+    const sweepAngle = pct * Math.PI * 2;
+
+    // 扇形
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, startAngle + sweepAngle);
+    ctx.closePath();
+    ctx.fillStyle = COLORS[i % COLORS.length];
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 标签
+    if (pct > 0.03) {
+      const midAngle = startAngle + sweepAngle / 2;
+      const labelR = r * 0.65;
+      const lx = cx + labelR * Math.cos(midAngle);
+      const ly = cy + labelR * Math.sin(midAngle);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${d.name}`, lx, ly - 8);
+      ctx.fillText(`${(pct * 100).toFixed(1)}%`, lx, ly + 8);
+    }
+
+    // 更新百分比
+    const pctEl = document.getElementById('pct' + i);
+    if (pctEl) pctEl.textContent = (pct * 100).toFixed(1) + '%';
+
+    startAngle += sweepAngle;
+  });
+
+  // 中心留白（甜甜圈效果）
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.35, 0, Math.PI * 2);
+  ctx.fillStyle = '#fdfbf7';
+  ctx.fill();
+  ctx.fillStyle = '#1a3a5c';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('总计', cx, cy - 10);
+  ctx.fillText(total.toString(), cx, cy + 12);
+
+  // 图例
+  const legendEl = document.getElementById('legend');
+  legendEl.innerHTML = '';
+  data.forEach((d, i) => {
+    const pct = (d.value / total * 100).toFixed(1);
+    const angle = (d.value / total * 360).toFixed(1);
+    legendEl.innerHTML += `<span style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:600">
+      <span style="width:10px;height:10px;border-radius:2px;background:${COLORS[i%COLORS.length]}"></span>
+      ${d.name} ${pct}% (${angle}°)</span>`;
+  });
+}
+
+function loadPreset(type) {
+  if (type === 'sport') {
+    data = [
+      { name: '足球', value: 12 },
+      { name: '篮球', value: 8 },
+      { name: '游泳', value: 6 },
+      { name: '跑步', value: 4 },
+      { name: '其他', value: 10 },
+    ];
+  } else if (type === 'traffic') {
+    data = [
+      { name: '步行', value: 8 },
+      { name: '公交', value: 15 },
+      { name: '私家车', value: 10 },
+      { name: '自行车', value: 12 },
+      { name: '地铁', value: 5 },
+    ];
+  } else if (type === 'fruit') {
+    data = [
+      { name: '苹果', value: 18 },
+      { name: '香蕉', value: 12 },
+      { name: '草莓', value: 15 },
+      { name: '葡萄', value: 8 },
+      { name: '西瓜', value: 7 },
+    ];
+  }
+  buildInputs();
+  drawChart();
+}
+
+function resetAll() {
+  loadPreset('sport');
+}
+
+buildInputs();
+drawChart();
+</script>
+</body>
+</html>

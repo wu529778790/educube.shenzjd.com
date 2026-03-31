@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>按比分配 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #f0fdf4 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .input-row { display: flex; align-items: center; gap: 8px; justify-content: center; margin: 8px 0; }
+    .input-row input { width: 80px; text-align: center; font-size: 20px; font-weight: 800; border: 2px solid #e2e8f0; border-radius: 10px; padding: 8px; font-family: 'Courier New', monospace; }
+    .input-row input:focus { border-color: #22c55e; outline: none; }
+    .input-row span { font-size: 20px; font-weight: 800; color: #64748b; }
+    .ratio-label { font-size: 16px; font-weight: 700; color: #334155; margin-bottom: 4px; }
+    .total-input { width: 140px; text-align: center; font-size: 22px; font-weight: 800; border: 2px solid #e2e8f0; border-radius: 10px; padding: 10px; font-family: 'Courier New', monospace; }
+    .total-input:focus { border-color: #22c55e; outline: none; }
+    .bar-container { width: 100%; max-width: 500px; margin: 12px 0; }
+    .bar-label { font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 4px; }
+    .bar-track { height: 40px; border-radius: 20px; overflow: hidden; display: flex; background: #f1f5f9; }
+    .bar-seg { display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: #fff; transition: width .3s; min-width: 30px; }
+    .result-card { background: #fff; border: 2px solid #22c55e; border-radius: 16px; padding: 20px; width: 100%; max-width: 500px; }
+    .result-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 16px; }
+    .result-row:last-child { border-bottom: none; }
+    .result-name { font-weight: 700; }
+    .result-val { font-weight: 800; font-family: 'Courier New', monospace; font-size: 20px; }
+    .step-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; width: 100%; max-width: 500px; margin-top: 12px; font-size: 14px; line-height: 2; }
+    .step-box .step-num { display: inline-block; width: 22px; height: 22px; background: #22c55e; color: #fff; border-radius: 50%; text-align: center; font-size: 12px; font-weight: 800; line-height: 22px; margin-right: 6px; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #22c55e; color: #22c55e; }
+    .add-btn { width: 36px; height: 36px; border-radius: 50%; border: 2px solid #22c55e; background: #fff; color: #22c55e; font-size: 20px; font-weight: 800; cursor: pointer; transition: all .15s; }
+    .add-btn:hover { background: #22c55e; color: #fff; }
+    .remove-btn { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid #ef4444; background: #fff; color: #ef4444; font-size: 16px; cursor: pointer; transition: all .15s; }
+    .remove-btn:hover { background: #ef4444; color: #fff; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">⚖ 按比分配</div>
+      <div class="edu-toolbar-subtitle">上册 · 第四单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="calculate()">分配</button>
+      <button class="edu-btn edu-btn-accent" onclick="addPart()">+添加</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div class="ratio-label">各部分的比</div>
+        <div class="input-row" id="ratioInputs"></div>
+
+        <div class="ratio-label" style="margin-top:16px">总数</div>
+        <div class="input-row">
+          <input class="total-input" type="number" id="totalInput" value="120" oninput="calculate()"/>
+          <span style="font-size:14px;color:#64748b">（总量）</span>
+        </div>
+
+        <div class="bar-container">
+          <div class="bar-label">分配可视化</div>
+          <div class="bar-track" id="distBar"></div>
+          <div id="barLabels" style="display:flex;gap:12px;margin-top:6px;font-size:12px;flex-wrap:wrap"></div>
+        </div>
+
+        <div class="result-card" id="resultCard"></div>
+
+        <div class="step-box" id="stepBox"></div>
+      </div>
+
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设场景</div>
+          <button class="preset-btn" onclick="loadScene(2,3,120,'甲乙分 120')">甲:乙 = 2:3，共 120</button>
+          <button class="preset-btn" onclick="loadScene(1,2,3,180,'三兄弟分 180')">三兄弟 1:2:3，共 180</button>
+          <button class="preset-btn" onclick="loadScene(3,5,240,'两班 240 本')">3:5 分 240 本书</button>
+          <button class="preset-btn" onclick="loadScene(2,3,5,500,'三批 500 元')">2:3:5 分 500 元</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>按比分配</b><br/>
+          ● 已知总量和各部分的比<br/>
+          ● 求各部分的具体数量<br/>
+          ● 步骤：<br/>
+          &nbsp;&nbsp;1. 求出总份数<br/>
+          &nbsp;&nbsp;2. 每份 = 总量 ÷ 总份数<br/>
+          &nbsp;&nbsp;3. 各部分 = 每份 × 对应份数<br/>
+          ● 验算：各部分之和 = 总量
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const colors = ['#22c55e','#f97316','#3b82f6','#ec4899','#8b5cf6','#eab308'];
+let parts = [2, 3];
+let partNames = ['甲', '乙', '丙', '丁', '戊', '己'];
+
+function renderInputs() {
+  const container = document.getElementById('ratioInputs');
+  container.innerHTML = parts.map((p, i) => `
+    <input type="number" value="${p}" min="1" oninput="updateParts(${i}, this.value)" style="border-color:${colors[i % colors.length]}"/>
+    ${i < parts.length - 1 ? '<span>:</span>' : ''}
+    ${parts.length > 2 ? `<button class="remove-btn" onclick="removePart(${i})">−</button>` : ''}
+  `).join('') + `<button class="add-btn" onclick="addPart()">+</button>`;
+}
+
+function updateParts(i, val) {
+  parts[i] = parseInt(val) || 0;
+  calculate();
+}
+
+function addPart() {
+  if (parts.length >= 6) return;
+  parts.push(1);
+  renderInputs();
+  calculate();
+}
+
+function removePart(i) {
+  if (parts.length <= 2) return;
+  parts.splice(i, 1);
+  renderInputs();
+  calculate();
+}
+
+function calculate() {
+  const total = parseFloat(document.getElementById('totalInput').value) || 0;
+  const sumParts = parts.reduce((a, b) => a + b, 0);
+  if (sumParts === 0) return;
+
+  const each = total / sumParts;
+  const results = parts.map(p => each * p);
+
+  // Bar visualization
+  const bar = document.getElementById('distBar');
+  bar.innerHTML = parts.map((p, i) => {
+    const pct = (p / sumParts * 100);
+    return `<div class="bar-seg" style="width:${pct}%;background:${colors[i % colors.length]}">${results[i].toFixed(1)}</div>`;
+  }).join('');
+
+  const labels = document.getElementById('barLabels');
+  labels.innerHTML = parts.map((p, i) => `<span style="color:${colors[i % colors.length]}">■ ${partNames[i]}</span>`).join('');
+
+  // Result card
+  const card = document.getElementById('resultCard');
+  card.innerHTML = `<div style="font-size:16px;font-weight:700;color:#334155;margin-bottom:12px">分配结果</div>` +
+    parts.map((p, i) => `<div class="result-row">
+      <span class="result-name" style="color:${colors[i % colors.length]}">${partNames[i]} (${p}份)</span>
+      <span class="result-val" style="color:${colors[i % colors.length]}">${results[i].toFixed(2)}</span>
+    </div>`).join('') +
+    `<div class="result-row" style="background:#f0fdf4;border-radius:8px;padding:10px;margin-top:4px">
+      <span class="result-name">合计</span>
+      <span class="result-val" style="color:#22c55e">${results.reduce((a, b) => a + b, 0).toFixed(2)}</span>
+    </div>`;
+
+  // Steps
+  const stepBox = document.getElementById('stepBox');
+  stepBox.innerHTML = `
+    <div style="font-size:15px;font-weight:700;margin-bottom:8px">解题步骤</div>
+    <div><span class="step-num">1</span>总份数 = ${parts.join(' + ')} = <b>${sumParts}</b></div>
+    <div><span class="step-num">2</span>每份 = ${total} ÷ ${sumParts} = <b style="color:#22c55e">${each.toFixed(2)}</b></div>
+    ${parts.map((p, i) => `<div><span class="step-num">${i + 3}</span>${partNames[i]} = ${each.toFixed(2)} × ${p} = <b style="color:${colors[i % colors.length]}">${results[i].toFixed(2)}</b></div>`).join('')}
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid #bbf7d0"><span class="step-num">✓</span>验算：${results.map(r => r.toFixed(2)).join(' + ')} = <b style="color:#22c55e">${results.reduce((a, b) => a + b, 0).toFixed(2)}</b></div>
+  `;
+}
+
+function loadScene(...args) {
+  const last = args[args.length - 1];
+  if (typeof last === 'string') args.pop();
+  parts = args.slice(0, -1).map(Number);
+  document.getElementById('totalInput').value = args[args.length - 1];
+  renderInputs();
+  calculate();
+}
+
+function resetAll() {
+  parts = [2, 3];
+  document.getElementById('totalInput').value = 120;
+  renderInputs();
+  calculate();
+}
+
+renderInputs();
+calculate();
+</script>
+</body>
+</html>

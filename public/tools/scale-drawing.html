@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>比例尺应用 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #ecfdf5 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #22c55e; color: #22c55e; }
+    .calc-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; justify-content: center; }
+    .calc-row input { width: 100px; text-align: center; font-size: 16px; font-weight: 700; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 6px; }
+    .calc-row select { font-size: 14px; font-weight: 600; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 6px; }
+    .result-card { background: #fff; border: 2px solid #22c55e; border-radius: 12px; padding: 16px; text-align: center; width: 100%; max-width: 460px; margin: 12px 0; }
+    .result-big { font-size: 24px; font-weight: 800; color: #22c55e; }
+    .map-canvas { border: 2px solid #e2e8f0; border-radius: 8px; background: #fff; margin: 12px 0; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">🗺️ 比例尺应用</div>
+      <div class="edu-toolbar-subtitle">下册 · 第四单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="calculate()">计算</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <!-- 已知比例尺和图上距离，求实际距离 -->
+        <div style="font-size:16px;font-weight:700;color:#334155;margin-bottom:8px">比例尺计算器</div>
+
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;width:100%;max-width:460px">
+          <div class="calc-row">
+            <span style="font-size:14px;font-weight:600">比例尺 1 :</span>
+            <input type="number" id="scaleVal" value="10000" onchange="calculate()"/>
+          </div>
+          <div class="calc-row">
+            <span style="font-size:14px;font-weight:600">图上距离</span>
+            <input type="number" id="mapDist" value="5" onchange="calculate()"/>
+            <select id="mapUnit" onchange="calculate()">
+              <option value="cm">厘米</option>
+              <option value="mm">毫米</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="result-card" id="resultCard"></div>
+
+        <!-- 反向计算 -->
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;width:100%;max-width:460px;margin-top:8px">
+          <div style="font-size:14px;font-weight:700;color:#334155;margin-bottom:8px">反向计算：已知实际距离求图上距离</div>
+          <div class="calc-row">
+            <span style="font-size:14px;font-weight:600">实际距离</span>
+            <input type="number" id="realDist" value="500" onchange="calcReverse()"/>
+            <select id="realUnit" onchange="calcReverse()">
+              <option value="m">米</option>
+              <option value="km">千米</option>
+            </select>
+          </div>
+          <div class="result-card" id="reverseResult" style="margin:8px 0 0"></div>
+        </div>
+
+        <!-- 地图示意 -->
+        <div style="font-size:14px;font-weight:700;color:#334155;margin-top:12px">地图缩放示意</div>
+        <canvas id="mapCanvas" class="map-canvas" width="420" height="200"></canvas>
+      </div>
+
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设比例尺</div>
+          <button class="preset-btn" onclick="setScale(100)">1:100（教室平面图）</button>
+          <button class="preset-btn" onclick="setScale(10000)">1:10000（街区地图）</button>
+          <button class="preset-btn" onclick="setScale(100000)">1:100000（城市地图）</button>
+          <button class="preset-btn" onclick="setScale(5000000)">1:5000000（中国地图）</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>比例尺知识</b><br/>
+          ● 比例尺 = 图上距离 : 实际距离<br/>
+          ● 1:10000 → 图上1cm = 实际100m<br/>
+          ● 数值比例尺：1:n<br/>
+          ● 线段比例尺：画一条标有实际距离的线段<br/>
+          ● 放大比例尺：n:1（n>1）<br/>
+          ● 缩小比例尺：1:n（n>1）
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function calculate() {
+  const scale = parseFloat(document.getElementById('scaleVal').value) || 1;
+  const mapDist = parseFloat(document.getElementById('mapDist').value) || 0;
+  const mapUnit = document.getElementById('mapUnit').value;
+
+  let distCm = mapDist;
+  if (mapUnit === 'mm') distCm = mapDist / 10;
+
+  const realCm = distCm * scale;
+  const realM = realCm / 100;
+  const realKm = realM / 1000;
+
+  let realStr;
+  if (realKm >= 1) {
+    realStr = `${realKm.toFixed(2)} 千米`;
+  } else if (realM >= 1) {
+    realStr = `${realM.toFixed(2)} 米`;
+  } else {
+    realStr = `${realCm.toFixed(1)} 厘米`;
+  }
+
+  document.getElementById('resultCard').innerHTML =
+    `<div style="font-size:12px;color:#64748b">实际距离</div>
+     <div class="result-big">${realStr}</div>
+     <div style="font-size:12px;color:#64748b;margin-top:4px">${mapDist}${mapUnit === 'mm' ? '毫米' : '厘米'} × ${scale.toLocaleString()} = ${realCm.toLocaleString()} 厘米</div>`;
+
+  drawMap(distCm, scale);
+}
+
+function calcReverse() {
+  const scale = parseFloat(document.getElementById('scaleVal').value) || 1;
+  const realDist = parseFloat(document.getElementById('realDist').value) || 0;
+  const realUnit = document.getElementById('realUnit').value;
+
+  let realCm = realDist;
+  if (realUnit === 'm') realCm = realDist * 100;
+  else if (realUnit === 'km') realCm = realDist * 100000;
+
+  const mapCm = realCm / scale;
+  const mapMm = mapCm * 10;
+
+  let mapStr = mapCm < 1 ? `${mapMm.toFixed(2)} 毫米` : `${mapCm.toFixed(2)} 厘米`;
+
+  document.getElementById('reverseResult').innerHTML =
+    `<div style="font-size:12px;color:#64748b">图上距离</div>
+     <div class="result-big" style="font-size:20px">${mapStr}</div>`;
+}
+
+function drawMap(distCm, scale) {
+  const canvas = document.getElementById('mapCanvas');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = 420 * dpr;
+  canvas.height = 200 * dpr;
+  canvas.style.width = '420px';
+  canvas.style.height = '200px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, 420, 200);
+
+  // 图上距离线
+  const lineLen = Math.min(distCm * 20, 300);
+  const y1 = 50;
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(60, y1);
+  ctx.lineTo(60 + lineLen, y1);
+  ctx.stroke();
+  ctx.fillStyle = '#ef4444';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`图上 ${distCm}cm`, 60 + lineLen / 2, y1 - 12);
+
+  // 箭头标注实际距离
+  const y2 = 90;
+  ctx.strokeStyle = '#22c55e';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(60, y2);
+  ctx.lineTo(60 + lineLen * 3, y2);
+  ctx.stroke();
+  const realKm = distCm * scale / 100000;
+  ctx.fillStyle = '#22c55e';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'center';
+  const realLabel = realKm >= 1 ? `${realKm.toFixed(1)}km` : `${(distCm * scale / 100).toFixed(0)}m`;
+  ctx.fillText(`实际 ${realLabel}`, 60 + lineLen * 1.5, y2 - 10);
+
+  // 比例尺尺
+  const y3 = 150;
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(60, y3);
+  ctx.lineTo(360, y3);
+  ctx.stroke();
+  for (let i = 0; i <= 6; i++) {
+    ctx.beginPath();
+    ctx.moveTo(60 + i * 50, y3 - 5);
+    ctx.lineTo(60 + i * 50, y3 + 5);
+    ctx.stroke();
+  }
+  ctx.fillStyle = '#334155';
+  ctx.font = '11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`比例尺 1:${scale.toLocaleString()}`, 210, y3 + 24);
+}
+
+function setScale(v) {
+  document.getElementById('scaleVal').value = v;
+  calculate();
+}
+
+function resetAll() {
+  document.getElementById('scaleVal').value = 10000;
+  document.getElementById('mapDist').value = 5;
+  document.getElementById('mapUnit').value = 'cm';
+  document.getElementById('realDist').value = 500;
+  document.getElementById('realUnit').value = 'm';
+  calculate();
+}
+
+calculate();
+</script>
+</body>
+</html>

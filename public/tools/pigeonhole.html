@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>鸽巢原理 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #fff7ed 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #fed7aa; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-row input { flex: 1; }
+    .slider-row .value-display { min-width: 24px; }
+    .box-row { display: flex; gap: 16px; margin: 16px 0; flex-wrap: wrap; justify-content: center; }
+    .pigeonhole { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 80px; }
+    .hole-box { width: 80px; min-height: 60px; border: 2px solid #e2e8f0; border-radius: 10px; background: #fff; display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; justify-content: center; align-items: center; transition: border-color .2s; }
+    .hole-box.highlight { border-color: #f97316; background: #fff7ed; }
+    .ball { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; transition: transform .3s; }
+    .hole-label { font-size: 12px; font-weight: 600; color: #64748b; }
+    .conclusion { background: #fff; border: 2px solid #f97316; border-radius: 12px; padding: 16px; text-align: center; width: 100%; max-width: 460px; margin-top: 12px; }
+    .conclusion .big { font-size: 18px; font-weight: 800; color: #f97316; }
+    .distribute-btn { padding: 8px 16px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; margin: 4px; }
+    .distribute-btn:hover { border-color: #f97316; color: #f97316; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">🐦 鸽巢原理</div>
+      <div class="edu-toolbar-subtitle">下册 · 数学广角</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-accent" onclick="randomDistribute()">随机分配</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div style="font-size:14px;font-weight:700;color:#334155">小球数</div>
+        <div class="slider-row" style="width:200px">
+          <input type="range" id="ballSlider" min="1" max="15" value="5" oninput="updateSettings()"/>
+          <span class="value-display" id="ballVal">5</span>
+        </div>
+        <div style="font-size:14px;font-weight:700;color:#334155;margin-top:8px">盒子数</div>
+        <div class="slider-row" style="width:200px">
+          <input type="range" id="boxSlider" min="1" max="6" value="3" oninput="updateSettings()"/>
+          <span class="value-display" id="boxVal">3</span>
+        </div>
+
+        <div class="box-row" id="boxRow"></div>
+
+        <button class="edu-btn edu-btn-accent" onclick="randomDistribute()" style="margin:8px 0">随机分配</button>
+
+        <div class="conclusion" id="conclusion"></div>
+      </div>
+
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">经典问题</div>
+          <button class="distribute-btn" onclick="loadProblem('socks')">4双袜子取5只</button>
+          <button class="distribute-btn" onclick="loadProblem('birthday')">13个人同月生日</button>
+          <button class="distribute-btn" onclick="loadProblem('hand')">5人握3次手</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>鸽巢原理（抽屉原理）</b><br/>
+          ● 把 n+1 个物品放入 n 个抽屉<br/>
+          ● 至少有一个抽屉有 ≥2 个物品<br/>
+          ● 把 k 个物品放入 n 个抽屉<br/>
+          ● 至少有一个抽屉有 ≥⌈k/n⌉ 个<br/>
+          ● ⌈k/n⌉ = (k-1)/n + 1（向上取整）<br/>
+          ● 关键：找"抽屉"和"物品"
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const BALL_COLORS = ['#ef4444','#3b82f6','#22c55e','#f97316','#8b5cf6','#eab308','#06b6d4','#ec4899','#14b8a6','#6366f1','#f43f5e','#84cc16','#0d9488','#7c3aed','#a855f7'];
+let numBalls = 5, numBoxes = 3;
+let boxes = [];
+
+function updateSettings() {
+  numBalls = parseInt(document.getElementById('ballSlider').value);
+  numBoxes = parseInt(document.getElementById('boxSlider').value);
+  document.getElementById('ballVal').textContent = numBalls;
+  document.getElementById('boxVal').textContent = numBoxes;
+  boxes = Array.from({ length: numBoxes }, () => []);
+  renderBoxes();
+  updateConclusion();
+}
+
+function randomDistribute() {
+  boxes = Array.from({ length: numBoxes }, () => []);
+  for (let i = 0; i < numBalls; i++) {
+    const b = Math.floor(Math.random() * numBoxes);
+    boxes[b].push(i);
+  }
+  renderBoxes();
+  updateConclusion();
+}
+
+function renderBoxes() {
+  const row = document.getElementById('boxRow');
+  row.innerHTML = '';
+  const maxCount = Math.max(...boxes.map(b => b.length), 0);
+
+  boxes.forEach((box, i) => {
+    const div = document.createElement('div');
+    div.className = 'pigeonhole';
+    const isHighlight = box.length === maxCount && box.length > 1;
+    const holeDiv = document.createElement('div');
+    holeDiv.className = 'hole-box' + (isHighlight ? ' highlight' : '');
+    box.forEach(ballIdx => {
+      const ball = document.createElement('div');
+      ball.className = 'ball';
+      ball.style.background = BALL_COLORS[ballIdx % BALL_COLORS.length];
+      ball.textContent = ballIdx + 1;
+      holeDiv.appendChild(ball);
+    });
+    if (box.length === 0) {
+      holeDiv.innerHTML = '<span style="color:#cbd5e1;font-size:12px">空</span>';
+    }
+    div.appendChild(holeDiv);
+    const label = document.createElement('div');
+    label.className = 'hole-label';
+    label.textContent = `盒子${i + 1}（${box.length}个）`;
+    div.appendChild(label);
+    row.appendChild(div);
+  });
+}
+
+function updateConclusion() {
+  const el = document.getElementById('conclusion');
+  const min = Math.ceil(numBalls / numBoxes);
+  if (numBalls <= numBoxes) {
+    el.innerHTML = `<div class="big">不一定有重复</div>
+      <div style="font-size:13px;color:#64748b;margin-top:4px">${numBalls} 个球放入 ${numBoxes} 个盒子，可能每个盒子最多 1 个</div>`;
+  } else {
+    el.innerHTML = `<div class="big">至少有一个盒子 ≥ ${min} 个球</div>
+      <div style="font-size:13px;color:#64748b;margin-top:4px">${numBalls} 个球放入 ${numBoxes} 个盒子：⌈${numBalls}/${numBoxes}⌉ = ${min}</div>
+      <div style="font-size:12px;color:#94a3b8;margin-top:2px">证明：如果每个盒子最多 ${min - 1} 个，最多放 ${(min - 1) * numBoxes} < ${numBalls} 个，矛盾！</div>`;
+  }
+}
+
+function loadProblem(type) {
+  if (type === 'socks') {
+    numBalls = 5; numBoxes = 4;
+    document.getElementById('ballSlider').value = 5;
+    document.getElementById('boxSlider').value = 4;
+  } else if (type === 'birthday') {
+    numBalls = 13; numBoxes = 12;
+    document.getElementById('ballSlider').value = 13;
+    document.getElementById('boxSlider').value = 6; // 滑块最大6，演示用
+    numBoxes = 12;
+  } else if (type === 'hand') {
+    numBalls = 5; numBoxes = 3;
+    document.getElementById('ballSlider').value = 5;
+    document.getElementById('boxSlider').value = 3;
+  }
+  document.getElementById('ballVal').textContent = numBalls;
+  document.getElementById('boxVal').textContent = numBoxes;
+  boxes = Array.from({ length: numBoxes }, () => []);
+  renderBoxes();
+  updateConclusion();
+  randomDistribute();
+}
+
+function resetAll() {
+  numBalls = 5; numBoxes = 3;
+  document.getElementById('ballSlider').value = 5;
+  document.getElementById('boxSlider').value = 3;
+  updateSettings();
+}
+
+updateSettings();
+</script>
+</body>
+</html>

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>圆的周长与面积 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 280px; height: 100%; }
+    .canvas-area { padding: 16px; overflow: hidden; background: linear-gradient(135deg, #faf5ff 0%, #fdfaf4 100%); position: relative; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #e9d5ff; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-row input { flex: 1; }
+    .slider-row .value-display { min-width: 36px; }
+    .prop-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #fff; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .prop-label { font-size: 13px; color: #64748b; }
+    .prop-value { font-size: 15px; font-weight: 700; color: #1e293b; font-family: 'Courier New', monospace; }
+    .tab-bar { display: flex; gap: 8px; margin-bottom: 12px; justify-content: center; }
+    .tab-btn { padding: 6px 16px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .tab-btn.active { background: #8b5cf6; color: #fff; border-color: #8b5cf6; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">🔵 圆的周长与面积</div>
+      <div class="edu-toolbar-subtitle">上册 · 第五单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-accent" onclick="playAnimation()">播放动画</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="switchTab('roll')">周长推导（滚动法）</button>
+          <button class="tab-btn" onclick="switchTab('cut')">面积推导（切割法）</button>
+        </div>
+        <canvas id="canvas" style="width:100%;height:calc(100% - 40px)"></canvas>
+      </div>
+
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">半径</div>
+          <div class="slider-row">
+            <input type="range" id="rSlider" min="30" max="120" value="60" oninput="onRChange()"/>
+            <span class="value-display" id="rVal">60</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">计算结果</div>
+          <div class="prop-row"><span class="prop-label">半径 r</span><span class="prop-value" id="pR">60</span></div>
+          <div class="prop-row"><span class="prop-label">直径 d</span><span class="prop-value" id="pD">120</span></div>
+          <div class="prop-row"><span class="prop-label">周长 C = πd</span><span class="prop-value" id="pC">376.99</span></div>
+          <div class="prop-row"><span class="prop-label">面积 S = πr²</span><span class="prop-value" id="pS">11309.7</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box" id="formulaBox">
+          <b>周长公式推导</b><br/>
+          ● 在直线上滚动一圈，距离 = 周长<br/>
+          ● C = πd = 2πr<br/>
+          ● π ≈ 3.14159...
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="../edu-lib/edu-tools.js"></script>
+<script>
+const canvas = document.getElementById('canvas');
+let R = 60;
+let mode = 'roll';
+let animProgress = 0;
+let animId = null;
+
+function switchTab(m) {
+  mode = m;
+  document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', ['roll','cut'][i] === m));
+  animProgress = 0;
+  const box = document.getElementById('formulaBox');
+  if (m === 'roll') {
+    box.innerHTML = '<b>周长公式推导</b><br/>● 在直线上滚动一圈，距离 = 周长<br/>● C = πd = 2πr<br/>● π ≈ 3.14159...';
+  } else {
+    box.innerHTML = '<b>面积公式推导</b><br/>● 把圆切成若干等份扇形<br/>● 拼成近似长方形<br/>● 长 = πr，宽 = r<br/>● S = πr × r = πr²';
+  }
+  render();
+}
+
+function onRChange() {
+  R = parseInt(document.getElementById('rSlider').value);
+  document.getElementById('rVal').textContent = R;
+  animProgress = 0;
+  updateProps();
+  render();
+}
+
+function updateProps() {
+  document.getElementById('pR').textContent = R;
+  document.getElementById('pD').textContent = R * 2;
+  document.getElementById('pC').textContent = (Math.PI * R * 2).toFixed(2);
+  document.getElementById('pS').textContent = (Math.PI * R * R).toFixed(1);
+}
+
+function playAnimation() {
+  if (animId) cancelAnimationFrame(animId);
+  animProgress = 0;
+  function step() {
+    animProgress += 0.008;
+    if (animProgress > 1) animProgress = 1;
+    render();
+    if (animProgress < 1) animId = requestAnimationFrame(step);
+  }
+  step();
+}
+
+function render() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  const ctx = canvas.getContext('2d');
+  ctx.save();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  if (mode === 'roll') {
+    renderRoll(ctx, w, h);
+  } else {
+    renderCut(ctx, w, h);
+  }
+
+  ctx.restore();
+}
+
+function renderRoll(ctx, w, h) {
+  const circ = 2 * Math.PI * R;
+  const baseY = h * 0.6;
+  const startX = 60;
+  const endX = startX + circ;
+  const rollDist = circ * animProgress;
+  const circleX = startX + rollDist;
+  const circleY = baseY - R;
+  const rotation = -rollDist / R; // 滚动旋转角
+
+  // 地面线
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(startX - 20, baseY);
+  ctx.lineTo(Math.max(endX + 40, w - 20), baseY);
+  ctx.stroke();
+
+  // 周长标尺
+  ctx.strokeStyle = '#8b5cf6';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(startX, baseY + 20);
+  ctx.lineTo(endX, baseY + 20);
+  ctx.stroke();
+  // 箭头
+  ctx.beginPath(); ctx.moveTo(startX, baseY + 15); ctx.lineTo(startX, baseY + 25); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(endX, baseY + 15); ctx.lineTo(endX, baseY + 25); ctx.stroke();
+  ctx.fillStyle = '#8b5cf6';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('周长 C = 2πr ≈ ' + circ.toFixed(1), (startX + endX) / 2, baseY + 38);
+
+  // 已滚距离
+  if (animProgress > 0) {
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(startX, baseY + 6);
+    ctx.lineTo(circleX, baseY + 6);
+    ctx.stroke();
+    ctx.fillStyle = '#22c55e';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('已滚 ' + rollDist.toFixed(1), (startX + circleX) / 2, baseY + 0);
+  }
+
+  // 圆
+  ctx.beginPath();
+  ctx.arc(circleX, circleY, R, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(139,92,246,0.1)';
+  ctx.fill();
+  ctx.strokeStyle = '#8b5cf6';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // 旋转标记线
+  ctx.save();
+  ctx.translate(circleX, circleY);
+  ctx.rotate(rotation);
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(R, 0);
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  // 标记点
+  ctx.beginPath();
+  ctx.arc(R, 0, 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#ef4444';
+  ctx.fill();
+  ctx.restore();
+
+  // 圆心
+  ctx.beginPath();
+  ctx.arc(circleX, circleY, 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#1a3a5c';
+  ctx.fill();
+
+  // 标注
+  ctx.fillStyle = '#1a3a5c';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('滚动法推导周长', 20, 30);
+  ctx.font = '12px sans-serif';
+  ctx.fillStyle = '#64748b';
+  ctx.fillText('圆在直线上滚一圈的距离 = 周长', 20, 50);
+}
+
+function renderCut(ctx, w, h) {
+  const cx = w / 2;
+  const cy = h / 2;
+  const numSlices = 12;
+  const progress = animProgress;
+
+  ctx.fillStyle = '#1a3a5c';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('切割法推导面积', 20, 30);
+  ctx.font = '12px sans-serif';
+  ctx.fillStyle = '#64748b';
+  ctx.fillText('将圆切成等份扇形，拼成近似长方形', 20, 50);
+
+  if (progress < 0.5) {
+    // 阶段1：显示圆和切割线
+    const cutProgress = progress / 0.5;
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(139,92,246,0.1)';
+    ctx.fill();
+    ctx.strokeStyle = '#8b5cf6';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 切割线
+    for (let i = 0; i < numSlices; i++) {
+      const angle = (Math.PI * 2 / numSlices) * i;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + R * Math.cos(angle), cy + R * Math.sin(angle));
+      ctx.strokeStyle = 'rgba(139,92,246,' + (cutProgress * 0.8) + ')';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // 圆心
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#1a3a5c';
+    ctx.fill();
+
+    // 半径标注
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + R, cy);
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('r = ' + R, cx + R / 2, cy - 10);
+  } else {
+    // 阶段2：拼成近似长方形
+    const mergeProgress = (progress - 0.5) / 0.5;
+    const rectW = Math.PI * R; // 长 = πr
+    const rectH = R; // 宽 = r
+    const rectX = cx - rectW / 2;
+    const rectY = cy - rectH / 2;
+
+    // 画长方形轮廓
+    ctx.strokeStyle = '#8b5cf6';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(rectX, rectY, rectW, rectH);
+
+    // 画扇形
+    const halfSlices = numSlices / 2;
+    for (let i = 0; i < numSlices; i++) {
+      const isUp = i % 2 === 0;
+      const sliceIdx = Math.floor(i / 2);
+      const baseAngle = (Math.PI / halfSlices) * sliceIdx - Math.PI / 2;
+
+      const sliceX = rectX + (i / numSlices) * rectW + rectW / numSlices / 2;
+      const sliceY = isUp ? rectY : rectY + rectH;
+
+      ctx.save();
+      ctx.translate(sliceX, sliceY);
+      ctx.rotate(isUp ? Math.PI : 0);
+
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      const sr = R * Math.min(mergeProgress * 1.2, 1);
+      ctx.arc(0, 0, sr, -Math.PI / numSlices, Math.PI / numSlices);
+      ctx.closePath();
+      ctx.fillStyle = isUp ? 'rgba(139,92,246,0.3)' : 'rgba(14,165,233,0.3)';
+      ctx.fill();
+      ctx.strokeStyle = isUp ? '#8b5cf6' : '#0ea5e9';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // 标注
+    ctx.fillStyle = '#8b5cf6';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('长 = πr = ' + (Math.PI * R).toFixed(1), cx, rectY - 12);
+    ctx.save();
+    ctx.translate(rectX - 16, cy);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillText('宽 = r = ' + R, 0, 0);
+    ctx.restore();
+
+    // 公式
+    ctx.fillStyle = '#22c55e';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('S = πr × r = πr² = ' + (Math.PI * R * R).toFixed(1), cx, rectY + rectH + 30);
+  }
+}
+
+function resetAll() {
+  R = 60;
+  document.getElementById('rSlider').value = 60;
+  animProgress = 0;
+  if (animId) cancelAnimationFrame(animId);
+  updateProps();
+  render();
+}
+
+window.addEventListener('resize', () => { render(); });
+updateProps();
+render();
+</script>
+</body>
+</html>

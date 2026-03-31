@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>分数四则混合运算 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #fef3c7 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #f97316; color: #f97316; }
+    .expr-input { width: 100%; max-width: 500px; text-align: center; font-size: 20px; font-weight: 700; border: 2px solid #e2e8f0; border-radius: 10px; padding: 12px; font-family: 'Courier New', monospace; background: #fff; margin-bottom: 16px; }
+    .expr-input:focus { outline: none; border-color: #f97316; }
+    .step-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; margin: 6px 0; width: 100%; max-width: 500px; }
+    .step-num { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #f97316; color: #fff; font-size: 12px; font-weight: 700; margin-right: 8px; }
+    .step-expr { font-size: 16px; font-weight: 700; font-family: 'Courier New', monospace; color: #334155; }
+    .step-note { font-size: 12px; color: #64748b; margin-top: 4px; margin-left: 32px; }
+    .result-card { background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 16px 20px; text-align: center; margin: 12px 0; width: 100%; max-width: 500px; }
+    .result-card .value { font-size: 28px; font-weight: 800; color: #22c55e; }
+    .error-card { background: #fef2f2; border: 2px solid #ef4444; border-radius: 12px; padding: 16px 20px; text-align: center; margin: 12px 0; width: 100%; max-width: 500px; color: #ef4444; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">🧮 分数四则混合运算</div>
+      <div class="edu-toolbar-subtitle">上册 · 第一单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="solve()">计算</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div style="font-size:13px;color:#64748b;margin-bottom:8px">输入运算式（用 a/b 表示分数，如 1/2+3/4×2/3）</div>
+        <input class="expr-input" id="exprInput" value="1/2+3/4×2/3" placeholder="例如：1/2+3/4*2/3"/>
+
+        <div id="stepsArea"></div>
+      </div>
+
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设题目</div>
+          <button class="preset-btn" onclick="loadExpr('1/2+3/4×2/3')">½ + ¾ × ⅔</button>
+          <button class="preset-btn" onclick="loadExpr('2/3-1/6×3/4')">⅔ - ⅙ × ¾</button>
+          <button class="preset-btn" onclick="loadExpr('(1/2+1/3)×6/5')">（½ + ⅓）× ⅗</button>
+          <button class="preset-btn" onclick="loadExpr('3/4÷(1/2-1/3)')">¾ ÷（½ - ⅓）</button>
+          <button class="preset-btn" onclick="loadExpr('5/6+1/3×2/5-1/2')">⅚ + ⅓ × ⅖ - ½</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>分数混合运算规则</b><br/>
+          ● 先算括号里的<br/>
+          ● 先乘除，后加减<br/>
+          ● 同级运算从左到右<br/>
+          ● 除以一个数 = 乘以它的倒数<br/>
+          ● 结果化为最简分数<br/>
+          ● 支持：+  -  ×  ÷  ( )<br/>
+          ● 用 a/b 格式输入分数
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function gcd(a, b) { a = Math.abs(Math.round(a)); b = Math.abs(Math.round(b)); while (b) { [a, b] = [b, a % b]; } return a; }
+
+function simplifyFrac(n, d) {
+  if (n === 0) return [0, 1];
+  if (d < 0) { n = -n; d = -d; }
+  const g = gcd(n, d);
+  return [n / g, d / g];
+}
+
+function fracStr(n, d) { return d === 1 ? `${n}` : `${n}/${d}`; }
+
+function loadExpr(expr) {
+  document.getElementById('exprInput').value = expr;
+  solve();
+}
+
+function solve() {
+  const raw = document.getElementById('exprInput').value.trim();
+  const area = document.getElementById('stepsArea');
+  area.innerHTML = '';
+
+  // 替换符号
+  let expr = raw.replace(/×/g, '*').replace(/÷/g, '/').replace(/（/g, '(').replace(/）/g, ')');
+
+  // 解析分数：a/b 形式
+  // 简单方法：将分数转为小数计算，同时记录步骤
+  // 这里用递归下降解析器
+
+  try {
+    const tokens = tokenize(expr);
+    const { result, steps } = parseExpr(tokens);
+    const [sn, sd] = simplifyFrac(result.n, result.d);
+
+    steps.forEach((s, i) => {
+      const card = document.createElement('div');
+      card.className = 'step-card';
+      card.innerHTML = `<span class="step-num">${i + 1}</span><span class="step-expr">${s.expr}</span><div class="step-note">${s.note}</div>`;
+      area.appendChild(card);
+    });
+
+    const resCard = document.createElement('div');
+    resCard.className = 'result-card';
+    resCard.innerHTML = `<div style="font-size:13px;color:#64748b;margin-bottom:4px">最终结果</div><div class="value">${fracStr(sn, sd)}</div>`;
+    area.appendChild(resCard);
+
+  } catch (e) {
+    const errCard = document.createElement('div');
+    errCard.className = 'error-card';
+    errCard.textContent = '计算出错：' + e.message;
+    area.appendChild(errCard);
+  }
+}
+
+// Token types
+function tokenize(expr) {
+  const tokens = [];
+  let i = 0;
+  while (i < expr.length) {
+    if (expr[i] === ' ') { i++; continue; }
+    if ('+-*-/()'.includes(expr[i])) {
+      // 区别减号和负号
+      tokens.push({ type: 'op', value: expr[i] });
+      i++;
+    } else if (/\d/.test(expr[i])) {
+      let num = '';
+      while (i < expr.length && /[\d]/.test(expr[i])) {
+        num += expr[i]; i++;
+      }
+      tokens.push({ type: 'num', value: parseInt(num) });
+    } else {
+      throw new Error('无法识别：' + expr[i]);
+    }
+  }
+  return tokens;
+}
+
+// 分数运算
+function fracAdd(a, b) {
+  const n = a.n * b.d + b.n * a.d;
+  const d = a.d * b.d;
+  const [sn, sd] = simplifyFrac(n, d);
+  return { n: sn, d: sd };
+}
+function fracSub(a, b) {
+  const n = a.n * b.d - b.n * a.d;
+  const d = a.d * b.d;
+  const [sn, sd] = simplifyFrac(n, d);
+  return { n: sn, d: sd };
+}
+function fracMul(a, b) {
+  const n = a.n * b.n;
+  const d = a.d * b.d;
+  const [sn, sd] = simplifyFrac(n, d);
+  return { n: sn, d: sd };
+}
+function fracDiv(a, b) {
+  if (b.n === 0) throw new Error('除数为0');
+  const n = a.n * b.d;
+  const d = a.d * b.n;
+  const [sn, sd] = simplifyFrac(n, d);
+  return { n: sn, d: sd };
+}
+
+// 递归下降解析器
+function parseExpr(tokens) {
+  const steps = [];
+  let pos = 0;
+
+  function peek() { return tokens[pos]; }
+  function consume() { return tokens[pos++]; }
+
+  function parseFactor() {
+    const t = peek();
+    if (!t) throw new Error('表达式不完整');
+    if (t.type === 'op' && t.value === '(') {
+      consume();
+      const val = parseAddSub();
+      if (!peek() || peek().value !== ')') throw new Error('缺少右括号');
+      consume();
+      return val;
+    }
+    if (t.type === 'num') {
+      consume();
+      // 检查是否是分数 a / b
+      if (peek() && peek().value === '/') {
+        consume(); // /
+        const t2 = peek();
+        if (t2 && t2.type === 'num') {
+          consume();
+          const [sn, sd] = simplifyFrac(t.value, t2.value);
+          return { n: sn, d: sd };
+        }
+      }
+      return { n: t.value, d: 1 };
+    }
+    throw new Error('意外的符号');
+  }
+
+  function parseMulDiv() {
+    let left = parseFactor();
+    while (peek() && peek().type === 'op' && (peek().value === '*' || peek().value === '/')) {
+      const op = consume().value;
+      const right = parseFactor();
+      const oldL = fracStr(left.n, left.d);
+      const oldR = fracStr(right.n, right.d);
+      if (op === '*') {
+        left = fracMul(left, right);
+        steps.push({ expr: `${oldL} × ${oldR} = ${fracStr(left.n, left.d)}`, note: '乘法：分子×分子，分母×分母' });
+      } else {
+        left = fracDiv(left, right);
+        steps.push({ expr: `${oldL} ÷ ${oldR} = ${fracStr(left.n, left.d)}`, note: '除法：除以一个数等于乘以它的倒数' });
+      }
+    }
+    return left;
+  }
+
+  function parseAddSub() {
+    let left = parseMulDiv();
+    while (peek() && peek().type === 'op' && (peek().value === '+' || peek().value === '-')) {
+      const op = consume().value;
+      const right = parseMulDiv();
+      const oldL = fracStr(left.n, left.d);
+      const oldR = fracStr(right.n, right.d);
+      if (op === '+') {
+        left = fracAdd(left, right);
+        steps.push({ expr: `${oldL} + ${oldR} = ${fracStr(left.n, left.d)}`, note: '加法：通分后分子相加' });
+      } else {
+        left = fracSub(left, right);
+        steps.push({ expr: `${oldL} - ${oldR} = ${fracStr(left.n, left.d)}`, note: '减法：通分后分子相减' });
+      }
+    }
+    return left;
+  }
+
+  const result = parseAddSub();
+  return { result, steps };
+}
+
+function resetAll() {
+  document.getElementById('exprInput').value = '1/2+3/4*2/3';
+  document.getElementById('stepsArea').innerHTML = '';
+}
+
+solve();
+</script>
+</body>
+</html>

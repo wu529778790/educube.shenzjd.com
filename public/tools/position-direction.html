@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>位置与方向 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 280px; height: 100%; }
+    .canvas-area { padding: 16px; overflow: hidden; background: linear-gradient(135deg, #e0f2fe 0%, #fdfaf4 100%); position: relative; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #bae6fd; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #0ea5e9; color: #0ea5e9; }
+    .point-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #fff; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 13px; }
+    .point-color { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .coord-display { background: #fff; border: 2px solid #0ea5e9; border-radius: 12px; padding: 12px 16px; text-align: center; font-size: 15px; font-weight: 600; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">🧭 位置与方向</div>
+      <div class="edu-toolbar-subtitle">上册 · 第二单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-accent" onclick="addRandomPoint()">随机目标</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="canvas" style="width:100%;height:100%"></canvas>
+      </div>
+
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">目标点信息</div>
+          <div class="coord-display" id="coordInfo">点击网格添加目标点</div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">已标注的点（最多6个）</div>
+          <div id="pointsList" style="display:flex;flex-direction:column;gap:4px"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设位置</div>
+          <button class="preset-btn" onclick="loadPreset('school')">学校：北偏东30° 4格</button>
+          <button class="preset-btn" onclick="loadPreset('park')">公园：南偏西45° 3格</button>
+          <button class="preset-btn" onclick="loadPreset('library')">图书馆：东偏北25° 5格</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>位置与方向</b><br/>
+          ● 以观测点为中心确定方向<br/>
+          ● 用"北偏东/西""南偏东/西"描述方向<br/>
+          ● 方向+距离确定唯一位置<br/>
+          ● 角度从正北/正南开始量
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="../edu-lib/edu-tools.js"></script>
+<script>
+const canvas = document.getElementById('canvas');
+const COLORS = ['#ef4444','#3b82f6','#22c55e','#f97316','#8b5cf6','#eab308'];
+let points = [];
+let centerX, centerY, gridSize;
+
+function initCanvas() {
+  const { ctx, w, h } = setupCanvas(canvas);
+  centerX = w / 2;
+  centerY = h / 2;
+  gridSize = Math.min(w, h) / 14;
+  render();
+}
+
+function render() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  const ctx = canvas.getContext('2d');
+  ctx.save();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // 背景
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, w, h);
+
+  // 网格
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 0.5;
+  for (let x = centerX % gridSize; x < w; x += gridSize) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+  }
+  for (let y = centerY % gridSize; y < h; y += gridSize) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+
+  // 坐标轴
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(centerX, 0); ctx.lineTo(centerX, h); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, centerY); ctx.lineTo(w, centerY); ctx.stroke();
+
+  // 方向标注
+  ctx.fillStyle = '#1a3a5c';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('北', centerX, 16);
+  ctx.fillText('南', centerX, h - 6);
+  ctx.fillText('东', w - 10, centerY + 5);
+  ctx.fillText('西', 12, centerY + 5);
+
+  // 观测点
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, 6, 0, Math.PI * 2);
+  ctx.fillStyle = '#1a3a5c';
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 10px sans-serif';
+  ctx.fillText('O', centerX, centerY + 3.5);
+
+  // 画点
+  points.forEach((p, i) => {
+    const px = centerX + p.dx * gridSize;
+    const py = centerY - p.dy * gridSize;
+
+    // 连线
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.lineTo(px, py);
+    ctx.strokeStyle = COLORS[i % COLORS.length];
+    ctx.lineWidth = 2;
+    ctx.setLineDash([]);
+    ctx.stroke();
+
+    // 角度弧
+    const angle = Math.atan2(-p.dy, p.dx);
+    let startAngle, endAngle;
+    // 判断是北偏还是南偏
+    if (p.dy >= 0) {
+      startAngle = -Math.PI / 2; endAngle = angle;
+    } else {
+      startAngle = Math.PI / 2; endAngle = angle;
+    }
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 25, startAngle, endAngle, p.dy >= 0 ? angle > -Math.PI/2 : angle > Math.PI/2);
+    ctx.strokeStyle = COLORS[i % COLORS.length] + '80';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // 点
+    ctx.beginPath();
+    ctx.arc(px, py, 8, 0, Math.PI * 2);
+    ctx.fillStyle = COLORS[i % COLORS.length];
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 标签
+    ctx.fillStyle = COLORS[i % COLORS.length];
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(p.name, px + 12, py - 4);
+    const desc = getDirectionDesc(p);
+    ctx.font = '11px sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText(desc, px + 12, py + 10);
+  });
+
+  ctx.restore();
+}
+
+function getDirectionDesc(p) {
+  const dx = p.dx, dy = p.dy;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  let angle;
+  let dir;
+  if (dy >= 0 && dx >= 0) { dir = '北偏东'; angle = Math.atan2(dx, dy) * 180 / Math.PI; }
+  else if (dy >= 0 && dx < 0) { dir = '北偏西'; angle = Math.atan2(-dx, dy) * 180 / Math.PI; }
+  else if (dy < 0 && dx >= 0) { dir = '南偏东'; angle = Math.atan2(dx, -dy) * 180 / Math.PI; }
+  else { dir = '南偏西'; angle = Math.atan2(-dx, -dy) * 180 / Math.PI; }
+  angle = Math.round(angle);
+  if (angle === 0) dir = dy >= 0 ? '正北' : '正南';
+  if (Math.abs(dx) < 0.01 && dy >= 0) dir = '正北';
+  if (Math.abs(dx) < 0.01 && dy < 0) dir = '正南';
+  if (Math.abs(dy) < 0.01 && dx >= 0) dir = '正东';
+  if (Math.abs(dy) < 0.01 && dx < 0) dir = '正西';
+  return `${dir}${angle > 0 ? angle + '°' : ''} ${dist.toFixed(1)}格`;
+}
+
+function getDirectionDescShort(p) {
+  const dx = p.dx, dy = p.dy;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  let angle;
+  let dir;
+  if (Math.abs(dx) < 0.01 && dy >= 0) return `正北 ${dist.toFixed(1)}格`;
+  if (Math.abs(dx) < 0.01 && dy < 0) return `正南 ${dist.toFixed(1)}格`;
+  if (Math.abs(dy) < 0.01 && dx >= 0) return `正东 ${dist.toFixed(1)}格`;
+  if (Math.abs(dy) < 0.01 && dx < 0) return `正西 ${dist.toFixed(1)}格`;
+  if (dy >= 0 && dx >= 0) { dir = '北偏东'; angle = Math.atan2(dx, dy) * 180 / Math.PI; }
+  else if (dy >= 0 && dx < 0) { dir = '北偏西'; angle = Math.atan2(-dx, dy) * 180 / Math.PI; }
+  else if (dy < 0 && dx >= 0) { dir = '南偏东'; angle = Math.atan2(dx, -dy) * 180 / Math.PI; }
+  else { dir = '南偏西'; angle = Math.atan2(-dx, -dy) * 180 / Math.PI; }
+  return `${dir}${Math.round(angle)}° ${dist.toFixed(1)}格`;
+}
+
+function updatePointsList() {
+  const el = document.getElementById('pointsList');
+  el.innerHTML = '';
+  points.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'point-row';
+    row.innerHTML = `<div class="point-color" style="background:${COLORS[i % COLORS.length]}"></div>
+      <span style="flex:1">${p.name}：${getDirectionDescShort(p)}</span>
+      <button style="border:none;background:none;cursor:pointer;color:#94a3b8;font-size:16px" onclick="removePoint(${i})">✕</button>`;
+    el.appendChild(row);
+  });
+  if (points.length > 0) {
+    const last = points[points.length - 1];
+    document.getElementById('coordInfo').innerHTML =
+      `<span style="color:${COLORS[(points.length-1) % COLORS.length]}">${last.name}</span><br/>${getDirectionDescShort(last)}`;
+  } else {
+    document.getElementById('coordInfo').textContent = '点击网格添加目标点';
+  }
+}
+
+function removePoint(i) {
+  points.splice(i, 1);
+  updatePointsList();
+  render();
+}
+
+canvas.addEventListener('click', function(e) {
+  if (points.length >= 6) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const dx = (mx - centerX) / gridSize;
+  const dy = -(my - centerY) / gridSize;
+  if (Math.abs(dx) < 0.3 && Math.abs(dy) < 0.3) return;
+  const names = ['A','B','C','D','E','F'];
+  points.push({ dx, dy, name: names[points.length] || 'P' });
+  updatePointsList();
+  render();
+});
+
+function addRandomPoint() {
+  if (points.length >= 6) return;
+  const names = ['A','B','C','D','E','F'];
+  const dx = (Math.random() * 8 - 4);
+  const dy = (Math.random() * 8 - 4);
+  if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return addRandomPoint();
+  points.push({ dx: Math.round(dx * 2) / 2, dy: Math.round(dy * 2) / 2, name: names[points.length] || 'P' });
+  updatePointsList();
+  render();
+}
+
+function loadPreset(type) {
+  points = [];
+  const names = ['A','B','C','D','E','F'];
+  if (type === 'school') {
+    const angle = 30 * Math.PI / 180;
+    points.push({ dx: 4 * Math.sin(angle), dy: 4 * Math.cos(angle), name: '学校' });
+  } else if (type === 'park') {
+    const angle = 45 * Math.PI / 180;
+    points.push({ dx: -3 * Math.sin(angle), dy: -3 * Math.cos(angle), name: '公园' });
+  } else if (type === 'library') {
+    const angle = 25 * Math.PI / 180;
+    points.push({ dx: 5 * Math.cos(angle), dy: 5 * Math.sin(angle), name: '图书馆' });
+  }
+  updatePointsList();
+  render();
+}
+
+function resetAll() {
+  points = [];
+  updatePointsList();
+  render();
+}
+
+window.addEventListener('resize', () => { initCanvas(); });
+initCanvas();
+</script>
+</body>
+</html>

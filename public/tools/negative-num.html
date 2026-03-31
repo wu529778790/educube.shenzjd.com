@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>负数的认识 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #f0f9ff 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #bae6fd; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #0ea5e9; color: #0ea5e9; }
+    canvas#numberLine { width: 100%; max-width: 600px; height: 100px; margin: 20px 0; }
+    .thermometer { display: flex; align-items: flex-end; gap: 16px; margin: 16px 0; }
+    .thermo-col { display: flex; flex-direction: column; align-items: center; }
+    .thermo-body { width: 30px; height: 200px; background: #f1f5f9; border: 2px solid #94a3b8; border-radius: 15px 15px 0 0; position: relative; overflow: hidden; }
+    .thermo-fill { position: absolute; bottom: 0; left: 0; right: 0; transition: height .3s, background .3s; }
+    .thermo-bulb { width: 44px; height: 44px; border-radius: 50%; border: 2px solid #94a3b8; margin-top: -4px; transition: background .3s; }
+    .thermo-label { font-size: 14px; font-weight: 700; margin-top: 6px; }
+    .num-tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 700; cursor: pointer; margin: 3px; border: 1.5px solid transparent; transition: all .15s; }
+    .num-tag.pos { background: #fef2f2; color: #ef4444; border-color: #fca5a5; }
+    .num-tag.neg { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+    .num-tag.zero { background: #f0fdf4; color: #22c55e; border-color: #86efac; }
+    .num-tag:hover { transform: scale(1.05); }
+    .compare-box { background: #fff; border: 2px solid #0ea5e9; border-radius: 12px; padding: 16px; text-align: center; margin-top: 12px; width: 100%; max-width: 400px; }
+    .compare-result { font-size: 20px; font-weight: 800; margin-top: 8px; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">🌡️ 负数的认识</div>
+      <div class="edu-toolbar-subtitle">下册 · 第一单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div style="font-size:16px;font-weight:700;color:#334155;margin-bottom:4px">数轴 — 正数、0、负数</div>
+        <canvas id="numberLine"></canvas>
+
+        <!-- 温度计 -->
+        <div style="font-size:14px;font-weight:700;color:#334155;margin-top:12px">温度计模型</div>
+        <div class="thermometer" id="thermos"></div>
+
+        <!-- 比较大小 -->
+        <div class="compare-box">
+          <div style="font-size:13px;color:#64748b">点击数字标签进行比较</div>
+          <div id="numTags" style="margin:10px 0"></div>
+          <div class="compare-result" id="cmpResult"></div>
+        </div>
+      </div>
+
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">添加/移除标记点</div>
+          <div class="slider-row" style="display:flex;gap:8px;align-items:center">
+            <input type="number" id="markVal" value="-3" style="width:60px;text-align:center;font-size:16px;font-weight:700;border:1.5px solid #e2e8f0;border-radius:6px;padding:4px"/>
+            <button class="edu-btn edu-btn-primary" onclick="addMark()" style="font-size:12px">添加</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设场景</div>
+          <button class="preset-btn" onclick="loadScene('temp')">温度场景</button>
+          <button class="preset-btn" onclick="loadScene('elev')">海拔场景</button>
+          <button class="preset-btn" onclick="loadScene('profit')">收支场景</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <b>负数知识</b><br/>
+          ● 正数 > 0，负数 < 0，0 既不是正数也不是负数<br/>
+          ● 数轴上右边 > 左边<br/>
+          ● -3 < -1（负数越大绝对值越小）<br/>
+          ● 相反数：符号不同的两个数互为相反数<br/>
+          ● |a| 表示 a 的绝对值
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="../edu-lib/edu-tools.js"></script>
+<script>
+const canvas = document.getElementById('numberLine');
+let marks = [-5, -3, 0, 2, 4];
+let selectedCmp = [];
+
+function drawNumberLine() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+
+  const pad = 40;
+  const lineY = h / 2;
+  const minV = -10, maxV = 10;
+  const scaleX = (w - pad * 2) / (maxV - minV);
+
+  // 数轴线
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(pad - 10, lineY);
+  ctx.lineTo(w - pad + 10, lineY);
+  ctx.stroke();
+
+  // 箭头
+  ctx.beginPath();
+  ctx.moveTo(w - pad + 10, lineY);
+  ctx.lineTo(w - pad, lineY - 6);
+  ctx.lineTo(w - pad, lineY + 6);
+  ctx.closePath();
+  ctx.fillStyle = '#334155';
+  ctx.fill();
+
+  // 刻度和数字
+  for (let v = minV; v <= maxV; v++) {
+    const x = pad + (v - minV) * scaleX;
+    const isMajor = v % 5 === 0;
+    ctx.beginPath();
+    ctx.moveTo(x, lineY - (isMajor ? 12 : 6));
+    ctx.lineTo(x, lineY + (isMajor ? 12 : 6));
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = isMajor ? 1.5 : 0.5;
+    ctx.stroke();
+
+    if (isMajor || v % 2 === 0) {
+      ctx.fillStyle = '#64748b';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(v, x, lineY + 26);
+    }
+  }
+
+  // 标记点
+  marks.forEach((v, i) => {
+    const x = pad + (v - minV) * scaleX;
+    const isNeg = v < 0;
+    const isZero = v === 0;
+    const color = isZero ? '#22c55e' : isNeg ? '#3b82f6' : '#ef4444';
+
+    ctx.beginPath();
+    ctx.arc(x, lineY, 8, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = color;
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(v, x, lineY - 16);
+  });
+
+  // 0点标注
+  const x0 = pad + (0 - minV) * scaleX;
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '10px sans-serif';
+  ctx.fillText('原点', x0, lineY + 40);
+}
+
+function drawThermometers() {
+  const el = document.getElementById('thermos');
+  el.innerHTML = '';
+  const vals = marks.filter(v => v >= -10 && v <= 10).slice(0, 4);
+  vals.forEach(v => {
+    const pct = ((v + 10) / 20) * 100;
+    const color = v < 0 ? '#3b82f6' : v === 0 ? '#94a3b8' : '#ef4444';
+    const col = document.createElement('div');
+    col.className = 'thermo-col';
+    col.innerHTML = `
+      <div class="thermo-body">
+        <div class="thermo-fill" style="height:${Math.max(pct, 5)}%;background:${color}"></div>
+      </div>
+      <div class="thermo-bulb" style="background:${color}"></div>
+      <div class="thermo-label" style="color:${color}">${v}°C</div>`;
+    el.appendChild(col);
+  });
+}
+
+function updateTags() {
+  const el = document.getElementById('numTags');
+  el.innerHTML = '';
+  marks.forEach((v, i) => {
+    const cls = v < 0 ? 'neg' : v === 0 ? 'zero' : 'pos';
+    const tag = document.createElement('span');
+    tag.className = `num-tag ${cls}`;
+    tag.textContent = v;
+    tag.onclick = () => toggleCmp(i, v);
+    el.appendChild(tag);
+  });
+}
+
+function toggleCmp(idx, val) {
+  if (selectedCmp.length < 2) {
+    selectedCmp.push(val);
+  }
+  if (selectedCmp.length === 2) {
+    const [a, b] = selectedCmp;
+    const el = document.getElementById('cmpResult');
+    if (a > b) {
+      el.innerHTML = `<span style="color:#ef4444">${a}</span> > <span style="color:#3b82f6">${b}</span>`;
+    } else if (a < b) {
+      el.innerHTML = `<span style="color:#3b82f6">${a}</span> < <span style="color:#ef4444">${b}</span>`;
+    } else {
+      el.innerHTML = `<span>${a}</span> = <span>${b}</span>`;
+    }
+    selectedCmp = [];
+  }
+}
+
+function addMark() {
+  const v = parseInt(document.getElementById('markVal').value);
+  if (isNaN(v) || v < -10 || v > 10) return;
+  if (!marks.includes(v)) {
+    marks.push(v);
+    marks.sort((a, b) => a - b);
+    renderAll();
+  }
+}
+
+function loadScene(type) {
+  if (type === 'temp') {
+    marks = [-8, -3, 0, 5, 12];
+  } else if (type === 'elev') {
+    marks = [-5, 0, 2, 8, 10];
+  } else if (type === 'profit') {
+    marks = [-6, -2, 0, 3, 7];
+  }
+  renderAll();
+}
+
+function renderAll() {
+  drawNumberLine();
+  drawThermometers();
+  updateTags();
+}
+
+function resetAll() {
+  marks = [-5, -3, 0, 2, 4];
+  selectedCmp = [];
+  document.getElementById('cmpResult').textContent = '';
+  renderAll();
+}
+
+window.addEventListener('resize', () => { renderAll(); });
+renderAll();
+</script>
+</body>
+</html>

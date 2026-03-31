@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>百分数应用 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
+    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #fff7ed 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .divider { height: 1px; background: #e2e8f0; }
+    .info-box { background: #fff; border: 1px solid #fed7aa; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
+    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn:hover { border-color: #f97316; color: #f97316; }
+    .tab-bar { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; justify-content: center; }
+    .tab-btn { padding: 6px 14px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .tab-btn.active { background: #f97316; color: #fff; border-color: #f97316; }
+    .calc-card { background: #fff; border: 2px solid #f97316; border-radius: 12px; padding: 20px; width: 100%; max-width: 460px; }
+    .input-group { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+    .input-group label { font-size: 14px; font-weight: 600; min-width: 80px; }
+    .input-group input { flex: 1; font-size: 16px; font-weight: 700; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 8px; text-align: center; }
+    .result-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px 16px; margin-top: 12px; text-align: center; }
+    .result-box .big { font-size: 24px; font-weight: 800; color: #22c55e; }
+    .result-box .label { font-size: 12px; color: #64748b; }
+    .bar-compare { height: 28px; border-radius: 14px; overflow: hidden; display: flex; margin: 10px 0; }
+    .bar-orig { background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #64748b; }
+    .bar-new { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="edu-toolbar-title">💰 百分数应用</div>
+      <div class="edu-toolbar-subtitle">下册 · 第二单元</div>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-primary" onclick="calculate()">计算</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="switchMode('discount')">折扣</button>
+          <button class="tab-btn" onclick="switchMode('tax')">税率</button>
+          <button class="tab-btn" onclick="switchMode('interest')">利率</button>
+          <button class="tab-btn" onclick="switchMode('chengshu')">成数</button>
+        </div>
+
+        <div class="calc-card" id="calcCard"></div>
+      </div>
+
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设场景</div>
+          <button class="preset-btn" onclick="loadScene('discount1')">八折优惠</button>
+          <button class="preset-btn" onclick="loadScene('tax1')">购物缴税</button>
+          <button class="preset-btn" onclick="loadScene('interest1')">银行存款</button>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box" id="knowledgeBox">
+          <b>折扣</b><br/>
+          ● 几折 = 原价 × 几/10<br/>
+          ● 八折 = 原价 × 80%<br/>
+          ● 现价 = 原价 × 折扣<br/>
+          ● 省了 = 原价 × (1 - 折扣)
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+let currentMode = 'discount';
+
+function switchMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', ['discount','tax','interest','chengshu'][i] === mode);
+  });
+  updateKnowledge();
+  calculate();
+}
+
+function updateKnowledge() {
+  const box = document.getElementById('knowledgeBox');
+  const knowledge = {
+    discount: '<b>折扣</b><br/>● 几折 = 原价 × 几/10<br/>● 八折 = 原价 × 80%<br/>● 现价 = 原价 × 折扣<br/>● 省了 = 原价 × (1 - 折扣)',
+    tax: '<b>税率</b><br/>● 税额 = 收入 × 税率<br/>● 税后 = 收入 - 税额<br/>● 常见税率：个人所得税、增值税<br/>● 营业税 = 营业额 × 税率',
+    interest: '<b>利率</b><br/>● 利息 = 本金 × 利率 × 时间<br/>● 本息 = 本金 + 利息<br/>● 年利率÷12=月利率<br/>● 利率通常以年为单位',
+    chengshu: '<b>成数</b><br/>● 几成 = 十分之几 = 百分之几十<br/>● 三成 = 30%<br/>● 增产二成 = 比原来增加20%<br/>● 成数用于表示增长或减少的幅度',
+  };
+  box.innerHTML = knowledge[currentMode] || '';
+}
+
+function calculate() {
+  const card = document.getElementById('calcCard');
+  if (currentMode === 'discount') {
+    const price = parseFloat(document.getElementById('inp1')?.value) || 200;
+    const disc = parseFloat(document.getElementById('inp2')?.value) || 8;
+    const discPct = disc / 10;
+    const sale = price * discPct;
+    const saved = price - sale;
+    card.innerHTML = `
+      <div style="font-size:16px;font-weight:700;color:#334155;margin-bottom:12px">打折计算器</div>
+      <div class="input-group"><label>原价（元）</label><input type="number" id="inp1" value="${price}" onchange="calculate()"/></div>
+      <div class="input-group"><label>折扣（几折）</label><input type="number" id="inp2" value="${disc}" min="0.1" max="10" step="0.1" onchange="calculate()"/></div>
+      <div class="bar-compare"><div class="bar-orig" style="flex:100">原价 ${price.toFixed(0)}元</div></div>
+      <div class="bar-compare"><div class="bar-new" style="flex:${discPct*100};background:#f97316">现价 ${sale.toFixed(2)}元</div><div class="bar-new" style="flex:${(1-discPct)*100};background:#22c55e">省 ${saved.toFixed(2)}元</div></div>
+      <div class="result-box"><div class="label">现价</div><div class="big">${sale.toFixed(2)} 元</div><div class="label" style="margin-top:4px">节省 ${saved.toFixed(2)} 元（${(100-discPct*100).toFixed(0)}% off）</div></div>`;
+  } else if (currentMode === 'tax') {
+    const income = parseFloat(document.getElementById('inp1')?.value) || 5000;
+    const rate = parseFloat(document.getElementById('inp2')?.value) || 3;
+    const tax = income * rate / 100;
+    const after = income - tax;
+    card.innerHTML = `
+      <div style="font-size:16px;font-weight:700;color:#334155;margin-bottom:12px">税率计算器</div>
+      <div class="input-group"><label>收入（元）</label><input type="number" id="inp1" value="${income}" onchange="calculate()"/></div>
+      <div class="input-group"><label>税率（%）</label><input type="number" id="inp2" value="${rate}" min="0" max="100" step="0.1" onchange="calculate()"/></div>
+      <div class="bar-compare"><div class="bar-new" style="flex:${(100-rate)};background:#22c55e">税后 ${after.toFixed(2)}元</div><div class="bar-new" style="flex:${rate};background:#ef4444">税 ${tax.toFixed(2)}元</div></div>
+      <div class="result-box"><div class="label">税额</div><div class="big">${tax.toFixed(2)} 元</div><div class="label" style="margin-top:4px">税后收入 ${after.toFixed(2)} 元</div></div>`;
+  } else if (currentMode === 'interest') {
+    const principal = parseFloat(document.getElementById('inp1')?.value) || 10000;
+    const rate = parseFloat(document.getElementById('inp2')?.value) || 2.5;
+    const years = parseFloat(document.getElementById('inp3')?.value) || 1;
+    const interest = principal * rate / 100 * years;
+    const total = principal + interest;
+    card.innerHTML = `
+      <div style="font-size:16px;font-weight:700;color:#334155;margin-bottom:12px">利息计算器</div>
+      <div class="input-group"><label>本金（元）</label><input type="number" id="inp1" value="${principal}" onchange="calculate()"/></div>
+      <div class="input-group"><label>年利率（%）</label><input type="number" id="inp2" value="${rate}" min="0" step="0.1" onchange="calculate()"/></div>
+      <div class="input-group"><label>存期（年）</label><input type="number" id="inp3" value="${years}" min="0.1" step="0.5" onchange="calculate()"/></div>
+      <div class="bar-compare"><div class="bar-new" style="flex:${principal/total*100};background:#3b82f6">本金 ${principal}元</div><div class="bar-new" style="flex:${Math.max(interest/total*100,2)};background:#22c55e">利息 ${interest.toFixed(2)}元</div></div>
+      <div class="result-box"><div class="label">利息</div><div class="big">${interest.toFixed(2)} 元</div><div class="label" style="margin-top:4px">本息合计 ${total.toFixed(2)} 元</div></div>`;
+  } else {
+    const orig = parseFloat(document.getElementById('inp1')?.value) || 1000;
+    const chengshu = parseFloat(document.getElementById('inp2')?.value) || 2;
+    const change = orig * chengshu / 10;
+    const newVal = orig + change;
+    card.innerHTML = `
+      <div style="font-size:16px;font-weight:700;color:#334155;margin-bottom:12px">成数计算器</div>
+      <div class="input-group"><label>原值</label><input type="number" id="inp1" value="${orig}" onchange="calculate()"/></div>
+      <div class="input-group"><label>成数（几成）</label><input type="number" id="inp2" value="${chengshu}" min="0" max="10" step="0.5" onchange="calculate()"/></div>
+      <div class="bar-compare"><div class="bar-orig" style="flex:${orig/newVal*100}">原值 ${orig}</div><div class="bar-new" style="flex:${change/newVal*100};background:#f97316">增加 ${change.toFixed(0)}</div></div>
+      <div class="result-box"><div class="label">增长 ${chengshu}成 = ${chengshu*10}%</div><div class="big">新值 = ${newVal.toFixed(0)}</div><div class="label" style="margin-top:4px">增加了 ${change.toFixed(0)}</div></div>`;
+  }
+}
+
+function loadScene(type) {
+  if (type === 'discount1') { switchMode('discount'); setTimeout(() => { document.getElementById('inp1').value = 280; document.getElementById('inp2').value = 8; calculate(); }, 50); }
+  else if (type === 'tax1') { switchMode('tax'); setTimeout(() => { document.getElementById('inp1').value = 8000; document.getElementById('inp2').value = 3; calculate(); }, 50); }
+  else if (type === 'interest1') { switchMode('interest'); setTimeout(() => { document.getElementById('inp1').value = 5000; document.getElementById('inp2').value = 2.75; document.getElementById('inp3').value = 3; calculate(); }, 50); }
+}
+
+function resetAll() {
+  switchMode('discount');
+}
+
+calculate();
+</script>
+</body>
+</html>
