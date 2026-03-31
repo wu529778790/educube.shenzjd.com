@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Tool } from "@/data/tools";
-import { getPathLabel } from "@/data/curriculum";
+import { getGrade } from "@/data/curriculum";
 
 interface ToolCardProps {
   tool: Tool;
@@ -45,7 +45,7 @@ export default function ToolCard({ tool, index }: ToolCardProps) {
         </h3>
         <p className="text-xs font-medium mb-3" style={{ color: tool.gradient[0] }}>
           {tool.subtitle} ·{" "}
-          {getPathLabel(tool.publisherId, tool.gradeId, tool.subjectId)}
+          {getGrade(tool.gradeId)?.name ?? tool.gradeId} · {tool.semester}
         </p>
 
         {/* 描述 */}
