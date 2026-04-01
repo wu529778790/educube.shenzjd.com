@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
   <style>
     .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
-    .canvas-area { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 14px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); }
+    .canvas-area { padding: 16px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 12px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); }
     .control-panel { background: #f0fdf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
     .ctrl-section { display: flex; flex-direction: column; gap: 5px; }
     .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: .05em; }
@@ -16,6 +16,11 @@
     .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 14px; font-weight: 700; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
     .preset-btn:hover { border-color: #22c55e; color: #22c55e; }
     canvas { border-radius: 12px; background: #fff; box-shadow: 0 2px 12px rgba(34,197,94,.1); }
+
+    .tab-bar { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+    .tab-btn { padding: 6px 14px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .tab-btn.active { background: #22c55e; color: #fff; border-color: #22c55e; }
+
     .convert-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
     .convert-input { width: 90px; padding: 8px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 18px; font-weight: 800; text-align: center; font-family: 'Courier New', monospace; }
     .convert-input:focus { outline: none; border-color: #22c55e; }
@@ -25,9 +30,17 @@
     .result-row:last-child { border-bottom: none; }
     .result-row .unit-name { font-weight: 700; color: #334155; }
     .result-row .unit-val { font-weight: 800; color: #22c55e; font-family: 'Courier New', monospace; }
-    .slider-row { display: flex; align-items: center; gap: 8px; }
-    .slider-row input[type="range"] { flex: 1; }
-    .slider-val { font-size: 14px; font-weight: 700; min-width: 60px; text-align: center; color: #22c55e; }
+
+    .quiz-box { background: #fff; border: 2px solid #22c55e; border-radius: 14px; padding: 16px; text-align: center; width: 100%; max-width: 520px; }
+    .quiz-q { font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 10px; }
+    .quiz-input-row { display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .quiz-input { width: 80px; padding: 8px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 20px; font-weight: 800; text-align: center; font-family: 'Courier New', monospace; }
+    .quiz-input:focus { outline: none; border-color: #22c55e; }
+    .quiz-feedback { font-size: 14px; font-weight: 700; min-height: 22px; margin-top: 8px; }
+    .quiz-score { font-size: 12px; color: #64748b; margin-top: 4px; }
+
+    .stair-canvas { border-radius: 12px; background: #fff; box-shadow: 0 2px 12px rgba(34,197,94,.1); cursor: pointer; }
+    .hint-text { font-size: 11px; color: #64748b; text-align: center; }
   </style>
 </head>
 <body>
@@ -42,22 +55,85 @@
   <div class="edu-content">
     <div class="main-layout">
       <div class="canvas-area">
-        <canvas id="barCanvas" width="520" height="180"></canvas>
-        <div class="slider-row" style="width:100%;max-width:520px">
-          <span style="font-size:12px;font-weight:700;color:#64748b;width:60px">对比长度</span>
-          <input type="range" id="slLength" min="1" max="1000" value="100" oninput="drawBars()" />
-          <span class="slider-val" id="lengthLabel">100 mm</span>
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="switchTab('ruler')">刻度尺</button>
+          <button class="tab-btn" onclick="switchTab('compare')">单位对比</button>
+          <button class="tab-btn" onclick="switchTab('staircase')">换算阶梯</button>
+          <button class="tab-btn" onclick="switchTab('quiz')">测量挑战</button>
+          <button class="tab-btn" onclick="switchTab('convert')">换算工具</button>
         </div>
-        <div class="convert-row">
-          <input class="convert-input" id="cvValue" value="1" />
-          <select class="unit-select" id="cvUnit">
-            <option value="km">千米(km)</option><option value="m">米(m)</option>
-            <option value="dm">分米(dm)</option><option value="cm" selected>厘米(cm)</option><option value="mm">毫米(mm)</option>
-          </select>
-          <button class="edu-btn edu-btn-primary" onclick="doConvert()">换算</button>
+
+        <!-- Tab: Interactive Ruler -->
+        <div id="tab-ruler">
+          <canvas id="rulerCanvas" width="680" height="200"></canvas>
+          <div class="hint-text">拖动绿色标记测量长度 | 滚轮缩放刻度 | 蓝色方块可拖到尺上测量</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center">
+            <button class="edu-btn edu-btn-outline" onclick="rulerZoom(1.5)">放大 +</button>
+            <button class="edu-btn edu-btn-outline" onclick="rulerZoom(0.667)">缩小 -</button>
+            <button class="edu-btn edu-btn-outline" onclick="rulerZoom(1/3)">看毫米</button>
+            <button class="edu-btn edu-btn-outline" onclick="rulerZoom(1)">1:1</button>
+            <span id="rulerZoomLabel" style="font-size:12px;font-weight:700;color:#64748b">缩放: 1.0x</span>
+            <span id="rulerDistLabel" style="font-size:14px;font-weight:800;color:#22c55e;min-width:160px;text-align:center">距离: --</span>
+          </div>
         </div>
-        <div class="result-table" id="resultTable"></div>
+
+        <!-- Tab: Unit Comparison -->
+        <div id="tab-compare" style="display:none">
+          <canvas id="compareCanvas" width="680" height="340"></canvas>
+          <div class="hint-text">观看 1 米 = 10 分米 = 100 厘米 = 1000 毫米的分解动画</div>
+          <div style="display:flex;gap:8px;align-items:center;justify-content:center">
+            <button class="edu-btn edu-btn-primary" onclick="startCompareAnim()">播放动画</button>
+            <select id="compareLevel" style="padding:6px 10px;border:2px solid #e2e8f0;border-radius:8px;font-weight:600">
+              <option value="0">米 → 分米</option>
+              <option value="1">分米 → 厘米</option>
+              <option value="2">厘米 → 毫米</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Tab: Staircase Conversion -->
+        <div id="tab-staircase" style="display:none">
+          <canvas id="stairCanvas" class="stair-canvas" width="520" height="360"></canvas>
+          <div class="hint-text">点击阶梯任意单位查看换算关系</div>
+          <div id="stairInfo" class="info-box" style="max-width:520px;width:100%;text-align:center;min-height:60px">
+            点击上方阶梯中的单位，查看详细换算
+          </div>
+        </div>
+
+        <!-- Tab: Quiz -->
+        <div id="tab-quiz" style="display:none">
+          <canvas id="quizCanvas" width="680" height="180"></canvas>
+          <div class="quiz-box">
+            <div class="quiz-q" id="quizQuestion">这条线段有多长？</div>
+            <div class="quiz-input-row">
+              <input class="quiz-input" id="quizAnswer" placeholder="?" />
+              <select id="quizUnitSel" style="padding:6px;border:2px solid #e2e8f0;border-radius:8px;font-weight:700">
+                <option value="mm">毫米</option><option value="cm" selected>厘米</option><option value="dm">分米</option>
+              </select>
+              <button class="edu-btn edu-btn-primary" onclick="checkQuiz()">确认</button>
+              <button class="edu-btn edu-btn-outline" onclick="newQuiz()">下一题</button>
+            </div>
+            <div class="quiz-feedback" id="quizFeedback"></div>
+            <div class="quiz-score" id="quizScore">得分: 0 / 0</div>
+          </div>
+        </div>
+
+        <!-- Tab: Conversion Tool -->
+        <div id="tab-convert" style="display:none">
+          <div class="convert-row">
+            <input class="convert-input" id="cvValue" value="1" />
+            <select class="unit-select" id="cvUnit">
+              <option value="km">千米(km)</option><option value="m">米(m)</option>
+              <option value="dm">分米(dm)</option><option value="cm" selected>厘米(cm)</option><option value="mm">毫米(mm)</option>
+            </select>
+            <button class="edu-btn edu-btn-primary" onclick="doConvert()">换算</button>
+          </div>
+          <div class="result-table" id="resultTable"></div>
+          <canvas id="animConvertCanvas" width="520" height="120"></canvas>
+          <div class="hint-text">点击换算后查看动画演示</div>
+        </div>
       </div>
+
       <div class="control-panel">
         <div class="ctrl-section">
           <div class="ctrl-label">常用换算</div>
@@ -65,6 +141,13 @@
           <button class="preset-btn" onclick="loadCv(1,'m')">1 米</button>
           <button class="preset-btn" onclick="loadCv(5,'dm')">5 分米</button>
           <button class="preset-btn" onclick="loadCv(100,'mm')">100 毫米</button>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">测量挑战难度</div>
+          <button class="preset-btn" onclick="setQuizDifficulty('easy')">简单 (cm)</button>
+          <button class="preset-btn" onclick="setQuizDifficulty('medium')">中等 (mm)</button>
+          <button class="preset-btn" onclick="setQuizDifficulty('hard')">困难 (dm)</button>
         </div>
         <div class="divider"></div>
         <div class="info-box">
@@ -80,8 +163,7 @@
   </div>
 </div>
 <script>
-const canvas = document.getElementById('barCanvas');
-const ctx = canvas.getContext('2d');
+/* ======================== Data ======================== */
 const UNITS = [
   { key:'mm', label:'毫米(mm)', factor:1, color:'#94a3b8' },
   { key:'cm', label:'厘米(cm)', factor:10, color:'#22c55e' },
@@ -89,35 +171,415 @@ const UNITS = [
   { key:'m',  label:'米(m)',   factor:1000, color:'#f97316' },
   { key:'km', label:'千米(km)', factor:1000000, color:'#ef4444' },
 ];
+const STAIR = [
+  { key:'km', label:'千米', factor:1000000, color:'#ef4444', arrow:'×1000' },
+  { key:'m',  label:'米',   factor:1000,    color:'#f97316', arrow:'×10' },
+  { key:'dm', label:'分米', factor:100,     color:'#3b82f6', arrow:'×10' },
+  { key:'cm', label:'厘米', factor:10,      color:'#22c55e', arrow:'×10' },
+  { key:'mm', label:'毫米', factor:1,       color:'#94a3b8', arrow:'' },
+];
 
 function toMM(val, unit) {
   const u = UNITS.find(x => x.key === unit);
   return val * (u ? u.factor : 1);
 }
-
-function drawBars() {
-  const len = +document.getElementById('slLength').value;
-  ctx.clearRect(0, 0, 520, 180);
-  const maxPx = 460, barH = 24, startY = 14;
-  UNITS.forEach((u, i) => {
-    const y = startY + i * (barH + 10);
-    // 标签
-    ctx.fillStyle = '#64748b'; ctx.font = '600 11px sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText(u.label, 50, y + 16);
-    // 条形
-    let barW;
-    if (u.key === 'km') barW = Math.min(maxPx, len / 1000000 * maxPx * 200);
-    else if (u.key === 'm') barW = Math.min(maxPx, len / 1000 * maxPx);
-    else barW = Math.min(maxPx, (len / u.factor) * maxPx / 10);
-    barW = Math.max(2, barW);
-    ctx.fillStyle = u.color;
-    ctx.beginPath(); ctx.roundRect(56, y, barW, barH, 4); ctx.fill();
-    // 数值
-    ctx.fillStyle = '#1e293b'; ctx.font = '700 12px "Courier New", monospace'; ctx.textAlign = 'left';
-    ctx.fillText((len / u.factor).toFixed(u.factor >= 1000 ? 6 : u.factor >= 100 ? 3 : 1).replace(/\.?0+$/, '') + ' ' + u.key, 56 + barW + 6, y + 16);
-  });
-  document.getElementById('lengthLabel').textContent = len + ' mm';
+function fmtNum(n) {
+  if (Number.isInteger(n)) return n.toLocaleString();
+  if (n < 0.001) return '0';
+  return parseFloat(n.toPrecision(8)).toString();
 }
+
+/* ======================== Tab Switching ======================== */
+let currentTab = 'ruler';
+function switchTab(tab) {
+  currentTab = tab;
+  const tabs = ['ruler','compare','staircase','quiz','convert'];
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', tabs[i]===tab));
+  tabs.forEach(t => { const el = document.getElementById('tab-'+t); if(el) el.style.display = t===tab ? '' : 'none'; });
+  if (tab==='ruler') drawRuler();
+  if (tab==='compare') drawCompare();
+  if (tab==='staircase') drawStaircase();
+  if (tab==='quiz') { newQuiz(); }
+}
+
+/* ======================== 1. Interactive Ruler ======================== */
+const rulerCv = document.getElementById('rulerCanvas');
+const rCtx = rulerCv.getContext('2d');
+let rulerScale = 1; // px per mm at base: 2px = 1mm
+const BASE_PX_PER_MM = 2;
+let markerA = 200, markerB = 500; // px positions
+let dragMarker = null; // 'A','B', or 'block'
+let blockX = 50, blockW = 120, blockVisible = true;
+const RULER_H = 200, RULER_TOP = 60, RULER_LEFT = 30;
+
+function pxToMM(px) { return Math.round((px - RULER_LEFT) / (BASE_PX_PER_MM * rulerScale)); }
+function mmToPx(mm) { return RULER_LEFT + mm * BASE_PX_PER_MM * rulerScale; }
+
+function rulerZoom(factor) {
+  rulerScale = Math.max(0.3, Math.min(6, factor * rulerScale));
+  document.getElementById('rulerZoomLabel').textContent = '缩放: ' + rulerScale.toFixed(1) + 'x';
+  drawRuler();
+}
+
+function drawRuler() {
+  const W = rulerCv.width, H = rulerCv.height;
+  rCtx.clearRect(0, 0, W, H);
+  // background
+  rCtx.fillStyle = '#fafffe'; rCtx.fillRect(0, 0, W, H);
+
+  const pxPerMM = BASE_PX_PER_MM * rulerScale;
+  const pxPerCM = pxPerMM * 10;
+
+  // Draw ruler body
+  rCtx.fillStyle = '#fefce8';
+  rCtx.fillRect(RULER_LEFT, RULER_TOP, W - RULER_LEFT * 2, 60);
+  rCtx.strokeStyle = '#a3a3a3'; rCtx.lineWidth = 1;
+  rCtx.strokeRect(RULER_LEFT, RULER_TOP, W - RULER_LEFT * 2, 60);
+
+  // Tick marks
+  const totalMM = Math.floor((W - RULER_LEFT * 2) / pxPerMM);
+  for (let mm = 0; mm <= totalMM; mm++) {
+    const x = RULER_LEFT + mm * pxPerMM;
+    if (x > W - RULER_LEFT) break;
+    const isCM = mm % 10 === 0;
+    const isHalfCM = mm % 5 === 0 && !isCM;
+    let tickH, lw, clr;
+    if (isCM) { tickH = 30; lw = 1.5; clr = '#1e293b'; }
+    else if (isHalfCM) { tickH = 20; lw = 1; clr = '#64748b'; }
+    else { tickH = 10; lw = 0.5; clr = '#94a3b8'; }
+    rCtx.beginPath(); rCtx.moveTo(x, RULER_TOP); rCtx.lineTo(x, RULER_TOP + tickH);
+    rCtx.strokeStyle = clr; rCtx.lineWidth = lw; rCtx.stroke();
+
+    // cm labels
+    if (isCM) {
+      const cmVal = mm / 10;
+      rCtx.fillStyle = '#1e293b'; rCtx.font = `bold ${Math.max(9, Math.min(14, pxPerCM * 0.35))}px sans-serif`;
+      rCtx.textAlign = 'center'; rCtx.fillText(cmVal + '', x, RULER_TOP + 45);
+    }
+  }
+  // Unit label
+  rCtx.fillStyle = '#64748b'; rCtx.font = 'bold 11px sans-serif'; rCtx.textAlign = 'left';
+  rCtx.fillText('cm', W - RULER_LEFT - 10, RULER_TOP + 45);
+  rCtx.fillText('0', RULER_LEFT - 2, RULER_TOP + 45);
+
+  // Draggable block (blue rectangle representing an object to measure)
+  if (blockVisible) {
+    const bx = blockX, bw = blockW;
+    rCtx.fillStyle = 'rgba(59,130,246,0.2)'; rCtx.fillRect(bx, RULER_TOP + 4, bw, 52);
+    rCtx.strokeStyle = '#3b82f6'; rCtx.lineWidth = 2; rCtx.strokeRect(bx, RULER_TOP + 4, bw, 52);
+    rCtx.fillStyle = '#3b82f6'; rCtx.font = 'bold 11px sans-serif'; rCtx.textAlign = 'center';
+    rCtx.fillText('拖动我', bx + bw / 2, RULER_TOP + 34);
+  }
+
+  // Markers A and B
+  drawMarker(rCtx, markerA, 'A', '#22c55e');
+  drawMarker(rCtx, markerB, 'B', '#ef4444');
+
+  // Distance line
+  const mmA = pxToMM(markerA), mmB = pxToMM(markerB);
+  const dist = Math.abs(mmB - mmA);
+  const minX = Math.min(markerA, markerB), maxX = Math.max(markerA, markerB);
+  if (maxX > minX + 4) {
+    const lineY = RULER_TOP + 70;
+    rCtx.beginPath(); rCtx.moveTo(minX, lineY); rCtx.lineTo(maxX, lineY);
+    rCtx.strokeStyle = '#22c55e'; rCtx.lineWidth = 3; rCtx.stroke();
+    // end caps
+    [minX, maxX].forEach(x => { rCtx.beginPath(); rCtx.moveTo(x, lineY - 6); rCtx.lineTo(x, lineY + 6); rCtx.strokeStyle = '#22c55e'; rCtx.lineWidth = 2; rCtx.stroke(); });
+    // label
+    rCtx.fillStyle = '#22c55e'; rCtx.font = 'bold 16px "Courier New", monospace'; rCtx.textAlign = 'center';
+    const distCM = (dist / 10).toFixed(1);
+    rCtx.fillText(dist + ' mm = ' + distCM + ' cm', (minX + maxX) / 2, lineY + 22);
+  }
+  document.getElementById('rulerDistLabel').textContent = '距离: ' + dist + ' mm (' + (dist / 10).toFixed(1) + ' cm)';
+}
+
+function drawMarker(ctx, x, label, color) {
+  ctx.beginPath(); ctx.moveTo(x, RULER_TOP - 18); ctx.lineTo(x, RULER_TOP + 60);
+  ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
+  // triangle
+  ctx.beginPath(); ctx.moveTo(x, RULER_TOP - 18); ctx.lineTo(x - 7, RULER_TOP - 30); ctx.lineTo(x + 7, RULER_TOP - 30); ctx.closePath();
+  ctx.fillStyle = color; ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(label, x, RULER_TOP - 21);
+}
+
+rulerCv.addEventListener('mousedown', e => {
+  const rect = rulerCv.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (rulerCv.width / rect.width);
+  if (Math.abs(mx - markerA) < 14) dragMarker = 'A';
+  else if (Math.abs(mx - markerB) < 14) dragMarker = 'B';
+  else if (blockVisible && mx >= blockX && mx <= blockX + blockW && mx > RULER_LEFT) dragMarker = 'block';
+});
+rulerCv.addEventListener('mousemove', e => {
+  if (!dragMarker) return;
+  const rect = rulerCv.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (rulerCv.width / rect.width);
+  const clamped = Math.max(RULER_LEFT, Math.min(rulerCv.width - RULER_LEFT, mx));
+  if (dragMarker === 'A') markerA = clamped;
+  else if (dragMarker === 'B') markerB = clamped;
+  else if (dragMarker === 'block') blockX = clamped - blockW / 2;
+  drawRuler();
+});
+rulerCv.addEventListener('mouseup', () => { dragMarker = null; });
+rulerCv.addEventListener('mouseleave', () => { dragMarker = null; });
+rulerCv.addEventListener('wheel', e => {
+  if (currentTab !== 'ruler') return;
+  e.preventDefault();
+  rulerZoom(e.deltaY < 0 ? 1.2 : 0.833);
+}, { passive: false });
+
+/* ======================== 2. Unit Comparison Animation ======================== */
+const cmpCv = document.getElementById('compareCanvas');
+const cCtx = cmpCv.getContext('2d');
+let cmpAnimId = null, cmpFrame = 0, cmpLevel = 0;
+const CMP_W = 680, CMP_H = 340;
+
+function drawCompare() {
+  if (cmpAnimId) { cancelAnimationFrame(cmpAnimId); cmpAnimId = null; }
+  cmpFrame = 0; cmpLevel = +document.getElementById('compareLevel').value;
+  drawCompareFrame();
+}
+
+function drawCompareFrame() {
+  const W = CMP_W, H = CMP_H;
+  cCtx.clearRect(0, 0, W, H);
+  cCtx.fillStyle = '#fafffe'; cCtx.fillRect(0, 0, W, H);
+
+  const levels = [
+    { from:'米', to:'分米', count:10, color:'#f97316', subColor:'#3b82f6', totalMM:1000 },
+    { from:'分米', to:'厘米', count:10, color:'#3b82f6', subColor:'#22c55e', totalMM:100 },
+    { from:'厘米', to:'毫米', count:10, color:'#22c55e', subColor:'#94a3b8', totalMM:10 },
+  ];
+  const lv = levels[cmpLevel];
+  const barY = 50, maxBarW = W - 80, barH = 50;
+  const progress = Math.min(1, cmpFrame / 60); // 0→1 over 60 frames
+  const splitProgress = Math.min(1, Math.max(0, (progress - 0.3) / 0.5)); // starts at 30%
+
+  // Title
+  cCtx.fillStyle = '#1e293b'; cCtx.font = 'bold 16px sans-serif'; cCtx.textAlign = 'center';
+  cCtx.fillText('1 ' + lv.from + ' = ' + lv.count + ' ' + lv.to, W / 2, 30);
+
+  // Whole bar
+  const wholeW = maxBarW * progress;
+  cCtx.fillStyle = lv.color; cCtx.beginPath();
+  cCtx.roundRect(40, barY, wholeW, barH, 6); cCtx.fill();
+  cCtx.fillStyle = '#fff'; cCtx.font = 'bold 18px sans-serif'; cCtx.textAlign = 'center';
+  if (wholeW > 60) cCtx.fillText('1 ' + lv.from, 40 + wholeW / 2, barY + 32);
+
+  // Split segments
+  if (splitProgress > 0) {
+    const segW = maxBarW / lv.count;
+    const visibleSegs = Math.ceil(lv.count * splitProgress);
+    for (let i = 0; i < visibleSegs; i++) {
+      const sx = 40 + i * segW;
+      const alpha = Math.min(1, splitProgress * lv.count - i);
+      cCtx.fillStyle = lv.subColor; cCtx.globalAlpha = alpha;
+      cCtx.fillRect(sx, barY + barH + 10, segW - 2, 40);
+      cCtx.globalAlpha = 1;
+      cCtx.strokeStyle = '#fff'; cCtx.lineWidth = 1;
+      cCtx.strokeRect(sx, barY + barH + 10, segW - 2, 40);
+      // label
+      if (segW > 30) {
+        cCtx.fillStyle = '#fff'; cCtx.font = 'bold 11px sans-serif'; cCtx.textAlign = 'center';
+        cCtx.fillText((i + 1) + '', sx + segW / 2 - 1, barY + barH + 35);
+      }
+    }
+    cCtx.fillStyle = lv.subColor; cCtx.font = 'bold 13px sans-serif'; cCtx.textAlign = 'left';
+    cCtx.fillText(visibleSegs + ' ' + lv.to, 40, barY + barH + 70);
+  }
+
+  // Zoom inset: show one segment enlarged
+  if (splitProgress > 0.5) {
+    const insetAlpha = Math.min(1, (splitProgress - 0.5) * 4);
+    cCtx.globalAlpha = insetAlpha;
+    const inX = 40, inY = barY + barH + 90, inW = maxBarW, inH = 80;
+    cCtx.fillStyle = '#f0fdf4'; cCtx.fillRect(inX, inY, inW, inH);
+    cCtx.strokeStyle = '#bbf7d0'; cCtx.lineWidth = 1; cCtx.strokeRect(inX, inY, inW, inH);
+    // draw one segment zoomed
+    const segW = maxBarW / lv.count;
+    const zoomSegW = inW / lv.count;
+    for (let i = 0; i < lv.count; i++) {
+      const sx = inX + i * zoomSegW;
+      cCtx.fillStyle = i % 2 === 0 ? 'rgba(34,197,94,0.3)' : 'rgba(59,130,246,0.3)';
+      cCtx.fillRect(sx, inY, zoomSegW, inH);
+      cCtx.strokeStyle = '#94a3b8'; cCtx.lineWidth = 0.5; cCtx.strokeRect(sx, inY, zoomSegW, inH);
+      cCtx.fillStyle = '#334155'; cCtx.font = 'bold 12px sans-serif'; cCtx.textAlign = 'center';
+      cCtx.fillText((i + 1) + ' ' + lv.to, sx + zoomSegW / 2, inY + inH / 2 + 4);
+    }
+    cCtx.globalAlpha = 1;
+  }
+
+  cmpFrame++;
+  if (cmpFrame <= 90) cmpAnimId = requestAnimationFrame(drawCompareFrame);
+  else cmpAnimId = null;
+}
+
+function startCompareAnim() {
+  cmpLevel = +document.getElementById('compareLevel').value;
+  cmpFrame = 0;
+  if (cmpAnimId) cancelAnimationFrame(cmpAnimId);
+  drawCompareFrame();
+}
+
+/* ======================== 3. Staircase Conversion Diagram ======================== */
+const stCv = document.getElementById('stairCanvas');
+const sCtx = stCv.getContext('2d');
+let stairSelected = -1;
+
+function drawStaircase() {
+  const W = stCv.width, H = stCv.height;
+  sCtx.clearRect(0, 0, W, H);
+  sCtx.fillStyle = '#fafffe'; sCtx.fillRect(0, 0, W, H);
+
+  const stepH = 56, stepW = 90, startX = 40, startY = 40;
+  STAIR.forEach((u, i) => {
+    const x = startX + i * stepW;
+    const y = startY + (STAIR.length - 1 - i) * stepH;
+    const isSelected = stairSelected === i;
+    // step block
+    sCtx.fillStyle = isSelected ? u.color : u.color + '33';
+    sCtx.beginPath(); sCtx.roundRect(x, y, stepW - 8, stepH - 6, 8); sCtx.fill();
+    sCtx.strokeStyle = u.color; sCtx.lineWidth = isSelected ? 3 : 1.5;
+    sCtx.stroke();
+    // label
+    sCtx.fillStyle = isSelected ? '#fff' : u.color;
+    sCtx.font = (isSelected ? 'bold 16px' : '13px') + ' sans-serif';
+    sCtx.textAlign = 'center';
+    sCtx.fillText(u.label, x + (stepW - 8) / 2, y + (stepH - 6) / 2 + 5);
+    // factor label below
+    sCtx.fillStyle = '#64748b'; sCtx.font = 'bold 11px sans-serif';
+    if (i < STAIR.length - 1) {
+      const arrowX = x + stepW - 4;
+      const arrowY1 = y + stepH - 3;
+      const arrowY2 = arrowY1 + stepH - 3;
+      // draw arrow
+      sCtx.beginPath(); sCtx.moveTo(arrowX, arrowY1); sCtx.lineTo(arrowX, arrowY2);
+      sCtx.strokeStyle = u.color; sCtx.lineWidth = 2; sCtx.stroke();
+      sCtx.beginPath(); sCtx.moveTo(arrowX - 4, arrowY2 - 6); sCtx.lineTo(arrowX, arrowY2); sCtx.lineTo(arrowX + 4, arrowY2 - 6);
+      sCtx.strokeStyle = u.color; sCtx.lineWidth = 2; sCtx.stroke();
+      // ×10 label
+      sCtx.fillStyle = u.color; sCtx.font = 'bold 11px "Courier New", monospace'; sCtx.textAlign = 'left';
+      sCtx.fillText(u.arrow, arrowX + 6, (arrowY1 + arrowY2) / 2 + 4);
+    }
+  });
+
+  // Title
+  sCtx.fillStyle = '#1e293b'; sCtx.font = 'bold 14px sans-serif'; sCtx.textAlign = 'center';
+  sCtx.fillText('长度单位换算阶梯', W / 2, H - 16);
+}
+
+stCv.addEventListener('click', e => {
+  const rect = stCv.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (stCv.width / rect.width);
+  const my = (e.clientY - rect.top) * (stCv.height / rect.height);
+  const stepH = 56, stepW = 90, startX = 40, startY = 40;
+  let found = -1;
+  STAIR.forEach((u, i) => {
+    const x = startX + i * stepW;
+    const y = startY + (STAIR.length - 1 - i) * stepH;
+    if (mx >= x && mx <= x + stepW - 8 && my >= y && my <= y + stepH - 6) found = i;
+  });
+  stairSelected = found;
+  drawStaircase();
+  updateStairInfo(found);
+});
+
+function updateStairInfo(idx) {
+  const el = document.getElementById('stairInfo');
+  if (idx < 0) { el.innerHTML = '点击上方阶梯中的单位，查看详细换算'; return; }
+  const u = STAIR[idx];
+  let html = '<b style="color:' + u.color + '">' + u.label + '</b><br/>';
+  STAIR.forEach(s => {
+    if (s.key === u.key) return;
+    const ratio = u.factor / s.factor;
+    const label = '1 ' + u.label + ' = ' + fmtNum(ratio) + ' ' + s.label;
+    html += '<span style="color:' + s.color + '">' + label + '</span><br/>';
+  });
+  el.innerHTML = html;
+}
+
+/* ======================== 4. Measurement Quiz ======================== */
+const qCv = document.getElementById('quizCanvas');
+const qCtx = qCv.getContext('2d');
+let quizLen = 0, quizDiff = 'easy', quizCorrect = 0, quizTotal = 0;
+let quizLineStart = 0;
+
+function newQuiz() {
+  const W = qCv.width, H = qCv.height;
+  qCtx.clearRect(0, 0, W, H);
+  qCtx.fillStyle = '#fafffe'; qCtx.fillRect(0, 0, W, H);
+
+  const pad = 60;
+  let maxMM;
+  if (quizDiff === 'easy') { maxMM = 200; quizLen = Math.floor(Math.random() * 18 + 2) * 10; } // cm precision
+  else if (quizDiff === 'medium') { maxMM = 150; quizLen = Math.floor(Math.random() * 140 + 10); } // mm
+  else { maxMM = 1000; quizLen = Math.floor(Math.random() * 9 + 1) * 100; } // dm
+
+  const lineLen = (quizLen / maxMM) * (W - pad * 2);
+  quizLineStart = pad + Math.random() * (W - pad * 2 - lineLen);
+  const lineY = H / 2;
+
+  // Draw ruler ticks in background
+  const pxPerCM = (W - pad * 2) / (maxMM / 10);
+  const totalCM = Math.ceil(maxMM / 10);
+  for (let cm = 0; cm <= totalCM; cm++) {
+    const x = pad + cm * pxPerCM;
+    qCtx.beginPath(); qCtx.moveTo(x, lineY + 20); qCtx.lineTo(x, lineY + (cm % 5 === 0 ? 34 : 26));
+    qCtx.strokeStyle = '#cbd5e1'; qCtx.lineWidth = 1; qCtx.stroke();
+    if (cm % 5 === 0) {
+      qCtx.fillStyle = '#94a3b8'; qCtx.font = '10px sans-serif'; qCtx.textAlign = 'center';
+      qCtx.fillText(cm + '', x, lineY + 44);
+    }
+  }
+  qCtx.fillStyle = '#94a3b8'; qCtx.font = '9px sans-serif'; qCtx.textAlign = 'right';
+  qCtx.fillText('cm', W - pad + 14, lineY + 44);
+
+  // Draw the line segment
+  qCtx.beginPath(); qCtx.moveTo(quizLineStart, lineY); qCtx.lineTo(quizLineStart + lineLen, lineY);
+  qCtx.strokeStyle = '#22c55e'; qCtx.lineWidth = 4; qCtx.lineCap = 'round'; qCtx.stroke();
+  // endpoints
+  [quizLineStart, quizLineStart + lineLen].forEach(x => {
+    qCtx.beginPath(); qCtx.arc(x, lineY, 5, 0, Math.PI * 2);
+    qCtx.fillStyle = '#22c55e'; qCtx.fill();
+  });
+  // ? label
+  qCtx.fillStyle = '#1e293b'; qCtx.font = 'bold 18px sans-serif'; qCtx.textAlign = 'center';
+  qCtx.fillText('? cm', quizLineStart + lineLen / 2, lineY - 16);
+
+  document.getElementById('quizFeedback').textContent = '';
+  document.getElementById('quizAnswer').value = '';
+  const unitMap = { easy: 'cm', medium: 'mm', hard: 'dm' };
+  document.getElementById('quizUnitSel').value = unitMap[quizDiff];
+  document.getElementById('quizQuestion').textContent = '这条线段有多长？';
+}
+
+function checkQuiz() {
+  const ans = parseFloat(document.getElementById('quizAnswer').value);
+  const unit = document.getElementById('quizUnitSel').value;
+  const fb = document.getElementById('quizFeedback');
+  if (isNaN(ans)) { fb.textContent = '请输入数字'; fb.style.color = '#f97316'; return; }
+  const userMM = ans * (UNITS.find(u => u.key === unit).factor);
+  const correct = Math.abs(userMM - quizLen) < 0.5;
+  quizTotal++;
+  if (correct) {
+    quizCorrect++;
+    fb.textContent = '✓ 回答正确！'; fb.style.color = '#22c55e';
+  } else {
+    const correctVal = quizLen / (UNITS.find(u => u.key === unit).factor);
+    fb.textContent = '✗ 正确答案是 ' + fmtNum(correctVal) + ' ' + unit; fb.style.color = '#ef4444';
+  }
+  document.getElementById('quizScore').textContent = '得分: ' + quizCorrect + ' / ' + quizTotal;
+}
+
+function setQuizDifficulty(d) {
+  quizDiff = d;
+  newQuiz();
+}
+
+/* ======================== 5. Animated Conversion ======================== */
+const acCv = document.getElementById('animConvertCanvas');
+const aCtx = acCv.getContext('2d');
+let convAnimId = null, convSteps = [], convStep = 0, convFrame = 0;
 
 function doConvert() {
   const val = parseFloat(document.getElementById('cvValue').value) || 0;
@@ -130,34 +592,102 @@ function doConvert() {
     const isCurrent = u.key === unit;
     html += `<div class="result-row" style="${isCurrent ? 'background:#f0fdf4;font-weight:800' : ''}">
       <span class="unit-name">${u.label}</span>
-      <span class="unit-val">${formatNum(converted)}</span></div>`;
+      <span class="unit-val">${fmtNum(converted)}</span></div>`;
   });
   el.innerHTML = html;
-  document.getElementById('slLength').value = Math.min(1000, mm);
-  drawBars();
+  animateConversion(val, unit);
 }
 
-function formatNum(n) {
-  if (Number.isInteger(n)) return n.toLocaleString();
-  if (n < 0.001) return '0';
-  return parseFloat(n.toPrecision(8)).toString();
+function animateConversion(val, fromUnit) {
+  if (convAnimId) cancelAnimationFrame(convAnimId);
+  const fromIdx = STAIR.findIndex(s => s.key === fromUnit);
+  convSteps = [];
+  // build steps: from the source unit, go up/down to each other unit
+  STAIR.forEach((s, i) => {
+    if (s.key === fromUnit) return;
+    const targetIdx = i;
+    const steps = Math.abs(targetIdx - fromIdx);
+    const direction = targetIdx > fromIdx ? 'down' : 'up';
+    convSteps.push({ from: fromUnit, to: s.key, fromIdx, toIdx: targetIdx, steps, direction, result: val * STAIR[fromIdx].factor / s.factor });
+  });
+  convStep = 0; convFrame = 0;
+  animConvertFrame();
 }
 
+function animConvertFrame() {
+  const W = acCv.width, H = acCv.height;
+  aCtx.clearRect(0, 0, W, H);
+  if (convSteps.length === 0) return;
+
+  const step = convSteps[convStep % convSteps.length];
+  const progress = Math.min(1, convFrame / 40);
+  const totalLevels = STAIR.length;
+  const levelH = H / (totalLevels + 1);
+
+  // Draw all levels
+  STAIR.forEach((s, i) => {
+    const y = H - (i + 1) * levelH;
+    aCtx.fillStyle = (i === step.fromIdx || i === step.toIdx) ? s.color + '22' : '#f8fafc';
+    aCtx.fillRect(0, y, W, levelH - 2);
+    aCtx.fillStyle = s.color; aCtx.font = 'bold 12px sans-serif'; aCtx.textAlign = 'left';
+    aCtx.fillText(s.label, 8, y + levelH / 2 + 4);
+  });
+
+  // Animate number moving
+  const fromY = H - (step.fromIdx + 1) * levelH + levelH / 2;
+  const toY = H - (step.toIdx + 1) * levelH + levelH / 2;
+  const curY = fromY + (toY - fromY) * progress;
+  const numX = 80;
+
+  // number ball
+  aCtx.beginPath(); aCtx.arc(numX, curY, 18, 0, Math.PI * 2);
+  aCtx.fillStyle = '#22c55e'; aCtx.fill();
+  aCtx.fillStyle = '#fff'; aCtx.font = 'bold 12px "Courier New", monospace'; aCtx.textAlign = 'center';
+  const fromVal = parseFloat(document.getElementById('cvValue').value) || 0;
+  const displayVal = fromVal + (step.result - fromVal) * progress;
+  aCtx.fillText(fmtNum(displayVal), numX, curY + 4);
+
+  // Operation label
+  aCtx.fillStyle = '#1e293b'; aCtx.font = 'bold 14px "Courier New", monospace'; aCtx.textAlign = 'left';
+  const opText = step.direction === 'down' ? '×10 ×10...' : '÷10 ÷10...';
+  const actualOp = step.fromIdx < step.toIdx ? '×' + Math.pow(10, step.steps) : '÷' + Math.pow(10, step.steps);
+  aCtx.fillText(actualOp, numX + 30, curY + 4);
+
+  // Result at destination
+  if (progress > 0.8) {
+    aCtx.globalAlpha = (progress - 0.8) * 5;
+    aCtx.fillStyle = STAIR[step.toIdx].color; aCtx.font = 'bold 16px "Courier New", monospace';
+    aCtx.fillText('= ' + fmtNum(step.result) + ' ' + step.to, numX + 30, toY + levelH / 2);
+    aCtx.globalAlpha = 1;
+  }
+
+  convFrame++;
+  if (convFrame > 60) { convFrame = 0; convStep++; if (convStep >= convSteps.length) { convAnimId = null; return; } }
+  convAnimId = requestAnimationFrame(animConvertFrame);
+}
+
+/* ======================== Presets & Reset ======================== */
 function loadCv(val, unit) {
+  switchTab('convert');
   document.getElementById('cvValue').value = val;
   document.getElementById('cvUnit').value = unit;
   doConvert();
 }
 
 function resetAll() {
+  rulerScale = 1; markerA = 200; markerB = 500; blockX = 50;
+  stairSelected = -1; quizCorrect = 0; quizTotal = 0;
   document.getElementById('cvValue').value = 1;
   document.getElementById('cvUnit').value = 'cm';
-  document.getElementById('slLength').value = 100;
   document.getElementById('resultTable').innerHTML = '';
-  drawBars();
+  document.getElementById('rulerZoomLabel').textContent = '缩放: 1.0x';
+  document.getElementById('quizScore').textContent = '得分: 0 / 0';
+  if (convAnimId) { cancelAnimationFrame(convAnimId); convAnimId = null; }
+  switchTab('ruler');
 }
 
-drawBars();
+/* ======================== Init ======================== */
+drawRuler();
 </script>
 </body>
 </html>

@@ -1,13 +1,7 @@
 /**
- * 教立方 — 课程体系分类（教材版本 / 年级 / 学科）
- * 与具体教具通过 publisherId + gradeId + subjectId 关联
+ * 教立方 — 课程体系分类（年级 / 学科）
+ * 与具体教具通过 gradeId + subjectId 关联
  */
-
-export interface Publisher {
-  id: string;
-  name: string;
-  shortName: string;
-}
 
 export interface GradeLevel {
   id: string;
@@ -20,18 +14,6 @@ export interface Subject {
   name: string;
   shortName: string;
 }
-
-/** 主流小学数学教材版本（可继续扩展） */
-export const publishers: Publisher[] = [
-  { id: "pep", name: "人教版", shortName: "人教" },
-  { id: "bsd", name: "北师大版", shortName: "北师大" },
-  { id: "sue", name: "苏教版", shortName: "苏教" },
-  { id: "xsw", name: "西师大版", shortName: "西师大" },
-  { id: "jje", name: "冀教版", shortName: "冀教" },
-  { id: "hue", name: "沪教版", shortName: "沪教" },
-  { id: "qd", name: "青岛版", shortName: "青岛" },
-  { id: "bj", name: "北京版", shortName: "北京" },
-];
 
 /** 小学 + 初中年级 */
 export const grades: GradeLevel[] = [
@@ -55,10 +37,6 @@ export const subjects: Subject[] = [
   { id: "moral", name: "道德与法治", shortName: "道法" },
 ];
 
-export function getPublisher(id: string): Publisher | undefined {
-  return publishers.find((p) => p.id === id);
-}
-
 export function getGrade(id: string): GradeLevel | undefined {
   return grades.find((g) => g.id === id);
 }
@@ -67,21 +45,18 @@ export function getSubject(id: string): Subject | undefined {
   return subjects.find((s) => s.id === id);
 }
 
-/** 面包屑文案，如「人教版 · 四年级 · 数学」 */
+/** 面包屑文案，如「四年级 · 数学」 */
 export function getPathLabel(
-  publisherId: string,
   gradeId: string,
   subjectId: string,
 ): string {
-  const pub = getPublisher(publisherId)?.name ?? publisherId;
   const gr = gradeId === "all" ? "全部年级" : (getGrade(gradeId)?.name ?? gradeId);
   const sub = getSubject(subjectId)?.name ?? subjectId;
-  return `${pub} · ${gr} · ${sub}`;
+  return `${gr} · ${sub}`;
 }
 
 /** 默认进入页时的路径（当前仅有教具的目录） */
 export const defaultCatalogPath = {
-  publisherId: "pep",
   gradeId: "all",
   subjectId: "math",
 } as const;

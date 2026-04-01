@@ -7,7 +7,6 @@ import {
   defaultCatalogPath,
   getPathLabel,
   grades,
-  publishers,
   subjects,
 } from "@/data/curriculum";
 import ToolGrid from "./ToolGrid";
@@ -27,16 +26,13 @@ function sortToolsForDisplay(list: Tool[]): Tool[] {
 }
 
 export default function HomePageContent({ tools }: HomePageContentProps) {
-  const [publisherId, setPublisherId] = useState<string>(
-    defaultCatalogPath.publisherId,
-  );
   const [gradeId, setGradeId] = useState<string>(defaultCatalogPath.gradeId);
   const [subjectId, setSubjectId] = useState<string>(defaultCatalogPath.subjectId);
   const [semesterFilter, setSemesterFilter] = useState<SemesterFilter>("all");
 
   const catalogTools = useMemo(
-    () => filterToolsByCatalog(tools, publisherId, gradeId, subjectId),
-    [tools, publisherId, gradeId, subjectId],
+    () => filterToolsByCatalog(tools, gradeId, subjectId),
+    [tools, gradeId, subjectId],
   );
 
   const displayTools = useMemo(() => {
@@ -47,7 +43,7 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
     return sortToolsForDisplay(list);
   }, [catalogTools, semesterFilter]);
 
-  const pathLabel = getPathLabel(publisherId, gradeId, subjectId);
+  const pathLabel = getPathLabel(gradeId, subjectId);
 
   const semesterSummary =
     semesterFilter === "all" ? "" : ` · ${semesterFilter}`;
@@ -58,34 +54,26 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
 
   // 预计算各维度的计数，避免在 JSX 中多次 filter
   const counts = useMemo(() => {
-    const pub = new Map<string, number>();
     const grade = new Map<string, number>();
     const sub = new Map<string, number>();
 
     for (const t of tools) {
-      if (t.gradeId === gradeId && t.subjectId === subjectId) {
-        pub.set(t.publisherId, (pub.get(t.publisherId) ?? 0) + 1);
-      }
-      if (t.publisherId === publisherId && t.subjectId === subjectId) {
-        if (t.gradeId === gradeId || gradeId === "all") {
-          // for "all" grade count
-        }
+      if (t.subjectId === subjectId) {
         grade.set(t.gradeId, (grade.get(t.gradeId) ?? 0) + 1);
       }
-      if (t.publisherId === publisherId && t.gradeId === gradeId) {
+      if (t.gradeId === gradeId) {
         sub.set(t.subjectId, (sub.get(t.subjectId) ?? 0) + 1);
       }
     }
     // "all" grade count
     const allGrade = tools.filter(
-      (t) => t.publisherId === publisherId && t.subjectId === subjectId,
+      (t) => t.subjectId === subjectId,
     ).length;
     grade.set("all", allGrade);
 
-    return { pub, grade, sub };
-  }, [tools, publisherId, gradeId, subjectId]);
+    return { grade, sub };
+  }, [tools, gradeId, subjectId]);
 
-  const countForPublisher = (pid: string) => counts.pub.get(pid) ?? 0;
   const countForGrade = (gid: string) => counts.grade.get(gid) ?? 0;
   const countForSubject = (sid: string) => counts.sub.get(sid) ?? 0;
 
@@ -218,39 +206,7 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
               未上线的教材 / 年级 / 学科会显示「陆续补充」。可先选册别再浏览列表。
             </p>
 
-            {/* ① 教材 */}
-            <div>
-              <span className="mb-1.5 block text-[11px] font-bold text-slate-500">版本</span>
-              <div className="flex flex-wrap gap-1.5">
-                {publishers.map((p) => {
-                  const n = countForPublisher(p.id);
-                  const active = publisherId === p.id;
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => setPublisherId(p.id)}
-                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
-                        active
-                          ? "border-slate-800 bg-slate-800 text-white"
-                          : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
-                      }`}
-                    >
-                      {p.shortName}
-                      <span
-                        className={
-                          active ? "text-white/80" : "text-slate-400"
-                        }
-                      >
-                        {n}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* ② 年级：小学与初中同一视觉块 */}
+            {/* ① 年级：小学与初中同一视觉块 */}
             <div>
               <span className="mb-1.5 block text-[11px] font-bold text-slate-500">年级</span>
               <div className="flex flex-wrap items-center gap-1.5">
@@ -317,7 +273,7 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
               </div>
             </div>
 
-            {/* ③ 册别（上册 / 下册） */}
+            {/* ② 册别（上册 / 下册） */}
             <div>
               <span className="mb-1.5 block text-[11px] font-bold text-slate-500">册别</span>
               <div className="flex flex-wrap gap-1.5">
@@ -350,7 +306,7 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
               </div>
             </div>
 
-            {/* ④ 学科 */}
+            {/* ③ 学科 */}
             <div>
               <span className="mb-1.5 block text-[11px] font-bold text-slate-500">学科</span>
               <div className="flex flex-wrap gap-1.5">
@@ -389,7 +345,6 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
               <strong className="text-slate-600">
                 {" "}
                 {getPathLabel(
-                  defaultCatalogPath.publisherId,
                   defaultCatalogPath.gradeId,
                   defaultCatalogPath.subjectId,
                 )}{" "}
@@ -423,7 +378,7 @@ export default function HomePageContent({ tools }: HomePageContentProps) {
             </div>
             <span>教立方 EduCube</span>
           </div>
-          <span>多版本教材 · 多年级 · 多学科 · 交互教具持续扩充</span>
+          <span>多年级 · 多学科 · 交互教具持续扩充</span>
         </div>
       </footer>
     </div>

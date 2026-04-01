@@ -6,37 +6,93 @@
   <title>鸽巢原理 — 教立方</title>
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
   <style>
-    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
-    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #fff7ed 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
-    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .main-layout { display: grid; grid-template-columns: 1fr 270px; height: 100%; }
+    .canvas-area { padding: 20px; overflow-y: auto; background: linear-gradient(135deg, #fff7ed 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
     .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
     .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
     .divider { height: 1px; background: #e2e8f0; }
     .info-box { background: #fff; border: 1px solid #fed7aa; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
     .slider-row { display: flex; align-items: center; gap: 10px; }
     .slider-row input { flex: 1; }
-    .slider-row .value-display { min-width: 24px; }
-    .box-row { display: flex; gap: 16px; margin: 16px 0; flex-wrap: wrap; justify-content: center; }
-    .pigeonhole { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 80px; }
-    .hole-box { width: 80px; min-height: 60px; border: 2px solid #e2e8f0; border-radius: 10px; background: #fff; display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; justify-content: center; align-items: center; transition: border-color .2s; }
-    .hole-box.highlight { border-color: #f97316; background: #fff7ed; }
-    .ball { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; transition: transform .3s; }
-    .hole-label { font-size: 12px; font-weight: 600; color: #64748b; }
-    .conclusion { background: #fff; border: 2px solid #f97316; border-radius: 12px; padding: 16px; text-align: center; width: 100%; max-width: 460px; margin-top: 12px; }
-    .conclusion .big { font-size: 18px; font-weight: 800; color: #f97316; }
-    .distribute-btn { padding: 8px 16px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; margin: 4px; }
-    .distribute-btn:hover { border-color: #f97316; color: #f97316; }
+
+    /* Simulation area */
+    .sim-stage { position: relative; width: 100%; max-width: 520px; min-height: 260px; background: #fff; border-radius: 14px; border: 1.5px solid #e2e8f0; overflow: hidden; }
+    .sim-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: #cbd5e1; font-size: 14px; font-weight: 600; pointer-events: none; }
+    .drop-zone { position: absolute; bottom: 0; border-top: 2.5px dashed #e2e8f0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 6px; cursor: pointer; transition: border-color .2s, background .2s; }
+    .drop-zone:hover { background: #fff7ed; border-top-color: #f97316; }
+    .drop-zone.triggered { border-top-color: #ef4444; background: #fef2f2; }
+    .drop-zone.triggered .zone-label { color: #ef4444; }
+    .zone-label { font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 2px; }
+    .zone-count { font-size: 10px; color: #94a3b8; }
+    .trigger-badge { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); background: #ef4444; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; white-space: nowrap; animation: badgePulse .6s ease infinite alternate; }
+    @keyframes badgePulse { from { transform: translateX(-50%) scale(1); } to { transform: translateX(-50%) scale(1.1); } }
+
+    /* Flying ball */
+    .fly-ball { position: absolute; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; z-index: 10; pointer-events: none; box-shadow: 0 3px 10px rgba(0,0,0,.18); }
+    .fly-ball.bounce { animation: ballBounce .5s cubic-bezier(.34,1.56,.64,1) forwards; }
+    @keyframes ballBounce {
+      0% { transform: translateY(0) scale(1); }
+      40% { transform: translateY(-18px) scale(.9); }
+      70% { transform: translateY(4px) scale(1.05); }
+      100% { transform: translateY(0) scale(1); }
+    }
+    .placed-ball { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; margin: 1px; }
+    .placed-ball.pop { animation: ballPop .35s cubic-bezier(.34,1.56,.64,1); }
+    @keyframes ballPop { 0%{transform:scale(0)} 60%{transform:scale(1.2)} 100%{transform:scale(1)} }
+
+    /* Queue area */
+    .queue-area { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; padding: 6px 0; min-height: 36px; align-items: center; }
+    .queue-ball { width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; cursor: pointer; transition: transform .15s, box-shadow .15s; box-shadow: 0 2px 6px rgba(0,0,0,.15); }
+    .queue-ball:hover { transform: scale(1.15); box-shadow: 0 4px 12px rgba(0,0,0,.25); }
+    .queue-ball.active { transform: scale(1.2); box-shadow: 0 0 0 3px #f97316, 0 4px 12px rgba(0,0,0,.2); }
+
+    /* Conclusion */
+    .conclusion { background: #fff; border: 2px solid #f97316; border-radius: 12px; padding: 14px; text-align: center; width: 100%; max-width: 520px; }
+    .conclusion .big { font-size: 17px; font-weight: 800; color: #f97316; }
+
+    /* Proof section */
+    .proof-card { background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px; width: 100%; max-width: 520px; }
+    .proof-step { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; opacity: .3; transition: opacity .4s; }
+    .proof-step.active { opacity: 1; }
+    .proof-num { width: 22px; height: 22px; border-radius: 50%; background: #f97316; color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .proof-text { font-size: 13px; color: #334155; line-height: 1.6; }
+    .proof-text b { color: #f97316; }
+
+    /* Challenge mode */
+    .challenge-box { background: linear-gradient(135deg, #fef3c7, #fff7ed); border: 1.5px solid #fed7aa; border-radius: 12px; padding: 14px; width: 100%; max-width: 520px; text-align: center; }
+    .challenge-q { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 8px; line-height: 1.6; }
+    .challenge-options { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 8px 0; }
+    .ch-opt { padding: 6px 18px; border-radius: 20px; border: 2px solid #e2e8f0; background: #fff; font-size: 14px; font-weight: 700; cursor: pointer; transition: all .15s; }
+    .ch-opt:hover { border-color: #f97316; color: #f97316; }
+    .ch-opt.correct { border-color: #22c55e; background: #f0fdf4; color: #16a34a; }
+    .ch-opt.wrong { border-color: #ef4444; background: #fef2f2; color: #ef4444; }
+    .ch-result { font-size: 13px; font-weight: 600; margin-top: 6px; min-height: 20px; }
+
+    /* Scenario preset buttons */
+    .scenario-btn { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 10px; border: 1.5px solid #e2e8f0; background: #fff; cursor: pointer; transition: all .15s; text-align: left; }
+    .scenario-btn:hover { border-color: #f97316; background: #fff7ed; }
+    .scenario-icon { font-size: 20px; flex-shrink: 0; }
+    .scenario-info { display: flex; flex-direction: column; gap: 1px; }
+    .scenario-title { font-size: 12px; font-weight: 700; color: #1e293b; }
+    .scenario-desc { font-size: 10px; color: #94a3b8; }
+
+    /* Mode tabs */
+    .mode-tabs { display: flex; gap: 4px; background: #f1f5f9; border-radius: 10px; padding: 3px; }
+    .mode-tab { flex: 1; padding: 6px 4px; border-radius: 8px; border: none; background: transparent; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .15s; color: #64748b; font-family: var(--edu-font, sans-serif); }
+    .mode-tab.active { background: #fff; color: #f97316; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
   </style>
 </head>
 <body>
 <div class="edu-tool">
   <div class="edu-toolbar">
     <div style="display:flex;align-items:center;gap:10px">
-      <div class="edu-toolbar-title">🐦 鸽巢原理</div>
+      <div class="edu-toolbar-title">鸽巢原理</div>
       <div class="edu-toolbar-subtitle">下册 · 数学广角</div>
     </div>
     <div class="edu-toolbar-actions">
       <button class="edu-btn edu-btn-accent" onclick="randomDistribute()">随机分配</button>
+      <button class="edu-btn edu-btn-outline" onclick="startProof()">动画证明</button>
       <div class="edu-divider"></div>
       <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
     </div>
@@ -44,143 +100,466 @@
   <div class="edu-content">
     <div class="main-layout">
       <div class="canvas-area">
-        <div style="font-size:14px;font-weight:700;color:#334155">小球数</div>
-        <div class="slider-row" style="width:200px">
-          <input type="range" id="ballSlider" min="1" max="15" value="5" oninput="updateSettings()"/>
-          <span class="value-display" id="ballVal">5</span>
+        <!-- Settings row -->
+        <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;justify-content:center">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:13px;font-weight:700;color:#334155">球</span>
+            <input type="range" id="ballSlider" min="1" max="20" value="5" style="width:100px" oninput="updateSettings()"/>
+            <span class="value-display" id="ballVal" style="min-width:24px">5</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:13px;font-weight:700;color:#334155">盒</span>
+            <input type="range" id="boxSlider" min="1" max="8" value="3" style="width:100px" oninput="updateSettings()"/>
+            <span class="value-display" id="boxVal" style="min-width:24px">3</span>
+          </div>
         </div>
-        <div style="font-size:14px;font-weight:700;color:#334155;margin-top:8px">盒子数</div>
-        <div class="slider-row" style="width:200px">
-          <input type="range" id="boxSlider" min="1" max="6" value="3" oninput="updateSettings()"/>
-          <span class="value-display" id="boxVal">3</span>
+
+        <!-- Ball queue -->
+        <div style="font-size:12px;font-weight:700;color:#64748b">点击小球，再点击盒子放入（或直接点盒子自动放入下一个球）</div>
+        <div class="queue-area" id="queueArea"></div>
+
+        <!-- Sim stage -->
+        <div class="sim-stage" id="simStage">
+          <div class="sim-hint" id="simHint">点击盒子放入小球</div>
         </div>
 
-        <div class="box-row" id="boxRow"></div>
-
-        <button class="edu-btn edu-btn-accent" onclick="randomDistribute()" style="margin:8px 0">随机分配</button>
-
+        <!-- Conclusion -->
         <div class="conclusion" id="conclusion"></div>
+
+        <!-- Challenge -->
+        <div class="challenge-box" id="challengeBox" style="display:none"></div>
+
+        <!-- Proof -->
+        <div class="proof-card" id="proofCard" style="display:none"></div>
       </div>
 
       <div class="control-panel">
-        <div class="ctrl-section">
-          <div class="ctrl-label">经典问题</div>
-          <button class="distribute-btn" onclick="loadProblem('socks')">4双袜子取5只</button>
-          <button class="distribute-btn" onclick="loadProblem('birthday')">13个人同月生日</button>
-          <button class="distribute-btn" onclick="loadProblem('hand')">5人握3次手</button>
+        <!-- Mode tabs -->
+        <div class="mode-tabs">
+          <button class="mode-tab active" onclick="switchMode('sim')" id="tabSim">模拟</button>
+          <button class="mode-tab" onclick="switchMode('challenge')" id="tabChallenge">挑战</button>
+          <button class="mode-tab" onclick="switchMode('proof')" id="tabProof">证明</button>
         </div>
+
+        <div class="ctrl-section" id="sectionSim">
+          <div class="ctrl-label">经典场景</div>
+          <button class="scenario-btn" onclick="loadProblem('socks')">
+            <span class="scenario-icon">🧦</span>
+            <span class="scenario-info"><span class="scenario-title">袜子配对</span><span class="scenario-desc">4种颜色取5只，必有一对</span></span>
+          </button>
+          <button class="scenario-btn" onclick="loadProblem('birthday')">
+            <span class="scenario-icon">🎂</span>
+            <span class="scenario-info"><span class="scenario-title">生日同月</span><span class="scenario-desc">13人中至少2人同月生日</span></span>
+          </button>
+          <button class="scenario-btn" onclick="loadProblem('hand')">
+            <span class="scenario-icon">🤝</span>
+            <span class="scenario-info"><span class="scenario-title">握手次数</span><span class="scenario-desc">5人互相握手，必有人握3次</span></span>
+          </button>
+          <button class="scenario-btn" onclick="loadProblem('score')">
+            <span class="scenario-icon">📊</span>
+            <span class="scenario-info"><span class="scenario-title">考试分数</span><span class="scenario-desc">25人考0~100分，至少3人同分</span></span>
+          </button>
+          <button class="scenario-btn" onclick="loadProblem('draw')">
+            <span class="scenario-icon">🎨</span>
+            <span class="scenario-info"><span class="scenario-title">涂色问题</span><span class="scenario-desc">3色涂5个格子，必有色重复</span></span>
+          </button>
+        </div>
+
+        <div id="sectionChallenge" style="display:none">
+          <div class="ctrl-section">
+            <div class="ctrl-label">挑战题库</div>
+            <button class="scenario-btn" onclick="loadChallenge(0)">
+              <span class="scenario-icon">1</span>
+              <span class="scenario-info"><span class="scenario-title">生日同月</span><span class="scenario-desc">13人，几个月？</span></span>
+            </button>
+            <button class="scenario-btn" onclick="loadChallenge(1)">
+              <span class="scenario-icon">2</span>
+              <span class="scenario-info"><span class="scenario-title">袜子配对</span><span class="scenario-desc">3种颜色取几只？</span></span>
+            </button>
+            <button class="scenario-btn" onclick="loadChallenge(2)">
+              <span class="scenario-icon">3</span>
+              <span class="scenario-info"><span class="scenario-title">扑克花色</span><span class="scenario-desc">抽5张牌，花色分析</span></span>
+            </button>
+            <button class="scenario-btn" onclick="loadChallenge(3)">
+              <span class="scenario-icon">4</span>
+              <span class="scenario-info"><span class="scenario-title">学生分组</span><span class="scenario-desc">30人分4组，至少几人？</span></span>
+            </button>
+          </div>
+        </div>
+
+        <div id="sectionProof" style="display:none">
+          <div class="ctrl-section">
+            <button class="edu-btn edu-btn-accent" style="width:100%" onclick="startProof()">播放证明动画</button>
+            <div class="info-box" style="margin-top:4px">
+              <b>反证法步骤</b><br/>
+              1. 假设每个盒子不超过 k 个<br/>
+              2. 计算最多能放多少个<br/>
+              3. 发现矛盾 → 原假设不成立<br/>
+              4. 结论成立
+            </div>
+          </div>
+        </div>
+
         <div class="divider"></div>
         <div class="info-box">
           <b>鸽巢原理（抽屉原理）</b><br/>
-          ● 把 n+1 个物品放入 n 个抽屉<br/>
-          ● 至少有一个抽屉有 ≥2 个物品<br/>
-          ● 把 k 个物品放入 n 个抽屉<br/>
-          ● 至少有一个抽屉有 ≥⌈k/n⌉ 个<br/>
-          ● ⌈k/n⌉ = (k-1)/n + 1（向上取整）<br/>
-          ● 关键：找"抽屉"和"物品"
+          把 n+1 个物品放入 n 个抽屉，<br/>
+          至少有一个抽屉里有 >=2 个物品。<br/><br/>
+          一般形式：k 个物品放入 n 个抽屉，<br/>
+          至少一个抽屉有 >= ceil(k/n) 个。
         </div>
       </div>
     </div>
   </div>
 </div>
 <script>
-const BALL_COLORS = ['#ef4444','#3b82f6','#22c55e','#f97316','#8b5cf6','#eab308','#06b6d4','#ec4899','#14b8a6','#6366f1','#f43f5e','#84cc16','#0d9488','#7c3aed','#a855f7'];
+const COLORS = ['#ef4444','#3b82f6','#22c55e','#f97316','#8b5cf6','#eab308','#06b6d4','#ec4899','#14b8a6','#6366f1','#f43f5e','#84cc16','#0d9488','#7c3aed','#a855f7','#d946ef','#0284c7','#65a30d','#c026d3','#0891b2'];
+const SCENARIOS = {
+  socks:    { balls: 5, boxes: 4, boxLabels: ['红袜','蓝袜','绿袜','黄袜'], ballLabel: '只袜子', boxLabel: '种颜色', title: '袜子配对' },
+  birthday: { balls: 13, boxes: 12, boxLabels: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'], ballLabel: '个人', boxLabel: '个月', title: '生日同月' },
+  hand:     { balls: 10, boxes: 6, boxLabels: ['0次','1次','2次','3次','4次','5次'], ballLabel: '次握手', boxLabel: '握手次数', title: '握手次数' },
+  score:    { balls: 25, boxes: 11, boxLabels: ['0~9','10~19','20~29','30~39','40~49','50~59','60~69','70~79','80~89','90~99','100'], ballLabel: '个学生', boxLabel: '分段', title: '考试分数' },
+  draw:     { balls: 5, boxes: 3, boxLabels: ['红色','绿色','蓝色'], ballLabel: '个格子', boxLabel: '种颜色', title: '涂色问题' },
+};
+const CHALLENGES = [
+  { q: '13个人中，至少有几人生日在同一个月？', balls: 13, boxes: 12, opts: ['1人','2人','3人','不确定'], answer: 1, explain: '13人放入12个月，ceil(13/12)=2，至少2人同月。' },
+  { q: '抽屉里有红、蓝、绿3种袜子（足够多），至少取出几只才能保证有一双同色？', balls: 4, boxes: 3, opts: ['3只','4只','5只','2只'], answer: 1, explain: '3种颜色看作3个抽屉，取4只（3+1），必有一双同色。' },
+  { q: '从一副扑克牌（4种花色）中至少抽几张，才能保证有2张同花色？', balls: 5, boxes: 4, opts: ['3张','5张','4张','6张'], answer: 1, explain: '4种花色=4个抽屉，抽5张（4+1），必有2张同花色。' },
+  { q: '30个学生分4组，至少有一组不少于几人？', balls: 30, boxes: 4, opts: ['6人','7人','8人','10人'], answer: 2, explain: 'ceil(30/4)=ceil(7.5)=8，至少有一组8人。' },
+];
+
 let numBalls = 5, numBoxes = 3;
 let boxes = [];
+let currentMode = 'sim';
+let activeBall = -1;     // index of ball selected in queue
+let placedCount = 0;     // how many balls have been placed
+let isAnimating = false;
+let currentScenario = null;
 
+// ---- Init ----
 function updateSettings() {
   numBalls = parseInt(document.getElementById('ballSlider').value);
   numBoxes = parseInt(document.getElementById('boxSlider').value);
   document.getElementById('ballVal').textContent = numBalls;
   document.getElementById('boxVal').textContent = numBoxes;
+  currentScenario = null;
+  initSimulation();
+}
+
+function initSimulation() {
   boxes = Array.from({ length: numBoxes }, () => []);
-  renderBoxes();
+  placedCount = 0;
+  activeBall = -1;
+  renderQueue();
+  renderStage();
   updateConclusion();
 }
 
-function randomDistribute() {
-  boxes = Array.from({ length: numBoxes }, () => []);
+// ---- Queue ----
+function renderQueue() {
+  const el = document.getElementById('queueArea');
+  el.innerHTML = '';
   for (let i = 0; i < numBalls; i++) {
-    const b = Math.floor(Math.random() * numBoxes);
-    boxes[b].push(i);
+    const isPlaced = boxes.some(b => b.includes(i));
+    if (isPlaced) continue;
+    const ball = document.createElement('div');
+    ball.className = 'queue-ball' + (activeBall === i ? ' active' : '');
+    ball.style.background = COLORS[i % COLORS.length];
+    ball.textContent = i + 1;
+    ball.onclick = () => { activeBall = (activeBall === i ? -1 : i); renderQueue(); };
+    el.appendChild(ball);
   }
-  renderBoxes();
-  updateConclusion();
+  if (el.children.length === 0) {
+    el.innerHTML = '<span style="color:#cbd5e1;font-size:12px">所有球已放入</span>';
+  }
 }
 
-function renderBoxes() {
-  const row = document.getElementById('boxRow');
-  row.innerHTML = '';
-  const maxCount = Math.max(...boxes.map(b => b.length), 0);
+// ---- Stage (boxes as drop zones) ----
+function renderStage() {
+  const stage = document.getElementById('simStage');
+  stage.innerHTML = '';
+  const stageW = stage.clientWidth || 520;
+  const gap = 6;
+  const zoneW = Math.min(90, Math.floor((stageW - gap * (numBoxes + 1)) / numBoxes));
+  const totalW = numBoxes * zoneW + (numBoxes - 1) * gap;
+  const startX = Math.floor((stageW - totalW) / 2);
+  const stageH = stage.clientHeight || 260;
+  const zoneH = stageH - 40;
 
-  boxes.forEach((box, i) => {
-    const div = document.createElement('div');
-    div.className = 'pigeonhole';
-    const isHighlight = box.length === maxCount && box.length > 1;
-    const holeDiv = document.createElement('div');
-    holeDiv.className = 'hole-box' + (isHighlight ? ' highlight' : '');
-    box.forEach(ballIdx => {
-      const ball = document.createElement('div');
-      ball.className = 'ball';
-      ball.style.background = BALL_COLORS[ballIdx % BALL_COLORS.length];
-      ball.textContent = ballIdx + 1;
-      holeDiv.appendChild(ball);
-    });
-    if (box.length === 0) {
-      holeDiv.innerHTML = '<span style="color:#cbd5e1;font-size:12px">空</span>';
+  const minPerBox = Math.ceil(numBalls / numBoxes);
+  const hint = document.createElement('div');
+  hint.className = 'sim-hint';
+  hint.id = 'simHint';
+  if (placedCount < numBalls) hint.textContent = '点击小球再点盒子放入';
+  else hint.textContent = '';
+  stage.appendChild(hint);
+
+  for (let i = 0; i < numBoxes; i++) {
+    const zone = document.createElement('div');
+    zone.className = 'drop-zone';
+    if (boxes[i].length > minPerBox || (numBalls > numBoxes && boxes[i].length >= minPerBox && boxes[i].length > 1)) {
+      zone.classList.add('triggered');
     }
-    div.appendChild(holeDiv);
-    const label = document.createElement('div');
-    label.className = 'hole-label';
-    label.textContent = `盒子${i + 1}（${box.length}个）`;
-    div.appendChild(label);
-    row.appendChild(div);
+    zone.style.left = (startX + i * (zoneW + gap)) + 'px';
+    zone.style.width = zoneW + 'px';
+    zone.style.height = zoneH + 'px';
+
+    // Label
+    const lbl = document.createElement('div');
+    lbl.className = 'zone-label';
+    lbl.textContent = currentScenario && SCENARIOS[currentScenario].boxLabels[i]
+      ? SCENARIOS[currentScenario].boxLabels[i]
+      : '盒子' + (i + 1);
+    zone.appendChild(lbl);
+
+    const cnt = document.createElement('div');
+    cnt.className = 'zone-count';
+    cnt.textContent = boxes[i].length + '个';
+    zone.appendChild(cnt);
+
+    // Balls inside
+    boxes[i].forEach((ballIdx, j) => {
+      const b = document.createElement('div');
+      b.className = 'placed-ball pop';
+      b.style.background = COLORS[ballIdx % COLORS.length];
+      b.textContent = ballIdx + 1;
+      zone.appendChild(b);
+    });
+
+    // Trigger badge
+    if (zone.classList.contains('triggered')) {
+      const badge = document.createElement('div');
+      badge.className = 'trigger-badge';
+      badge.textContent = '>= ' + minPerBox + ' !';
+      zone.appendChild(badge);
+    }
+
+    // Click handler
+    zone.onclick = () => placeBallInBox(i);
+    stage.appendChild(zone);
+  }
+}
+
+// ---- Place ball ----
+function placeBallInBox(boxIdx) {
+  if (isAnimating || placedCount >= numBalls) return;
+
+  // If no active ball, pick next unplaced
+  if (activeBall === -1) {
+    for (let i = 0; i < numBalls; i++) {
+      if (!boxes.some(b => b.includes(i))) { activeBall = i; break; }
+    }
+  }
+  if (activeBall === -1) return;
+
+  const ballIdx = activeBall;
+  const stage = document.getElementById('simStage');
+  const stageW = stage.clientWidth || 520;
+  const gap = 6;
+  const zoneW = Math.min(90, Math.floor((stageW - gap * (numBoxes + 1)) / numBoxes));
+  const totalW = numBoxes * zoneW + (numBoxes - 1) * gap;
+  const startX = Math.floor((stageW - totalW) / 2);
+  const targetX = startX + boxIdx * (zoneW + gap) + zoneW / 2 - 14;
+  const targetY = (stage.clientHeight || 260) - 40;
+
+  // Create flying ball
+  const fly = document.createElement('div');
+  fly.className = 'fly-ball';
+  fly.style.background = COLORS[ballIdx % COLORS.length];
+  fly.textContent = ballIdx + 1;
+  fly.style.left = (stageW / 2 - 14) + 'px';
+  fly.style.top = '10px';
+  fly.style.transition = 'left .35s cubic-bezier(.4,0,.2,1), top .35s cubic-bezier(.4,0,.2,1)';
+  stage.appendChild(fly);
+
+  isAnimating = true;
+  requestAnimationFrame(() => {
+    fly.style.left = targetX + 'px';
+    fly.style.top = targetY + 'px';
+  });
+
+  setTimeout(() => {
+    fly.classList.add('bounce');
+    setTimeout(() => {
+      fly.remove();
+      boxes[boxIdx].push(ballIdx);
+      placedCount++;
+      activeBall = -1;
+      isAnimating = false;
+      renderQueue();
+      renderStage();
+      updateConclusion();
+    }, 400);
+  }, 350);
+}
+
+// ---- Random distribute with animation ----
+function randomDistribute() {
+  initSimulation();
+  const assignments = [];
+  for (let i = 0; i < numBalls; i++) {
+    assignments.push({ ball: i, box: Math.floor(Math.random() * numBoxes) });
+  }
+  let delay = 0;
+  assignments.forEach(a => {
+    setTimeout(() => {
+      activeBall = a.ball;
+      placeBallInBox(a.box);
+    }, delay);
+    delay += 420;
   });
 }
 
+// ---- Conclusion ----
 function updateConclusion() {
   const el = document.getElementById('conclusion');
   const min = Math.ceil(numBalls / numBoxes);
+  const ballName = currentScenario ? SCENARIOS[currentScenario].ballLabel : '球';
+  const boxName = currentScenario ? SCENARIOS[currentScenario].boxLabel : '盒子';
   if (numBalls <= numBoxes) {
-    el.innerHTML = `<div class="big">不一定有重复</div>
-      <div style="font-size:13px;color:#64748b;margin-top:4px">${numBalls} 个球放入 ${numBoxes} 个盒子，可能每个盒子最多 1 个</div>`;
+    el.innerHTML = '<div class="big">不一定有重复</div>' +
+      '<div style="font-size:13px;color:#64748b;margin-top:4px">' +
+      numBalls + ' 个' + ballName + '放入 ' + numBoxes + ' 个' + boxName +
+      '，可能每个' + boxName + '最多 1 个</div>';
   } else {
-    el.innerHTML = `<div class="big">至少有一个盒子 ≥ ${min} 个球</div>
-      <div style="font-size:13px;color:#64748b;margin-top:4px">${numBalls} 个球放入 ${numBoxes} 个盒子：⌈${numBalls}/${numBoxes}⌉ = ${min}</div>
-      <div style="font-size:12px;color:#94a3b8;margin-top:2px">证明：如果每个盒子最多 ${min - 1} 个，最多放 ${(min - 1) * numBoxes} < ${numBalls} 个，矛盾！</div>`;
+    el.innerHTML = '<div class="big">至少有一个' + boxName + '里有 >= ' + min + ' 个' + ballName + '</div>' +
+      '<div style="font-size:13px;color:#64748b;margin-top:4px">' +
+      numBalls + ' 个' + ballName + '放入 ' + numBoxes + ' 个' + boxName +
+      '：ceil(' + numBalls + '/' + numBoxes + ') = ' + min + '</div>' +
+      '<div style="font-size:12px;color:#94a3b8;margin-top:2px">' +
+      '反证：若每个' + boxName + '最多 ' + (min - 1) + ' 个，最多放 ' +
+      ((min - 1) * numBoxes) + ' < ' + numBalls + ' 个，矛盾！</div>';
   }
 }
 
-function loadProblem(type) {
-  if (type === 'socks') {
-    numBalls = 5; numBoxes = 4;
-    document.getElementById('ballSlider').value = 5;
-    document.getElementById('boxSlider').value = 4;
-  } else if (type === 'birthday') {
-    numBalls = 13; numBoxes = 12;
-    document.getElementById('ballSlider').value = 13;
-    document.getElementById('boxSlider').value = 6; // 滑块最大6，演示用
-    numBoxes = 12;
-  } else if (type === 'hand') {
-    numBalls = 5; numBoxes = 3;
-    document.getElementById('ballSlider').value = 5;
-    document.getElementById('boxSlider').value = 3;
-  }
+// ---- Load scenario ----
+function loadProblem(key) {
+  const s = SCENARIOS[key];
+  if (!s) return;
+  currentScenario = key;
+  numBalls = s.balls;
+  numBoxes = s.boxes;
+  document.getElementById('ballSlider').value = Math.min(numBalls, 20);
+  document.getElementById('boxSlider').value = Math.min(numBoxes, 8);
   document.getElementById('ballVal').textContent = numBalls;
   document.getElementById('boxVal').textContent = numBoxes;
-  boxes = Array.from({ length: numBoxes }, () => []);
-  renderBoxes();
-  updateConclusion();
-  randomDistribute();
+  initSimulation();
+  switchMode('sim');
 }
 
+// ---- Challenge mode ----
+function loadChallenge(idx) {
+  const ch = CHALLENGES[idx];
+  if (!ch) return;
+  switchMode('challenge');
+  const box = document.getElementById('challengeBox');
+  box.style.display = 'block';
+  box.innerHTML = '<div class="challenge-q">' + ch.q + '</div>' +
+    '<div class="challenge-options" id="chOpts">' +
+    ch.opts.map((o, i) => '<button class="ch-opt" onclick="answerChallenge(' + idx + ',' + i + ')">' + o + '</button>').join('') +
+    '</div><div class="ch-result" id="chResult"></div>';
+}
+
+function answerChallenge(chIdx, optIdx) {
+  const ch = CHALLENGES[chIdx];
+  const opts = document.querySelectorAll('#chOpts .ch-opt');
+  opts.forEach((o, i) => {
+    o.onclick = null;
+    if (i === ch.answer) o.classList.add('correct');
+    if (i === optIdx && i !== ch.answer) o.classList.add('wrong');
+  });
+  const res = document.getElementById('chResult');
+  if (optIdx === ch.answer) {
+    res.innerHTML = '<span style="color:#16a34a">正确！</span> ' + ch.explain;
+  } else {
+    res.innerHTML = '<span style="color:#ef4444">再想想</span> ' + ch.explain;
+  }
+  // Set sliders to match and simulate
+  numBalls = ch.balls;
+  numBoxes = ch.boxes;
+  document.getElementById('ballSlider').value = Math.min(numBalls, 20);
+  document.getElementById('boxSlider').value = Math.min(numBoxes, 8);
+  document.getElementById('ballVal').textContent = numBalls;
+  document.getElementById('boxVal').textContent = numBoxes;
+  currentScenario = null;
+  initSimulation();
+  // Auto-distribute
+  setTimeout(() => randomDistribute(), 300);
+}
+
+// ---- Proof animation ----
+function startProof() {
+  switchMode('proof');
+  const card = document.getElementById('proofCard');
+  card.style.display = 'block';
+  const min = Math.ceil(numBalls / numBoxes);
+  const steps = [
+    { text: '前提：有 <b>' + numBalls + '</b> 个物品，<b>' + numBoxes + '</b> 个盒子。' },
+    { text: '目标：证明至少一个盒子有 >= <b>' + min + '</b> 个物品。' },
+    { text: '假设反命题：每个盒子最多放 <b>' + (min - 1) + '</b> 个。' },
+    { text: '那么总共最多放 <b>' + (min - 1) + ' x ' + numBoxes + ' = ' + ((min - 1) * numBoxes) + '</b> 个。' },
+  ];
+  if ((min - 1) * numBoxes < numBalls) {
+    steps.push({ text: '但我们需要放 <b>' + numBalls + '</b> 个 > ' + ((min - 1) * numBoxes) + '，矛盾！' });
+  } else {
+    steps.push({ text: '验证：' + numBalls + ' <= ' + ((min - 1) * numBoxes) + '，不矛盾。' });
+  }
+  steps.push({ text: '结论：<b>至少一个盒子有 >= ' + min + ' 个物品</b>。' });
+
+  card.innerHTML = steps.map((s, i) =>
+    '<div class="proof-step" id="pstep' + i + '"><div class="proof-num">' + (i + 1) + '</div><div class="proof-text">' + s.text + '</div></div>'
+  ).join('');
+
+  steps.forEach((_, i) => {
+    setTimeout(() => {
+      document.getElementById('pstep' + i).classList.add('active');
+    }, i * 800);
+  });
+
+  // Also show worst case distribution in sim
+  showWorstCase();
+}
+
+function showWorstCase() {
+  initSimulation();
+  // Distribute as evenly as possible (worst case for pigeonhole)
+  for (let i = 0; i < numBalls; i++) {
+    const boxIdx = i % numBoxes;
+    boxes[boxIdx].push(i);
+  }
+  placedCount = numBalls;
+  activeBall = -1;
+  renderQueue();
+  renderStage();
+  updateConclusion();
+}
+
+// ---- Mode switching ----
+function switchMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
+  document.getElementById('sectionSim').style.display = mode === 'sim' ? '' : 'none';
+  document.getElementById('sectionChallenge').style.display = mode === 'challenge' ? '' : 'none';
+  document.getElementById('sectionProof').style.display = mode === 'proof' ? '' : 'none';
+  if (mode !== 'challenge') document.getElementById('challengeBox').style.display = 'none';
+  if (mode !== 'proof') document.getElementById('proofCard').style.display = 'none';
+}
+
+// ---- Reset ----
 function resetAll() {
   numBalls = 5; numBoxes = 3;
+  currentScenario = null;
   document.getElementById('ballSlider').value = 5;
   document.getElementById('boxSlider').value = 3;
+  switchMode('sim');
   updateSettings();
 }
 
+// ---- Resize handler ----
+window.addEventListener('resize', () => { if (currentMode === 'sim') renderStage(); });
+
+// ---- Init on load ----
 updateSettings();
 </script>
 </body>

@@ -78,7 +78,6 @@ export async function saveGeneratedTool(
       chapter: meta.chapter,
       semester,
       unitNum: 99,
-      publisherId: "pep",
       gradeId: meta.grade,
       subjectId: meta.subject,
       description: meta.description,

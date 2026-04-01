@@ -6,35 +6,47 @@
   <title>正比例与反比例 — 教立方</title>
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
   <style>
-    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
-    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #eff6ff 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
-    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
-    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
-    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
-    .divider { height: 1px; background: #e2e8f0; }
-    .info-box { background: #fff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
-    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
-    .preset-btn:hover { border-color: #3b82f6; color: #3b82f6; }
-    .tab-bar { display: flex; gap: 6px; margin-bottom: 12px; }
-    .tab-btn { padding: 6px 14px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
-    .tab-btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
-    .data-table { width: 100%; max-width: 440px; border-collapse: collapse; margin: 8px 0; }
-    .data-table th, .data-table td { border: 1px solid #e2e8f0; padding: 8px; text-align: center; font-size: 14px; font-weight: 600; }
-    .data-table th { background: #f1f5f9; color: #1a3a5c; }
-    .data-table input { width: 50px; text-align: center; font-size: 14px; font-weight: 700; border: none; background: transparent; }
-    .result-box { background: #fff; border: 2px solid #3b82f6; border-radius: 12px; padding: 14px; text-align: center; width: 100%; max-width: 440px; margin: 8px 0; }
-    .result-big { font-size: 18px; font-weight: 800; }
+    .main-layout{display:grid;grid-template-columns:1fr 260px;height:100%}
+    .canvas-area{padding:14px;overflow-y:auto;background:linear-gradient(135deg,#eff6ff 0%,#fdfaf4 100%);display:flex;flex-direction:column;align-items:center}
+    .control-panel{background:#fdfaf4;border-left:1px solid #e2e8f0;padding:12px;display:flex;flex-direction:column;gap:10px;overflow:auto}
+    .ctrl-label{font-size:11px;font-weight:700;color:#64748b;letter-spacing:.05em}
+    .divider{height:1px;background:#e2e8f0}
+    .info-box{background:#fff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.8;color:#334155}
+    .slider-row{display:flex;align-items:center;gap:8px}
+    .slider-row input[type=range]{flex:1}
+    .tab-bar{display:flex;gap:5px;margin-bottom:8px}
+    .tab-btn{padding:5px 12px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+    .tab-btn.active{background:#3b82f6;color:#fff;border-color:#3b82f6}
+    .section-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px;width:100%;max-width:600px;margin-bottom:8px}
+    .section-title{font-size:13px;font-weight:700;color:#1a3a5c;margin-bottom:6px}
+    .data-table{width:100%;border-collapse:collapse}
+    .data-table th,.data-table td{border:1px solid #e2e8f0;padding:5px 6px;text-align:center;font-size:13px;font-weight:600}
+    .data-table th{background:#f1f5f9;color:#1a3a5c;font-size:11px}
+    .data-table input{width:48px;text-align:center;font-size:13px;font-weight:700;border:1px solid #e2e8f0;border-radius:4px;padding:2px;background:#f8fafc}
+    .data-table input:focus{outline:none;border-color:#3b82f6;background:#eff6ff}
+    .hl-ok{color:#22c55e;background:#f0fdf4;font-weight:800}
+    .hl-direct{color:#3b82f6;background:#eff6ff;font-weight:800}
+    .hl-inverse{color:#f97316;background:#fff7ed;font-weight:800}
+    .quiz-btn{padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;border:1.5px solid #e2e8f0;background:#fff;cursor:pointer;transition:all .15s}
+    .quiz-btn:hover{border-color:#3b82f6}
+    .quiz-btn.correct{background:#22c55e;color:#fff;border-color:#22c55e}
+    .quiz-btn.wrong{background:#ef4444;color:#fff;border-color:#ef4444}
+    .result-box{background:#fff;border:2px solid #3b82f6;border-radius:12px;padding:8px;text-align:center}
+    .split-box{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .split-panel{border:1px solid #e2e8f0;border-radius:8px;padding:8px}
+    .split-label{font-size:11px;font-weight:700;text-align:center;margin-bottom:4px}
+    canvas.cv{border:1px solid #e2e8f0;border-radius:8px;background:#fff;display:block}
   </style>
 </head>
 <body>
 <div class="edu-tool">
   <div class="edu-toolbar">
     <div style="display:flex;align-items:center;gap:10px">
-      <div class="edu-toolbar-title">📊 正比例与反比例</div>
+      <div class="edu-toolbar-title">正比例与反比例</div>
       <div class="edu-toolbar-subtitle">下册 · 第四单元</div>
     </div>
     <div class="edu-toolbar-actions">
-      <button class="edu-btn edu-btn-primary" onclick="analyze()">分析</button>
+      <button class="edu-btn edu-btn-primary" onclick="analyzeData()">分析</button>
       <div class="edu-divider"></div>
       <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
     </div>
@@ -42,189 +54,450 @@
   <div class="edu-content">
     <div class="main-layout">
       <div class="canvas-area">
-        <div class="tab-bar">
-          <button class="tab-btn active" onclick="switchMode('direct')">正比例</button>
-          <button class="tab-btn" onclick="switchMode('inverse')">反比例</button>
+
+        <!-- 1. Interactive Graph -->
+        <div class="section-card">
+          <div class="section-title">1. 互动图像 — 拖动滑块观察变化</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <canvas id="cvGraph" width="360" height="200" class="cv" style="width:360px;height:200px"></canvas>
+            <div style="min-width:140px;display:flex;flex-direction:column;gap:6px">
+              <div class="ctrl-label">X 值</div>
+              <div class="slider-row">
+                <input type="range" id="slX" min="0.5" max="10" step="0.1" value="3" oninput="drawGraph()"/>
+                <span class="value-display" id="vX">3.0</span>
+              </div>
+              <div class="ctrl-label">常数 k</div>
+              <div class="slider-row">
+                <input type="range" id="slK" min="1" max="60" step="1" value="24" oninput="drawGraph()"/>
+                <span class="value-display" id="vK">24</span>
+              </div>
+              <div style="font-size:13px;font-weight:700" id="fmDisp">y = 24 * 3.0 = 72.0</div>
+            </div>
+          </div>
         </div>
 
-        <div style="font-size:14px;font-weight:700;color:#334155" id="modeTitle">正比例 — 两种量的比值一定</div>
+        <!-- 2. Split Comparison -->
+        <div class="section-card">
+          <div class="section-title">2. 对比视图 — 正比例 vs 反比例</div>
+          <div class="split-box">
+            <div class="split-panel">
+              <div class="split-label" style="color:#3b82f6">正比例 y = kx</div>
+              <canvas id="cvSD" width="240" height="140" class="cv" style="width:240px;height:140px"></canvas>
+            </div>
+            <div class="split-panel">
+              <div class="split-label" style="color:#f97316">反比例 y = k/x</div>
+              <canvas id="cvSI" width="240" height="140" class="cv" style="width:240px;height:140px"></canvas>
+            </div>
+          </div>
+          <div class="slider-row" style="margin-top:6px;max-width:280px;margin-left:auto;margin-right:auto">
+            <span style="font-size:11px;font-weight:600;color:#64748b">同步 k =</span>
+            <input type="range" id="slSK" min="1" max="30" value="8" oninput="drawSplit()"/>
+            <span class="value-display" id="vSK">8</span>
+          </div>
+        </div>
 
-        <table class="data-table" id="dataTable">
-          <tr><th>X</th><th>Y</th><th id="col3">X/Y</th></tr>
-        </table>
+        <!-- 3. Data Table with Pattern Detection -->
+        <div class="section-card">
+          <div class="section-title">3. 数据表 — 填入数值，发现规律</div>
+          <div class="tab-bar" id="tbTabs">
+            <button class="tab-btn active" data-m="direct">正比例</button>
+            <button class="tab-btn" data-m="inverse">反比例</button>
+          </div>
+          <table class="data-table" id="tblData"></table>
+          <div class="result-box" id="tblResult" style="margin-top:6px"></div>
+        </div>
 
-        <canvas id="chart" width="420" height="240" style="border:1px solid #e2e8f0;border-radius:8px;background:#fff;margin:8px 0"></canvas>
+        <!-- 4. Real-world Scenarios -->
+        <div class="section-card">
+          <div class="section-title">4. 生活场景</div>
+          <div class="tab-bar" id="scTabs">
+            <button class="tab-btn active" data-s="car">正比例: 路程=速度x时间</button>
+            <button class="tab-btn" data-s="worker">反比例: 人数x天数=总量</button>
+          </div>
+          <canvas id="cvScen" width="520" height="140" class="cv" style="width:520px;height:140px"></canvas>
+          <div class="slider-row" style="margin-top:6px;max-width:360px;margin-left:auto;margin-right:auto">
+            <span style="font-size:11px;font-weight:600;color:#64748b" id="scLabel">速度</span>
+            <input type="range" id="slSc" min="10" max="120" value="60" oninput="drawScen()"/>
+            <span class="value-display" id="vSc">60</span>
+          </div>
+          <div style="text-align:center;font-size:12px;font-weight:600;margin-top:4px" id="scInfo"></div>
+        </div>
 
-        <div class="result-box" id="resultBox"></div>
+        <!-- 5. Proportion Detector Quiz -->
+        <div class="section-card">
+          <div class="section-title">5. 比例探测器 — 判断比例关系</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:13px;font-weight:700">得分: <span id="qS">0</span> / <span id="qT">0</span></span>
+            <button class="edu-btn edu-btn-outline" style="font-size:11px;padding:3px 10px" onclick="newQuiz()">下一题</button>
+          </div>
+          <table class="data-table" id="tblQuiz" style="max-width:340px"></table>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <button class="quiz-btn" onclick="answer('direct')">正比例</button>
+            <button class="quiz-btn" onclick="answer('inverse')">反比例</button>
+            <button class="quiz-btn" onclick="answer('none')">不成比例</button>
+          </div>
+          <div style="font-size:12px;font-weight:600;min-height:16px;margin-top:4px" id="qFb"></div>
+        </div>
       </div>
 
+      <!-- Right panel -->
       <div class="control-panel">
-        <div class="ctrl-section">
+        <div style="display:flex;flex-direction:column;gap:5px">
           <div class="ctrl-label">预设数据</div>
-          <button class="preset-btn" onclick="loadPreset('speed')">速度一定：路程/时间</button>
-          <button class="preset-btn" onclick="loadPreset('price')">单价一定：总价/数量</button>
-          <button class="preset-btn" onclick="loadPreset('area')">面积一定：长×宽</button>
-          <button class="preset-btn" onclick="loadPreset('dist')">距离一定：速度×时间</button>
+          <button class="edu-btn edu-btn-outline" style="width:100%;justify-content:center" onclick="loadPreset('speed')">速度一定：路程/时间</button>
+          <button class="edu-btn edu-btn-outline" style="width:100%;justify-content:center" onclick="loadPreset('price')">单价一定：总价/数量</button>
+          <button class="edu-btn edu-btn-outline" style="width:100%;justify-content:center" onclick="loadPreset('area')">面积一定：长x宽</button>
+          <button class="edu-btn edu-btn-outline" style="width:100%;justify-content:center" onclick="loadPreset('dist')">距离一定：速度x时间</button>
+        </div>
+        <div class="divider"></div>
+        <div>
+          <div class="ctrl-label">图形模式</div>
+          <button class="edu-btn edu-btn-primary" id="btnMode" onclick="toggleMode()" style="width:100%;justify-content:center">切换反比例</button>
+          <div style="font-size:11px;color:#64748b;margin-top:3px" id="modeHint">当前: 正比例 y = kx</div>
         </div>
         <div class="divider"></div>
         <div class="info-box">
-          <b>正比例与反比例</b><br/>
-          <b>正比例</b>：y/x = k（定值）<br/>
-          ● 一种量变化，另一种量也随着变化<br/>
-          ● 比值一定 → 图像是过原点的直线<br/><br/>
-          <b>反比例</b>：x×y = k（定值）<br/>
-          ● 一种量变化，另一种量相反变化<br/>
-          ● 乘积一定 → 图像是双曲线
+          <b style="color:#3b82f6">正比例</b>：y/x = k（定值）<br/>
+          两种量同增同减<br/>
+          图像是过原点的直线<br/><br/>
+          <b style="color:#f97316">反比例</b>：xy = k（定值）<br/>
+          一种量增，另一种减<br/>
+          图像是双曲线
+        </div>
+        <div class="divider"></div>
+        <div class="info-box" style="border-color:#dcfce7;background:#f0fdf4">
+          <b>解题技巧</b><br/>
+          1. 算每组 y/x，相同→正比例<br/>
+          2. 算每组 xy，相同→反比例<br/>
+          3. 都不同→不成比例
         </div>
       </div>
     </div>
   </div>
 </div>
 <script>
-let mode = 'direct';
-let data = [
-  { x: 1, y: 60 },
-  { x: 2, y: 120 },
-  { x: 3, y: 180 },
-  { x: 4, y: 240 },
-  { x: 5, y: 300 },
-];
+// --- State ---
+let gMode = 'direct', tMode = 'direct', scen = 'car';
+let qAns = '', qSc = 0, qTo = 0, qD = [];
+let tData = [{x:1,y:3},{x:2,y:6},{x:3,y:9},{x:4,y:12},{x:5,y:15}];
 
-function switchMode(m) {
-  mode = m;
-  document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', ['direct','inverse'][i] === m));
-  document.getElementById('modeTitle').textContent = m === 'direct' ? '正比例 — 两种量的比值一定' : '反比例 — 两种量的乘积一定';
-  document.getElementById('col3').textContent = m === 'direct' ? 'X/Y' : 'X×Y';
-  analyze();
+// --- Canvas helpers ---
+function initCv(id, w, h) {
+  const c = document.getElementById(id), d = devicePixelRatio || 1;
+  c.width = w * d; c.height = h * d;
+  c.style.width = w + 'px'; c.style.height = h + 'px';
+  const ctx = c.getContext('2d'); ctx.scale(d, d);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+  return { ctx, w, h };
 }
 
-function loadPreset(type) {
-  if (type === 'speed') {
-    mode = 'direct';
-    data = [{x:1,y:60},{x:2,y:120},{x:3,y:180},{x:4,y:240},{x:5,y:300}];
-  } else if (type === 'price') {
-    mode = 'direct';
-    data = [{x:2,y:10},{x:4,y:20},{x:6,y:30},{x:8,y:40},{x:10,y:50}];
-  } else if (type === 'area') {
-    mode = 'inverse';
-    data = [{x:2,y:24},{x:4,y:12},{x:6,y:8},{x:8,y:6},{x:12,y:4}];
-  } else if (type === 'dist') {
-    mode = 'inverse';
-    data = [{x:30,y:2},{x:60,y:1},{x:20,y:3},{x:15,y:4},{x:10,y:6}];
+function drawAxes(ctx, p, w, h) {
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(p, p); ctx.lineTo(p, h - p); ctx.lineTo(w - p, h - p); ctx.stroke();
+}
+
+// ===========================
+// Feature 1: Live Graph
+// ===========================
+function drawGraph() {
+  const x = +$('slX').value, k = +$('slK').value;
+  $('vX').textContent = x.toFixed(1); $('vK').textContent = k;
+  const dir = gMode === 'direct';
+  const y = dir ? k * x : (x > 0.01 ? k / x : 0);
+  const fm = $('fmDisp');
+  fm.textContent = `y = ${k} ${dir ? '*' : '/'} ${x.toFixed(1)} = ${y.toFixed(1)}`;
+  fm.style.color = dir ? '#3b82f6' : '#f97316';
+
+  const { ctx, w, h } = initCv('cvGraph', 360, 200);
+  const pad = 34, pw = w - pad * 2, ph = h - pad * 2, mx = 10;
+  const clr = dir ? '#3b82f6' : '#f97316';
+  drawAxes(ctx, pad, w, h);
+
+  // Grid
+  ctx.strokeStyle = '#f1f5f9'; ctx.lineWidth = 0.5;
+  for (let i = 1; i <= mx; i++) {
+    const xp = pad + (i / mx) * pw, yp = h - pad - (i / mx) * ph;
+    ctx.beginPath(); ctx.moveTo(xp, h - pad); ctx.lineTo(xp, pad); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pad, yp); ctx.lineTo(w - pad, yp); ctx.stroke();
   }
-  switchMode(mode);
-}
-
-function analyze() {
-  // 更新表格
-  const table = document.getElementById('dataTable');
-  table.innerHTML = `<tr><th>X</th><th>Y</th><th id="col3">${mode === 'direct' ? 'X/Y' : 'X×Y'}</th></tr>`;
-  data.forEach((d, i) => {
-    const v3 = mode === 'direct' ? (d.y / d.x).toFixed(2) : (d.x * d.y);
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td><input type="number" value="${d.x}" onchange="data[${i}].x=parseFloat(this.value);analyze()"/></td>
-      <td><input type="number" value="${d.y}" onchange="data[${i}].y=parseFloat(this.value);analyze()"/></td>
-      <td style="color:${mode === 'direct' ? '#3b82f6' : '#f97316'};font-weight:700">${v3}</td>`;
-    table.appendChild(tr);
-  });
-
-  // 判断
-  const ratios = data.map(d => mode === 'direct' ? d.y / d.x : d.x * d.y);
-  const allSame = ratios.every(r => Math.abs(r - ratios[0]) < 0.01);
-  const box = document.getElementById('resultBox');
-  if (allSame) {
-    box.innerHTML = `<div class="result-big" style="color:#22c55e">✓ ${mode === 'direct' ? '正比例关系' : '反比例关系'}</div>
-      <div style="font-size:13px;color:#64748b;margin-top:4px">${mode === 'direct' ? `Y/X = ${ratios[0].toFixed(2)}（定值）` : `X×Y = ${ratios[0]}（定值）`}</div>`;
-  } else {
-    box.innerHTML = `<div class="result-big" style="color:#ef4444">✗ 不是${mode === 'direct' ? '正' : '反'}比例关系</div>
-      <div style="font-size:13px;color:#64748b;margin-top:4px">${mode === 'direct' ? 'Y/X 的值不相同' : 'X×Y 的值不相同'}</div>`;
-  }
-
-  drawChart();
-}
-
-function drawChart() {
-  const canvas = document.getElementById('chart');
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = 420 * dpr;
-  canvas.height = 240 * dpr;
-  canvas.style.width = '420px';
-  canvas.style.height = '240px';
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-
-  const w = 420, h = 240;
-  const pad = 40;
-  const pw = w - pad * 2, ph = h - pad * 2;
-
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, w, h);
-
-  const allX = data.map(d => d.x);
-  const allY = data.map(d => d.y);
-  const maxX = Math.max(...allX) * 1.2;
-  const maxY = Math.max(...allY) * 1.2;
-
-  // 坐标轴
-  ctx.strokeStyle = '#94a3b8';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(pad, pad);
-  ctx.lineTo(pad, h - pad);
-  ctx.lineTo(w - pad, h - pad);
-  ctx.stroke();
-
-  // 刻度
-  ctx.fillStyle = '#94a3b8';
-  ctx.font = '10px sans-serif';
+  // Tick labels
+  ctx.fillStyle = '#94a3b8'; ctx.font = '10px sans-serif';
   ctx.textAlign = 'center';
-  for (let i = 0; i <= 5; i++) {
-    const xv = (maxX / 5 * i).toFixed(1);
-    const xp = pad + pw * i / 5;
-    ctx.fillText(xv, xp, h - pad + 14);
-  }
+  for (let i = 0; i <= mx; i += 2) ctx.fillText(i, pad + (i / mx) * pw, h - pad + 13);
   ctx.textAlign = 'right';
-  for (let i = 0; i <= 4; i++) {
-    const yv = (maxY / 4 * i).toFixed(0);
-    const yp = h - pad - ph * i / 4;
-    ctx.fillText(yv, pad - 6, yp + 3);
+  for (let i = 0; i <= mx; i += 2) ctx.fillText(i, pad - 5, h - pad - (i / mx) * ph + 3);
+
+  // Compute Y scale
+  const maxY = dir ? k * mx : k * 2;
+  const sY = ph / (maxY * 1.1);
+
+  // Draw curve / line
+  ctx.beginPath(); ctx.strokeStyle = clr; ctx.lineWidth = 2.5;
+  let first = true;
+  for (let xi = 0.1; xi <= mx; xi += 0.05) {
+    const yi = dir ? k * xi : k / xi;
+    const px = pad + (xi / mx) * pw, py = h - pad - yi * sY;
+    if (py < pad - 5 || py > h - pad + 5) { first = true; continue; }
+    first ? ctx.moveTo(px, py) : ctx.lineTo(px, py); first = false;
   }
-
-  // 画点和连线
-  const pts = data.map(d => ({
-    x: pad + (d.x / maxX) * pw,
-    y: h - pad - (d.y / maxY) * ph
-  }));
-
-  ctx.beginPath();
-  pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
-  ctx.strokeStyle = mode === 'direct' ? '#3b82f6' : '#f97316';
-  ctx.lineWidth = 2;
   ctx.stroke();
 
-  pts.forEach(p => {
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
-    ctx.fillStyle = mode === 'direct' ? '#3b82f6' : '#f97316';
-    ctx.fill();
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  });
-
-  // 轴标签
-  ctx.fillStyle = '#334155';
-  ctx.font = 'bold 12px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('X', w - pad + 10, h - pad + 4);
-  ctx.fillText('Y', pad - 4, pad - 10);
+  // Highlight current point with dashed reference lines
+  const px = pad + (x / mx) * pw, py = h - pad - y * sY;
+  if (py >= pad - 5 && py <= h - pad + 5) {
+    ctx.setLineDash([4, 3]); ctx.strokeStyle = clr + '60'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px, h - pad); ctx.lineTo(px, py); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pad, py); ctx.lineTo(px, py); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2);
+    ctx.fillStyle = clr; ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = clr; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(`(${x.toFixed(1)}, ${y.toFixed(1)})`, px + 9, py - 5);
+  }
+  ctx.fillStyle = '#334155'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('X', w - pad + 10, h - pad + 4); ctx.fillText('Y', pad - 4, pad - 8);
 }
+
+function toggleMode() {
+  gMode = gMode === 'direct' ? 'inverse' : 'direct';
+  const b = $('btnMode'), m = $('modeHint');
+  if (gMode === 'direct') {
+    b.textContent = '切换反比例'; b.className = 'edu-btn edu-btn-primary';
+    m.textContent = '当前: 正比例 y = kx';
+  } else {
+    b.textContent = '切换正比例'; b.className = 'edu-btn edu-btn-accent';
+    m.textContent = '当前: 反比例 y = k/x';
+  }
+  drawGraph();
+}
+
+// Feature 2: Split View
+function drawSplit() {
+  const k = +$('slSK').value; $('vSK').textContent = k;
+  drawMiniGraph('cvSD', k, true);
+  drawMiniGraph('cvSI', k, false);
+}
+
+function drawMiniGraph(id, k, dir) {
+  const { ctx, w, h } = initCv(id, 240, 140);
+  const pad = 26, pw = w - pad * 2, ph = h - pad * 2;
+  const clr = dir ? '#3b82f6' : '#f97316';
+  drawAxes(ctx, pad, w, h);
+  const mx = 10, yR = dir ? k * mx : k * 2;
+
+  ctx.beginPath(); ctx.strokeStyle = clr; ctx.lineWidth = 2;
+  let first = true;
+  for (let xi = 0.05; xi <= mx; xi += 0.05) {
+    const yi = dir ? k * xi : k / xi;
+    const px = pad + (xi / mx) * pw, py = h - pad - (yi / yR) * ph;
+    if (py < pad - 10) { first = true; continue; }
+    first ? ctx.moveTo(px, py) : ctx.lineTo(px, py); first = false;
+  }
+  ctx.stroke();
+
+  // Integer dots
+  for (let xi = 1; xi <= mx; xi++) {
+    const yi = dir ? k * xi : k / xi;
+    const px = pad + (xi / mx) * pw, py = h - pad - (yi / yR) * ph;
+    if (py < pad - 5) continue;
+    ctx.beginPath(); ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = clr; ctx.fill();
+  }
+  ctx.fillStyle = clr; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(dir ? `y = ${k}x` : `y = ${k}/x`, w / 2, h - 4);
+}
+
+// Feature 3: Data Table
+function setTMode(m, el) {
+  tMode = m;
+  el.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderTbl();
+}
+
+function renderTbl() {
+  const tbl = $('tblData'), dir = tMode === 'direct';
+  let html = `<tr><th>X</th><th>Y</th><th>${dir ? 'Y/X' : 'X*Y'}</th></tr>`;
+  const vals = [];
+  tData.forEach((d, i) => {
+    const v = dir ? d.y / d.x : d.x * d.y;
+    vals.push(v);
+    const allEq = vals.every(v2 => Math.abs(v2 - vals[0]) < 0.01);
+    const cls = allEq ? 'hl-ok' : (dir ? 'hl-direct' : 'hl-inverse');
+    html += `<tr><td><input type="number" value="${d.x}" onchange="tData[${i}].x=+this.value||0;renderTbl()"/></td>` +
+      `<td><input type="number" value="${d.y}" onchange="tData[${i}].y=+this.value||0;renderTbl()"/></td>` +
+      `<td class="${cls}">${v.toFixed(2)}</td></tr>`;
+  });
+  tbl.innerHTML = html;
+
+  const ok = vals.every(v2 => Math.abs(v2 - vals[0]) < 0.01);
+  $('tblResult').innerHTML = ok
+    ? `<div style="font-size:15px;font-weight:800;color:#22c55e">${dir ? 'Y/X' : 'X*Y'} = ${vals[0].toFixed(2)}（定值）</div>`
+    : '<div style="font-size:14px;font-weight:800;color:#ef4444">比值/乘积不一致</div>';
+}
+
+// Feature 4: Scenarios
+function setScen(s, el) {
+  scen = s;
+  el.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  const sl = $('slSc'), lb = $('scLabel');
+  if (s === 'car') { lb.textContent = '速度'; sl.min = 10; sl.max = 120; sl.value = 60; }
+  else { lb.textContent = '工人数'; sl.min = 1; sl.max = 12; sl.value = 4; }
+  drawScen();
+}
+
+function drawScen() {
+  const v = +$('slSc').value; $('vSc').textContent = v;
+  const { ctx, w, h } = initCv('cvScen', 520, 140);
+
+  if (scen === 'car') {
+    // Direct proportion: distance = speed * time
+    const sp = v, times = [1, 2, 3, 4, 5];
+    const dists = times.map(t => sp * t);
+    const maxD = Math.max(...dists) * 1.2;
+    ctx.fillStyle = '#64748b'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(`速度 = ${sp} km/h（一定）`, 260, 22);
+    times.forEach((t, i) => {
+      const bw = dists[i] / maxD * 440, y = 36 + i * 20;
+      ctx.fillStyle = '#3b82f6'; ctx.fillRect(45, y, bw, 14);
+      ctx.fillStyle = '#1a3a5c'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText(`${t}h → ${dists[i]}km`, 50 + bw + 4, y + 11);
+    });
+    $('scInfo').innerHTML = `路程/时间 = ${sp}（定值）→ <b style="color:#3b82f6">正比例</b>`;
+  } else {
+    // Inverse proportion: workers * days = totalWork
+    const ws = v, tw = 120, ds = Math.round(tw / ws);
+    const allW = [1, 2, 3, 4, 6, 8, 10, 12];
+    ctx.fillStyle = '#64748b'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(`总工作量 = ${tw}（一定）`, 260, 22);
+    allW.forEach((nw, i) => {
+      const d = Math.round(tw / nw), bh = nw / 12 * 55;
+      const x = 50 + i * 56, y = 130 - bh;
+      ctx.fillStyle = nw === ws ? '#f97316' : '#fed7aa';
+      ctx.fillRect(x - 14, y, 28, bh);
+      ctx.fillStyle = '#1a3a5c'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nw + '人', x, 130 + 11);
+      ctx.fillStyle = '#f97316'; ctx.fillText(d + '天', x, y - 3);
+    });
+    $('scInfo').innerHTML = `${ws}人 x ${ds}天 = ${ws * ds} → <b style="color:#f97316">反比例</b>`;
+  }
+}
+
+// Feature 5: Quiz
+function shuffle(a) {
+  const b = [...a];
+  for (let i = b.length - 1; i > 0; i--) {
+    const j = ~~(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]];
+  }
+  return b;
+}
+
+function genQuiz() {
+  const t = ~~(Math.random() * 3), rows = [];
+  if (t === 0) {
+    const k = ~~(Math.random() * 8) + 2;
+    shuffle([1, 2, 3, 4, 5, 6, 7, 8, 10, 12]).slice(0, 5).sort((a, b) => a - b)
+      .forEach(x => rows.push({ x, y: x * k }));
+    qAns = 'direct';
+  } else if (t === 1) {
+    const k = [12, 24, 36, 48, 60][~~(Math.random() * 5)];
+    shuffle([1, 2, 3, 4, 6, 8, 12]).slice(0, 5).sort((a, b) => a - b)
+      .forEach(x => rows.push({ x, y: k / x }));
+    qAns = 'inverse';
+  } else {
+    [2, 4, 6, 8, 10].forEach(x => rows.push({ x, y: ~~(Math.random() * 20) + 1 }));
+    qAns = 'none';
+  }
+  qD = rows;
+}
+
+function newQuiz() {
+  genQuiz();
+  const tbl = $('tblQuiz');
+  let html = '<tr><th>X</th><th>Y</th></tr>';
+  qD.forEach(d => { html += `<tr><td>${d.x}</td><td>${d.y}</td></tr>`; });
+  tbl.innerHTML = html;
+  document.querySelectorAll('.quiz-btn').forEach(b => {
+    b.classList.remove('correct', 'wrong'); b.disabled = false;
+  });
+  $('qFb').textContent = '';
+}
+
+function answer(ch) {
+  const btns = document.querySelectorAll('.quiz-btn');
+  btns.forEach(b => b.disabled = true);
+  qTo++;
+  let ok = false, msg = '';
+  if (qAns === 'direct') {
+    const r = (qD[0].y / qD[0].x).toFixed(1);
+    ok = ch === 'direct'; msg = `y/x = ${r}（定值）→ 正比例`;
+  } else if (qAns === 'inverse') {
+    const p = qD[0].x * qD[0].y;
+    ok = ch === 'inverse'; msg = `xy = ${p}（定值）→ 反比例`;
+  } else {
+    ok = ch === 'none'; msg = '比值和乘积都不固定 → 不成比例';
+  }
+  if (ok) qSc++;
+  $('qFb').innerHTML = `<span style="color:${ok ? '#22c55e' : '#ef4444'}">${ok ? '正确! ' : '不对。'}${msg}</span>`;
+  $('qS').textContent = qSc; $('qT').textContent = qTo;
+  btns.forEach(b => {
+    const t = b.getAttribute('onclick');
+    if (t.includes(`'${qAns}'`)) b.classList.add('correct');
+    else if (t.includes(`'${ch}'`) && !ok) b.classList.add('wrong');
+  });
+}
+
+// Presets & Reset
+function loadPreset(type) {
+  const map = {
+    speed:  { d: 'direct',  data: [{x:1,y:60},{x:2,y:120},{x:3,y:180},{x:4,y:240},{x:5,y:300}], k: 60 },
+    price:  { d: 'direct',  data: [{x:2,y:10},{x:4,y:20},{x:6,y:30},{x:8,y:40},{x:10,y:50}], k: 5 },
+    area:   { d: 'inverse', data: [{x:2,y:24},{x:4,y:12},{x:6,y:8},{x:8,y:6},{x:12,y:4}], k: 48 },
+    dist:   { d: 'inverse', data: [{x:30,y:2},{x:60,y:1},{x:20,y:3},{x:15,y:4},{x:10,y:6}], k: 60 }
+  };
+  const p = map[type]; if (!p) return;
+  tMode = p.d; tData = p.data;
+  // Set graph mode correctly regardless of current state
+  gMode = p.d;
+  const b = $('btnMode'), m = $('modeHint');
+  if (gMode === 'direct') {
+    b.textContent = '切换反比例'; b.className = 'edu-btn edu-btn-primary';
+    m.textContent = '当前: 正比例 y = kx';
+  } else {
+    b.textContent = '切换正比例'; b.className = 'edu-btn edu-btn-accent';
+    m.textContent = '当前: 反比例 y = k/x';
+  }
+  $('slK').value = p.k;
+  drawGraph(); renderTbl();
+}
+
+function analyzeData() { renderTbl(); drawGraph(); }
 
 function resetAll() {
   loadPreset('speed');
+  qSc = qTo = 0; $('qS').textContent = '0'; $('qT').textContent = '0';
+  newQuiz();
+  $('slSK').value = 8; drawSplit();
+  // Reset scenario tab
+  const scBtns = $('scTabs').querySelectorAll('.tab-btn');
+  scBtns.forEach(b => b.classList.remove('active'));
+  scBtns[0].classList.add('active');
+  $('slSc').min = 10; $('slSc').max = 120; $('slSc').value = 60;
+  $('scLabel').textContent = '速度'; scen = 'car';
+  drawScen();
 }
 
-analyze();
+// --- Helper ---
+function $(id) { return document.getElementById(id); }
+
+// --- Tab click delegation ---
+$('tbTabs').addEventListener('click', e => { if (e.target.dataset.m) setTMode(e.target.dataset.m, e.target); });
+$('scTabs').addEventListener('click', e => { if (e.target.dataset.s) setScen(e.target.dataset.s, e.target); });
+
+// --- Init ---
+renderTbl(); drawGraph(); drawSplit(); drawScen(); newQuiz();
 </script>
 </body>
 </html>

@@ -8,7 +8,7 @@
   <style>
     .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; }
     .canvas-area { padding:24px; overflow-y:auto; background:linear-gradient(135deg,#eff6ff,#e0f2fe); display:flex; flex-direction:column; align-items:center; }
-    .control-panel { background:#f8fafc; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:12px; overflow:auto; }
+    .control-panel { background:#f8fafc; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
     .ctrl-section { display:flex; flex-direction:column; gap:6px; }
     .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
     .divider { height:1px; background:#e2e8f0; }
@@ -17,13 +17,19 @@
     .slider-row { display:flex; align-items:center; gap:8px; }
     .slider-row input[type=range] { flex:1; }
     .slider-row .val { font-size:14px; font-weight:700; color:#0EA5E9; min-width:30px; text-align:right; }
-    canvas { border-radius:12px; background:#fff; }
-    .formula-box { background:linear-gradient(135deg,#3B82F6,#0EA5E9); color:#fff; border-radius:12px; padding:14px 20px; text-align:center; margin-top:12px; font-weight:700; font-size:15px; line-height:1.8; }
+    canvas { border-radius:12px; background:#fff; cursor:crosshair; }
+    .formula-box { background:linear-gradient(135deg,#3B82F6,#0EA5E9); color:#fff; border-radius:12px; padding:14px 20px; text-align:center; margin-top:12px; font-weight:700; font-size:15px; line-height:1.8; width:100%; max-width:600px; }
     .preset-btn { padding:8px 0; border-radius:8px; font-size:13px; font-weight:600; background:#fff; border:1.5px solid #e2e8f0; cursor:pointer; transition:all .15s; }
     .preset-btn:hover { border-color:#0EA5E9; color:#0EA5E9; }
     .mode-btn { padding:6px 14px; border-radius:8px; border:1.5px solid #e2e8f0; background:#fff; font-size:13px; cursor:pointer; font-weight:600; transition:all .15s; }
     .mode-btn.active { background:#3B82F6; color:#fff; border-color:#3B82F6; }
     .mode-tab { display:flex; gap:6px; margin-bottom:12px; }
+    .action-btn { padding:8px 0; border-radius:8px; font-size:13px; font-weight:700; background:#0EA5E9; color:#fff; border:none; cursor:pointer; transition:all .15s; width:100%; }
+    .action-btn:hover { background:#0284c7; }
+    .action-btn.secondary { background:#fff; color:#0EA5E9; border:1.5px solid #0EA5E9; }
+    .action-btn.secondary:hover { background:#e0f2fe; }
+    .action-btn:disabled { opacity:.5; cursor:not-allowed; }
+    .hint-text { font-size:11px; color:#94a3b8; text-align:center; margin-top:4px; }
   </style>
 </head>
 <body>
@@ -34,6 +40,10 @@
       <div class="edu-toolbar-subtitle">上册 · 第七单元</div>
     </div>
     <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-accent" id="btnTrace" onclick="toggleTrace()">描边动画</button>
+      <button class="edu-btn edu-btn-outline" id="btnRope" onclick="toggleRope()">绳子展开</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="toggleCompare()">对比模式</button>
       <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
     </div>
   </div>
@@ -44,17 +54,18 @@
           <button class="mode-btn active" id="modeRect" onclick="setMode('rect')">长方形</button>
           <button class="mode-btn" id="modeSquare" onclick="setMode('square')">正方形</button>
         </div>
-        <canvas id="cvs" width="420" height="280"></canvas>
+        <canvas id="cvs" width="600" height="380"></canvas>
+        <div class="hint-text">拖拽角点或边可调整大小 | 每格 = 1 cm</div>
         <div class="formula-box" id="formulaBox"></div>
       </div>
       <div class="control-panel">
         <div class="ctrl-section">
           <div class="ctrl-label">长（厘米）</div>
-          <div class="slider-row"><input type="range" id="slL" min="1" max="20" value="6" oninput="update()"/><span class="val" id="vlL">6</span></div>
+          <div class="slider-row"><input type="range" id="slL" min="1" max="20" value="6" oninput="sliderChanged()"/><span class="val" id="vlL">6</span></div>
         </div>
         <div class="ctrl-section" id="widthSection">
           <div class="ctrl-label">宽（厘米）</div>
-          <div class="slider-row"><input type="range" id="slW" min="1" max="20" value="4" oninput="update()"/><span class="val" id="vlW">4</span></div>
+          <div class="slider-row"><input type="range" id="slW" min="1" max="20" value="4" oninput="sliderChanged()"/><span class="val" id="vlW">4</span></div>
         </div>
         <div class="divider"></div>
         <div class="ctrl-section">
@@ -65,6 +76,22 @@
           <button class="preset-btn" onclick="loadSquare(8)">正方形地砖 (边长8)</button>
         </div>
         <div class="divider"></div>
+        <div class="ctrl-section">
+          <button class="action-btn" id="btnAnimate" onclick="startTraceAnim()">▶ 描边动画</button>
+          <button class="action-btn secondary" id="btnUnroll" onclick="startRopeAnim()">绳子展开 →</button>
+        </div>
+        <div class="divider"></div>
+        <div id="compareSection" style="display:none">
+          <div class="ctrl-section">
+            <div class="ctrl-label">对比 — 长 B（厘米）</div>
+            <div class="slider-row"><input type="range" id="slL2" min="1" max="20" value="5" oninput="sliderChanged()"/><span class="val" id="vlL2">5</span></div>
+          </div>
+          <div class="ctrl-section">
+            <div class="ctrl-label">宽 B（厘米）</div>
+            <div class="slider-row"><input type="range" id="slW2" min="1" max="20" value="3" oninput="sliderChanged()"/><span class="val" id="vlW2">3</span></div>
+          </div>
+          <div class="divider"></div>
+        </div>
         <div class="info-box">
           <strong>周长公式</strong><br/>
           ● 长方形：P = (长+宽)×2<br/>
@@ -77,102 +104,543 @@
   </div>
 </div>
 <script>
+/* ===== State ===== */
 const cvs = document.getElementById('cvs');
 const ctx = cvs.getContext('2d');
-let mode = 'rect';
+const GRID = 20; // pixels per cm
+let mode = 'rect', compareMode = false;
+let rect1 = { l: 6, w: 4 };
+let rect2 = { l: 5, w: 3 };
+let drag = null; // { target:'r1'|'r2', handle:'tl'|'tr'|'br'|'bl'|'top'|'right'|'bottom'|'left' }
 
+/* Trace animation state */
+let trace = { active: false, side: 0, progress: 0, raf: null, totalSoFar: 0 };
+
+/* Rope animation state */
+let rope = { active: false, progress: 0, raf: null };
+
+const COLORS = ['#ef4444','#f59e0b','#22c55e','#a855f7']; // side colors for tracing
+
+/* ===== Layout helpers ===== */
+function getOrigin(which) {
+  if (compareMode) {
+    return which === 1 ? { x: 30, y: 30 } : { x: 320, y: 30 };
+  }
+  return { x: Math.floor((cvs.width - rect1.l * GRID) / 2), y: Math.floor((cvs.height - rect1.w * GRID) / 2) };
+}
+
+function getRect(which) { return which === 1 ? rect1 : rect2; }
+
+function rectPixels(r, origin) {
+  return { x: origin.x, y: origin.y, pw: r.l * GRID, ph: r.w * GRID };
+}
+
+/* ===== Draw ===== */
+function draw() {
+  const W = cvs.width, H = cvs.height;
+  ctx.clearRect(0, 0, W, H);
+
+  if (compareMode) {
+    drawRectWithGrid(1, true);
+    drawRectWithGrid(2, true);
+    drawCompareLabels();
+  } else {
+    drawRectWithGrid(1, false);
+  }
+
+  if (trace.active || trace.side > 0) drawTraceOverlay(1);
+  if (rope.active || rope.progress > 0) drawRopeOverlay();
+
+  if (!compareMode) drawHandles(1);
+  if (compareMode) { drawHandles(1); drawHandles(2); }
+}
+
+function drawGrid(origin, pw, ph) {
+  ctx.save();
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 0.5;
+  for (let gx = origin.x; gx <= origin.x + pw; gx += GRID) {
+    ctx.beginPath(); ctx.moveTo(gx, origin.y); ctx.lineTo(gx, origin.y + ph); ctx.stroke();
+  }
+  for (let gy = origin.y; gy <= origin.y + ph; gy += GRID) {
+    ctx.beginPath(); ctx.moveTo(origin.x, gy); ctx.lineTo(origin.x + pw, gy); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawRectWithGrid(which, isCompare) {
+  const r = getRect(which);
+  const origin = getOrigin(which);
+  const rp = rectPixels(r, origin);
+
+  drawGrid(origin, rp.pw, rp.ph);
+
+  // Shadow
+  ctx.fillStyle = '#e2e8f0';
+  ctx.fillRect(rp.x + 3, rp.y + 3, rp.pw, rp.ph);
+
+  // Fill
+  ctx.fillStyle = which === 1 ? '#dbeafe' : '#fef3c7';
+  ctx.fillRect(rp.x, rp.y, rp.pw, rp.ph);
+
+  // Border
+  ctx.strokeStyle = which === 1 ? '#3B82F6' : '#f59e0b';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(rp.x, rp.y, rp.pw, rp.ph);
+
+  // Dimension labels
+  ctx.fillStyle = '#1e293b'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(`${r.l} cm`, rp.x + rp.pw / 2, rp.y - 14);
+  drawDimLine(ctx, rp.x, rp.y - 6, rp.x + rp.pw, rp.y - 6);
+  ctx.save(); ctx.translate(rp.x + rp.pw + 18, rp.y + rp.ph / 2);
+  ctx.rotate(Math.PI / 2); ctx.fillText(`${r.w} cm`, 0, 0); ctx.restore();
+  drawDimLine(ctx, rp.x + rp.pw + 10, rp.y, rp.x + rp.pw + 10, rp.y + rp.ph);
+
+  // Center label
+  const peri = mode === 'square' && which === 1 ? r.l * 4 : (r.l + r.w) * 2;
+  ctx.fillStyle = which === 1 ? '#0EA5E9' : '#d97706';
+  ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(`P = ${peri} cm`, rp.x + rp.pw / 2, rp.y + rp.ph / 2);
+}
+
+function drawHandles(which) {
+  const r = getRect(which);
+  const origin = getOrigin(which);
+  const rp = rectPixels(r, origin);
+  const color = which === 1 ? '#3B82F6' : '#f59e0b';
+  const corners = [[rp.x, rp.y],[rp.x+rp.pw, rp.y],[rp.x+rp.pw, rp.y+rp.ph],[rp.x, rp.y+rp.ph]];
+  corners.forEach(([x, y]) => {
+    ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+  });
+  // Edge midpoints
+  const mids = [
+    [rp.x + rp.pw/2, rp.y], [rp.x + rp.pw, rp.y + rp.ph/2],
+    [rp.x + rp.pw/2, rp.y + rp.ph], [rp.x, rp.y + rp.ph/2]
+  ];
+  mids.forEach(([x, y]) => {
+    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+  });
+}
+
+function drawDimLine(ctx, x1, y1, x2, y2) {
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1; ctx.setLineDash([4, 3]); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawCompareLabels() {
+  const p1 = (rect1.l + rect1.w) * 2, p2 = (rect2.l + rect2.w) * 2;
+  ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#3B82F6';
+  ctx.fillText('A', getOrigin(1).x + rect1.l * GRID / 2, getOrigin(1).y + rect1.w * GRID + 24);
+  ctx.fillStyle = '#f59e0b';
+  ctx.fillText('B', getOrigin(2).x + rect2.l * GRID / 2, getOrigin(2).y + rect2.w * GRID + 24);
+  // Comparison
+  const diff = p1 - p2;
+  ctx.fillStyle = '#1e293b'; ctx.font = '13px sans-serif';
+  ctx.fillText(`A周长${p1}cm  B周长${p2}cm`, cvs.width / 2, cvs.height - 16);
+  ctx.fillStyle = '#0EA5E9'; ctx.font = 'bold 13px sans-serif';
+  ctx.fillText(diff > 0 ? `A比B长 ${diff} cm` : diff < 0 ? `B比A长 ${-diff} cm` : 'A和B周长相等', cvs.width / 2, cvs.height - 36);
+}
+
+/* ===== Trace Animation ===== */
+function startTraceAnim() {
+  if (trace.active) return;
+  trace.active = true; trace.side = 0; trace.progress = 0; trace.totalSoFar = 0;
+  document.getElementById('btnAnimate').disabled = true;
+  animateTrace();
+}
+
+function animateTrace() {
+  if (!trace.active) return;
+  trace.progress += 0.025;
+  if (trace.progress >= 1) {
+    const r = rect1;
+    const sides = [r.l, r.w, r.l, r.w];
+    trace.totalSoFar += sides[trace.side];
+    trace.side++; trace.progress = 0;
+    if (trace.side >= 4) {
+      trace.active = false;
+      document.getElementById('btnAnimate').disabled = false;
+      draw();
+      showFormula(rect1.l, rect1.w);
+      return;
+    }
+  }
+  draw();
+  drawTraceProgress();
+  trace.raf = requestAnimationFrame(animateTrace);
+}
+
+function drawTraceOverlay(which) {
+  const r = getRect(which);
+  const origin = getOrigin(which);
+  const rp = rectPixels(r, origin);
+  const sides = [
+    { x1: rp.x, y1: rp.y, x2: rp.x + rp.pw, y2: rp.y, len: r.l },
+    { x1: rp.x + rp.pw, y1: rp.y, x2: rp.x + rp.pw, y2: rp.y + rp.ph, len: r.w },
+    { x1: rp.x + rp.pw, y1: rp.y + rp.ph, x2: rp.x, y2: rp.y + rp.ph, len: r.l },
+    { x1: rp.x, y1: rp.y + rp.ph, x2: rp.x, y2: rp.y, len: r.w }
+  ];
+  // Draw completed sides
+  for (let i = 0; i < trace.side && i < 4; i++) {
+    const s = sides[i];
+    ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2);
+    ctx.strokeStyle = COLORS[i]; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.stroke();
+  }
+  // Draw current partial side
+  if (trace.side < 4) {
+    const s = sides[trace.side];
+    const cx = s.x1 + (s.x2 - s.x1) * trace.progress;
+    const cy = s.y1 + (s.y2 - s.y1) * trace.progress;
+    ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(cx, cy);
+    ctx.strokeStyle = COLORS[trace.side]; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.stroke();
+    // Moving dot
+    ctx.beginPath(); ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+    ctx.fillStyle = COLORS[trace.side]; ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+  }
+}
+
+function drawTraceProgress() {
+  const r = rect1;
+  const sides = [r.l, r.w, r.l, r.w];
+  let completed = 0;
+  for (let i = 0; i < trace.side; i++) completed += sides[i];
+  const currentSideLen = sides[trace.side] || 0;
+  const running = completed + currentSideLen * trace.progress;
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.roundRect(cvs.width - 160, 10, 150, 32, 8);
+  ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  ctx.fillText(`已走: ${running.toFixed(1)} cm`, cvs.width - 20, 26);
+  ctx.restore();
+}
+
+function toggleTrace() {
+  if (trace.active) {
+    trace.active = false;
+    cancelAnimationFrame(trace.raf);
+    trace.side = 0; trace.progress = 0; trace.totalSoFar = 0;
+    document.getElementById('btnAnimate').disabled = false;
+    draw();
+  } else {
+    startTraceAnim();
+  }
+}
+
+/* ===== Rope Animation ===== */
+function startRopeAnim() {
+  if (rope.active) return;
+  rope.active = true; rope.progress = 0;
+  document.getElementById('btnUnroll').disabled = true;
+  animateRope();
+}
+
+function animateRope() {
+  if (!rope.active) return;
+  rope.progress += 0.012;
+  if (rope.progress >= 1) {
+    rope.active = false;
+    document.getElementById('btnUnroll').disabled = false;
+  }
+  draw();
+  drawRopeOverlay();
+  if (rope.active) rope.raf = requestAnimationFrame(animateRope);
+}
+
+function toggleRope() {
+  if (rope.active) {
+    rope.active = false;
+    cancelAnimationFrame(rope.raf);
+    rope.progress = 0;
+    document.getElementById('btnUnroll').disabled = false;
+    draw();
+  } else {
+    startRopeAnim();
+  }
+}
+
+function drawRopeOverlay() {
+  const r = rect1;
+  const peri = (r.l + r.w) * 2;
+  const origin = getOrigin(1);
+  const rp = rectPixels(r, origin);
+  const p = Math.min(rope.progress, 1);
+
+  // Rope starting point (bottom center of rect)
+  const startX = rp.x + rp.pw / 2;
+  const startY = rp.y + rp.ph + 30;
+
+  // Rope width in pixels
+  const totalPixelLen = peri * GRID;
+  const unrolledPixels = totalPixelLen * p;
+
+  // Draw the rope as segments with colors
+  const segments = [
+    { len: r.l, color: COLORS[0] },
+    { len: r.w, color: COLORS[1] },
+    { len: r.l, color: COLORS[2] },
+    { len: r.w, color: COLORS[3] }
+  ];
+
+  let xPos = startX - totalPixelLen / 2;
+  let remaining = unrolledPixels;
+
+  // Background track
+  ctx.fillStyle = '#f1f5f9';
+  ctx.fillRect(xPos - 4, startY - 8, totalPixelLen + 8, 16);
+  ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
+  ctx.strokeRect(xPos - 4, startY - 8, totalPixelLen + 8, 16);
+
+  let accumulatedCm = 0;
+  for (let i = 0; i < segments.length; i++) {
+    const segPx = segments[i].len * GRID;
+    const drawPx = Math.min(remaining, segPx);
+    if (drawPx <= 0) break;
+
+    ctx.fillStyle = segments[i].color;
+    ctx.fillRect(xPos, startY - 5, drawPx, 10);
+
+    // Label above segment
+    if (drawPx >= 15) {
+      ctx.fillStyle = '#1e293b'; ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText(`${segments[i].len}`, xPos + segPx / 2, startY - 10);
+    }
+
+    // Tick at segment boundary
+    ctx.beginPath(); ctx.moveTo(xPos, startY - 8); ctx.lineTo(xPos, startY + 8);
+    ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    accumulatedCm += segments[i].len;
+    xPos += segPx;
+    remaining -= segPx;
+  }
+
+  // End tick
+  ctx.beginPath(); ctx.moveTo(xPos, startY - 8); ctx.lineTo(xPos, startY + 8);
+  ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // Total label
+  const shown = peri * p;
+  ctx.fillStyle = '#0EA5E9'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(`总周长: ${Math.round(shown)} / ${peri} cm`, startX, startY + 26);
+}
+
+/* ===== Drag interaction ===== */
+function getHitHandle(mx, my) {
+  function checkRect(which) {
+    const r = getRect(which);
+    const origin = getOrigin(which);
+    const rp = rectPixels(r, origin);
+    const corners = [
+      { id: 'tl', x: rp.x, y: rp.y },
+      { id: 'tr', x: rp.x + rp.pw, y: rp.y },
+      { id: 'br', x: rp.x + rp.pw, y: rp.y + rp.ph },
+      { id: 'bl', x: rp.x, y: rp.y + rp.ph }
+    ];
+    for (const c of corners) {
+      if (Math.hypot(mx - c.x, my - c.y) < 12) return { target: which === 1 ? 'r1' : 'r2', handle: c.id };
+    }
+    const mids = [
+      { id: 'top', x: rp.x + rp.pw/2, y: rp.y },
+      { id: 'right', x: rp.x + rp.pw, y: rp.y + rp.ph/2 },
+      { id: 'bottom', x: rp.x + rp.pw/2, y: rp.y + rp.ph },
+      { id: 'left', x: rp.x, y: rp.y + rp.ph/2 }
+    ];
+    for (const m of mids) {
+      if (Math.hypot(mx - m.x, my - m.y) < 10) return { target: which === 1 ? 'r1' : 'r2', handle: m.id };
+    }
+    return null;
+  }
+  if (compareMode) {
+    return checkRect(2) || checkRect(1);
+  }
+  return checkRect(1);
+}
+
+cvs.addEventListener('mousedown', e => {
+  const rect = cvs.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (cvs.width / rect.width);
+  const my = (e.clientY - rect.top) * (cvs.height / rect.height);
+  drag = getHitHandle(mx, my);
+  if (drag) cvs.style.cursor = 'grabbing';
+});
+
+cvs.addEventListener('mousemove', e => {
+  const rect = cvs.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (cvs.width / rect.width);
+  const my = (e.clientY - rect.top) * (cvs.height / rect.height);
+
+  if (!drag) {
+    const hit = getHitHandle(mx, my);
+    cvs.style.cursor = hit ? 'grab' : 'crosshair';
+    return;
+  }
+
+  const r = drag.target === 'r1' ? rect1 : rect2;
+  const origin = getOrigin(drag.target === 'r1' ? 1 : 2);
+  const h = drag.handle;
+
+  if (h === 'br' || h === 'right' || h === 'bottom') {
+    if (h === 'br') {
+      let newL = Math.max(1, Math.min(20, Math.round((mx - origin.x) / GRID)));
+      let newW = Math.max(1, Math.min(20, Math.round((my - origin.y) / GRID)));
+      if (mode === 'square' && drag.target === 'r1') { newW = newL; }
+      r.l = newL; r.w = newW;
+    } else if (h === 'right') {
+      r.l = Math.max(1, Math.min(20, Math.round((mx - origin.x) / GRID)));
+      if (mode === 'square' && drag.target === 'r1') r.w = r.l;
+    } else {
+      r.w = Math.max(1, Math.min(20, Math.round((my - origin.y) / GRID)));
+      if (mode === 'square' && drag.target === 'r1') r.l = r.w;
+    }
+  } else if (h === 'tl' || h === 'left' || h === 'top') {
+    // For simplicity, resize from top-left by adjusting origin (keep l/w positive)
+    // We fix the bottom-right and compute new l/w
+    const rp = rectPixels(r, origin);
+    const brx = rp.x + rp.pw, bry = rp.y + rp.ph;
+    let newL = Math.max(1, Math.min(20, Math.round((brx - mx) / GRID)));
+    let newW = Math.max(1, Math.min(20, Math.round((bry - my) / GRID)));
+    if (mode === 'square' && drag.target === 'r1') { newW = newL; }
+    if (h === 'tl') { r.l = newL; r.w = newW; }
+    else if (h === 'left') { r.l = newL; if (mode === 'square' && drag.target === 'r1') r.w = r.l; }
+    else { r.w = newW; if (mode === 'square' && drag.target === 'r1') r.l = r.w; }
+  } else if (h === 'tr') {
+    const rp = rectPixels(r, origin);
+    let newL = Math.max(1, Math.min(20, Math.round((mx - origin.x) / GRID)));
+    let newW = Math.max(1, Math.min(20, Math.round((rp.y + rp.ph - my) / GRID)));
+    if (mode === 'square' && drag.target === 'r1') { newW = newL; }
+    r.l = newL; r.w = newW;
+  } else if (h === 'bl') {
+    const rp = rectPixels(r, origin);
+    let newL = Math.max(1, Math.min(20, Math.round((rp.x + rp.pw - mx) / GRID)));
+    let newW = Math.max(1, Math.min(20, Math.round((my - origin.y) / GRID)));
+    if (mode === 'square' && drag.target === 'r1') { newW = newL; }
+    r.l = newL; r.w = newW;
+  }
+
+  syncSliders();
+  draw();
+  showFormula(rect1.l, rect1.w);
+});
+
+cvs.addEventListener('mouseup', () => { drag = null; cvs.style.cursor = 'crosshair'; });
+cvs.addEventListener('mouseleave', () => { drag = null; cvs.style.cursor = 'crosshair'; });
+
+/* Touch support */
+cvs.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.touches[0], r = cvs.getBoundingClientRect();
+  drag = getHitHandle((t.clientX - r.left) * (cvs.width / r.width), (t.clientY - r.top) * (cvs.height / r.height));
+}, { passive: false });
+
+cvs.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!drag) return;
+  const t = e.touches[0];
+  cvs.dispatchEvent(new MouseEvent('mousemove', { clientX: t.clientX, clientY: t.clientY }));
+}, { passive: false });
+
+cvs.addEventListener('touchend', () => { drag = null; });
+
+/* ===== UI Sync ===== */
+function syncSliders() {
+  document.getElementById('slL').value = rect1.l;
+  document.getElementById('vlL').textContent = rect1.l;
+  document.getElementById('slW').value = rect1.w;
+  document.getElementById('vlW').textContent = rect1.w;
+  if (compareMode) {
+    document.getElementById('slL2').value = rect2.l;
+    document.getElementById('vlL2').textContent = rect2.l;
+    document.getElementById('slW2').value = rect2.w;
+    document.getElementById('vlW2').textContent = rect2.w;
+  }
+}
+
+function sliderChanged() {
+  rect1.l = parseInt(document.getElementById('slL').value);
+  rect1.w = mode === 'square' ? rect1.l : parseInt(document.getElementById('slW').value);
+  if (compareMode) {
+    rect2.l = parseInt(document.getElementById('slL2').value);
+    rect2.w = parseInt(document.getElementById('slW2').value);
+  }
+  syncSliders();
+  draw();
+  showFormula(rect1.l, rect1.w);
+}
+
+function update() { sliderChanged(); }
+
+/* ===== Mode & Presets ===== */
 function setMode(m) {
   mode = m;
   document.getElementById('modeRect').classList.toggle('active', m === 'rect');
   document.getElementById('modeSquare').classList.toggle('active', m === 'square');
   document.getElementById('widthSection').style.display = m === 'square' ? 'none' : '';
-  update();
+  if (m === 'square') { rect1.w = rect1.l; }
+  syncSliders();
+  draw();
+  showFormula(rect1.l, rect1.w);
 }
 
-function update() {
-  let l = parseInt(document.getElementById('slL').value);
-  const w = mode === 'square' ? l : parseInt(document.getElementById('slW').value);
-  if (mode === 'square') { document.getElementById('slW').value = l; }
-  document.getElementById('vlL').textContent = l;
-  document.getElementById('vlW').textContent = w;
-  draw(l, w);
-  showFormula(l, w);
+function toggleCompare() {
+  compareMode = !compareMode;
+  document.getElementById('compareSection').style.display = compareMode ? '' : 'none';
+  draw();
+  if (compareMode) syncSliders();
 }
 
-function draw(l, w) {
-  const W = cvs.width, H = cvs.height;
-  ctx.clearRect(0, 0, W, H);
-  const scale = Math.min((W - 140) / l, (H - 120) / w, 30);
-  const rw = l * scale, rh = w * scale;
-  const rx = (W - rw) / 2, ry = (H - rh) / 2;
-
-  // Shadow
-  ctx.fillStyle = '#e2e8f0';
-  ctx.fillRect(rx + 4, ry + 4, rw, rh);
-
-  // Fill
-  ctx.fillStyle = '#dbeafe';
-  ctx.fillRect(rx, ry, rw, rh);
-
-  // Border with gradient stroke
-  ctx.strokeStyle = '#3B82F6';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(rx, ry, rw, rh);
-
-  // Corner dots
-  [[rx,ry],[rx+rw,ry],[rx+rw,ry+rh],[rx,ry+rh]].forEach(([x,y]) => {
-    ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2);
-    ctx.fillStyle = '#3B82F6'; ctx.fill();
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-  });
-
-  // Dimension labels
-  ctx.fillStyle = '#1e293b'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  // Top: length
-  ctx.fillText(`${l} cm`, rx + rw/2, ry - 16);
-  drawArrow(ctx, rx, ry - 8, rx + rw, ry - 8);
-  // Right: width
-  ctx.save(); ctx.translate(rx + rw + 20, ry + rh/2);
-  ctx.rotate(Math.PI/2); ctx.fillText(`${w} cm`, 0, 0); ctx.restore();
-  drawArrow(ctx, rx + rw + 12, ry, rx + rw + 12, ry + rh);
-
-  // Perimeter highlight on edges
-  const peri = mode === 'square' ? l * 4 : (l + w) * 2;
-  ctx.fillStyle = '#0EA5E9'; ctx.font = 'bold 13px sans-serif';
-  ctx.fillText(`周长 = ${peri} cm`, rx + rw/2, ry + rh/2);
+function loadPreset(l, w) {
+  setMode('rect');
+  rect1.l = l; rect1.w = w;
+  // If the preset values exceed slider max, clamp them
+  document.getElementById('slL').max = Math.max(20, l);
+  document.getElementById('slW').max = Math.max(20, w);
+  syncSliders(); draw(); showFormula(rect1.l, rect1.w);
 }
 
-function drawArrow(ctx, x1, y1, x2, y2) {
-  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
-  ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1; ctx.setLineDash([4,3]); ctx.stroke();
-  ctx.setLineDash([]);
-  // arrowheads
-  const sz = 5, dx = x2-x1, dy = y2-y1, len = Math.sqrt(dx*dx+dy*dy);
-  if (len < 10) return;
-  const ux = dx/len, uy = dy/len;
-  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x1+sz*(ux+uy*0.5), y1+sz*(uy-ux*0.5));
-  ctx.moveTo(x1,y1); ctx.lineTo(x1+sz*(ux-uy*0.5), y1+sz*(uy+ux*0.5));
-  ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1.5; ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-sz*(ux-uy*0.5), y2-sz*(uy+ux*0.5));
-  ctx.moveTo(x2,y2); ctx.lineTo(x2-sz*(ux+uy*0.5), y2-sz*(uy-ux*0.5));
-  ctx.stroke();
+function loadSquare(s) {
+  setMode('square');
+  rect1.l = s; rect1.w = s;
+  document.getElementById('slL').max = Math.max(20, s);
+  syncSliders(); draw(); showFormula(rect1.l, rect1.w);
 }
 
+function resetAll() {
+  trace.active = false; trace.side = 0; trace.progress = 0;
+  rope.active = false; rope.progress = 0;
+  compareMode = false;
+  document.getElementById('compareSection').style.display = 'none';
+  document.getElementById('slL').max = 20;
+  document.getElementById('slW').max = 20;
+  document.getElementById('btnAnimate').disabled = false;
+  document.getElementById('btnUnroll').disabled = false;
+  setMode('rect');
+  rect1.l = 6; rect1.w = 4; rect2.l = 5; rect2.w = 3;
+  syncSliders(); draw(); showFormula(rect1.l, rect1.w);
+}
+
+/* ===== Formula ===== */
 function showFormula(l, w) {
   const box = document.getElementById('formulaBox');
   if (mode === 'square') {
     const p = l * 4;
-    box.innerHTML = `正方形周长<br/>P = 边长 × 4 = ${l} × 4 = <span style="font-size:22px">${p}</span> cm`;
+    box.innerHTML = `正方形周长 &nbsp; P = 边长 × 4 = ${l} × 4 = <span style="font-size:22px">${p}</span> cm`;
   } else {
     const s = l + w, p = s * 2;
-    box.innerHTML = `长方形周长<br/>P = (长 + 宽) × 2 = (${l} + ${w}) × 2 = ${s} × 2 = <span style="font-size:22px">${p}</span> cm`;
+    box.innerHTML = `长方形周长 &nbsp; P = (长 + 宽) × 2 = (${l} + ${w}) × 2 = ${s} × 2 = <span style="font-size:22px">${p}</span> cm`;
   }
 }
 
-function loadPreset(l, w) { setMode('rect'); document.getElementById('slL').value = l; document.getElementById('slW').value = w; update(); }
-function loadSquare(s) { setMode('square'); document.getElementById('slL').value = s; update(); }
-function resetAll() { setMode('rect'); document.getElementById('slL').value = 6; document.getElementById('slW').value = 4; update(); }
-update();
+/* ===== Init ===== */
+syncSliders(); draw(); showFormula(rect1.l, rect1.w);
 </script>
 </body>
 </html>

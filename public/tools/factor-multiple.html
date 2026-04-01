@@ -29,11 +29,32 @@
   .tag {
     display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px;
     font-weight:600; margin:2px; background:#dcfce7; color:#16A34A;
+    transition:all .2s;
   }
   .tag.common { background:#fef3c7; color:#D97706; }
+  .tag.prime { background:#ede9fe; color:#7c3aed; }
   .pair-row { display:flex; align-items:center; gap:4px; margin:2px 0; font-size:12px; }
   .pair-arrow { color:#94a3b8; }
   .result-title { font-size:13px; font-weight:700; color:#1e293b; margin-bottom:4px; }
+  .tab-bar { display:flex; gap:4px; flex-wrap:wrap; }
+  .tab-btn {
+    padding:6px 12px; border-radius:8px; border:1.5px solid #e2e8f0; background:#fff;
+    font-size:12px; font-weight:600; cursor:pointer; transition:all .15s;
+  }
+  .tab-btn.active { background:#16A34A; color:#fff; border-color:#16A34A; }
+  .tab-btn:hover:not(.active) { border-color:#22C55E; color:#22C55E; }
+  .quiz-btn {
+    padding:8px 0; border-radius:8px; font-size:13px; font-weight:600;
+    background:#fff; border:1.5px solid #e2e8f0; cursor:pointer; transition:all .15s; width:100%;
+  }
+  .quiz-btn:hover { border-color:#16A34A; color:#16A34A; }
+  .quiz-btn.correct { background:#dcfce7; border-color:#22C55E; color:#16A34A; }
+  .quiz-btn.wrong { background:#fee2e2; border-color:#ef4444; color:#ef4444; }
+  .score-badge {
+    display:inline-flex; align-items:center; gap:4px;
+    background:#16A34A; color:#fff; padding:4px 10px; border-radius:20px;
+    font-size:12px; font-weight:700;
+  }
 </style>
 </head>
 <body>
@@ -44,6 +65,7 @@
       <span class="edu-toolbar-subtitle">五下·第二单元</span>
     </div>
     <div class="edu-toolbar-actions">
+      <span class="score-badge" id="scoreBadge" style="display:none">得分: 0</span>
       <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
     </div>
   </div>
@@ -54,18 +76,50 @@
       </div>
       <div class="control-panel">
         <div class="ctrl-section">
-          <div class="ctrl-label">输入一个数（求因数）</div>
+          <div class="ctrl-label">模式</div>
+          <div class="tab-bar">
+            <button class="tab-btn active" onclick="setTab('grid')">因数网格</button>
+            <button class="tab-btn" onclick="setTab('tree')">因数分解</button>
+            <button class="tab-btn" onclick="setTab('rainbow')">因数彩虹</button>
+            <button class="tab-btn" onclick="setTab('classify')">质合判断</button>
+            <button class="tab-btn" onclick="setTab('quiz')">挑战答题</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div id="panel-grid" class="ctrl-section">
+          <div class="ctrl-label">输入数字（1-200）</div>
           <input class="num-input" id="num1" type="number" min="1" max="200" value="12" oninput="update()"/>
           <div id="factors-result" class="info-box"></div>
         </div>
-        <div class="divider"></div>
-        <div class="ctrl-section">
-          <div class="ctrl-label">输入一个数（求倍数）</div>
-          <input class="num-input" id="num2" type="number" min="1" max="50" value="6" oninput="update()"/>
-          <div class="info-box">
-            <div class="result-title"><span id="num2-label">6</span> 的前 10 个倍数</div>
-            <div id="multiples-result"></div>
+        <div id="panel-tree" class="ctrl-section" style="display:none">
+          <div class="ctrl-label">输入数字分解质因数</div>
+          <input class="num-input" id="treeNum" type="number" min="2" max="500" value="60" oninput="update()"/>
+          <div id="tree-result" class="info-box"></div>
+        </div>
+        <div id="panel-rainbow" class="ctrl-section" style="display:none">
+          <div class="ctrl-label">输入数字看因数配对</div>
+          <input class="num-input" id="rainbowNum" type="number" min="1" max="200" value="24" oninput="update()"/>
+          <div id="rainbow-result" class="info-box"></div>
+        </div>
+        <div id="panel-classify" class="ctrl-section" style="display:none">
+          <div class="ctrl-label">这个数是质数还是合数？</div>
+          <div style="text-align:center;font-size:48px;font-weight:800;color:#1e293b;padding:10px 0" id="classifyNum">17</div>
+          <div style="display:flex;gap:8px">
+            <button class="quiz-btn" onclick="classifyAnswer('prime')">质数</button>
+            <button class="quiz-btn" onclick="classifyAnswer('composite')">合数</button>
           </div>
+          <div id="classify-feedback" style="text-align:center;font-weight:700;font-size:14px;min-height:20px"></div>
+          <button class="quiz-btn" onclick="nextClassify()" style="margin-top:4px">下一题</button>
+        </div>
+        <div id="panel-quiz" class="ctrl-section" style="display:none">
+          <div class="ctrl-label">因数倍数挑战</div>
+          <div id="quiz-question" class="info-box" style="font-size:13px;line-height:1.6"></div>
+          <div style="display:flex;gap:8px">
+            <input class="num-input" id="quizInput" type="number" style="flex:1" onkeydown="if(event.key==='Enter')checkQuiz()"/>
+            <button class="edu-btn edu-btn-accent" onclick="checkQuiz()">确认</button>
+          </div>
+          <div id="quiz-feedback" style="text-align:center;font-weight:700;font-size:13px;min-height:20px"></div>
+          <button class="quiz-btn" onclick="nextQuiz()">下一题</button>
         </div>
         <div class="divider"></div>
         <div class="ctrl-section">
@@ -76,16 +130,6 @@
           </div>
           <div id="common-result" class="info-box"></div>
         </div>
-        <div class="divider"></div>
-        <div class="ctrl-section">
-          <div class="ctrl-label">知识卡片</div>
-          <div class="info-box" style="background:#fff;border-color:#e2e8f0;font-size:11px;line-height:1.7;">
-            <strong>因数</strong>：若 a&times;b=c，则 a、b 是 c 的因数。<br/>
-            <strong>倍数</strong>：若 a&times;b=c，则 c 是 a 的倍数。<br/>
-            <strong>公因数</strong>：两个数共有的因数。<br/>
-            一个数的因数个数<b>有限</b>，倍数个数<b>无限</b>。
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -94,58 +138,88 @@
 <script>
 const canvas = document.getElementById('main-canvas');
 const ctx = canvas.getContext('2d');
-let W, H;
+let W, H, currentTab = 'grid', quizScore = 0, classifyCurrent = 17;
 
 function getFactors(n) {
-  const factors = [];
-  for (let i = 1; i <= n; i++) if (n % i === 0) factors.push(i);
-  return factors;
+  const f = [];
+  for (let i = 1; i <= n; i++) if (n % i === 0) f.push(i);
+  return f;
 }
 
 function getFactorPairs(n) {
-  const pairs = [];
-  for (let i = 1; i * i <= n; i++) {
-    if (n % i === 0) pairs.push([i, n / i]);
-  }
-  return pairs;
+  const p = [];
+  for (let i = 1; i * i <= n; i++) if (n % i === 0) p.push([i, n / i]);
+  return p;
 }
 
-function getMultiples(n, count) {
-  const m = [];
-  for (let i = 1; i <= count; i++) m.push(n * i);
-  return m;
+function getMultiples(n, c) { const m = []; for (let i = 1; i <= c; i++) m.push(n * i); return m; }
+
+function isPrime(n) {
+  if (n < 2) return false;
+  for (let i = 2; i * i <= n; i++) if (n % i === 0) return false;
+  return true;
+}
+
+function primeFactors(n) {
+  const f = []; let d = 2;
+  while (d * d <= n) { while (n % d === 0) { f.push(d); n /= d; } d++; }
+  if (n > 1) f.push(n);
+  return f;
+}
+
+function setTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  ['grid','tree','rainbow','classify','quiz'].forEach(t => {
+    const p = document.getElementById('panel-' + t);
+    if (p) p.style.display = t === tab ? '' : 'none';
+  });
+  if (tab === 'classify' && !classifyCurrent) nextClassify();
+  if (tab === 'quiz') nextQuiz();
+  update();
 }
 
 function update() {
   const n1 = Math.max(1, parseInt(document.getElementById('num1').value) || 1);
-  const n2 = Math.max(1, parseInt(document.getElementById('num2').value) || 1);
+  const n2 = Math.max(1, parseInt(document.getElementById('num2')?.value) || 1);
   const n3 = Math.max(1, parseInt(document.getElementById('num3').value) || 1);
   const n4 = Math.max(1, parseInt(document.getElementById('num4').value) || 1);
 
-  // Factors
+  // Factors panel
   const factors = getFactors(n1);
   const pairs = getFactorPairs(n1);
   let fhtml = `<div class="result-title">${n1} 的因数（共 ${factors.length} 个）</div>`;
-  fhtml += factors.map(f => `<span class="tag">${f}</span>`).join('');
+  fhtml += factors.map(f => `<span class="tag${isPrime(f)?' prime':''}">${f}</span>`).join('');
   fhtml += `<div style="margin-top:6px;" class="result-title">因数对</div>`;
   pairs.forEach(p => {
     fhtml += `<div class="pair-row"><span class="tag">${p[0]}</span><span class="pair-arrow">&times;</span><span class="tag">${p[1]}</span><span class="pair-arrow">= ${n1}</span></div>`;
   });
   document.getElementById('factors-result').innerHTML = fhtml;
 
-  // Multiples
-  const mults = getMultiples(n2, 10);
-  document.getElementById('num2-label').textContent = n2;
-  document.getElementById('multiples-result').innerHTML = mults.map(m => `<span class="tag">${m}</span>`).join('');
+  // Tree panel
+  const treeN = Math.max(2, parseInt(document.getElementById('treeNum')?.value) || 2);
+  const pf = primeFactors(treeN);
+  document.getElementById('tree-result').innerHTML =
+    `<div class="result-title">${treeN} 的质因数分解</div>` +
+    `<div style="font-size:16px;font-weight:800;color:#16A34A">${treeN} = ${pf.join(' × ')}</div>` +
+    `<div style="margin-top:4px;font-size:11px;color:#94a3b8">质因数：${[...new Set(pf)].map(p=>`<span class="tag prime">${p}</span>`).join('')}</div>`;
+
+  // Rainbow panel
+  const rn = Math.max(1, parseInt(document.getElementById('rainbowNum')?.value) || 1);
+  const rp = getFactorPairs(rn);
+  document.getElementById('rainbow-result').innerHTML =
+    `<div class="result-title">${rn} 的因数配对（${rp.length} 对）</div>` +
+    rp.map(p => `<div class="pair-row"><span class="tag">${p[0]}</span><span class="pair-arrow">↔</span><span class="tag">${p[1]}</span></div>`).join('');
 
   // Common factors
   const f3 = getFactors(n3), f4 = getFactors(n4);
   const common = f3.filter(f => f4.includes(f));
   let chtml = `<div class="result-title">${n3} 和 ${n4} 的公因数</div>`;
-  chtml += `<div style="margin-bottom:4px;">${n3} 的因数：${f3.map(f => `<span class="tag${common.includes(f)?' common':''}">${f}</span>`).join('')}</div>`;
-  chtml += `<div>${n4} 的因数：${f4.map(f => `<span class="tag${common.includes(f)?' common':''}">${f}</span>`).join('')}</div>`;
-  chtml += `<div style="margin-top:4px;">公因数：${common.map(f => `<span class="tag common">${f}</span>`).join('')}</div>`;
-  chtml += `<div>最大公因数：<strong>${Math.max(...common)}</strong></div>`;
+  chtml += `<div style="margin-bottom:4px;">${n3}：${f3.map(f => `<span class="tag${common.includes(f)?' common':''}">${f}</span>`).join('')}</div>`;
+  chtml += `<div>${n4}：${f4.map(f => `<span class="tag${common.includes(f)?' common':''}">${f}</span>`).join('')}</div>`;
+  chtml += `<div style="margin-top:4px;">公因数：${common.map(f => `<span class="tag common">${f}</span>`).join('')||'无'}</div>`;
+  chtml += `<div>最大公因数：<strong>${common.length?Math.max(...common):'-'}</strong></div>`;
   document.getElementById('common-result').innerHTML = chtml;
 
   render();
@@ -158,78 +232,310 @@ function render() {
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, W, H);
 
+  if (currentTab === 'grid') renderGrid();
+  else if (currentTab === 'tree') renderTree();
+  else if (currentTab === 'rainbow') renderRainbow();
+  else if (currentTab === 'classify') renderClassify();
+  else if (currentTab === 'quiz') renderQuiz();
+}
+
+function renderGrid() {
   const n1 = Math.max(1, parseInt(document.getElementById('num1').value) || 1);
   const factors = getFactors(n1);
   const pairs = getFactorPairs(n1);
 
-  // Draw factor pair bars
-  ctx.font = 'bold 14px sans-serif';
-  ctx.fillStyle = '#1e293b';
-  ctx.textAlign = 'center';
-  ctx.fillText(`${n1} 的因数对可视化`, W / 2, 40);
+  ctx.font = 'bold 16px sans-serif'; ctx.fillStyle = '#1e293b'; ctx.textAlign = 'center';
+  ctx.fillText(`${n1} 的因数网格`, W / 2, 35);
 
-  const barMaxW = W - 120;
-  const barH = 32;
-  const startY = 70;
-  const colors = ['#22C55E', '#16A34A', '#15803d', '#4ade80', '#86efac'];
+  // 1-100 number grid
+  const cols = 10, rows = 10, maxNum = 100;
+  const pad = 30, gap = 2;
+  const cellW = Math.min((W - pad * 2) / cols, 42);
+  const cellH = Math.min((H - 80) / rows, 38);
+  const gridW = cols * cellW, gridH = rows * cellH;
+  const ox = (W - gridW) / 2, oy = 55;
 
-  pairs.forEach((p, i) => {
-    const y = startY + i * (barH + 14);
-    const a = p[0], b = p[1];
-    const ratioA = a / n1, ratioB = b / n1;
-    const wA = barMaxW * ratioA, wB = barMaxW * ratioB;
-    const xA = 60;
+  for (let i = 0; i < maxNum; i++) {
+    const r = Math.floor(i / cols), c = i % cols;
+    const x = ox + c * cellW, y = oy + r * cellH;
+    const num = i + 1;
+    const isFactor = factors.includes(num);
+    const isPrimeNum = isPrime(num);
 
-    // Bar A
-    ctx.fillStyle = '#22C55E50';
-    ctx.fillRect(xA, y, wA, barH / 2 - 2);
-    ctx.fillStyle = '#16A34A';
-    ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(a, xA + wA + 6, y + barH / 4 + 3);
+    ctx.fillStyle = isFactor ? '#22C55E50' : '#f8fafc';
+    if (num <= n1 && !isFactor) ctx.fillStyle = '#f1f5f9';
+    ctx.fillRect(x + gap, y + gap, cellW - gap * 2, cellH - gap * 2);
 
-    // Bar B
-    ctx.fillStyle = '#4ade8050';
-    ctx.fillRect(xA, y + barH / 2 + 2, wB, barH / 2 - 2);
-    ctx.fillStyle = '#15803d';
-    ctx.fillText(b, xA + wB + 6, y + barH * 3 / 4 + 4);
+    ctx.strokeStyle = isFactor ? '#16A34A' : (num <= n1 ? '#cbd5e1' : '#e2e8f0');
+    ctx.lineWidth = isFactor ? 2 : 1;
+    ctx.strokeRect(x + gap, y + gap, cellW - gap * 2, cellH - gap * 2);
 
-    // Multiply sign
-    ctx.fillStyle = '#64748b'; ctx.textAlign = 'right';
-    ctx.fillText('= ' + n1, xA - 8, y + barH / 2 + 3);
-  });
+    ctx.fillStyle = isFactor ? '#16A34A' : (isPrimeNum && num <= n1 ? '#7c3aed' : '#94a3b8');
+    ctx.font = (isFactor ? 'bold ' : '') + '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(num, x + cellW / 2, y + cellH / 2 + 4);
+  }
 
-  // Draw number grid at bottom
-  const gridSize = Math.min(Math.ceil(Math.sqrt(n1)), 10);
-  const cellSize = Math.min((W - 80) / gridSize, (H - startY - pairs.length * (barH + 14) - 60) / gridSize, 40);
-  const gridW = gridSize * cellSize;
-  const gridStartX = (W - gridW) / 2;
-  const gridStartY = startY + pairs.length * (barH + 14) + 30;
-  let idx = 0;
+  // Factor pair bars at bottom
+  const barY = oy + gridH + 20;
+  if (barY + pairs.length * 30 < H) {
+    ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#64748b'; ctx.textAlign = 'center';
+    ctx.fillText('因数对', W / 2, barY);
+    const barMaxW = W - 140;
+    pairs.forEach((p, i) => {
+      const y = barY + 18 + i * 26;
+      const wA = Math.max(4, (p[0] / n1) * barMaxW);
+      const wB = Math.max(4, (p[1] / n1) * barMaxW);
+      const xA = 70;
 
-  for (let r = 0; r < gridSize && idx < n1; r++) {
-    for (let c = 0; c < gridSize && idx < n1; c++) {
-      const x = gridStartX + c * cellSize, y = gridStartY + r * cellSize;
-      const num = idx + 1;
-      const isFactor = factors.includes(num);
-      ctx.fillStyle = isFactor ? '#22C55E40' : '#f1f5f9';
-      ctx.fillRect(x, y, cellSize - 2, cellSize - 2);
-      ctx.strokeStyle = isFactor ? '#16A34A' : '#e2e8f0';
-      ctx.lineWidth = isFactor ? 2 : 1;
-      ctx.strokeRect(x, y, cellSize - 2, cellSize - 2);
-      ctx.fillStyle = isFactor ? '#16A34A' : '#94a3b8';
-      ctx.font = (isFactor ? 'bold ' : '') + Math.max(10, cellSize * 0.3) + 'px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(num, x + (cellSize - 2) / 2, y + (cellSize - 2) / 2 + 4);
-      idx++;
+      ctx.fillStyle = '#22C55E40'; ctx.fillRect(xA, y, wA, 10);
+      ctx.fillStyle = '#4ade8040'; ctx.fillRect(xA, y + 12, wB, 10);
+      ctx.fillStyle = '#16A34A'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'right';
+      ctx.fillText(`${p[0]} × ${p[1]} = ${n1}`, xA - 6, y + 12);
+    });
+  }
+}
+
+function renderTree() {
+  const n = Math.max(2, parseInt(document.getElementById('treeNum').value) || 2);
+  const pf = primeFactors(n);
+
+  ctx.font = 'bold 16px sans-serif'; ctx.fillStyle = '#1e293b'; ctx.textAlign = 'center';
+  ctx.fillText(`${n} 的质因数分解树`, W / 2, 35);
+
+  // Build tree levels
+  const levels = [[n]];
+  let current = n;
+  const primes = [];
+  for (const p of pf) {
+    const other = current / p;
+    levels.push([p, other]);
+    primes.push(p);
+    current = other;
+  }
+
+  const levelH = 70, startY = 70;
+  const colors = ['#22C55E', '#3b82f6', '#f97316', '#ef4444', '#8b5cf6', '#ec4899'];
+
+  for (let i = 0; i < levels.length; i++) {
+    const y = startY + i * levelH;
+    const left = levels[i][0], right = levels[i][1];
+    const cx = W / 2;
+
+    if (i < levels.length - 1) {
+      // Draw connecting lines
+      const nextY = y + levelH;
+      ctx.beginPath(); ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5;
+      ctx.moveTo(cx, y + 16); ctx.lineTo(cx - 60, nextY - 12);
+      ctx.moveTo(cx, y + 16); ctx.lineTo(cx + 60, nextY - 12);
+      ctx.stroke();
+
+      // Current number
+      drawCircle(cx, y, 20, '#16A34A', '#fff', String(left));
+
+      // Next level
+      const pColor = colors[i % colors.length];
+      drawCircle(cx - 60, nextY, 18, pColor, '#fff', String(levels[i + 1][0]));
+      drawCircle(cx + 60, nextY, 18, '#e2e8f0', '#64748b', String(levels[i + 1][1]));
+
+      // ÷ label
+      ctx.fillStyle = '#94a3b8'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(`÷ ${levels[i + 1][0]}`, cx + 30, y + levelH / 2);
+    } else {
+      drawCircle(cx, y, 18, '#e2e8f0', '#64748b', String(left));
     }
   }
+
+  // Result equation at bottom
+  const bottomY = startY + levels.length * levelH + 10;
+  ctx.font = 'bold 20px sans-serif'; ctx.fillStyle = '#16A34A'; ctx.textAlign = 'center';
+  ctx.fillText(`${n} = ${pf.join(' × ')}`, W / 2, bottomY);
+
+  // Color-coded primes
+  let px = W / 2 - pf.length * 15;
+  ctx.font = 'bold 11px sans-serif';
+  const unique = [...new Set(pf)];
+  unique.forEach((p, i) => {
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fillText(`●${p}`, px + i * 50, bottomY + 25);
+  });
+}
+
+function drawCircle(x, y, r, bg, fg, text) {
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = bg; ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = fg; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(text, x, y + 5);
+}
+
+function renderRainbow() {
+  const n = Math.max(1, parseInt(document.getElementById('rainbowNum').value) || 1);
+  const pairs = getFactorPairs(n);
+
+  ctx.font = 'bold 16px sans-serif'; ctx.fillStyle = '#1e293b'; ctx.textAlign = 'center';
+  ctx.fillText(`${n} 的因数彩虹`, W / 2, 35);
+
+  const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4'];
+  const barW = Math.min(W - 100, 500);
+  const ox = (W - barW) / 2;
+
+  // Draw factor number line
+  ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(ox, 70); ctx.lineTo(ox + barW, 70); ctx.stroke();
+
+  const maxFactor = pairs.length > 0 ? pairs[pairs.length - 1][1] : 1;
+
+  // Tick marks for all factors
+  const allFactors = getFactors(n);
+  allFactors.forEach(f => {
+    const x = ox + (f / n) * barW;
+    ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, 65); ctx.lineTo(x, 75); ctx.stroke();
+    ctx.fillStyle = '#64748b'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(f, x, 60);
+  });
+
+  // Rainbow arcs
+  const arcH = 40;
+  pairs.forEach((p, i) => {
+    const x1 = ox + (p[0] / n) * barW;
+    const x2 = ox + (p[1] / n) * barW;
+    const midX = (x1 + x2) / 2;
+    const midY = 70 + arcH * (i + 1);
+    const color = colors[i % colors.length];
+
+    ctx.beginPath();
+    ctx.moveTo(x1, 70);
+    ctx.quadraticCurveTo(midX, midY + arcH, x2, 70);
+    ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.stroke();
+
+    // Labels
+    ctx.fillStyle = color; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(`${p[0]}×${p[1]}=${n}`, midX, midY + arcH / 2 + 4);
+  });
+}
+
+function renderClassify() {
+  ctx.font = 'bold 16px sans-serif'; ctx.fillStyle = '#1e293b'; ctx.textAlign = 'center';
+  ctx.fillText('判断：质数还是合数？', W / 2, 35);
+
+  const n = classifyCurrent;
+  const factors = getFactors(n);
+
+  // Big number
+  ctx.font = 'bold 72px sans-serif'; ctx.fillStyle = '#16A34A';
+  ctx.fillText(n, W / 2, H / 2 - 20);
+
+  // Factor hint
+  ctx.font = '14px sans-serif'; ctx.fillStyle = '#64748b';
+  ctx.fillText(`因数：1`, W / 2, H / 2 + 20);
+  if (factors.length > 2) {
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(`还有 ${factors.length - 2} 个其他因数...`, W / 2, H / 2 + 44);
+  } else {
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(`除了 1 和它本身没有其他因数`, W / 2, H / 2 + 44);
+  }
+
+  // Factors count visual
+  const dotSize = 16, cols = Math.min(factors.length, 10);
+  const dx = (W - cols * (dotSize + 6)) / 2;
+  factors.forEach((f, i) => {
+    const r = Math.floor(i / 10), c = i % 10;
+    ctx.beginPath(); ctx.arc(dx + c * (dotSize + 6) + dotSize / 2, H / 2 + 80 + r * 26, dotSize / 2, 0, Math.PI * 2);
+    ctx.fillStyle = '#22C55E40'; ctx.fill();
+    ctx.strokeStyle = '#16A34A'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = '#16A34A'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(f, dx + c * (dotSize + 6) + dotSize / 2, H / 2 + 84 + r * 26);
+  });
+
+  document.getElementById('classifyNum').textContent = n;
+}
+
+function renderQuiz() {
+  ctx.font = 'bold 16px sans-serif'; ctx.fillStyle = '#1e293b'; ctx.textAlign = 'center';
+  ctx.fillText('因数与倍数挑战', W / 2, 35);
+  ctx.font = '14px sans-serif'; ctx.fillStyle = '#94a3b8';
+  ctx.fillText(`当前得分：${quizScore}`, W / 2, 60);
+}
+
+let quizAnswer = 0, quizType = '';
+function nextQuiz() {
+  document.getElementById('quiz-feedback').textContent = '';
+  const types = ['factors_count', 'multiple_check', 'common_factor'];
+  quizType = types[Math.floor(Math.random() * types.length)];
+  const a = Math.floor(Math.random() * 30) + 4;
+  const b = Math.floor(Math.random() * 30) + 4;
+  let q = '';
+  if (quizType === 'factors_count') {
+    quizAnswer = getFactors(a).length;
+    q = `<b>${a}</b> 有多少个因数？`;
+  } else if (quizType === 'multiple_check') {
+    const c = a * (Math.floor(Math.random() * 5) + 1);
+    quizAnswer = 1; // yes
+    if (Math.random() > 0.5) { q = `<b>${c}</b> 是 <b>${a}</b> 的倍数吗？（1=是, 0=不是）`; quizAnswer = 1; }
+    else { const fake = c + Math.floor(Math.random() * 3) + 1; q = `<b>${fake}</b> 是 <b>${a}</b> 的倍数吗？（1=是, 0=不是）`; quizAnswer = a > 0 && fake % a === 0 ? 1 : 0; }
+  } else {
+    const f3 = getFactors(a), f4 = getFactors(b);
+    const common = f3.filter(f => f4.includes(f));
+    quizAnswer = common.length;
+    q = `<b>${a}</b> 和 <b>${b}</b> 有多少个公因数？`;
+  }
+  document.getElementById('quiz-question').innerHTML = q;
+  document.getElementById('quizInput').value = '';
+  document.getElementById('quizInput').focus();
+  render();
+}
+
+function checkQuiz() {
+  const val = parseInt(document.getElementById('quizInput').value);
+  const fb = document.getElementById('quiz-feedback');
+  if (isNaN(val)) { fb.innerHTML = '<span style="color:#ef4444">请输入数字</span>'; return; }
+  if (val === quizAnswer) {
+    quizScore += 10;
+    fb.innerHTML = '<span style="color:#16A34A">✓ 正确！+10 分</span>';
+  } else {
+    fb.innerHTML = `<span style="color:#ef4444">✗ 答案是 ${quizAnswer}</span>`;
+  }
+  document.getElementById('scoreBadge').style.display = '';
+  document.getElementById('scoreBadge').textContent = `得分: ${quizScore}`;
+  render();
+}
+
+function classifyAnswer(type) {
+  const correct = isPrime(classifyCurrent) ? 'prime' : 'composite';
+  const fb = document.getElementById('classify-feedback');
+  const btns = document.querySelectorAll('#panel-classify .quiz-btn');
+  btns.forEach(b => b.classList.remove('correct', 'wrong'));
+  if (type === correct) {
+    fb.innerHTML = '<span style="color:#16A34A">✓ 正确！</span>';
+    btns.forEach(b => b.onclick.toString().includes(type) && b.classList.add('correct'));
+    quizScore += 5;
+  } else {
+    fb.innerHTML = `<span style="color:#ef4444">✗ ${classifyCurrent} 是${correct === 'prime' ? '质数' : '合数'}</span>`;
+    btns.forEach(b => b.onclick.toString().includes(type) && b.classList.add('wrong'));
+  }
+  document.getElementById('scoreBadge').style.display = '';
+  document.getElementById('scoreBadge').textContent = `得分: ${quizScore}`;
+}
+
+function nextClassify() {
+  document.getElementById('classify-feedback').textContent = '';
+  document.querySelectorAll('#panel-classify .quiz-btn').forEach(b => b.classList.remove('correct', 'wrong'));
+  classifyCurrent = Math.floor(Math.random() * 49) + 2;
+  document.getElementById('classifyNum').textContent = classifyCurrent;
+  render();
 }
 
 function resetAll() {
   document.getElementById('num1').value = 12;
-  document.getElementById('num2').value = 6;
   document.getElementById('num3').value = 12;
   document.getElementById('num4').value = 18;
+  if (document.getElementById('treeNum')) document.getElementById('treeNum').value = 60;
+  if (document.getElementById('rainbowNum')) document.getElementById('rainbowNum').value = 24;
+  quizScore = 0;
+  document.getElementById('scoreBadge').style.display = 'none';
   update();
 }
 

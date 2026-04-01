@@ -10,8 +10,6 @@ export interface Tool {
   semester: Semester;
   /** 单元序号，用于组内排序；数学广角统一用 99 */
   unitNum: number;
-  /** 教材版本 id，见 data/curriculum.ts */
-  publisherId: string;
   /** 年级 id，如 p4 */
   gradeId: string;
   /** 学科 id，如 math */
@@ -33,7 +31,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第一单元",
     semester: "上册",
     unitNum: 1,
-    publisherId: "pep",
     gradeId: "p3",
     subjectId: "math",
     description:
@@ -50,7 +47,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第三单元",
     semester: "上册",
     unitNum: 3,
-    publisherId: "pep",
     gradeId: "p3",
     subjectId: "math",
     description:
@@ -66,7 +62,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第五单元",
     semester: "上册",
     unitNum: 5,
-    publisherId: "pep",
     gradeId: "p3",
     subjectId: "math",
     description:
@@ -83,7 +78,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第七单元",
     semester: "上册",
     unitNum: 7,
-    publisherId: "pep",
     gradeId: "p3",
     subjectId: "math",
     description:
@@ -99,7 +93,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第八单元",
     semester: "上册",
     unitNum: 8,
-    publisherId: "pep",
     gradeId: "p3",
     subjectId: "math",
     description:
@@ -115,7 +108,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 数学广角",
     semester: "上册",
     unitNum: 99,
-    publisherId: "pep",
     gradeId: "p3",
     subjectId: "math",
     description:
@@ -135,7 +127,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第一单元",
     semester: "下册",
     unitNum: 1,
-    publisherId: "pep",
     gradeId: "p3",
     subjectId: "math",
     description:
@@ -152,7 +143,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第五单元",
     semester: "下册",
     unitNum: 5,
-    publisherId: "pep",
     gradeId: "p3",
     subjectId: "math",
     description:
@@ -168,7 +158,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第七单元",
     semester: "下册",
     unitNum: 7,
-    publisherId: "pep",
     gradeId: "p3",
     subjectId: "math",
     description:
@@ -189,7 +178,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第二单元",
     semester: "上册",
     unitNum: 2,
-    publisherId: "pep",
     gradeId: "p4",
     subjectId: "math",
     description:
@@ -205,7 +193,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第三单元",
     semester: "上册",
     unitNum: 3,
-    publisherId: "pep",
     gradeId: "p4",
     subjectId: "math",
     description:
@@ -221,7 +208,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第五单元",
     semester: "上册",
     unitNum: 5,
-    publisherId: "pep",
     gradeId: "p4",
     subjectId: "math",
     description:
@@ -237,7 +223,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第五单元",
     semester: "上册",
     unitNum: 5,
-    publisherId: "pep",
     gradeId: "p4",
     subjectId: "math",
     description:
@@ -253,7 +238,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第六单元",
     semester: "上册",
     unitNum: 6,
-    publisherId: "pep",
     gradeId: "p4",
     subjectId: "math",
     description:
@@ -274,7 +258,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第二单元",
     semester: "下册",
     unitNum: 2,
-    publisherId: "pep",
     gradeId: "p4",
     subjectId: "math",
     description:
@@ -290,7 +273,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第二单元",
     semester: "下册",
     unitNum: 2,
-    publisherId: "pep",
     gradeId: "p4",
     subjectId: "math",
     description:
@@ -306,7 +288,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第二单元",
     semester: "下册",
     unitNum: 2,
-    publisherId: "pep",
     gradeId: "p4",
     subjectId: "math",
     description:
@@ -322,7 +303,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第二单元",
     semester: "下册",
     unitNum: 2,
-    publisherId: "pep",
     gradeId: "p4",
     subjectId: "math",
     description:
@@ -338,7 +318,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第三单元",
     semester: "下册",
     unitNum: 3,
-    publisherId: "pep",
     gradeId: "p4",
     subjectId: "math",
     description:
@@ -355,7 +334,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第五单元",
     semester: "下册",
     unitNum: 5,
-    publisherId: "pep",
     gradeId: "p4",
     subjectId: "math",
     description:
@@ -371,7 +349,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第五单元",
     semester: "下册",
     unitNum: 5,
-    publisherId: "pep",
     gradeId: "p4",
     subjectId: "math",
     description:
@@ -387,7 +364,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第七单元",
     semester: "下册",
     unitNum: 7,
-    publisherId: "pep",
     gradeId: "p4",
     subjectId: "math",
     description:
@@ -403,7 +379,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第七单元",
     semester: "下册",
     unitNum: 7,
-    publisherId: "pep",
     gradeId: "p4",
     subjectId: "math",
     description:
@@ -419,7 +394,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第七单元",
     semester: "下册",
     unitNum: 7,
-    publisherId: "pep",
     gradeId: "p4",
     subjectId: "math",
     description:
@@ -435,7 +409,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第八单元",
     semester: "下册",
     unitNum: 8,
-    publisherId: "pep",
     gradeId: "p4",
     subjectId: "math",
     description:
@@ -451,7 +424,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 数学广角",
     semester: "下册",
     unitNum: 99,
-    publisherId: "pep",
     gradeId: "p4",
     subjectId: "math",
     description:
@@ -467,7 +439,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 数学广角",
     semester: "下册",
     unitNum: 99,
-    publisherId: "pep",
     gradeId: "p4",
     subjectId: "math",
     description:
@@ -487,7 +458,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第二单元",
     semester: "上册",
     unitNum: 2,
-    publisherId: "pep",
     gradeId: "p5",
     subjectId: "math",
     description:
@@ -503,7 +473,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第四单元",
     semester: "上册",
     unitNum: 4,
-    publisherId: "pep",
     gradeId: "p5",
     subjectId: "math",
     description:
@@ -519,7 +488,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第六单元",
     semester: "上册",
     unitNum: 6,
-    publisherId: "pep",
     gradeId: "p5",
     subjectId: "math",
     description:
@@ -535,7 +503,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第六单元",
     semester: "上册",
     unitNum: 6,
-    publisherId: "pep",
     gradeId: "p5",
     subjectId: "math",
     description:
@@ -551,7 +518,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第六单元",
     semester: "上册",
     unitNum: 6,
-    publisherId: "pep",
     gradeId: "p5",
     subjectId: "math",
     description:
@@ -567,7 +533,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第六单元",
     semester: "上册",
     unitNum: 6,
-    publisherId: "pep",
     gradeId: "p5",
     subjectId: "math",
     description:
@@ -583,7 +548,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 数学广角",
     semester: "上册",
     unitNum: 99,
-    publisherId: "pep",
     gradeId: "p5",
     subjectId: "math",
     description:
@@ -603,7 +567,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第一单元",
     semester: "下册",
     unitNum: 1,
-    publisherId: "pep",
     gradeId: "p5",
     subjectId: "math",
     description:
@@ -619,7 +582,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第二单元",
     semester: "下册",
     unitNum: 2,
-    publisherId: "pep",
     gradeId: "p5",
     subjectId: "math",
     description:
@@ -635,7 +597,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第二单元",
     semester: "下册",
     unitNum: 2,
-    publisherId: "pep",
     gradeId: "p5",
     subjectId: "math",
     description:
@@ -651,7 +612,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第三单元",
     semester: "下册",
     unitNum: 3,
-    publisherId: "pep",
     gradeId: "p5",
     subjectId: "math",
     description:
@@ -667,7 +627,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第三单元",
     semester: "下册",
     unitNum: 3,
-    publisherId: "pep",
     gradeId: "p5",
     subjectId: "math",
     description:
@@ -683,7 +642,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第四单元",
     semester: "下册",
     unitNum: 4,
-    publisherId: "pep",
     gradeId: "p5",
     subjectId: "math",
     description:
@@ -701,7 +659,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第五单元",
     semester: "下册",
     unitNum: 5,
-    publisherId: "pep",
     gradeId: "p5",
     subjectId: "math",
     description:
@@ -717,7 +674,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第七单元",
     semester: "下册",
     unitNum: 7,
-    publisherId: "pep",
     gradeId: "p5",
     subjectId: "math",
     description:
@@ -733,7 +689,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 数学广角",
     semester: "下册",
     unitNum: 99,
-    publisherId: "pep",
     gradeId: "p5",
     subjectId: "math",
     description:
@@ -753,7 +708,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第一单元",
     semester: "上册",
     unitNum: 1,
-    publisherId: "pep",
     gradeId: "p6",
     subjectId: "math",
     description:
@@ -769,7 +723,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第二单元",
     semester: "上册",
     unitNum: 2,
-    publisherId: "pep",
     gradeId: "p6",
     subjectId: "math",
     description:
@@ -789,7 +742,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第五单元",
     semester: "上册",
     unitNum: 5,
-    publisherId: "pep",
     gradeId: "p6",
     subjectId: "math",
     description:
@@ -805,7 +757,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第五单元",
     semester: "上册",
     unitNum: 5,
-    publisherId: "pep",
     gradeId: "p6",
     subjectId: "math",
     description:
@@ -821,7 +772,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第五单元",
     semester: "上册",
     unitNum: 5,
-    publisherId: "pep",
     gradeId: "p6",
     subjectId: "math",
     description:
@@ -838,7 +788,6 @@ export const tools: Tool[] = [
     chapter: "上册 · 第七单元",
     semester: "上册",
     unitNum: 7,
-    publisherId: "pep",
     gradeId: "p6",
     subjectId: "math",
     description:
@@ -859,7 +808,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第三单元",
     semester: "下册",
     unitNum: 3,
-    publisherId: "pep",
     gradeId: "p6",
     subjectId: "math",
     description:
@@ -875,7 +823,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第三单元",
     semester: "下册",
     unitNum: 3,
-    publisherId: "pep",
     gradeId: "p6",
     subjectId: "math",
     description:
@@ -891,7 +838,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第三单元",
     semester: "下册",
     unitNum: 3,
-    publisherId: "pep",
     gradeId: "p6",
     subjectId: "math",
     description:
@@ -908,7 +854,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第四单元",
     semester: "下册",
     unitNum: 4,
-    publisherId: "pep",
     gradeId: "p6",
     subjectId: "math",
     description:
@@ -924,7 +869,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第四单元",
     semester: "下册",
     unitNum: 4,
-    publisherId: "pep",
     gradeId: "p6",
     subjectId: "math",
     description:
@@ -940,7 +884,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 第四单元",
     semester: "下册",
     unitNum: 4,
-    publisherId: "pep",
     gradeId: "p6",
     subjectId: "math",
     description:
@@ -956,7 +899,6 @@ export const tools: Tool[] = [
     chapter: "下册 · 数学广角",
     semester: "下册",
     unitNum: 99,
-    publisherId: "pep",
     gradeId: "p6",
     subjectId: "math",
     description:
@@ -969,13 +911,11 @@ export const tools: Tool[] = [
 
 export function filterToolsByCatalog(
   list: Tool[],
-  publisherId: string,
   gradeId: string,
   subjectId: string,
 ): Tool[] {
   return list.filter(
     (t) =>
-      t.publisherId === publisherId &&
       (gradeId === "all" || t.gradeId === gradeId) &&
       t.subjectId === subjectId,
   );

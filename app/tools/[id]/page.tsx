@@ -74,9 +74,9 @@ export default async function ToolPage({ params }: PageProps) {
           </span>
           <span
             className="hidden sm:inline text-xs text-slate-400 flex-shrink-0 truncate max-w-[min(280px,40vw)]"
-            title={getPathLabel(tool.publisherId, tool.gradeId, tool.subjectId)}
+            title={getPathLabel(tool.gradeId, tool.subjectId)}
           >
-            · {getPathLabel(tool.publisherId, tool.gradeId, tool.subjectId)}
+            · {getPathLabel(tool.gradeId, tool.subjectId)}
           </span>
         </div>
 

@@ -1,38 +1,79 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>植树问题 — 教立方</title>
-  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
-  <style>
-    .main-layout { display: grid; grid-template-columns: 1fr 280px; height: 100%; }
-    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #f0fdf4 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
-    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
-    .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
-    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
-    .divider { height: 1px; background: #e2e8f0; }
-    .info-box { background: #fff; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
-    .slider-row { display: flex; align-items: center; gap: 10px; }
-    .slider-row input { flex: 1; }
-    .slider-row .value-display { min-width: 50px; font-weight: 700; }
-    .tab-bar { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; justify-content: center; }
-    .tab-btn { padding: 6px 12px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
-    .tab-btn.active { background: #22c55e; color: #fff; border-color: #22c55e; }
-    canvas { border-radius: 12px; background: #fff; }
-    .formula-card { background: #fff; border: 2px solid #22c55e; border-radius: 14px; padding: 16px; width: 100%; max-width: 480px; margin-top: 16px; text-align: center; }
-    .formula-big { font-size: 22px; font-weight: 800; color: #22c55e; font-family: 'Courier New', monospace; }
-    .step-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; width: 100%; max-width: 480px; margin-top: 12px; font-size: 14px; line-height: 2; }
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>植树问题 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  .main-layout { display: grid; grid-template-columns: 1fr 290px; height: 100%; }
+  .canvas-area {
+    padding: 20px; overflow-y: auto;
+    background: linear-gradient(135deg, #f0fdf4 0%, #fdfaf4 100%);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .control-panel {
+    background: #fdfaf4; border-left: 1px solid #e2e8f0;
+    padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow: auto;
+  }
+  .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
+  .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+  .divider { height: 1px; background: #e2e8f0; }
+  .slider-row { display: flex; align-items: center; gap: 10px; }
+  .slider-row input { flex: 1; }
+  .slider-row .value-display { min-width: 46px; font-weight: 700; }
+  .tab-bar { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; justify-content: center; }
+  .tab-btn {
+    padding: 7px 14px; border-radius: 8px; border: 1.5px solid #e2e8f0;
+    background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s;
+    font-family: var(--edu-font);
+  }
+  .tab-btn.active { background: #22c55e; color: #fff; border-color: #22c55e; }
+  .tab-btn:hover:not(.active) { border-color: #22c55e; color: #22c55e; }
+  canvas { border-radius: 12px; background: #fff; display: block; }
+  .formula-card {
+    background: #fff; border: 2px solid #22c55e; border-radius: 14px;
+    padding: 14px; width: 100%; max-width: 520px; margin-top: 14px; text-align: center;
+    opacity: 0; transform: translateY(8px); transition: all .4s;
+  }
+  .formula-card.show { opacity: 1; transform: translateY(0); }
+  .formula-big { font-size: 22px; font-weight: 800; color: #22c55e; font-family: 'Courier New', monospace; }
+  .step-box {
+    background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px;
+    padding: 14px; width: 100%; max-width: 520px; margin-top: 10px; font-size: 14px; line-height: 2;
+  }
+  .info-box {
+    background: #fff; border: 1px solid #bbf7d0; border-radius: 10px;
+    padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155;
+  }
+  .quiz-box {
+    background: #fff; border: 2px solid #f97316; border-radius: 14px;
+    padding: 16px; text-align: center; width: 100%; max-width: 520px; margin-top: 12px;
+  }
+  .quiz-box input {
+    width: 70px; padding: 6px 10px; border: 2px solid #e2e8f0; border-radius: 8px;
+    font-size: 16px; font-weight: 700; text-align: center; outline: none; font-family: var(--edu-font);
+  }
+  .quiz-box input:focus { border-color: #22c55e; }
+  .discover-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+  .discover-cell {
+    background: #f0fdf4; border-radius: 10px; padding: 10px; text-align: center;
+    border: 1.5px solid #bbf7d0; font-size: 13px;
+  }
+  .discover-cell .num { font-size: 28px; font-weight: 800; color: #22c55e; }
+  .discover-cell .lbl { font-size: 11px; color: #64748b; margin-top: 2px; }
+</style>
 </head>
 <body>
 <div class="edu-tool">
   <div class="edu-toolbar">
     <div style="display:flex;align-items:center;gap:10px">
-      <div class="edu-toolbar-title">🌳 植树问题</div>
+      <div class="edu-toolbar-title">植树问题</div>
       <div class="edu-toolbar-subtitle">上册 · 数学广角</div>
     </div>
     <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-accent" onclick="animatePlant()">动画种植</button>
+      <button class="edu-btn edu-btn-primary" onclick="genQuiz()">随机练习</button>
       <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
     </div>
   </div>
@@ -45,27 +86,46 @@
           <button class="tab-btn" onclick="switchMode('none')">两端不栽</button>
           <button class="tab-btn" onclick="switchMode('circle')">封闭图形</button>
         </div>
-        <canvas id="cvs" width="480" height="200"></canvas>
+        <canvas id="cvs" width="560" height="220"></canvas>
         <div class="formula-card" id="calcCard"></div>
+        <div class="discover-grid" id="discoverGrid" style="max-width:520px;width:100%;display:none">
+          <div class="discover-cell"><div class="num" id="dTree">-</div><div class="lbl">棵数（棵）</div></div>
+          <div class="discover-cell"><div class="num" id="dSeg">-</div><div class="lbl">段数（段）</div></div>
+        </div>
         <div class="step-box" id="stepBox"></div>
+        <div class="quiz-box" id="quizBox" style="display:none"></div>
       </div>
       <div class="control-panel">
         <div class="ctrl-section">
           <div class="ctrl-label">总长度（m）</div>
-          <div class="slider-row"><input type="range" id="lenSlider" min="5" max="60" value="30" oninput="update()"/><span class="value-display" id="lenVal">30</span></div>
+          <div class="slider-row">
+            <input type="range" id="lenSlider" min="5" max="60" value="30" oninput="onSlider()"/>
+            <span class="value-display" id="lenVal">30</span>
+          </div>
         </div>
         <div class="ctrl-section">
           <div class="ctrl-label">间隔距离（m）</div>
-          <div class="slider-row"><input type="range" id="gapSlider" min="1" max="15" value="5" oninput="update()"/><span class="value-display" id="gapVal">5</span></div>
+          <div class="slider-row">
+            <input type="range" id="gapSlider" min="1" max="15" value="5" oninput="onSlider()"/>
+            <span class="value-display" id="gapVal">5</span>
+          </div>
         </div>
         <div class="divider"></div>
-        <div class="info-box">
-          <b>植树问题公式</b><br/>
-          ● 两端都栽：棵数 = 段数 + 1<br/>
-          ● 只栽一端：棵数 = 段数<br/>
-          ● 两端不栽：棵数 = 段数 − 1<br/>
-          ● 封闭图形：棵数 = 段数<br/>
-          ● 段数 = 总长 ÷ 间隔
+        <div class="ctrl-section">
+          <div class="ctrl-label">互动探索</div>
+          <p style="font-size:12px;color:#64748b;line-height:1.6">拖动画布上的树木可自由调整位置，实时观察段数变化。</p>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">公式规律</div>
+          <div class="info-box">
+            <b>植树问题公式</b><br/>
+            两端都栽：棵数 = 段数 + 1<br/>
+            只栽一端：棵数 = 段数<br/>
+            两端不栽：棵数 = 段数 - 1<br/>
+            封闭图形：棵数 = 段数<br/>
+            <b>段数 = 总长 / 间隔</b>
+          </div>
         </div>
       </div>
     </div>
@@ -74,145 +134,283 @@
 <script>
 const cvs = document.getElementById('cvs');
 const ctx = cvs.getContext('2d');
-let currentMode = 'both';
+let currentMode = 'both', animTimer = null, dragIdx = -1, dragOffsetX = 0, quizAnswer = 0;
+let draggedPositions = {};
+const MODES = ['both','one','none','circle'];
+const MODE_NAMES = { both:'两端都栽', one:'只栽一端', none:'两端不栽', circle:'封闭图形' };
 
 function switchMode(mode) {
   currentMode = mode;
-  document.querySelectorAll('.tab-btn').forEach((b, i) => {
-    b.classList.toggle('active', ['both','one','none','circle'][i] === mode);
-  });
-  update();
+  document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', MODES[i] === mode));
+  draggedPositions = {}; clearAnim(); update();
 }
+function onSlider() { draggedPositions = {}; clearAnim(); update(); }
+function clearAnim() { clearInterval(animTimer); animTimer = null; }
 
-function update() {
+function getParams() {
   const len = parseFloat(document.getElementById('lenSlider').value);
   const gap = parseFloat(document.getElementById('gapSlider').value);
   document.getElementById('lenVal').textContent = len;
   document.getElementById('gapVal').textContent = gap;
-
-  const segments = len / gap;
-  if (segments !== Math.floor(segments)) {
-    document.getElementById('calcCard').innerHTML = '<div style="color:#ef4444;font-weight:700">总长度不能被间隔整除！</div>';
-    ctx.clearRect(0, 0, cvs.width, cvs.height);
-    return;
-  }
-
-  let trees;
-  const names = { both: '两端都栽', one: '只栽一端', none: '两端不栽', circle: '封闭图形' };
-  if (currentMode === 'both') trees = segments + 1;
-  else if (currentMode === 'one') trees = segments;
-  else if (currentMode === 'none') trees = segments - 1;
-  else trees = segments;
-
-  draw(len, gap, segments, trees);
-  calc(len, gap, segments, trees, names[currentMode]);
+  return { len, gap, seg: len / gap };
 }
 
-function draw(len, gap, segments, trees) {
+function treeCount(seg) {
+  if (currentMode === 'both') return seg + 1;
+  if (currentMode === 'one') return seg;
+  if (currentMode === 'none') return Math.max(0, seg - 1);
+  return seg; // circle
+}
+
+function treeIndex(i, seg) {
+  return (currentMode === 'none') ? i + 1 : i;
+}
+
+function update() {
+  const { len, gap, seg } = getParams();
+  if (seg !== Math.floor(seg) || seg < 1) {
+    document.getElementById('calcCard').innerHTML = '<div style="color:#ef4444;font-weight:700">总长度不能被间隔整除！</div>';
+    document.getElementById('calcCard').classList.add('show');
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+    document.getElementById('stepBox').innerHTML = '';
+    document.getElementById('discoverGrid').style.display = 'none';
+    return;
+  }
+  const trees = treeCount(seg);
+  drawScene(len, gap, seg, trees, trees);
+  showCalc(len, gap, seg, trees);
+  document.getElementById('discoverGrid').style.display = 'grid';
+  document.getElementById('dTree').textContent = trees;
+  document.getElementById('dSeg').textContent = seg;
+}
+
+// === DRAWING ===
+function drawScene(len, gap, seg, trees, visibleCount) {
   const W = cvs.width, H = cvs.height;
   ctx.clearRect(0, 0, W, H);
+  const pad = 50, totalW = W - pad * 2;
+  if (currentMode === 'circle') drawCircle(W, H, len, gap, seg, trees, visibleCount);
+  else drawLine(W, H, len, gap, seg, trees, visibleCount, pad, totalW);
+}
 
-  const pad = 40, lineY = 100;
-  const totalW = W - pad * 2;
-
-  if (currentMode === 'circle') {
-    // Draw circle
-    const cx = W / 2, cy = lineY, r = 60;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.strokeStyle = '#22c55e';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Trees on circle
-    for (let i = 0; i < trees; i++) {
-      const angle = (i / trees) * Math.PI * 2 - Math.PI / 2;
-      const x = cx + r * Math.cos(angle);
-      const y = cy + r * Math.sin(angle);
-      drawTree(x, y);
+function drawLine(W, H, len, gap, seg, trees, vis, pad, totalW) {
+  const lineY = 100;
+  // Road
+  ctx.fillStyle = '#e2e8f0';
+  ctx.fillRect(pad - 10, lineY - 4, totalW + 20, 8);
+  ctx.fillStyle = '#cbd5e1';
+  for (let x = pad; x < pad + totalW; x += 20) ctx.fillRect(x, lineY - 1, 10, 2);
+  // End markers
+  ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('0m', pad, lineY + 26);
+  ctx.fillText(len + 'm', pad + totalW, lineY + 26);
+  // Tick marks + gap labels
+  for (let i = 0; i <= seg; i++) {
+    const x = pad + (i / seg) * totalW;
+    ctx.beginPath(); ctx.moveTo(x, lineY - 10); ctx.lineTo(x, lineY + 10);
+    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1; ctx.stroke();
+    if (i < seg) {
+      const nx = pad + ((i + 1) / seg) * totalW, mx = (x + nx) / 2;
+      ctx.fillStyle = '#22c55e'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(gap + 'm', mx, lineY + 40);
+      ctx.beginPath(); ctx.moveTo(x + 4, lineY + 16); ctx.lineTo(x + 4, lineY + 20);
+      ctx.lineTo(nx - 4, lineY + 20); ctx.lineTo(nx - 4, lineY + 16);
+      ctx.strokeStyle = '#22c55e88'; ctx.lineWidth = 1; ctx.stroke();
     }
-
-    ctx.fillStyle = '#64748b'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(`周长 ${len}m`, cx, cy + r + 36);
-  } else {
-    // Draw line
-    ctx.beginPath();
-    ctx.moveTo(pad, lineY);
-    ctx.lineTo(pad + totalW, lineY);
-    ctx.strokeStyle = '#94a3b8';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-
-    // Segments
-    for (let i = 0; i <= segments; i++) {
-      const x = pad + (i / segments) * totalW;
-      // Tick mark
-      ctx.beginPath();
-      ctx.moveTo(x, lineY - 8);
-      ctx.lineTo(x, lineY + 8);
-      ctx.strokeStyle = '#94a3b8';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      // Gap label
-      if (i < segments) {
-        ctx.fillStyle = '#64748b'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText(`${gap}m`, x + totalW / segments / 2, lineY + 24);
-      }
-    }
-
-    // Trees
-    for (let i = 0; i < trees; i++) {
-      let idx;
-      if (currentMode === 'both') idx = i;
-      else if (currentMode === 'one') idx = i;
-      else idx = i + 1;
-
-      const x = pad + (idx / segments) * totalW;
-      drawTree(x, lineY - 20);
-    }
-
-    // Length label
-    ctx.fillStyle = '#334155'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(`总长 ${len}m`, W / 2, lineY + 44);
   }
+  // Trees
+  for (let i = 0; i < vis; i++) {
+    const idx = treeIndex(i, seg);
+    let xFrac = draggedPositions[i] !== undefined ? draggedPositions[i] : idx / seg;
+    drawTree(pad + xFrac * totalW, lineY - 28);
+  }
+  ctx.fillStyle = '#334155'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('总长 ' + len + 'm', W / 2, lineY + 60);
+}
+
+function drawCircle(W, H, len, gap, seg, trees, vis) {
+  const cx = W / 2, cy = H / 2, r = 72;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 8; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.stroke(); ctx.setLineDash([]);
+  for (let i = 0; i < seg; i++) {
+    const a1 = (i / trees) * Math.PI * 2 - Math.PI / 2;
+    const a2 = ((i + 1) / trees) * Math.PI * 2 - Math.PI / 2;
+    const midA = (a1 + a2) / 2;
+    ctx.fillStyle = '#22c55e'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(gap + 'm', cx + (r + 22) * Math.cos(midA), cy + (r + 22) * Math.sin(midA));
+  }
+  ctx.textBaseline = 'alphabetic';
+  for (let i = 0; i < vis; i++) {
+    const angle = (i / trees) * Math.PI * 2 - Math.PI / 2;
+    drawTree(cx + r * Math.cos(angle), cy + r * Math.sin(angle) - 10);
+  }
+  ctx.fillStyle = '#334155'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('周长 ' + len + 'm', cx, cy + r + 50);
 }
 
 function drawTree(x, y) {
-  // Trunk
-  ctx.fillStyle = '#92400e';
-  ctx.fillRect(x - 2, y, 4, 14);
-  // Crown
-  ctx.beginPath();
-  ctx.arc(x, y - 4, 10, 0, Math.PI * 2);
-  ctx.fillStyle = '#22c55e';
-  ctx.fill();
-  ctx.strokeStyle = '#16a34a';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(x, y + 16, 8, 3, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#00000012'; ctx.fill();
+  ctx.fillStyle = '#92400e'; ctx.beginPath();
+  ctx.roundRect(x - 2.5, y + 2, 5, 14, 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y - 3, 12, 0, Math.PI * 2);
+  ctx.fillStyle = '#22c55e'; ctx.fill(); ctx.strokeStyle = '#16a34a'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.beginPath(); ctx.arc(x - 3, y - 6, 5, 0, Math.PI * 2);
+  ctx.fillStyle = '#4ade8044'; ctx.fill();
 }
 
-function calc(len, gap, seg, trees, mode) {
-  document.getElementById('calcCard').innerHTML = `
-    <div style="font-size:14px;color:#64748b;margin-bottom:4px">${mode}</div>
-    <div class="formula-big">棵数 = ${trees} 棵</div>
-  `;
+// === ANIMATED PLANTING ===
+function animatePlant() {
+  const { len, gap, seg } = getParams();
+  if (seg !== Math.floor(seg) || seg < 1) return;
+  const trees = treeCount(seg);
+  clearAnim();
+  let step = 0;
+  animTimer = setInterval(() => {
+    if (step >= trees) { clearInterval(animTimer); animTimer = null; return; }
+    step++;
+    drawScene(len, gap, seg, trees, step);
+  }, 350);
+}
 
-  let formula;
-  if (currentMode === 'both') formula = `段数 = ${len}÷${gap} = ${seg}，棵数 = ${seg}+1 = ${trees}`;
-  else if (currentMode === 'one') formula = `段数 = ${len}÷${gap} = ${seg}，棵数 = ${seg}`;
-  else if (currentMode === 'none') formula = `段数 = ${len}÷${gap} = ${seg}，棵数 = ${seg}−1 = ${trees}`;
-  else formula = `段数 = ${len}÷${gap} = ${seg}，棵数 = 段数 = ${trees}`;
+// === FORMULA & CALC ===
+function showCalc(len, gap, seg, trees) {
+  const card = document.getElementById('calcCard');
+  const mn = MODE_NAMES[currentMode];
+  const ops = { both: [seg, '+', 1, trees], one: [seg, '', '', trees], none: [seg, '-', 1, trees], circle: [seg, '', '', trees] };
+  const [s, op, n, t] = ops[currentMode];
+  const formulaText = op ? `棵数 = ${s} ${op} ${n} = ${t}` : `棵数 = ${s} = ${trees}`;
+  card.innerHTML = `<div style="font-size:13px;color:#64748b;margin-bottom:4px">${mn}</div><div class="formula-big">${formulaText}</div>`;
+  card.classList.add('show');
+
+  let sf;
+  if (currentMode === 'both') sf = `段数 = ${len}/${gap} = ${seg}，棵数 = ${seg}+1 = ${trees}`;
+  else if (currentMode === 'one') sf = `段数 = ${len}/${gap} = ${seg}，棵数 = ${seg}`;
+  else if (currentMode === 'none') sf = `段数 = ${len}/${gap} = ${seg}，棵数 = ${seg}-1 = ${trees}`;
+  else sf = `段数 = ${len}/${gap} = ${seg}，棵数 = 段数 = ${trees}`;
 
   document.getElementById('stepBox').innerHTML = `
-    <div style="font-weight:700;margin-bottom:6px">解题步骤</div>
-    <div>① 总长 ${len}m，间隔 ${gap}m</div>
-    <div>② ${formula}</div>
-    <div>③ <b style="color:#22c55e">需要栽 ${trees} 棵树</b></div>
-  `;
+    <div style="font-weight:700;margin-bottom:4px">解题步骤</div>
+    <div>1. 总长 ${len}m，间隔 ${gap}m</div>
+    <div>2. ${sf}</div>
+    <div>3. <b style="color:#22c55e">需要栽 ${trees} 棵树</b></div>`;
 }
 
-function resetAll() { switchMode('both'); document.getElementById('lenSlider').value = 30; document.getElementById('gapSlider').value = 5; update(); }
+// === DRAGGING ===
+cvs.addEventListener('mousedown', (e) => {
+  if (currentMode === 'circle') return;
+  const { len, gap, seg } = getParams();
+  if (seg !== Math.floor(seg) || seg < 1) return;
+  const trees = treeCount(seg);
+  const rect = cvs.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const pad = 50, totalW = cvs.width - pad * 2;
+  for (let i = 0; i < trees; i++) {
+    const idx = treeIndex(i, seg);
+    let xFrac = draggedPositions[i] !== undefined ? draggedPositions[i] : idx / seg;
+    const tx = pad + xFrac * totalW, ty = 72;
+    if (Math.hypot(mx - tx, my - ty) < 20) {
+      dragIdx = i; dragOffsetX = mx - tx; cvs.style.cursor = 'grabbing'; return;
+    }
+  }
+});
+
+cvs.addEventListener('mousemove', (e) => {
+  if (dragIdx < 0) return;
+  const { seg } = getParams();
+  const trees = treeCount(seg);
+  const rect = cvs.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const pad = 50, totalW = cvs.width - pad * 2;
+  draggedPositions[dragIdx] = Math.max(0, Math.min(1, (mx - dragOffsetX - pad) / totalW));
+  update();
+  // Show live interval count
+  const sortedX = [];
+  for (let i = 0; i < trees; i++) {
+    const idx = treeIndex(i, seg);
+    sortedX.push(draggedPositions[i] !== undefined ? draggedPositions[i] : idx / seg);
+  }
+  sortedX.sort((a, b) => a - b);
+  ctx.fillStyle = '#334155'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'right';
+  ctx.fillText(`拖动中：${trees} 棵树，${Math.max(0, trees - 1)} 个间隔`, cvs.width - 16, cvs.height - 8);
+});
+
+function endDrag() { if (dragIdx >= 0) { dragIdx = -1; cvs.style.cursor = 'default'; } }
+cvs.addEventListener('mouseup', endDrag);
+cvs.addEventListener('mouseleave', endDrag);
+
+// === QUIZ ===
+function genQuiz() {
+  clearAnim();
+  const lengths = [20, 30, 40, 50, 60, 80, 100, 120];
+  const gaps = [2, 4, 5, 8, 10];
+  const modes = ['both','one','none','circle'];
+  let len, gap, seg, mode;
+  do {
+    mode = modes[Math.floor(Math.random() * 4)];
+    len = lengths[Math.floor(Math.random() * lengths.length)];
+    gap = gaps[Math.floor(Math.random() * gaps.length)];
+    seg = len / gap;
+  } while (seg !== Math.floor(seg) || seg < 2);
+
+  quizAnswer = mode === 'both' ? seg + 1 : mode === 'none' ? seg - 1 : seg;
+  const ml = MODE_NAMES[mode];
+  document.getElementById('quizBox').style.display = 'block';
+  document.getElementById('quizBox').innerHTML = `
+    <div style="font-size:14px;font-weight:700;color:#f97316;margin-bottom:8px">随机练习题</div>
+    <div style="font-size:15px;line-height:1.8;margin-bottom:12px">
+      一条 <b>${len}米</b>的路，每隔 <b>${gap}米</b> 种一棵树，<b>${ml}</b>，一共需要种几棵？
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px">
+      <span>答案：</span>
+      <input type="number" id="quizInput" onkeydown="if(event.key==='Enter')checkQuiz()"/>
+      <span>棵</span>
+      <button class="edu-btn edu-btn-primary" style="padding:6px 14px" onclick="checkQuiz()">验证</button>
+    </div>
+    <div id="quizFeedback" style="margin-top:10px;font-size:14px;font-weight:700"></div>
+    <div id="quizSolution" style="margin-top:8px;text-align:left;font-size:13px;line-height:1.8"></div>`;
+  switchMode(mode);
+  document.getElementById('lenSlider').value = Math.min(60, len);
+  document.getElementById('gapSlider').value = Math.min(15, gap);
+  update();
+}
+
+function checkQuiz() {
+  const val = parseInt(document.getElementById('quizInput').value);
+  const fb = document.getElementById('quizFeedback');
+  const sol = document.getElementById('quizSolution');
+  if (isNaN(val)) { fb.innerHTML = '<span style="color:#f97316">请输入数字</span>'; return; }
+  const { len, gap, seg } = getParams();
+  if (val === quizAnswer) {
+    fb.innerHTML = '<span style="color:#22c55e">回答正确！</span>';
+    sol.innerHTML = '';
+    animatePlant();
+  } else {
+    fb.innerHTML = '<span style="color:#ef4444">再想一想！</span>';
+    let fs;
+    if (currentMode === 'both') fs = `${seg} + 1 = ${quizAnswer}`;
+    else if (currentMode === 'one') fs = `${seg}`;
+    else if (currentMode === 'none') fs = `${seg} - 1 = ${quizAnswer}`;
+    else fs = `${seg}`;
+    sol.innerHTML = `
+      <div style="font-weight:700;color:#64748b;margin-bottom:4px">解题提示：</div>
+      <div>1. 段数 = ${len} / ${gap} = <b>${seg}</b></div>
+      <div>2. ${MODE_NAMES[currentMode]}：棵数 = ${fs}</div>
+      <div>3. 答案是 <b style="color:#22c55e">${quizAnswer} 棵</b></div>`;
+  }
+}
+
+function resetAll() {
+  clearAnim(); draggedPositions = {};
+  document.getElementById('quizBox').style.display = 'none';
+  document.getElementById('lenSlider').value = 30;
+  document.getElementById('gapSlider').value = 5;
+  switchMode('both');
+}
+
 update();
 </script>
 </body>
