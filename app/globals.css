@@ -1,15 +1,156 @@
+@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap");
 @import "tailwindcss";
 
+/* ──────────────────────────────────────────────
+   EduCube Design System — 温暖学院风
+   ────────────────────────────────────────────── */
+
 :root {
-  --edu-cream: #fdfaf4;
-  --edu-navy: #1a3a5c;
-  --edu-orange: #f97316;
-  --edu-sky: #0ea5e9;
+  /* 核心色板 */
+  --edu-bg: #faf8f3;            /* 暖纸白 — 教科书纸张色 */
+  --edu-surface: #ffffff;       /* 卡片白 */
+  --edu-primary: #2d3a8c;       /* 深靛蓝 — 学术感主色 */
+  --edu-primary-light: #3d4ea8; /* 靛蓝 hover */
+  --edu-accent: #e8890c;        /* 琥珀橙 — 强调色 */
+  --edu-accent-light: #f5a623;  /* 琥珀 hover */
+  --edu-accent2: #4f9cf7;       /* 明亮蓝 — 辅助色 */
+  --edu-success: #3dab5c;       /* 成功绿 */
+  --edu-danger: #e5484d;        /* 错误红 */
+
+  /* 文字色 */
+  --edu-text: #2c2c2c;          /* 温暖深灰 */
+  --edu-text-secondary: #5c5650; /* 次级文字 */
+  --edu-text-muted: #8b8680;    /* 弱化文字 */
+  --edu-text-inverse: #ffffff;  /* 反色文字 */
+
+  /* 边框 & 阴影 */
+  --edu-border: #e8e4dd;        /* 暖边框 */
+  --edu-border-light: #f0ece6;  /* 轻边框 */
+  --edu-shadow-sm: 0 1px 3px rgba(44, 44, 44, 0.06);
+  --edu-shadow: 0 2px 12px rgba(44, 44, 44, 0.08);
+  --edu-shadow-lg: 0 8px 32px rgba(44, 44, 44, 0.12);
+  --edu-shadow-xl: 0 16px 48px rgba(44, 44, 44, 0.16);
+
+  /* 圆角 */
+  --edu-radius-sm: 8px;
+  --edu-radius: 14px;
+  --edu-radius-lg: 20px;
+  --edu-radius-xl: 24px;
+
+  /* 字体 */
+  --edu-font-sans: -apple-system, "PingFang SC", "Microsoft YaHei",
+    "Noto Sans SC", sans-serif;
+  --edu-font-serif: "Noto Serif SC", "Songti SC", "SimSun", serif;
+
+  /* 动效 */
+  --edu-transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --edu-transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* 兼容旧变量 */
+  --edu-cream: var(--edu-bg);
+  --edu-navy: var(--edu-primary);
+  --edu-orange: var(--edu-accent);
+  --edu-sky: var(--edu-accent2);
 }
 
 body {
-  background: var(--edu-cream);
-  color: #1e293b;
-  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC",
-    sans-serif;
+  background: var(--edu-bg);
+  color: var(--edu-text);
+  font-family: var(--edu-font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── 全局动画 Keyframes ── */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── 工具类 ── */
+
+.edu-card {
+  background: var(--edu-surface);
+  border: 1px solid var(--edu-border-light);
+  border-radius: var(--edu-radius-lg);
+  box-shadow: var(--edu-shadow-sm);
+  transition: box-shadow var(--edu-transition), transform var(--edu-transition);
+}
+
+.edu-card:hover {
+  box-shadow: var(--edu-shadow);
+}
+
+.edu-card-elevated {
+  background: var(--edu-surface);
+  border: 1px solid var(--edu-border-light);
+  border-radius: var(--edu-radius-lg);
+  box-shadow: var(--edu-shadow);
+  transition: box-shadow var(--edu-transition-slow), transform var(--edu-transition-slow);
+}
+
+.edu-card-elevated:hover {
+  box-shadow: var(--edu-shadow-xl);
+  transform: translateY(-4px);
+}
+
+.edu-heading {
+  font-family: var(--edu-font-serif);
+  font-weight: 700;
+  color: var(--edu-primary);
+  letter-spacing: -0.01em;
+}
+
+.edu-btn-accent {
+  background: linear-gradient(135deg, var(--edu-accent), var(--edu-accent-light));
+  color: white;
+  font-weight: 600;
+  border-radius: var(--edu-radius-sm);
+  transition: all var(--edu-transition);
+}
+
+.edu-btn-accent:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 4px 16px rgba(232, 137, 12, 0.3);
+}
+
+/* ── 笔记本横线纹理（Hero 背景装饰） ── */
+.edu-notebook-lines {
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 31px,
+    rgba(45, 58, 140, 0.04) 31px,
+    rgba(45, 58, 140, 0.04) 32px
+  );
+}
+
+/* ── 纸张纹理 ── */
+.edu-paper-texture {
+  position: relative;
+}
+
+.edu-paper-texture::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0z' fill='none'/%3E%3Cpath d='M0 40L40 0' stroke='%232d3a8c' stroke-width='0.3' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
 }

@@ -1,19 +1,25 @@
-/* 教立方 EduCube — 教具公共基础样式 */
+/* 教立方 EduCube — 教具公共基础样式（与 globals.css 统一色板） */
 
 :root {
-  --edu-bg: #fdfbf7;
+  --edu-bg: #faf8f3;
   --edu-surface: #ffffff;
-  --edu-primary: #1a3a5c;
-  --edu-accent: #f97316;
-  --edu-accent2: #0ea5e9;
-  --edu-success: #22c55e;
-  --edu-text: #1e293b;
-  --edu-text-muted: #64748b;
-  --edu-border: #e2e8f0;
-  --edu-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --edu-primary: #2d3a8c;
+  --edu-primary-light: #3d4ea8;
+  --edu-accent: #e8890c;
+  --edu-accent-light: #f5a623;
+  --edu-accent2: #4f9cf7;
+  --edu-success: #3dab5c;
+  --edu-danger: #e5484d;
+  --edu-text: #2c2c2c;
+  --edu-text-secondary: #5c5650;
+  --edu-text-muted: #8b8680;
+  --edu-border: #e8e4dd;
+  --edu-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
   --edu-radius: 12px;
+  --edu-radius-sm: 8px;
   --edu-font: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC",
     sans-serif;
+  --edu-serif: "'Noto Serif SC', serif";
 }
 
 *,
@@ -62,6 +68,7 @@ body {
   font-weight: 700;
   color: var(--edu-primary);
   white-space: nowrap;
+  font-family: var(--edu-serif);
 }
 
 .edu-toolbar-subtitle {
@@ -85,6 +92,43 @@ body {
   flex: 1;
   overflow: hidden;
   position: relative;
+}
+
+/* ── 响应式：小屏时 .main-layout 从两栏改为上下堆叠 ── */
+@media (max-width: 640px) {
+  .main-layout {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 1fr auto !important;
+    overflow-y: auto !important;
+  }
+
+  .main-layout .control-panel {
+    max-height: 45vh;
+    overflow-y: auto;
+    border-top: 1px solid var(--edu-border);
+  }
+
+  .main-layout .canvas-area {
+    min-height: 50vh;
+  }
+
+  .edu-toolbar {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .edu-toolbar-title {
+    font-size: 13px;
+  }
+
+  .edu-toolbar-subtitle {
+    display: none;
+  }
+
+  .edu-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
 }
 
 /* 按钮基础样式 */

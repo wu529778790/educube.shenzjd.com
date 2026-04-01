@@ -1,6 +1,9 @@
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 
+/* AI 调用超时（毫秒），可通过环境变量覆盖 */
+const AI_TIMEOUT = parseInt(process.env.AI_TIMEOUT || "120000");
+
 type Provider = "openai" | "anthropic";
 const VALID_PROVIDERS = new Set<Provider>(["openai", "anthropic"]);
 
@@ -82,15 +85,18 @@ async function callOpenAI(
   user: string,
   options: ChatOptions,
 ): Promise<string> {
-  const res = await getOpenAI().chat.completions.create({
-    model: process.env.AI_MODEL || "gpt-4o",
-    messages: [
-      { role: "system", content: sys },
-      { role: "user", content: user },
-    ],
-    max_tokens: options.maxTokens,
-    temperature: options.temperature,
-  });
+  const res = await getOpenAI().chat.completions.create(
+    {
+      model: process.env.AI_MODEL || "gpt-4o",
+      messages: [
+        { role: "system", content: sys },
+        { role: "user", content: user },
+      ],
+      max_tokens: options.maxTokens,
+      temperature: options.temperature,
+    },
+    { timeout: AI_TIMEOUT },
+  );
 
   const content = res.choices[0]?.message?.content;
   if (!content) throw new Error("AI 未生成内容（可能被安全过滤或内容为空）");
@@ -102,13 +108,16 @@ async function callAnthropic(
   user: string,
   options: ChatOptions,
 ): Promise<string> {
-  const res = await getAnthropicClient().messages.create({
-    model: process.env.AI_MODEL || "claude-sonnet-4-20250514",
-    max_tokens: options.maxTokens,
-    system: sys,
-    messages: [{ role: "user", content: user }],
-    temperature: options.temperature,
-  });
+  const res = await getAnthropicClient().messages.create(
+    {
+      model: process.env.AI_MODEL || "claude-sonnet-4-20250514",
+      max_tokens: options.maxTokens,
+      system: sys,
+      messages: [{ role: "user", content: user }],
+      temperature: options.temperature,
+    },
+    { timeout: AI_TIMEOUT },
+  );
 
   if (!res.content || res.content.length === 0) {
     throw new Error("AI 未生成内容（可能被安全过滤或内容为空）");

@@ -105,7 +105,7 @@ const SKELETON_TEMPLATE = `
   <title>{教具名称} — 教立方</title>
   <link rel="stylesheet" href="../edu-lib/edu-base.css"/>
   <style>
-    .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; }
+    .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; } @media(max-width:640px){.main-layout{grid-template-columns:1fr!important;grid-template-rows:1fr auto!important;overflow-y:auto!important} .main-layout .control-panel{max-height:45vh;overflow-y:auto;border-top:1px solid #e2e8f0} .main-layout .canvas-area{min-height:50vh}}
     .canvas-area { padding:24px; overflow-y:auto; background:linear-gradient(...); display:flex; flex-direction:column; align-items:center; }
     .control-panel { background:#fdfaf4; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:12px; overflow:auto; }
     .ctrl-section { display:flex; flex-direction:column; gap:6px; }
@@ -174,7 +174,7 @@ const EXAMPLE_1 = `
   <title>分数的初步认识 — 教立方</title>
   <link rel="stylesheet" href="../edu-lib/edu-base.css"/>
   <style>
-    .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; }
+    .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; } @media(max-width:640px){.main-layout{grid-template-columns:1fr!important;grid-template-rows:1fr auto!important;overflow-y:auto!important} .main-layout .control-panel{max-height:45vh;overflow-y:auto;border-top:1px solid #e2e8f0} .main-layout .canvas-area{min-height:50vh}}
     .canvas-area { padding:24px; overflow-y:auto; background:linear-gradient(135deg,#fdf2f8,#fce7f3); display:flex; flex-direction:column; align-items:center; }
     .control-panel { background:#fdfaf4; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:12px; overflow:auto; }
     .ctrl-section { display:flex; flex-direction:column; gap:6px; }
@@ -391,7 +391,7 @@ const EXAMPLE_2 = `
   <title>找次品 — 教立方</title>
   <link rel="stylesheet" href="../edu-lib/edu-base.css"/>
   <style>
-    .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; }
+    .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; } @media(max-width:640px){.main-layout{grid-template-columns:1fr!important;grid-template-rows:1fr auto!important;overflow-y:auto!important} .main-layout .control-panel{max-height:45vh;overflow-y:auto;border-top:1px solid #e2e8f0} .main-layout .canvas-area{min-height:50vh}}
     .canvas-area { padding:24px; overflow-y:auto; background:linear-gradient(135deg,#fff7ed,#fdfaf4); display:flex; flex-direction:column; align-items:center; }
     .control-panel { background:#fdfaf4; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:14px; overflow:auto; }
     .ctrl-section { display:flex; flex-direction:column; gap:6px; }
@@ -552,7 +552,7 @@ const EXAMPLE_3 = `
   <title>图形放大与缩小 — 教立方</title>
   <link rel="stylesheet" href="../edu-lib/edu-base.css"/>
   <style>
-    .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; }
+    .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; } @media(max-width:640px){.main-layout{grid-template-columns:1fr!important;grid-template-rows:1fr auto!important;overflow-y:auto!important} .main-layout .control-panel{max-height:45vh;overflow-y:auto;border-top:1px solid #e2e8f0} .main-layout .canvas-area{min-height:50vh}}
     .canvas-area { padding:24px; overflow-y:auto; background:linear-gradient(135deg,#eff6ff,#fdfaf4); display:flex; flex-direction:column; align-items:center; }
     .control-panel { background:#fdfaf4; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:14px; overflow:auto; }
     .ctrl-section { display:flex; flex-direction:column; gap:6px; }
@@ -803,7 +803,7 @@ const EXAMPLE_4 = `
   <script src="../edu-lib/OrbitControls.js"></script>
   <script src="../edu-lib/edu-3d.js"></script>
   <style>
-    .main-layout { display:grid; grid-template-columns:1fr 280px; height:100%; }
+    .main-layout { display:grid; grid-template-columns:1fr 280px; height:100%; } @media(max-width:640px){.main-layout{grid-template-columns:1fr!important;grid-template-rows:1fr auto!important;overflow-y:auto!important} .main-layout .control-panel{max-height:45vh;overflow-y:auto;border-top:1px solid #e2e8f0} .main-layout .canvas-area{min-height:50vh}}
     .canvas-area { position:relative; background:linear-gradient(135deg,#eff6ff,#dbeafe); overflow:hidden; }
     .canvas-area canvas { width:100%; height:100%; display:block; }
     .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:16px; display:flex; flex-direction:column; gap:12px; overflow:auto; }

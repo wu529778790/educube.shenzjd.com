@@ -1,8 +1,10 @@
 /**
  * 教立方 — 生成工具的 JSON 索引与文件 I/O
+ *
+ * 写入策略：先写临时文件再 rename，确保原子性。
  */
 import type { Tool } from "@/data/tools";
-import { readFile, writeFile, mkdir } from "fs/promises";
+import { readFile, writeFile, mkdir, rename, unlink } from "fs/promises";
 import { join } from "path";
 
 interface GeneratedToolRecord {
@@ -20,6 +22,13 @@ const CACHE_TTL = 30_000; // 30 秒
 
 /** 简易写锁：防止并发写入 JSON 导致数据丢失 */
 let writeLock: Promise<void> = Promise.resolve();
+
+/** 从多个字段中推断学期 */
+function guessSemester(text: string): "上册" | "下册" {
+  if (text.includes("下册")) return "下册";
+  if (text.includes("上册")) return "上册";
+  return "上册"; // 默认
+}
 
 export async function loadGeneratedTools(): Promise<Tool[]> {
   const now = Date.now();
@@ -65,11 +74,16 @@ export async function saveGeneratedTool(
   });
   await prevLock;
 
+  const htmlTmpPath = join(HTML_DIR, `${id}.html.tmp`);
+  const htmlFinalPath = join(HTML_DIR, `${id}.html`);
+  const indexTmpPath = INDEX_PATH + ".tmp";
+
   try {
     await mkdir(HTML_DIR, { recursive: true });
 
-    const semester: "上册" | "下册" =
-      meta.chapter.includes("下册") ? "下册" : "上册";
+    const semester = guessSemester(
+      `${meta.name} ${meta.description} ${meta.chapter}`,
+    );
 
     const tool: Tool = {
       id,
@@ -86,27 +100,38 @@ export async function saveGeneratedTool(
       icon: meta.icon,
     };
 
-    // Save HTML file
-    await writeFile(join(HTML_DIR, `${id}.html`), html, "utf-8");
+    // 1. 写 HTML 到临时文件
+    await writeFile(htmlTmpPath, html, "utf-8");
 
-    // Update index
+    // 2. 读取并更新索引，写到临时文件
     let records: GeneratedToolRecord[] = [];
     try {
       const raw = await readFile(INDEX_PATH, "utf-8");
       records = JSON.parse(raw);
     } catch {
-      /* first time */
+      /* 首次创建 */
     }
 
     records.push({ tool, createdAt: new Date().toISOString() });
     await writeFile(
-      INDEX_PATH,
+      indexTmpPath,
       JSON.stringify(records, null, 2),
       "utf-8",
     );
 
+    // 3. 原子 rename（同文件系统上是原子操作）
+    await rename(htmlTmpPath, htmlFinalPath);
+    await rename(indexTmpPath, INDEX_PATH);
+
     invalidateCache();
     return tool;
+  } catch (err) {
+    // 清理残留临时文件
+    await Promise.allSettled([
+      unlink(htmlTmpPath).catch(() => {}),
+      unlink(indexTmpPath).catch(() => {}),
+    ]);
+    throw err;
   } finally {
     releaseLock!();
   }
