@@ -6,30 +6,46 @@
   <title>图形放大与缩小 — 教立方</title>
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
   <style>
-    .main-layout { display: grid; grid-template-columns: 1fr 260px; height: 100%; }
-    .canvas-area { padding: 24px; overflow-y: auto; background: linear-gradient(135deg, #eff6ff 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; }
-    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+    .main-layout { display: grid; grid-template-columns: 1fr 270px; height: 100%; }
+    .canvas-area { padding: 18px 20px; overflow-y: auto; background: linear-gradient(135deg, #eff6ff 0%, #fdfaf4 100%); display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    .control-panel { background: #fdfaf4; border-left: 1px solid #e2e8f0; padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
     .ctrl-section { display: flex; flex-direction: column; gap: 6px; }
-    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; }
+    .ctrl-label { font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: .05em; }
     .divider { height: 1px; background: #e2e8f0; }
-    .info-box { background: #fff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.8; color: #334155; }
     .slider-row { display: flex; align-items: center; gap: 10px; }
     .slider-row input { flex: 1; }
-    .slider-row .value-display { min-width: 50px; font-weight: 700; text-align: right; }
-    .compare-area { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+    .compare-area { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
     .shape-box { text-align: center; }
-    .shape-box .title { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
-    canvas { border-radius: 12px; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
-    .scale-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 800; margin-top: 8px; }
+    .shape-box .title { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+    canvas { border-radius: 12px; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.06); cursor: default; }
+    .scale-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 800; margin-top: 6px; }
     .shape-selector { display: flex; gap: 6px; flex-wrap: wrap; }
-    .shape-btn { padding: 6px 12px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 13px; cursor: pointer; transition: all .15s; font-weight: 600; }
+    .shape-btn { padding: 5px 11px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 13px; cursor: pointer; transition: all .15s; font-weight: 600; }
     .shape-btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
-    .result-card { background: #fff; border: 2px solid #3b82f6; border-radius: 14px; padding: 16px; width: 100%; max-width: 520px; margin-top: 16px; }
-    .result-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
-    .result-row .label { color: #64748b; }
-    .result-row .val { font-weight: 800; font-family: 'Courier New', monospace; }
-    .preset-btn { padding: 8px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .preset-btn { padding: 7px 0; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all .15s; width: 100%; }
     .preset-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+    .result-card { background: #fff; border: 2px solid #3b82f6; border-radius: 14px; padding: 14px; width: 100%; max-width: 560px; }
+    .result-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; }
+    .result-row .label { color: #64748b; }
+    .result-row .val { font-weight: 800; font-family: 'Courier New', monospace; font-size: 12px; }
+    .tab-bar { display: flex; gap: 4px; background: #f1f5f9; border-radius: 10px; padding: 3px; }
+    .tab-btn { flex: 1; padding: 6px 0; border-radius: 8px; border: none; font-size: 12px; font-weight: 700; cursor: pointer; background: transparent; color: #64748b; transition: all .15s; }
+    .tab-btn.active { background: #fff; color: #1a3a5c; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .quiz-card { background: #fff; border: 2px solid #8b5cf6; border-radius: 14px; padding: 16px; width: 100%; max-width: 560px; }
+    .quiz-q { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 12px; }
+    .quiz-opts { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .quiz-opt { padding: 8px 20px; border-radius: 10px; border: 2px solid #e2e8f0; background: #fff; font-size: 14px; font-weight: 700; cursor: pointer; transition: all .15s; }
+    .quiz-opt:hover { border-color: #8b5cf6; }
+    .quiz-opt.correct { border-color: #22c55e; background: #f0fdf4; color: #16a34a; }
+    .quiz-opt.wrong { border-color: #ef4444; background: #fef2f2; color: #dc2626; }
+    .quiz-score { font-size: 13px; color: #64748b; }
+    .quiz-score b { color: #8b5cf6; font-size: 15px; }
+    .quiz-feedback { font-size: 13px; font-weight: 600; min-height: 20px; margin-bottom: 8px; }
+    .handle-hint { font-size: 11px; color: #94a3b8; text-align: center; margin-top: 4px; }
+    .anim-arrow { font-size: 26px; display: flex; align-items: center; color: #94a3b8; cursor: pointer; user-select: none; transition: color .2s; }
+    .anim-arrow:hover { color: #3b82f6; }
+    .anim-arrow.playing { color: #3b82f6; animation: pulse-arrow .8s infinite; }
+    @keyframes pulse-arrow { 0%,100%{opacity:1} 50%{opacity:.4} }
   </style>
 </head>
 <body>
@@ -46,40 +62,53 @@
   <div class="edu-content">
     <div class="main-layout">
       <div class="canvas-area">
-        <div class="shape-selector" id="shapeSelector"></div>
-
-        <div class="compare-area" style="margin-top:16px">
-          <div class="shape-box">
-            <div class="title" style="color:#94a3b8">原图形</div>
-            <canvas id="cvsOrig" width="220" height="220"></canvas>
-            <div class="scale-badge" style="background:#f1f5f9;color:#64748b">1 : 1</div>
-          </div>
-          <div style="font-size:28px;display:flex;align-items:center;color:#94a3b8">→</div>
-          <div class="shape-box">
-            <div class="title" style="color:#3b82f6" id="scaleTitle">放大 2:1</div>
-            <canvas id="cvsScaled" width="220" height="220"></canvas>
-            <div class="scale-badge" id="scaleBadge" style="background:#eff6ff;color:#3b82f6">2 : 1</div>
-          </div>
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="switchTab('compare')">对比模式</button>
+          <button class="tab-btn" onclick="switchTab('drag')">拖拽缩放</button>
+          <button class="tab-btn" onclick="switchTab('quiz')">缩放挑战</button>
         </div>
-
-        <div class="result-card" id="resultCard"></div>
+        <!-- COMPARE TAB -->
+        <div id="tabCompare">
+          <div class="compare-area" style="margin-top:10px">
+            <div class="shape-box">
+              <div class="title" style="color:#94a3b8">原图形</div>
+              <canvas id="cvsOrig" width="230" height="230"></canvas>
+              <div class="scale-badge" style="background:#f1f5f9;color:#64748b">1 : 1</div>
+            </div>
+            <div class="anim-arrow" id="animArrow" onclick="playAnimation()" title="播放变形动画">→</div>
+            <div class="shape-box">
+              <div class="title" style="color:#3b82f6" id="scaleTitle">放大 2:1</div>
+              <canvas id="cvsScaled" width="230" height="230"></canvas>
+              <div class="scale-badge" id="scaleBadge" style="background:#eff6ff;color:#3b82f6">2 : 1</div>
+            </div>
+          </div>
+          <div class="result-card" id="resultCard"></div>
+        </div>
+        <!-- DRAG TAB -->
+        <div id="tabDrag" style="display:none;margin-top:8px">
+          <canvas id="cvsDrag" width="500" height="400"></canvas>
+          <div class="handle-hint">拖拽蓝色圆点缩放图形 · 比例实时更新</div>
+        </div>
+        <!-- QUIZ TAB -->
+        <div id="tabQuiz" style="display:none;margin-top:8px;width:100%;max-width:560px">
+          <div class="quiz-card" id="quizCard"></div>
+        </div>
       </div>
-
       <div class="control-panel">
-        <div class="ctrl-section">
-          <div class="ctrl-label">缩放比例</div>
-          <div class="slider-row">
-            <input type="range" id="scaleSlider" min="0.5" max="3" step="0.1" value="2" oninput="drawAll()"/>
-            <span class="value-display" id="scaleVal">2.0</span>
-          </div>
-        </div>
-        <div class="divider"></div>
         <div class="ctrl-section">
           <div class="ctrl-label">选择图形</div>
           <div class="shape-selector" id="shapeList"></div>
         </div>
         <div class="divider"></div>
-        <div class="ctrl-section">
+        <div class="ctrl-section" id="scaleSection">
+          <div class="ctrl-label">缩放比例</div>
+          <div class="slider-row">
+            <input type="range" id="scaleSlider" min="0.5" max="3" step="0.1" value="2" oninput="onSliderChange()"/>
+            <span class="value-display" id="scaleVal">2.0</span>
+          </div>
+        </div>
+        <div class="divider" id="presetDivider"></div>
+        <div class="ctrl-section" id="presetSection">
           <div class="ctrl-label">预设比例</div>
           <button class="preset-btn" onclick="setScale(0.5)">缩小 1:2</button>
           <button class="preset-btn" onclick="setScale(1.5)">放大 3:2</button>
@@ -87,203 +116,288 @@
           <button class="preset-btn" onclick="setScale(3)">放大 3:1</button>
         </div>
         <div class="divider"></div>
-        <div class="info-box">
+        <div class="ctrl-section">
+          <div class="ctrl-label">网格测量</div>
+          <label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="checkbox" id="gridToggle" checked onchange="redrawCurrentTab()"> 显示网格
+          </label>
+        </div>
+        <div class="divider"></div>
+        <div style="background:#fff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.8;color:#334155">
           <b>图形放大与缩小</b><br/>
-          ● 按 k:1 放大，边长×k<br/>
-          ● 按 1:k 缩小，边长÷k<br/>
-          ● 放大/缩小后形状不变<br/>
-          ● 面积比 = k²<br/>
-          ● 周长比 = k<br/>
-          ● 对应角的大小不变
+          ● 按 k:1 放大，边长 x k<br/>
+          ● 按 1:k 缩小，边长 / k<br/>
+          ● 形状不变，大小改变<br/>
+          ● 面积比 = k²  周长比 = k<br/>
+          ● 对应角大小不变
         </div>
       </div>
     </div>
   </div>
 </div>
 <script>
-let currentShape = 'rect';
+/* ── State ── */
+let currentShape = 'rect', currentTab = 'compare', animId = null, dragScale = 2;
+let dragDragging = false; const HANDLE_R = 8;
 const shapes = {
-  rect: { name: '长方形', w: 4, h: 3 },
-  square: { name: '正方形', w: 4, h: 4 },
-  triangle: { name: '三角形', w: 6, h: 5 },
-  lshape: { name: 'L形', w: 4, h: 4 },
+  rect:     { name:'长方形', w:4, h:3 },
+  square:   { name:'正方形', w:4, h:4 },
+  triangle: { name:'三角形', w:6, h:5 },
+  lshape:   { name:'L形',    w:4, h:4 },
 };
 
+/* ── Tabs ── */
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['compare','drag','quiz'][i]===tab));
+  document.getElementById('tabCompare').style.display = tab==='compare'?'':'none';
+  document.getElementById('tabDrag').style.display    = tab==='drag'   ?'':'none';
+  document.getElementById('tabQuiz').style.display    = tab==='quiz'   ?'':'none';
+  const show = tab !== 'quiz';
+  document.getElementById('scaleSection').style.display  = show?'':'none';
+  document.getElementById('presetDivider').style.display = show?'':'none';
+  document.getElementById('presetSection').style.display = show?'':'none';
+  if (tab === 'quiz') initQuiz();
+  redrawCurrentTab();
+}
+function redrawCurrentTab() {
+  if (currentTab === 'compare') drawAll();
+  else if (currentTab === 'drag') drawDragCanvas();
+}
+
+/* ── Shape Selector ── */
 function buildShapeSelector() {
-  const el = document.getElementById('shapeList');
-  el.innerHTML = Object.entries(shapes).map(([k, v]) =>
-    `<button class="shape-btn ${k === currentShape ? 'active' : ''}" onclick="selectShape('${k}')">${v.name}</button>`
+  document.getElementById('shapeList').innerHTML = Object.entries(shapes).map(([k,v]) =>
+    `<button class="shape-btn ${k===currentShape?'active':''}" onclick="selectShape('${k}')">${v.name}</button>`
   ).join('');
 }
-
-function selectShape(s) {
-  currentShape = s;
-  buildShapeSelector();
-  drawAll();
+function selectShape(s) { currentShape = s; buildShapeSelector(); redrawCurrentTab(); }
+function setScale(v) { document.getElementById('scaleSlider').value = v; onSliderChange(); }
+function onSliderChange() {
+  document.getElementById('scaleVal').textContent = parseFloat(document.getElementById('scaleSlider').value).toFixed(1);
+  redrawCurrentTab();
 }
 
-function setScale(v) {
-  document.getElementById('scaleSlider').value = v;
-  drawAll();
-}
-
-function drawShape(ctx, type, cx, cy, w, h, scale, color, dashColor) {
-  const sw = w * scale, sh = h * scale;
-  ctx.save();
-  ctx.translate(cx, cy);
-
-  if (type === 'rect') {
-    ctx.beginPath();
-    ctx.rect(-sw/2, -sh/2, sw, sh);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.fillStyle = color + '15';
-    ctx.fill();
-    // Dimension labels
-    ctx.fillStyle = dashColor;
-    ctx.font = `bold ${Math.max(10, 12 * Math.min(scale, 1.5))}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillText((w * scale).toFixed(1), 0, sh/2 + 14);
-    ctx.save();
-    ctx.rotate(-Math.PI/2);
-    ctx.fillText((h * scale).toFixed(1), 0, -sw/2 - 8);
-    ctx.restore();
-  } else if (type === 'square') {
-    ctx.beginPath();
-    ctx.rect(-sw/2, -sh/2, sw, sw);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.fillStyle = color + '15';
-    ctx.fill();
-    ctx.fillStyle = dashColor;
-    ctx.font = `bold ${Math.max(10, 12 * Math.min(scale, 1.5))}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillText((w * scale).toFixed(1), 0, sw/2 + 14);
-  } else if (type === 'triangle') {
-    ctx.beginPath();
-    ctx.moveTo(0, -sh/2);
-    ctx.lineTo(sw/2, sh/2);
-    ctx.lineTo(-sw/2, sh/2);
-    ctx.closePath();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.fillStyle = color + '15';
-    ctx.fill();
-    ctx.fillStyle = dashColor;
-    ctx.font = `bold ${Math.max(10, 12 * Math.min(scale, 1.5))}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillText((w * scale).toFixed(1), 0, sh/2 + 14);
-  } else if (type === 'lshape') {
-    const s = sw / 2;
-    const u = sw / 4;
-    ctx.beginPath();
-    ctx.moveTo(-s, -s);
-    ctx.lineTo(-s + u, -s);
-    ctx.lineTo(-s + u, s - u);
-    ctx.lineTo(s, s - u);
-    ctx.lineTo(s, s);
-    ctx.lineTo(-s, s);
-    ctx.closePath();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.fillStyle = color + '15';
-    ctx.fill();
+/* ── Shape Path Helper ── */
+function shapePath(ctx, type, cx, cy, w, h) {
+  ctx.beginPath();
+  if (type === 'rect')     ctx.rect(cx-w/2, cy-h/2, w, h);
+  else if (type === 'square') ctx.rect(cx-w/2, cy-w/2, w, w);
+  else if (type === 'triangle') { ctx.moveTo(cx, cy-h/2); ctx.lineTo(cx+w/2, cy+h/2); ctx.lineTo(cx-w/2, cy+h/2); ctx.closePath(); }
+  else if (type === 'lshape') {
+    const u = w/4;
+    ctx.moveTo(cx-w/2, cy-w/2); ctx.lineTo(cx-w/2+u, cy-w/2); ctx.lineTo(cx-w/2+u, cy+w/2-u);
+    ctx.lineTo(cx+w/2, cy+w/2-u); ctx.lineTo(cx+w/2, cy+w/2); ctx.lineTo(cx-w/2, cy+w/2); ctx.closePath();
   }
+}
+function shapeHH(type, w, h) { return type==='square' ? w : h; }
 
+/* ── Grid ── */
+function drawGrid(ctx, cw, ch, gs) {
+  if (!document.getElementById('gridToggle').checked) return;
+  ctx.save(); ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 0.5;
+  for (let x = gs; x < cw; x += gs) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,ch); ctx.stroke(); }
+  for (let y = gs; y < ch; y += gs) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(cw,y); ctx.stroke(); }
+  ctx.restore();
+}
+function drawMeasurement(ctx, x, y, len, label, color, vertical) {
+  ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1;
+  ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+  if (!vertical) {
+    ctx.beginPath(); ctx.moveTo(x,y-3); ctx.lineTo(x,y+3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x+len,y-3); ctx.lineTo(x+len,y+3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+len,y); ctx.stroke();
+    ctx.fillText(label, x+len/2, y-5);
+  } else {
+    ctx.beginPath(); ctx.moveTo(x-3,y); ctx.lineTo(x+3,y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x-3,y+len); ctx.lineTo(x+3,y+len); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,y+len); ctx.stroke();
+    ctx.save(); ctx.translate(x-6, y+len/2); ctx.rotate(-Math.PI/2); ctx.fillText(label,0,0); ctx.restore();
+  }
   ctx.restore();
 }
 
+/* ── COMPARE TAB ── */
+function drawShapeOn(ctx, type, cx, cy, w, h, scale, color) {
+  const sw = w*scale, sh = shapeHH(type,w,h)*scale;
+  ctx.save();
+  shapePath(ctx, type, cx, cy, sw, sh);
+  ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = color + '15'; ctx.fill();
+  if (document.getElementById('gridToggle').checked) {
+    const hw = sw/2, hh = sh/2;
+    drawMeasurement(ctx, cx-hw, cy+hh+6, sw, (w*scale/22*1).toFixed(1), color, false);
+    drawMeasurement(ctx, cx-hw-6, cy-hh, sh, (h*scale/22*1).toFixed(1), color, true);
+  }
+  ctx.restore();
+}
 function drawAll() {
   const k = parseFloat(document.getElementById('scaleSlider').value);
   document.getElementById('scaleVal').textContent = k.toFixed(1);
-
-  const isEnlarge = k >= 1;
-  const titleEl = document.getElementById('scaleTitle');
-  const badgeEl = document.getElementById('scaleBadge');
-
-  if (k === 1) {
-    titleEl.textContent = '原大小';
-    badgeEl.textContent = '1 : 1';
-  } else if (isEnlarge) {
-    titleEl.textContent = `放大 ${k}:1`;
-    badgeEl.textContent = `${k} : 1`;
-    titleEl.style.color = '#3b82f6';
-    badgeEl.style.background = '#eff6ff';
-    badgeEl.style.color = '#3b82f6';
-  } else {
-    titleEl.textContent = `缩小 1:${(1/k).toFixed(1)}`;
-    badgeEl.textContent = `1 : ${(1/k).toFixed(1)}`;
-    titleEl.style.color = '#f97316';
-    badgeEl.style.background = '#fff7ed';
-    badgeEl.style.color = '#f97316';
-  }
-
-  const shape = shapes[currentShape];
-  const baseScale = 22;
-
-  // Draw original
-  const c1 = document.getElementById('cvsOrig');
-  const ctx1 = c1.getContext('2d');
-  ctx1.clearRect(0, 0, c1.width, c1.height);
-  drawShape(ctx1, currentShape, c1.width/2, c1.height/2, shape.w, shape.h, baseScale, '#94a3b8', '#94a3b8');
-
-  // Draw scaled
-  const c2 = document.getElementById('cvsScaled');
-  const ctx2 = c2.getContext('2d');
-  ctx2.clearRect(0, 0, c2.width, c2.height);
-  const drawScale = Math.min(baseScale * k, c2.width * 0.4 / Math.max(shape.w, shape.h));
-  const color = isEnlarge ? '#3b82f6' : '#f97316';
-  drawShape(ctx2, currentShape, c2.width/2, c2.height/2, shape.w, shape.h, drawScale, color, color);
-
+  const isBig = k >= 1, shape = shapes[currentShape], bs = 22;
+  const titleEl = document.getElementById('scaleTitle'), badgeEl = document.getElementById('scaleBadge');
+  if (k===1)      { titleEl.textContent='原大小'; badgeEl.textContent='1 : 1'; }
+  else if (isBig) { titleEl.textContent=`放大 ${k}:1`; badgeEl.textContent=`${k} : 1`;
+                    titleEl.style.color='#3b82f6'; badgeEl.style.background='#eff6ff'; badgeEl.style.color='#3b82f6'; }
+  else            { titleEl.textContent=`缩小 1:${(1/k).toFixed(1)}`; badgeEl.textContent=`1 : ${(1/k).toFixed(1)}`;
+                    titleEl.style.color='#f97316'; badgeEl.style.background='#fff7ed'; badgeEl.style.color='#f97316'; }
+  // Original
+  const c1 = document.getElementById('cvsOrig'), ctx1 = c1.getContext('2d');
+  ctx1.clearRect(0,0,c1.width,c1.height); drawGrid(ctx1,c1.width,c1.height,23);
+  drawShapeOn(ctx1, currentShape, c1.width/2, c1.height/2, shape.w, shape.h, bs, '#94a3b8');
+  // Scaled
+  const c2 = document.getElementById('cvsScaled'), ctx2 = c2.getContext('2d');
+  ctx2.clearRect(0,0,c2.width,c2.height); drawGrid(ctx2,c2.width,c2.height,23);
+  const ds = Math.min(bs*k, c2.width*0.38/Math.max(shape.w,shapeHH(currentShape,shape.w,shape.h)));
+  drawShapeOn(ctx2, currentShape, c2.width/2, c2.height/2, shape.w, shape.h, ds, isBig?'#3b82f6':'#f97316');
   // Result card
-  const origW = shape.w, origH = shape.h;
-  const newW = origW * k, newH = origH * k;
-  let origArea, newArea, origPerimeter, newPerimeter;
+  const oW=shape.w, oH=shape.h, nW=oW*k, nH=oH*k;
+  let oA,nA,oP,nP;
+  if (currentShape==='rect'||currentShape==='square') { oA=oW*oH; nA=nW*nH; oP=2*(oW+oH); nP=2*(nW+nH); }
+  else if (currentShape==='triangle') { oA=oW*oH/2; nA=nW*nH/2; const s=Math.sqrt((oW/2)**2+oH**2); oP=oW+2*s; nP=nW+2*s*k; }
+  else { oA=oW*oH*3/4; nA=nW*nH*3/4; oP=oW*2+oH; nP=nW*2+nH; }
+  document.getElementById('resultCard').innerHTML = `
+    <div style="font-size:15px;font-weight:700;color:#334155;margin-bottom:10px">${shape.name} · 缩放 ${k}:1</div>
+    <div class="result-row"><span class="label">宽</span><span class="val">${oW} → ${nW.toFixed(1)}</span></div>
+    <div class="result-row"><span class="label">高</span><span class="val">${oH} → ${nH.toFixed(1)}</span></div>
+    <div class="result-row" style="background:#f8fafc;border-radius:6px;padding:8px"><span class="label">面积</span><span class="val" style="color:#3b82f6">${oA} → ${nA.toFixed(1)} (x${(k*k).toFixed(1)})</span></div>
+    <div class="result-row"><span class="label">周长</span><span class="val">${oP.toFixed(1)} → ${nP.toFixed(1)} (x${k})</span></div>
+    <div class="result-row"><span class="label">面积比</span><span class="val" style="color:#8b5cf6">1 : ${(k*k).toFixed(1)} (= ${k}²)</span></div>`;
+}
 
-  if (currentShape === 'rect' || currentShape === 'square') {
-    origArea = origW * origH;
-    newArea = newW * newH;
-    origPerimeter = 2 * (origW + origH);
-    newPerimeter = 2 * (newW + newH);
-  } else if (currentShape === 'triangle') {
-    origArea = origW * origH / 2;
-    newArea = newW * newH / 2;
-    const side = Math.sqrt((origW/2)**2 + origH**2);
-    const newSide = side * k;
-    origPerimeter = origW + 2 * side;
-    newPerimeter = newW + 2 * newSide;
-  } else {
-    origArea = origW * origH * 3/4;
-    newArea = newW * newH * 3/4;
-    origPerimeter = origW * 2 + origH;
-    newPerimeter = newW * 2 + newH;
+/* ── ANIMATION: morph from original to scaled ── */
+function playAnimation() {
+  if (animId) return;
+  const arrow = document.getElementById('animArrow'); arrow.classList.add('playing');
+  const k = parseFloat(document.getElementById('scaleSlider').value);
+  const shape = shapes[currentShape], bs = 22;
+  const c2 = document.getElementById('cvsScaled'), ctx2 = c2.getContext('2d');
+  const maxDs = Math.min(bs*k, c2.width*0.38/Math.max(shape.w,shapeHH(currentShape,shape.w,shape.h)));
+  const color = k>=1?'#3b82f6':'#f97316';
+  const start = performance.now(), dur = 800;
+  function tick(now) {
+    let t = Math.min((now-start)/dur, 1);
+    t = t<0.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2; // ease in-out cubic
+    const ds = bs + (maxDs - bs)*t;
+    ctx2.clearRect(0,0,c2.width,c2.height); drawGrid(ctx2,c2.width,c2.height,23);
+    drawShapeOn(ctx2, currentShape, c2.width/2, c2.height/2, shape.w, shape.h, ds, color);
+    if (t < 1) animId = requestAnimationFrame(tick);
+    else { animId = null; arrow.classList.remove('playing'); }
   }
-
-  const card = document.getElementById('resultCard');
-  card.innerHTML = `
-    <div style="font-size:16px;font-weight:700;color:#334155;margin-bottom:12px">${shape.name} · 缩放比例 ${k}:1</div>
-    <div class="result-row"><span class="label">原宽 → 新宽</span><span class="val">${origW} → ${newW.toFixed(1)} (= ${origW}×${k})</span></div>
-    <div class="result-row"><span class="label">原高 → 新高</span><span class="val">${origH} → ${newH.toFixed(1)} (= ${origH}×${k})</span></div>
-    <div class="result-row" style="background:#f8fafc;border-radius:6px;padding:8px"><span class="label">原面积 → 新面积</span><span class="val" style="color:#3b82f6">${origArea} → ${newArea.toFixed(1)} (= ×${(k*k).toFixed(1)})</span></div>
-    <div class="result-row"><span class="label">原周长 → 新周长</span><span class="val">${origPerimeter.toFixed(1)} → ${newPerimeter.toFixed(1)} (= ×${k})</span></div>
-    <div class="result-row"><span class="label">面积比</span><span class="val" style="color:#8b5cf6">1 : ${(k*k).toFixed(1)} (= ${k}²)</span></div>
-    <div class="result-row"><span class="label">周长比</span><span class="val">1 : ${k.toFixed(1)}</span></div>
-  `;
+  animId = requestAnimationFrame(tick);
 }
 
+/* ── DRAG TAB: draggable scale handles ── */
+function drawDragCanvas() {
+  const c = document.getElementById('cvsDrag'); if (!c) return;
+  const ctx = c.getContext('2d'), cw = c.width, ch = c.height;
+  const shape = shapes[currentShape], bs = 22;
+  ctx.clearRect(0,0,cw,ch); drawGrid(ctx,cw,ch,25);
+  // Original on left
+  const ox=cw*0.28, oy=ch/2, oSW=shape.w*bs, oSH=shapeHH(currentShape,shape.w,shape.h)*bs;
+  ctx.save(); shapePath(ctx,currentShape,ox,oy,oSW,oSH);
+  ctx.strokeStyle='#94a3b8'; ctx.lineWidth=2; ctx.stroke(); ctx.fillStyle='#94a3b815'; ctx.fill(); ctx.restore();
+  ctx.font='bold 12px sans-serif'; ctx.fillStyle='#94a3b8'; ctx.textAlign='center';
+  ctx.fillText('原图形', ox, oy+oSH/2+20);
+  // Scaled on right
+  const sx=cw*0.7, sy=ch/2;
+  const ds = Math.min(bs*dragScale, cw*0.25/Math.max(shape.w,shapeHH(currentShape,shape.w,shape.h)));
+  const sSW=shape.w*ds, sSH=shapeHH(currentShape,shape.w,shape.h)*ds;
+  const isBig=dragScale>=1, color=isBig?'#3b82f6':'#f97316';
+  ctx.save(); shapePath(ctx,currentShape,sx,sy,sSW,sSH);
+  ctx.strokeStyle=color; ctx.lineWidth=2.5; ctx.stroke(); ctx.fillStyle=color+'18'; ctx.fill(); ctx.restore();
+  // Corner handles
+  const hw=sSW/2, hh=sSH/2;
+  const handles = [{x:sx-hw,y:sy-hh},{x:sx+hw,y:sy-hh},{x:sx-hw,y:sy+hh},{x:sx+hw,y:sy+hh}];
+  handles.forEach(h => {
+    ctx.beginPath(); ctx.arc(h.x,h.y,HANDLE_R,0,Math.PI*2);
+    ctx.fillStyle='#3b82f6'; ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+  });
+  // Measurements
+  if (document.getElementById('gridToggle').checked) {
+    drawMeasurement(ctx, sx-hw, sy+hh+8, sSW, `${(shape.w*dragScale).toFixed(1)}`, color, false);
+    drawMeasurement(ctx, sx-hw-8, sy-hh, sSH, `${(shape.h*dragScale).toFixed(1)}`, color, true);
+  }
+  ctx.font='bold 14px sans-serif'; ctx.fillStyle=color; ctx.textAlign='center';
+  ctx.fillText(`${dragScale.toFixed(2)} : 1`, sx, sy+hh+38);
+}
+function initDragEvents() {
+  const c = document.getElementById('cvsDrag'); if (!c) return;
+  function getHandles() {
+    const shape=shapes[currentShape], bs=22, sx=c.width*0.7, sy=c.height/2;
+    const ds=Math.min(bs*dragScale,c.width*0.25/Math.max(shape.w,shapeHH(currentShape,shape.w,shape.h)));
+    const sSW=shape.w*ds, sSH=shapeHH(currentShape,shape.w,shape.h)*ds;
+    return [{x:sx-sSW/2,y:sy-sSH/2},{x:sx+sSW/2,y:sy-sSH/2},{x:sx-sSW/2,y:sy+sSH/2},{x:sx+sSW/2,y:sy+sSH/2}];
+  }
+  c.addEventListener('mousedown', e => {
+    if (currentTab!=='drag') return;
+    const r=c.getBoundingClientRect(), mx=(e.clientX-r.left)*(c.width/r.width), my=(e.clientY-r.top)*(c.height/r.height);
+    getHandles().forEach((h,i) => { if (Math.hypot(mx-h.x,my-h.y)<HANDLE_R+4) { dragDragging=true; } });
+  });
+  c.addEventListener('mousemove', e => {
+    if (!dragDragging||currentTab!=='drag') return;
+    const r=c.getBoundingClientRect(), mx=(e.clientX-r.left)*(c.width/r.width), my=(e.clientY-r.top)*(c.height/r.height);
+    const sx=c.width*0.7, sy=c.height/2, bs=22, shape=shapes[currentShape];
+    const origDist = Math.hypot(shape.w*bs/2, shapeHH(currentShape,shape.w,shape.h)*bs/2);
+    dragScale = Math.max(0.5, Math.min(3, Math.hypot(mx-sx,my-sy)/origDist));
+    document.getElementById('scaleSlider').value = dragScale;
+    document.getElementById('scaleVal').textContent = dragScale.toFixed(1);
+    drawDragCanvas();
+  });
+  const endDrag = () => { dragDragging = false; };
+  c.addEventListener('mouseup', endDrag);
+  c.addEventListener('mouseleave', endDrag);
+}
+
+/* ── QUIZ ── */
+let quizScore=0, quizTotal=0, quizAnswer=null, quizLocked=false;
+function generateQuiz() {
+  const factors=[0.5,1.5,2,2.5,3], answer=factors[Math.floor(Math.random()*factors.length)];
+  const sk=Object.keys(shapes)[Math.floor(Math.random()*Object.keys(shapes).length)];
+  const shape=shapes[sk], nW=shape.w*answer, nH=shape.h*answer;
+  let opts=new Set([answer]);
+  while (opts.size<4) { const w=+(answer+(Math.random()-.5)*2).toFixed(1); if(w>0.3&&w<=3&&!opts.has(w))opts.add(w); }
+  return { q:`${shape.name}：原图形宽 ${shape.w}、高 ${shape.h}，变换后宽 ${nW.toFixed(1)}、高 ${nH.toFixed(1)}。缩放比例是？`,
+           opts:[...opts].sort(()=>Math.random()-.5), answer };
+}
+function initQuiz() {
+  quizLocked=false;
+  const g=generateQuiz(); quizAnswer=g.answer;
+  document.getElementById('quizCard').innerHTML = `
+    <div class="quiz-q">${g.q}</div>
+    <div class="quiz-opts">${g.opts.map(o=>`<button class="quiz-opt" onclick="answerQuiz(this,${o})">${o} : 1</button>`).join('')}</div>
+    <div class="quiz-feedback" id="quizFeedback"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div class="quiz-score">得分：<b>${quizScore}</b> / ${quizTotal}</div>
+      <button class="edu-btn edu-btn-primary" onclick="initQuiz()" style="font-size:12px;padding:6px 16px">下一题</button>
+    </div>`;
+}
+function answerQuiz(btn, val) {
+  if (quizLocked) return;
+  quizLocked=true; quizTotal++;
+  document.querySelectorAll('.quiz-opt').forEach(o => {
+    const ov=parseFloat(o.textContent);
+    if(ov===quizAnswer) o.classList.add('correct');
+    if(o===btn&&ov!==quizAnswer) o.classList.add('wrong');
+  });
+  const fb=document.getElementById('quizFeedback');
+  if(val===quizAnswer) { quizScore++; fb.style.color='#16a34a'; fb.textContent='✓ 正确！'; }
+  else { fb.style.color='#dc2626'; fb.textContent=`✗ 正确答案是 ${quizAnswer} : 1`; }
+  const sd=document.querySelector('.quiz-score');
+  if(sd) sd.innerHTML=`得分：<b>${quizScore}</b> / ${quizTotal}`;
+}
+
+/* ── Reset ── */
 function resetAll() {
-  currentShape = 'rect';
-  document.getElementById('scaleSlider').value = 2;
-  buildShapeSelector();
-  drawAll();
+  currentShape='rect'; dragScale=2;
+  document.getElementById('scaleSlider').value=2;
+  document.getElementById('gridToggle').checked=true;
+  buildShapeSelector(); onSliderChange();
+  if(currentTab==='quiz') initQuiz(); else redrawCurrentTab();
 }
 
-buildShapeSelector();
-drawAll();
+/* ── Init ── */
+buildShapeSelector(); onSliderChange(); initDragEvents();
 </script>
 </body>
 </html>

@@ -6,34 +6,42 @@
   <title>集合·韦恩图 — 教立方</title>
   <link rel="stylesheet" href="../edu-lib/edu-base.css"/>
   <style>
-    .main-layout { display:grid; grid-template-columns:1fr 280px; height:100%; }
-    .canvas-area { padding:24px; overflow-y:auto; background:linear-gradient(135deg,#ecfeff,#e0f2fe); display:flex; flex-direction:column; align-items:center; }
-    .control-panel { background:#f8fafc; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:12px; overflow:auto; }
-    .ctrl-section { display:flex; flex-direction:column; gap:6px; }
-    .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
-    .divider { height:1px; background:#e2e8f0; }
-    .info-box { background:#fff; border:1px solid #a5f3fc; border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.8; color:#334155; }
-    .info-box strong { color:#0891b2; }
-    canvas { border-radius:12px; background:#fff; }
-    .tag-input { display:flex; gap:6px; }
-    .tag-input input { flex:1; padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; }
-    .tag-input input:focus { border-color:#06B6D4; outline:none; }
-    .tag-input button { padding:6px 12px; border-radius:8px; background:#06B6D4; color:#fff; border:none; font-size:13px; font-weight:600; cursor:pointer; }
-    .tag-list { display:flex; flex-wrap:wrap; gap:4px; min-height:24px; }
-    .tag { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px; font-size:12px; font-weight:600; cursor:default; }
-    .tag-a { background:#cffafe; color:#0e7490; }
-    .tag-b { background:#e0e7ff; color:#4338ca; }
-    .tag .del { cursor:pointer; font-weight:800; margin-left:2px; }
-    .tag .del:hover { color:#ef4444; }
-    .preset-btn { padding:8px 0; border-radius:8px; font-size:13px; font-weight:600; background:#fff; border:1.5px solid #e2e8f0; cursor:pointer; transition:all .15s; }
-    .preset-btn:hover { border-color:#06B6D4; color:#06B6D4; }
-    .stat-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
-    .stat-item { padding:6px 12px; border-radius:8px; font-size:13px; font-weight:700; }
-    .stat-a { background:#cffafe; color:#0e7490; }
-    .stat-b { background:#e0e7ff; color:#4338ca; }
-    .stat-ab { background:#fef3c7; color:#92400e; }
-    .stat-total { background:#dcfce7; color:#166534; }
-    .formula-box { background:linear-gradient(135deg,#06B6D4,#0EA5E9); color:#fff; border-radius:10px; padding:10px 16px; text-align:center; font-weight:700; font-size:14px; margin-top:8px; }
+    .main-layout{display:grid;grid-template-columns:1fr 280px;height:100%}
+    .canvas-area{padding:16px;overflow-y:auto;background:linear-gradient(135deg,#ecfeff,#e0f2fe);display:flex;flex-direction:column;align-items:center}
+    .control-panel{background:#f8fafc;border-left:1px solid #e2e8f0;padding:14px;display:flex;flex-direction:column;gap:10px;overflow:auto}
+    .ctrl-section{display:flex;flex-direction:column;gap:5px}
+    .ctrl-label{font-size:11px;font-weight:700;color:#64748b;letter-spacing:.05em}
+    .divider{height:1px;background:#e2e8f0}
+    canvas{border-radius:14px;background:#fff;max-width:100%;cursor:default;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+    .tray{display:flex;flex-wrap:wrap;gap:6px;padding:10px;background:#fff;border-radius:12px;border:2px dashed #cbd5e1;min-height:44px;margin-top:10px;width:100%;max-width:620px;justify-content:center;transition:border-color .2s,background .2s}
+    .tray.hl{border-color:#06B6D4;background:#f0fdfa}
+    .tk{display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:32px;padding:0 8px;border-radius:8px;font-size:13px;font-weight:700;cursor:grab;user-select:none;transition:transform .12s,box-shadow .12s;border:2px solid transparent}
+    .tk:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+    .tk-a{background:#cffafe;color:#0e7490;border-color:#a5f3fc}
+    .tk-b{background:#e0e7ff;color:#4338ca;border-color:#c7d2fe}
+    .tk-c{background:#fce7f3;color:#9d174d;border-color:#fbcfe8}
+    .tk-ab{background:#fef3c7;color:#92400e;border-color:#fde68a}
+    .tk-ac{background:#ffedd5;color:#9a3412;border-color:#fed7aa}
+    .tk-bc{background:#ede9fe;color:#5b21b6;border-color:#ddd6fe}
+    .tk-abc{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+    .tk-f{background:#f1f5f9;color:#475569;border-color:#e2e8f0}
+    .sr{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+    .si{padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700}
+    .fb{background:linear-gradient(135deg,#06B6D4,#0EA5E9);color:#fff;border-radius:12px;padding:10px 16px;text-align:center;font-weight:700;font-size:14px;margin-top:6px;width:100%;max-width:620px;animation:fadeUp .3s ease}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    .mt{display:flex;background:#e2e8f0;border-radius:8px;overflow:hidden}
+    .mt button{flex:1;padding:7px 0;border:none;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:#64748b;transition:all .2s}
+    .mt button.on{background:#06B6D4;color:#fff}
+    .ob{padding:7px 0;border-radius:8px;font-size:12px;font-weight:700;background:#fff;border:1.5px solid #e2e8f0;cursor:pointer;transition:all .15s;width:100%}
+    .ob:hover{border-color:#06B6D4;color:#06B6D4}
+    .ob.active-op{background:#06B6D4;color:#fff;border-color:#06B6D4}
+    .gd{background:#fffbeb;border:1.5px solid #fde68a;border-radius:8px;padding:8px 10px;font-size:12px;color:#92400e;line-height:1.6}
+    .gs{font-size:20px;font-weight:800;color:#06B6D4;text-align:center}
+    .ib{background:#fff;border:1px solid #a5f3fc;border-radius:10px;padding:10px 12px;font-size:11px;line-height:1.8;color:#334155}
+    .ib strong{color:#0891b2}
+    .ghost{position:fixed;pointer-events:none;z-index:1000;transform:translate(-50%,-50%) scale(1.15);box-shadow:0 8px 24px rgba(0,0,0,.25)}
+    .result-banner{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border-radius:12px;padding:14px 24px;text-align:center;font-size:16px;font-weight:800;width:100%;max-width:480px;animation:popIn .4s cubic-bezier(.34,1.56,.64,1);box-shadow:0 6px 20px rgba(34,197,94,.3)}
+    @keyframes popIn{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
   </style>
 </head>
 <body>
@@ -41,148 +49,497 @@
   <div class="edu-toolbar">
     <div style="display:flex;align-items:center;gap:10px">
       <div class="edu-toolbar-title">⭕ 集合·韦恩图</div>
-      <div class="edu-toolbar-subtitle">上册 · 数学广角</div>
+      <div class="edu-toolbar-subtitle" id="modeLabel">拖拽模式</div>
     </div>
     <div class="edu-toolbar-actions">
+      <div class="mt" id="modeTabs">
+        <button class="on" onclick="setMode('drag')">拖拽</button>
+        <button onclick="setMode('ops')">运算</button>
+        <button onclick="setMode('game')">闯关</button>
+      </div>
+      <div class="edu-divider"></div>
+      <div class="mt" id="setTabs">
+        <button class="on" onclick="setSets(2)">双集</button>
+        <button onclick="setSets(3)">三集</button>
+      </div>
       <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
     </div>
   </div>
-  <div class="edu-content">
-    <div class="main-layout">
-      <div class="canvas-area">
-        <canvas id="cvs" width="500" height="320"></canvas>
-        <div class="stat-row" id="stats"></div>
-        <div class="formula-box" id="formulaBox"></div>
-      </div>
-      <div class="control-panel">
-        <div class="ctrl-section">
-          <div class="ctrl-label">集合 A（输入后回车添加）</div>
-          <div class="tag-input"><input id="inA" placeholder="输入姓名" onkeydown="if(event.key==='Enter')addA()"/><button onclick="addA()">添加</button></div>
-          <div class="tag-list" id="tagsA"></div>
-        </div>
-        <div class="divider"></div>
-        <div class="ctrl-section">
-          <div class="ctrl-label">集合 B（输入后回车添加）</div>
-          <div class="tag-input"><input id="inB" placeholder="输入姓名" onkeydown="if(event.key==='Enter')addB()"/><button onclick="addB()">添加</button></div>
-          <div class="tag-list" id="tagsB"></div>
-        </div>
-        <div class="divider"></div>
-        <div class="ctrl-section">
-          <div class="ctrl-label">预设</div>
-          <button class="preset-btn" onclick="loadPreset('sport')">参加运动会</button>
-          <button class="preset-btn" onclick="loadPreset('fruit')">水果偏好调查</button>
-        </div>
-        <div class="divider"></div>
-        <div class="info-box">
-          <strong>集合与韦恩图</strong><br/>
-          ● 韦恩图用来表示集合关系<br/>
-          ● 重叠部分是两个集合的交集<br/>
-          ● 总人数 = A + B - 重复<br/>
-          ● 只A = A中减去重复人数<br/>
-          ● 只B = B中减去重复人数
-        </div>
-      </div>
+  <div class="edu-content"><div class="main-layout">
+    <div class="canvas-area">
+      <canvas id="c" width="600" height="380"></canvas>
+      <div class="tray" id="tray"></div>
+      <div class="sr" id="stats"></div>
+      <div class="fb" id="fb"></div>
+      <div id="resultArea"></div>
     </div>
-  </div>
+    <div class="control-panel" id="sidePanel"></div>
+  </div></div>
 </div>
+
 <script>
-const cvs = document.getElementById('cvs');
-const ctx = cvs.getContext('2d');
-let setA = ['小明','小红','小刚','小丽'];
-let setB = ['小红','小刚','小华','小强'];
+/* ====== Constants ====== */
+const COL = {A:'#06B6D4', B:'#6366f1', C:'#ec4899'};
+const TKC = {A:'tk-a', B:'tk-b', C:'tk-c', AB:'tk-ab', AC:'tk-ac', BC:'tk-bc', ABC:'tk-abc'};
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
 
-function addA() {
-  const v = document.getElementById('inA').value.trim();
-  if (v && !setA.includes(v)) { setA.push(v); document.getElementById('inA').value = ''; update(); }
-}
-function addB() {
-  const v = document.getElementById('inB').value.trim();
-  if (v && !setB.includes(v)) { setB.push(v); document.getElementById('inB').value = ''; update(); }
-}
-function removeA(i) { setA.splice(i,1); update(); }
-function removeB(i) { setB.splice(i,1); update(); }
+/* ====== State ====== */
+let G = {};
+let hovR = null, drag = null, ghostEl = null;
+const S = {
+  mode: 'drag', sets: 2,
+  cir: {A:[], B:[], C:[]},
+  free: [],
+  anim: false,
+  gm: {desc:'', ans:{}, sc:0, rd:0, tot:5}
+};
 
-function update() {
-  renderTags();
-  draw();
-  showStats();
-}
+/* ====== Helpers ====== */
+const dist = (a,b,c2,d) => Math.sqrt((a-c2)**2 + (b-d)**2);
 
-function renderTags() {
-  document.getElementById('tagsA').innerHTML = setA.map((t,i) =>
-    `<span class="tag tag-a">${t}<span class="del" onclick="removeA(${i})">×</span></span>`).join('');
-  document.getElementById('tagsB').innerHTML = setB.map((t,i) =>
-    `<span class="tag tag-b">${t}<span class="del" onclick="removeB(${i})">×</span></span>`).join('');
-}
-
-function draw() {
-  const W = cvs.width, H = cvs.height;
-  ctx.clearRect(0, 0, W, H);
-  const both = setA.filter(x => setB.includes(x));
-  const onlyA = setA.filter(x => !setB.includes(x));
-  const onlyB = setB.filter(x => !setA.includes(x));
-  const cx1 = W/2 - 70, cx2 = W/2 + 70, cy = H/2, r = 110;
-
-  // Circle A
-  ctx.beginPath(); ctx.arc(cx1, cy, r, 0, Math.PI*2);
-  ctx.fillStyle = 'rgba(6,182,212,0.15)'; ctx.fill();
-  ctx.strokeStyle = '#06B6D4'; ctx.lineWidth = 2.5; ctx.stroke();
-
-  // Circle B
-  ctx.beginPath(); ctx.arc(cx2, cy, r, 0, Math.PI*2);
-  ctx.fillStyle = 'rgba(99,102,241,0.12)'; ctx.fill();
-  ctx.strokeStyle = '#6366f1'; ctx.lineWidth = 2.5; ctx.stroke();
-
-  // Labels
-  ctx.fillStyle = '#0891b2'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('集合 A', cx1, cy - r - 12);
-  ctx.fillText(`(${setA.length}人)`, cx1, cy - r + 2);
-  ctx.fillStyle = '#4338ca';
-  ctx.fillText('集合 B', cx2, cy - r - 12);
-  ctx.fillText(`(${setB.length}人)`, cx2, cy - r + 2);
-
-  // Items in onlyA region (left)
-  ctx.fillStyle = '#0e7490'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
-  onlyA.forEach((t,i) => ctx.fillText(t, cx1 - 40, cy - 20 + i*22));
-
-  // Items in intersection
-  ctx.fillStyle = '#92400e'; ctx.font = 'bold 13px sans-serif';
-  both.forEach((t,i) => ctx.fillText(t, (cx1+cx2)/2, cy - 20 + i*22));
-
-  // Items in onlyB
-  ctx.fillStyle = '#4338ca'; ctx.font = '13px sans-serif';
-  onlyB.forEach((t,i) => ctx.fillText(t, cx2 + 40, cy - 20 + i*22));
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r); ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h); ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r); ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y); ctx.closePath();
 }
 
-function showStats() {
-  const both = setA.filter(x => setB.includes(x));
-  const onlyA = setA.filter(x => !setB.includes(x));
-  const onlyB = setB.filter(x => !setA.includes(x));
-  const total = onlyA.length + onlyB.length + both.length;
-
-  document.getElementById('stats').innerHTML =
-    `<span class="stat-item stat-a">仅A: ${onlyA.length}人</span>` +
-    `<span class="stat-item stat-ab">重叠: ${both.length}人</span>` +
-    `<span class="stat-item stat-b">仅B: ${onlyB.length}人</span>` +
-    `<span class="stat-item stat-total">总计: ${total}人</span>`;
-
-  document.getElementById('formulaBox').innerHTML =
-    `总人数 = ${setA.length} + ${setB.length} - ${both.length} = <span style="font-size:20px">${total}</span> 人`;
-}
-
-function loadPreset(type) {
-  if (type === 'sport') {
-    setA = ['小明','小红','小刚','小丽'];
-    setB = ['小红','小刚','小华','小强'];
+function where(v) {
+  const a = S.cir.A.includes(v), b = S.cir.B.includes(v), c2 = S.cir.C.includes(v);
+  if (S.sets === 3) {
+    if (a && b && c2) return 'ABC';
+    if (a && b) return 'AB'; if (a && c2) return 'AC'; if (b && c2) return 'BC';
   } else {
-    setA = ['苹果','香蕉','橘子','草莓'];
-    setB = ['香蕉','草莓','西瓜','葡萄','芒果'];
+    if (a && b) return 'AB';
   }
-  update();
+  if (a) return 'A'; if (b) return 'B'; if (S.sets === 3 && c2) return 'C';
+  return 'free';
 }
 
-function resetAll() { loadPreset('sport'); }
-update();
+function placed() {
+  const o = [], seen = new Set();
+  for (const k of S.sets === 2 ? ['A','B'] : ['A','B','C']) {
+    for (const v of S.cir[k]) { if (seen.has(v)) continue; seen.add(v); o.push({v, r: where(v)}); }
+  }
+  return o;
+}
+
+function inReg(r) { return placed().filter(t => t.r === r).map(t => t.v); }
+function rmAll(v) { S.free = S.free.filter(x => x !== v); for (const k of ['A','B','C']) S.cir[k] = S.cir[k].filter(x => x !== v); }
+function place(v, r) {
+  if (r === 'free' || !r) { S.free.push(v); return; }
+  for (const ch of r.split('')) if (!S.cir[ch].includes(v)) S.cir[ch].push(v);
+}
+
+/* ====== Geometry ====== */
+function calcG() {
+  const W = c.width, H = c.height - 60;
+  if (S.sets === 2) {
+    const r = 110;
+    G = {A:{cx:W/2-70, cy:H/2, r}, B:{cx:W/2+70, cy:H/2, r}};
+  } else {
+    const r = 95;
+    G = {A:{cx:W/2-70, cy:H/2+35, r}, B:{cx:W/2+70, cy:H/2+35, r}, C:{cx:W/2, cy:H/2-50, r}};
+  }
+}
+
+function regPos(g) {
+  const p = {};
+  if (S.sets === 2) {
+    const {A, B} = g;
+    p.A = [{x:A.cx-45,y:A.cy-25},{x:A.cx-45,y:A.cy+5},{x:A.cx-45,y:A.cy+35},{x:A.cx-25,y:A.cy+55}];
+    p.B = [{x:B.cx+45,y:B.cy-25},{x:B.cx+45,y:B.cy+5},{x:B.cx+45,y:B.cy+35},{x:B.cx+25,y:B.cy+55}];
+    p.AB = [{x:(A.cx+B.cx)/2,y:A.cy-10},{x:(A.cx+B.cx)/2,y:A.cy+18},{x:(A.cx+B.cx)/2,y:A.cy+42}];
+  } else {
+    const {A, B, C} = g, mx = (A.cx+B.cx)/2, my = (A.cy+B.cy)/2;
+    p.A = [{x:A.cx-35,y:A.cy+10},{x:A.cx-35,y:A.cy+40}];
+    p.B = [{x:B.cx+35,y:B.cy+10},{x:B.cx+35,y:B.cy+40}];
+    p.C = [{x:C.cx,y:C.cy-30},{x:C.cx-22,y:C.cy},{x:C.cx+22,y:C.cy}];
+    p.AB = [{x:mx,y:my+15},{x:mx,y:my+40}];
+    p.AC = [{x:(A.cx+C.cx)/2,y:(A.cy+C.cy)/2}];
+    p.BC = [{x:(B.cx+C.cx)/2,y:(B.cy+C.cy)/2}];
+    p.ABC = [{x:mx,y:(my+C.cy)/2+5}];
+  }
+  return p;
+}
+
+function tkPos(v, r) {
+  if (r === 'free') {
+    const i = S.free.indexOf(v);
+    if (i < 0) return null;
+    const cols = Math.floor((c.width - 40) / 50);
+    return {x: 20 + i % cols * 50 + 20, y: c.height - 35 + Math.floor(i / cols) * 34 + 16};
+  }
+  const ps = regPos(G)[r];
+  if (!ps) return null;
+  const items = inReg(r), i = items.indexOf(v);
+  if (i < 0 || i >= ps.length) return null;
+  return ps[i];
+}
+
+function hitTk(mx, my) {
+  const all = [...S.free.map(v => ({v, r:'free'})), ...placed()];
+  for (const t of all) {
+    const p = tkPos(t.v, t.r);
+    if (p && Math.abs(mx - p.x) < 20 && Math.abs(my - p.y) < 16) return t;
+  }
+  return null;
+}
+
+function detect(cx, cy) {
+  const rc = c.getBoundingClientRect(), x = cx - rc.left, y = cy - rc.top, g = G;
+  const a = g.A ? dist(x, y, g.A.cx, g.A.cy) < g.A.r : false;
+  const b = g.B ? dist(x, y, g.B.cx, g.B.cy) < g.B.r : false;
+  const c2 = g.C ? dist(x, y, g.C.cx, g.C.cy) < g.C.r : false;
+  if (S.sets === 3) {
+    if (a && b && c2) return 'ABC';
+    if (a && b) return 'AB'; if (a && c2) return 'AC'; if (b && c2) return 'BC';
+  } else {
+    if (a && b) return 'AB';
+  }
+  if (a) return 'A'; if (b) return 'B'; if (S.sets === 3 && c2) return 'C';
+  return 'free';
+}
+
+/* ====== Drag System ====== */
+function pDown(e) {
+  if (S.anim) return;
+  const rc = c.getBoundingClientRect();
+  const x = (e.clientX || e.touches[0].clientX) - rc.left;
+  const y = (e.clientY || e.touches[0].clientY) - rc.top;
+  const h = hitTk(x, y);
+  if (!h) return;
+  drag = h.v; rmAll(h.v);
+
+  ghostEl = document.createElement('div');
+  ghostEl.className = 'tk ghost ' + (TKC[h.r] || 'tk-f');
+  ghostEl.textContent = h.v;
+  ghostEl.style.left = e.clientX + 'px';
+  ghostEl.style.top = e.clientY + 'px';
+  document.body.appendChild(ghostEl);
+  c.style.cursor = 'grabbing';
+  render();
+}
+
+function pMove(e) {
+  if (!ghostEl) return;
+  const cx = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+  const cy = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+  ghostEl.style.left = cx + 'px';
+  ghostEl.style.top = cy + 'px';
+  hovR = detect(cx, cy);
+  drawV();
+}
+
+function pUp(e) {
+  if (!ghostEl) return;
+  const cx = e.clientX || (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : 0);
+  const cy = e.clientY || (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientY : 0);
+  place(drag, detect(cx, cy));
+  ghostEl.remove(); ghostEl = null; drag = null;
+  c.style.cursor = 'default';
+  render();
+}
+
+c.addEventListener('mousedown', pDown);
+c.addEventListener('mousemove', pMove);
+window.addEventListener('mouseup', pUp);
+c.addEventListener('touchstart', e => { e.preventDefault(); pDown(e); }, {passive:false});
+c.addEventListener('touchmove', e => { e.preventDefault(); pMove(e); }, {passive:false});
+window.addEventListener('touchend', pUp);
+
+/* ====== Drawing ====== */
+function drawV() {
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+  calcG();
+  const g = G;
+
+  // Highlight hover region
+  if (hovR && hovR !== 'free') {
+    ctx.save();
+    ctx.globalAlpha = 0.1;
+    for (const k of hovR.split('')) {
+      ctx.beginPath();
+      ctx.arc(g[k].cx, g[k].cy, g[k].r + 8, 0, Math.PI * 2);
+      ctx.fillStyle = COL[k];
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Draw circles with gradient fill
+  for (const k of S.sets === 2 ? ['A','B'] : ['A','B','C']) {
+    const o = g[k];
+    // Fill
+    const grad = ctx.createRadialGradient(o.cx, o.cy, 0, o.cx, o.cy, o.r);
+    grad.addColorStop(0, COL[k] + '15');
+    grad.addColorStop(1, COL[k] + '08');
+    ctx.beginPath(); ctx.arc(o.cx, o.cy, o.r, 0, Math.PI * 2);
+    ctx.fillStyle = grad; ctx.fill();
+    // Stroke
+    ctx.beginPath(); ctx.arc(o.cx, o.cy, o.r, 0, Math.PI * 2);
+    ctx.strokeStyle = COL[k]; ctx.lineWidth = 2.5; ctx.stroke();
+    // Labels
+    ctx.fillStyle = COL[k]; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('集合 ' + k, o.cx, o.cy - o.r - 14);
+    ctx.font = '12px sans-serif';
+    ctx.fillText('(' + S.cir[k].length + ')', o.cx, o.cy - o.r);
+  }
+
+  // Draw tokens in regions
+  const pos = regPos(g);
+  for (const r of Object.keys(pos)) {
+    inReg(r).forEach((v, i) => {
+      if (i < pos[r].length) drawTk(pos[r][i].x, pos[r][i].y, v, r);
+    });
+  }
+
+  // Draw free items
+  const cols = Math.floor((W - 40) / 50);
+  S.free.forEach((v, i) => drawTk(20 + i % cols * 50 + 20, H - 35 + Math.floor(i / cols) * 34 + 16, v, 'free'));
+}
+
+function drawTk(x, y, v, r) {
+  const w = 36, h = 30;
+  const cl = r === 'free' ? '#e2e8f0' : COL[r[0]] || '#e2e8f0';
+
+  // Shadow
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.1)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 2;
+  ctx.fillStyle = r === 'free' ? '#f1f5f9' : cl + '30';
+  roundRect(x - w/2, y - h/2, w, h, 8); ctx.fill();
+  ctx.restore();
+
+  // Border
+  ctx.strokeStyle = cl; ctx.lineWidth = 1.5;
+  roundRect(x - w/2, y - h/2, w, h, 8); ctx.stroke();
+
+  // Text
+  ctx.fillStyle = r === 'free' ? '#475569' : COL[r[0]];
+  ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(v, x, y + 1);
+}
+
+/* ====== Tray ====== */
+function renderTray() {
+  const t = document.getElementById('tray');
+  t.innerHTML = S.free.map(v =>
+    `<div class="tk tk-f" draggable="true" ondragstart="event.dataTransfer.setData('text/plain','${v}');rmAll('${v}');render()">${v}</div>`
+  ).join('');
+}
+
+/* ====== Set Operations Animation ====== */
+function animOp(op) {
+  if (S.anim) return;
+  S.anim = true;
+  const a = [...S.cir.A], b = [...S.cir.B], c2 = S.sets === 3 ? [...S.cir.C] : [];
+  let res = [], desc = '';
+
+  if (S.sets === 2) {
+    if (op === 'union') { res = [...new Set([...a,...b])]; desc = `A ∪ B = {${res.join(', ')}}`; }
+    else if (op === 'isect') { res = a.filter(x => b.includes(x)); desc = `A ∩ B = {${res.join(', ')}}`; }
+    else if (op === 'dAB') { res = a.filter(x => !b.includes(x)); desc = `A − B = {${res.join(', ')}}`; }
+    else { res = b.filter(x => !a.includes(x)); desc = `B − A = {${res.join(', ')}}`; }
+  } else {
+    const all = [...new Set([...a,...b,...c2])];
+    if (op === 'union') { res = all; desc = `A ∪ B ∪ C = {${res.join(', ')}}`; }
+    else if (op === 'isect') { res = all.filter(x => a.includes(x) && b.includes(x) && c2.includes(x)); desc = `A ∩ B ∩ C = {${res.join(', ')}}`; }
+    else { res = a.filter(x => !b.includes(x) && !c2.includes(x)); desc = `仅 A = {${res.join(', ')}}`; }
+  }
+
+  // Highlight active op button
+  document.querySelectorAll('.ob').forEach(b => b.classList.remove('active-op'));
+  const activeBtn = document.querySelector(`.ob[data-op="${op}"]`);
+  if (activeBtn) activeBtn.classList.add('active-op');
+
+  let fr = 0; const tot = 45;
+  (function step() {
+    drawV();
+    ctx.save();
+    const pulse = Math.abs(Math.sin(fr / tot * Math.PI * 3));
+    ctx.globalAlpha = pulse * 0.4;
+    res.forEach(v => {
+      const p = tkPos(v, where(v));
+      if (p) {
+        ctx.beginPath(); ctx.arc(p.x, p.y, 22, 0, Math.PI * 2);
+        ctx.fillStyle = '#fbbf24'; ctx.fill();
+      }
+    });
+    ctx.restore();
+    if (++fr < tot) requestAnimationFrame(step);
+    else {
+      document.getElementById('fb').innerHTML = `<span style="font-size:16px">${desc || '∅ (空集)'}</span>`;
+      S.anim = false;
+      document.querySelectorAll('.ob').forEach(b => b.classList.remove('active-op'));
+    }
+  })();
+}
+
+/* ====== Game Mode ====== */
+const LEVELS = [
+  {d:'3的倍数 AND 24的因数', p:[1,2,3,4,5,6,7,8,9,10,12,15,18,20,24], a:{AB:['3','6','12','24'], A:['9','15','18'], B:['1','2','4','8']}},
+  {d:'5的倍数 AND 偶数', p:[1,2,3,4,5,6,7,8,9,10,12,15,20,25,30], a:{AB:['10','20','30'], A:['5','15','25'], B:['2','4','6','8','12']}},
+  {d:'偶数 AND 大于10的数', p:[2,4,6,8,10,11,12,13,14,15,16,17,18,19,20], a:{AB:['12','14','16','18','20'], A:['2','4','6','8','10'], B:['11','13','15','17','19']}},
+  {d:'小于8的数 AND 3的倍数', p:[1,2,3,4,5,6,7,8,9,10,12,15,18], a:{AB:['3','6'], A:['1','2','4','5','7'], B:['9','12','15','18']}},
+  {d:'6的因数 AND 8的因数', p:[1,2,3,4,5,6,7,8,9,10,12,16,24], a:{AB:['1','2'], A:['3','6'], B:['4','8']}},
+];
+
+function startGm() {
+  const lv = LEVELS[S.gm.rd % LEVELS.length];
+  S.gm.desc = lv.d; S.gm.ans = lv.a;
+  S.free = [...lv.p].map(String);
+  S.cir.A = []; S.cir.B = []; S.cir.C = [];
+  updUI(); render();
+}
+
+function checkGm() {
+  let ok = true;
+  for (const r of Object.keys(S.gm.ans)) {
+    if (inReg(r).sort().join(',') !== [...S.gm.ans[r]].sort().join(',')) { ok = false; break; }
+  }
+  const resultEl = document.getElementById('resultArea');
+  if (ok) {
+    S.gm.sc++;
+    resultEl.innerHTML = `<div class="result-banner">正确! 得分 ${S.gm.sc}/${S.gm.tot}</div>`;
+    setTimeout(() => {
+      resultEl.innerHTML = '';
+      S.gm.rd++;
+      if (S.gm.rd >= S.gm.tot) {
+        resultEl.innerHTML = `<div class="result-banner">闯关完成! 总分: ${S.gm.sc}/${S.gm.tot}</div>`;
+        return;
+      }
+      startGm();
+    }, 1500);
+  } else {
+    resultEl.innerHTML = `<div style="color:#ef4444;font-weight:700;text-align:center">再想想~ 检查每个区域是否正确</div>`;
+    setTimeout(() => { resultEl.innerHTML = ''; }, 2000);
+  }
+}
+
+/* ====== Stats ====== */
+function showStats() {
+  const a = S.cir.A.length, b = S.cir.B.length, c2 = S.cir.C.length;
+  const ab = inReg('AB').length, ac = S.sets === 3 ? inReg('AC').length : 0;
+  const bc = S.sets === 3 ? inReg('BC').length : 0, abc = S.sets === 3 ? inReg('ABC').length : 0;
+  const oA = inReg('A').length, oB = inReg('B').length, oC = S.sets === 3 ? inReg('C').length : 0;
+  const tot = oA + oB + oC + ab + ac + bc + abc;
+
+  let h = `<span class="si" style="background:#cffafe;color:#0e7490">A:${a}</span>`;
+  h += `<span class="si" style="background:#e0e7ff;color:#4338ca">B:${b}</span>`;
+  if (S.sets === 3) h += `<span class="si" style="background:#fce7f3;color:#9d174d">C:${c2}</span>`;
+  h += `<span class="si" style="background:#fef3c7;color:#92400e">A∩B:${ab}</span>`;
+  if (S.sets === 3) h += `<span class="si" style="background:#ffedd5;color:#9a3412">A∩C:${ac}</span><span class="si" style="background:#ede9fe;color:#5b21b6">B∩C:${bc}</span><span class="si" style="background:#dcfce7;color:#166534">A∩B∩C:${abc}</span>`;
+  h += `<span class="si" style="background:#dcfce7;color:#166534">总:${tot}</span>`;
+  document.getElementById('stats').innerHTML = h;
+
+  if (S.mode !== 'ops') {
+    const formula = S.sets === 2
+      ? `|A∪B| = ${a} + ${b} − ${ab} = <b style="font-size:18px">${a + b - ab}</b>`
+      : `|A∪B∪C| = ${a}+${b}+${c2}−${ab}−${ac}−${bc}+${abc} = <b style="font-size:18px">${a+b+c2-ab-ac-bc+abc}</b>`;
+    document.getElementById('fb').innerHTML = formula;
+  }
+}
+
+/* ====== Mode/Set Switching ====== */
+function setMode(m) {
+  S.mode = m;
+  document.querySelectorAll('#modeTabs button').forEach((b, i) => b.classList.toggle('on', ['drag','ops','game'][i] === m));
+  document.getElementById('modeLabel').textContent = {drag:'拖拽模式', ops:'运算模式', game:'闯关模式'}[m];
+  document.getElementById('resultArea').innerHTML = '';
+  if (m === 'game') startGm();
+  updUI(); render();
+}
+
+function setSets(n) {
+  S.sets = n;
+  document.querySelectorAll('#setTabs button').forEach((b, i) => b.classList.toggle('on', [2, 3][i] === n));
+  S.cir.C = [];
+  render();
+}
+
+function updUI() {
+  const p = document.getElementById('sidePanel');
+  if (S.mode === 'drag') {
+    p.innerHTML = `
+      <div class="ctrl-section">
+        <div class="ctrl-label">操作提示</div>
+        <div class="ib"><strong>拖拽操作</strong><br/>● 在画布上拖动数字到圆圈<br/>● 拖到重叠区自动加入多个集合<br/>● 拖到下方空白处移出</div>
+      </div><div class="divider"></div>
+      <div class="ctrl-section">
+        <div class="ctrl-label">预设数据</div>
+        <button class="ob" onclick="loadP('factor')">因数与倍数</button>
+        <button class="ob" onclick="loadP('even')">奇数与偶数</button>
+        <button class="ob" onclick="loadP('fruit')">水果偏好</button>
+        <button class="ob" onclick="loadP('prime')">质数与合数</button>
+      </div><div class="divider"></div>
+      <div class="ctrl-section">
+        <div class="ctrl-label">知识点</div>
+        <div class="ib"><strong>集合与韦恩图</strong><br/>● 重叠部分 = 交集<br/>● 总数 = A + B − 重复<br/>● 只A = A中减去交集元素</div>
+      </div>`;
+  } else if (S.mode === 'ops') {
+    const btns = S.sets === 2
+      ? `<button class="ob" data-op="union" onclick="animOp('union')">A ∪ B 并集</button><button class="ob" data-op="isect" onclick="animOp('isect')">A ∩ B 交集</button><button class="ob" data-op="dAB" onclick="animOp('dAB')">A − B 差集</button><button class="ob" data-op="dBA" onclick="animOp('dBA')">B − A 差集</button>`
+      : `<button class="ob" data-op="union" onclick="animOp('union')">A ∪ B ∪ C 并集</button><button class="ob" data-op="isect" onclick="animOp('isect')">A ∩ B ∩ C 交集</button><button class="ob" data-op="dA" onclick="animOp('dA')">仅属于 A</button>`;
+    p.innerHTML = `
+      <div class="ctrl-section">
+        <div class="ctrl-label">选择运算</div>
+        ${btns}
+      </div><div class="divider"></div>
+      <div class="ctrl-section">
+        <div class="ctrl-label">提示</div>
+        <div class="ib">先在<strong>拖拽模式</strong>中放入元素，再点运算按钮观看动画高亮</div>
+      </div>`;
+  } else {
+    p.innerHTML = `
+      <div class="ctrl-section">
+        <div class="ctrl-label">闯关 ${S.gm.rd + 1}/${S.gm.tot}</div>
+        <div class="gs">${S.gm.sc} 分</div>
+      </div><div class="divider"></div>
+      <div class="ctrl-section">
+        <div class="ctrl-label">题目</div>
+        <div class="gd">${S.gm.desc}<br/><small>将正确数字拖到 A、B 或重叠区域中</small></div>
+      </div><div class="divider"></div>
+      <div class="ctrl-section">
+        <button class="edu-btn edu-btn-accent" style="width:100%;justify-content:center" onclick="checkGm()">提交答案</button>
+      </div>`;
+  }
+}
+
+/* ====== Presets ====== */
+function loadP(t) {
+  if (t === 'factor') {
+    S.free = [5,7,9,10,15,18,20,24].map(String);
+    S.cir.A = ['1','2','3','6']; S.cir.B = ['1','2','4','8']; S.cir.C = [];
+  } else if (t === 'even') {
+    S.free = [];
+    S.cir.A = ['2','4','6','8','10']; S.cir.B = ['1','3','5','7','9']; S.cir.C = [];
+  } else if (t === 'fruit') {
+    S.free = ['橙子','芒果','菠萝'];
+    S.cir.A = ['苹果','香蕉','橘子','草莓']; S.cir.B = ['香蕉','草莓','西瓜','葡萄']; S.cir.C = [];
+  } else if (t === 'prime') {
+    S.free = [1,4,6,8,9,10,12].map(String);
+    S.cir.A = ['2','3','5','7','11']; S.cir.B = ['2','3','5','7']; S.cir.C = [];
+  }
+  render();
+}
+
+/* ====== Master Render ====== */
+function render() { drawV(); renderTray(); showStats(); }
+
+function resetAll() {
+  S.mode = 'drag'; S.sets = 2; S.gm = {desc:'', ans:{}, sc:0, rd:0, tot:5};
+  document.querySelectorAll('#modeTabs button').forEach((b, i) => b.classList.toggle('on', i === 0));
+  document.querySelectorAll('#setTabs button').forEach((b, i) => b.classList.toggle('on', i === 0));
+  document.getElementById('modeLabel').textContent = '拖拽模式';
+  document.getElementById('resultArea').innerHTML = '';
+  loadP('factor');
+}
+
+loadP('factor');
 </script>
 </body>
 </html>
