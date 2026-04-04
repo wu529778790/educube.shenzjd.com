@@ -1,13 +1,14 @@
 import Link from "next/link";
 import type { Tool } from "@/data/tools";
 import { getGrade } from "@/data/curriculum";
+import { memo } from "react";
 
 interface ToolCardProps {
   tool: Tool;
   index: number;
 }
 
-export default function ToolCard({ tool, index }: ToolCardProps) {
+const ToolCard = memo(function ToolCard({ tool, index }: ToolCardProps) {
   return (
     <Link
       href={`/tools/${tool.id}`}
@@ -122,4 +123,6 @@ export default function ToolCard({ tool, index }: ToolCardProps) {
       </div>
     </Link>
   );
-}
+});
+
+export default ToolCard;

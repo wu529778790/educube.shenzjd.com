@@ -1,4 +1,5 @@
 export type Semester = "上册" | "下册";
+export type SemesterFilter = "all" | Semester;
 
 export interface Tool {
   id: string;

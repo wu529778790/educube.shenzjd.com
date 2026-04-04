@@ -4,6 +4,10 @@ import Anthropic from "@anthropic-ai/sdk";
 /* AI 调用超时（毫秒），可通过环境变量覆盖 */
 const AI_TIMEOUT = parseInt(process.env.AI_TIMEOUT || "120000");
 
+/* 重试配置 */
+const MAX_RETRIES = 2;
+const RETRY_BASE_DELAY = 1000; // 1 秒
+
 type Provider = "openai" | "anthropic";
 const VALID_PROVIDERS = new Set<Provider>(["openai", "anthropic"]);
 
@@ -85,22 +89,24 @@ async function callOpenAI(
   user: string,
   options: ChatOptions,
 ): Promise<string> {
-  const res = await getOpenAI().chat.completions.create(
-    {
-      model: process.env.AI_MODEL || "gpt-4o",
-      messages: [
-        { role: "system", content: sys },
-        { role: "user", content: user },
-      ],
-      max_tokens: options.maxTokens,
-      temperature: options.temperature,
-    },
-    { timeout: AI_TIMEOUT },
-  );
+  return retryWithBackoff(async () => {
+    const res = await getOpenAI().chat.completions.create(
+      {
+        model: process.env.AI_MODEL || "gpt-4o",
+        messages: [
+          { role: "system", content: sys },
+          { role: "user", content: user },
+        ],
+        max_tokens: options.maxTokens,
+        temperature: options.temperature,
+      },
+      { timeout: AI_TIMEOUT },
+    );
 
-  const content = res.choices[0]?.message?.content;
-  if (!content) throw new Error("AI 未生成内容（可能被安全过滤或内容为空）");
-  return content;
+    const content = res.choices[0]?.message?.content;
+    if (!content) throw new Error("AI 未生成内容（可能被安全过滤或内容为空）");
+    return content;
+  });
 }
 
 async function callAnthropic(
@@ -108,21 +114,78 @@ async function callAnthropic(
   user: string,
   options: ChatOptions,
 ): Promise<string> {
-  const res = await getAnthropicClient().messages.create(
-    {
-      model: process.env.AI_MODEL || "claude-sonnet-4-20250514",
-      max_tokens: options.maxTokens,
-      system: sys,
-      messages: [{ role: "user", content: user }],
-      temperature: options.temperature,
-    },
-    { timeout: AI_TIMEOUT },
-  );
+  return retryWithBackoff(async () => {
+    const res = await getAnthropicClient().messages.create(
+      {
+        model: process.env.AI_MODEL || "claude-sonnet-4-20250514",
+        max_tokens: options.maxTokens,
+        system: sys,
+        messages: [{ role: "user", content: user }],
+        temperature: options.temperature,
+      },
+      { timeout: AI_TIMEOUT },
+    );
 
-  if (!res.content || res.content.length === 0) {
-    throw new Error("AI 未生成内容（可能被安全过滤或内容为空）");
+    if (!res.content || res.content.length === 0) {
+      throw new Error("AI 未生成内容（可能被安全过滤或内容为空）");
+    }
+    const block = res.content[0];
+    if (block.type === "text") return block.text;
+    throw new Error("AI 返回了非文本内容");
+  });
+}
+
+/**
+ * 带指数退避的重试包装器。
+ * 仅对 5xx 错误和网络超时重试，4xx 错误直接抛出。
+ */
+async function retryWithBackoff<T>(fn: () => Promise<T>): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await fn();
+    } catch (err: unknown) {
+      lastError = err;
+
+      // 判断是否为可重试错误（5xx、网络超时等）
+      const isRetryable = isRetryableError(err);
+      if (!isRetryable || attempt === MAX_RETRIES) break;
+
+      const delay = RETRY_BASE_DELAY * Math.pow(2, attempt);
+      console.warn(
+        `[ai-client] 请求失败 (尝试 ${attempt + 1}/${MAX_RETRIES + 1})，${delay}ms 后重试:`,
+        err instanceof Error ? err.message : err,
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
   }
-  const block = res.content[0];
-  if (block.type === "text") return block.text;
-  throw new Error("AI 返回了非文本内容");
+  throw lastError;
+}
+
+function isRetryableError(err: unknown): boolean {
+  // OpenAI SDK 结构化错误
+  if (err instanceof OpenAI.APIError) {
+    const s = err.status;
+    if (s === undefined) return true;
+    if (s === 429) return true;
+    if (s >= 400 && s < 500) return false;
+    return s >= 500;
+  }
+  // Anthropic SDK 结构化错误
+  if (err instanceof Anthropic.APIError) {
+    const s = err.status;
+    if (s === undefined) return true;
+    if (s === 429) return true;
+    if (s >= 400 && s < 500) return false;
+    return s >= 500;
+  }
+  if (!(err instanceof Error)) return true;
+
+  // 网络超时 / 连接异常
+  const msg = err.message.toLowerCase();
+  if (msg.includes("timeout") || msg.includes("econnreset") || msg.includes("econnrefused")) return true;
+  // 安全过滤，不重试
+  if (msg.includes("安全过滤")) return false;
+
+  return true;
 }

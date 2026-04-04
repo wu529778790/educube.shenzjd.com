@@ -38,6 +38,9 @@ USER nextjs
 
 EXPOSE 3000
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+
 # 持久化生成工具的卷（容器重启后数据不丢失）
 # 启动时挂载：docker run -v educube-data:/app/data -v educube-gen:/app/public/tools/gen educube
 VOLUME ["/app/data", "/app/public/tools/gen"]

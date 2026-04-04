@@ -9,6 +9,8 @@ import {
   parseRefinedSpecOutput,
 } from "@/data/prompt-template";
 import { grades, subjects } from "@/data/curriculum";
+import { randomUUID } from "crypto";
+import { revalidatePath } from "next/cache";
 
 /* ================================================================
  * IP 限流：5 次/小时，自动清理过期条目，防止内存泄漏
@@ -100,9 +102,9 @@ function validateInput(body: Partial<GenerateRequest>): string | null {
     return "需求描述请至少写 8 个字，便于生成可用教具";
   if (body.description.length > 800) return "需求描述过长（最多 800 字）";
   if (body.grade && !VALID_GRADES.has(body.grade))
-    return `无效的年级 ID: ${body.grade}`;
+    return "无效的年级";
   if (body.subject && !VALID_SUBJECTS.has(body.subject))
-    return `无效的学科 ID: ${body.subject}`;
+    return "无效的学科";
   return null;
 }
 
@@ -128,8 +130,10 @@ export async function GET(request: Request): Promise<Response> {
  * POST /api/generate — SSE 流式生成
  * ================================================================ */
 export async function POST(request: Request): Promise<Response> {
+  const startTime = Date.now();
   const ip = extractClientIp(request);
   if (!checkRateLimit(ip)) {
+    console.warn(`[generate] IP ${ip} 限流拒绝`);
     return new Response(
       JSON.stringify({ error: "生成次数已达上限，请一小时后再试" }),
       { status: 429, headers: { "Content-Type": "application/json" } },
@@ -157,6 +161,7 @@ export async function POST(request: Request): Promise<Response> {
   const gradeId = body.grade || "p5";
   const subjectId = body.subject || "math";
   const userIntent = body.description!.trim();
+  console.log(`[generate] IP ${ip} 开始生成: grade=${gradeId} subject=${subjectId} desc="${userIntent.slice(0, 50)}..."`);
 
   const gradeLabel = grades.find((g) => g.id === gradeId)?.name ?? gradeId;
   const subjectLabel =
@@ -217,7 +222,7 @@ export async function POST(request: Request): Promise<Response> {
         // ── 阶段 3：保存 ──
         send("stage", { stage: "saving", message: "正在保存教具…" });
 
-        const id = `gen-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const id = `gen-${randomUUID()}`;
         const tool = await saveGeneratedTool(id, html, {
           name,
           grade: gradeId,
@@ -228,11 +233,16 @@ export async function POST(request: Request): Promise<Response> {
           icon: DEFAULT_ICON,
         });
 
+        // 主动刷新首页缓存，使新生成的工具立即可见
+        revalidatePath("/");
+
         send("done", { tool, html, refinedName: name, refinedSpec: spec });
+        console.log(`[generate] 成功: id=${id} name="${name}" 耗时 ${Date.now() - startTime}ms`);
         controller.close();
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "未知错误";
+        console.error(`[generate] 失败: ${message} 耗时 ${Date.now() - startTime}ms`);
         send("error", { error: message });
         controller.close();
       }

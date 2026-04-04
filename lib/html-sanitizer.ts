@@ -12,27 +12,46 @@ import sanitize from "sanitize-html";
 /* ── 允许的 script src 路径前缀（仅允许本地 edu-lib 资源） ── */
 const ALLOWED_SCRIPT_SRC_PREFIXES = ["../edu-lib/"];
 
-/* ── 允许的 link href（仅允许 edu-base.css） ── */
-const ALLOWED_LINK_HREF = "../edu-lib/edu-base.css";
+/* ── script 内容安全 API 白名单（预留，用于未来更精细的静态分析） ── */
 
-/* ── script 内容中禁止的 API（兜底检查） ── */
-const FORBIDDEN_API = [
-  "fetch(",
-  "XMLHttpRequest",
-  "WebSocket",
-  "import(",
-  "require(",
-  ".postMessage(",
-  "eval(",
-  "Function(",
-  "document.cookie",
-  "localStorage",
-  "sessionStorage",
-  "window.open(",
-  "navigator.",
-  "atob(",
-  "importScripts(",
-];
+/**
+ * 验证 script 内容是否安全。
+ * 采用正则启发式检测：拦截已知的危险 API 调用模式，包括字符串拼接绕过。
+ */
+function validateScriptContent(content: string): void {
+  const DANGEROUS_PATTERNS: ReadonlyArray<{ pattern: RegExp; label: string }> = [
+    { pattern: /\bfetch\s*\(/, label: "fetch()" },
+    { pattern: /\bXMLHttpRequest\b/, label: "XMLHttpRequest" },
+    { pattern: /\bWebSocket\b/, label: "WebSocket" },
+    { pattern: /\beval\s*\(/, label: "eval()" },
+    { pattern: /\bnew\s+Function\s*\(/, label: "new Function()" },
+    { pattern: /\bimport\s*\(/, label: "import()" },
+    { pattern: /\brequire\s*\(/, label: "require()" },
+    { pattern: /\.postMessage\s*\(/, label: "postMessage()" },
+    { pattern: /\bdocument\.cookie\b/, label: "document.cookie" },
+    { pattern: /\blocalStorage\b/, label: "localStorage" },
+    { pattern: /\bsessionStorage\b/, label: "sessionStorage" },
+    { pattern: /\bwindow\.open\s*\(/, label: "window.open()" },
+    { pattern: /\bnavigator\b/, label: "navigator" },
+    { pattern: /\bimportScripts\s*\(/, label: "importScripts()" },
+    { pattern: /\bWorker\b/, label: "Worker" },
+    { pattern: /\bSharedWorker\b/, label: "SharedWorker" },
+    { pattern: /\bServiceWorker\b/, label: "ServiceWorker" },
+    // 检测字符串拼接绕过尝试：window['fetch'], obj["eval"] 等
+    { pattern: /\[[\s"']*["'](?:fetch|eval|Function|import|require|XMLHttpRequest|localStorage|sessionStorage|document\.cookie|navigator)["'][\s"']*\]/, label: "动态属性访问（绕过检测）" },
+    // 检测全局对象动态属性访问：window['...'], self["..."]
+    { pattern: /(?:window|self|globalThis)\s*\[\s*["']/, label: "全局对象动态属性访问" },
+    // 检测 atob/btoa 可能用于编码绕过
+    { pattern: /\batob\s*\(/, label: "atob()" },
+    { pattern: /\bbtoa\s*\(/, label: "btoa()" },
+  ];
+
+  for (const { pattern, label } of DANGEROUS_PATTERNS) {
+    if (pattern.test(content)) {
+      throw new Error(`AI 输出包含禁止的 API：${label}`);
+    }
+  }
+}
 
 /* ── 内联事件属性白名单 ── */
 const INLINE_EVENT_ATTRS = [
@@ -263,15 +282,10 @@ export function sanitizeHtml(
     }
   }
 
-  // ── 6. 检查 script 内容中的危险 API（兜底） ──
+  // ── 6. 验证 script 内容安全性（白名单 + 正则启发式） ──
   const scriptContentRe = /<script[^>]*>([\s\S]*?)<\/script>/gi;
   while ((match = scriptContentRe.exec(html)) !== null) {
-    const content = match[1];
-    for (const api of FORBIDDEN_API) {
-      if (content.includes(api)) {
-        throw new Error(`AI 输出包含禁止的 API：${api}`);
-      }
-    }
+    validateScriptContent(match[1]);
   }
 
   // ── 7. 确保 edu-base.css 链接存在 ──

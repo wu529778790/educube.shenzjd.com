@@ -969,8 +969,11 @@ export function parseRefinedSpecOutput(
   return { name: name.slice(0, 50), spec };
 }
 
+let _cachedSystemPrompt: string | null = null;
+
 export function buildSystemPrompt(): string {
-  return `${ROLE_AND_RULES}
+  if (!_cachedSystemPrompt) {
+    _cachedSystemPrompt = `${ROLE_AND_RULES}
 
 ## 可用的 CSS 变量和类（edu-base.css）
 
@@ -987,6 +990,8 @@ ${EXAMPLE_3}
 ${EDU_3D_API}
 
 ${EXAMPLE_4}`;
+  }
+  return _cachedSystemPrompt;
 }
 
 export function buildUserPrompt(params: GenerateParams): string {
