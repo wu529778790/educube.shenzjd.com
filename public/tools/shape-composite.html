@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>组合体体积计算 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 300px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#fef3c7,#fdfaf4); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+
+  .shape-btn {
+    padding:10px 8px; border-radius:10px; font-size:11px; font-weight:700;
+    cursor:pointer; border:2px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+  }
+  .shape-btn:hover { border-color:#f59e0b; }
+  .shape-btn.active { background:#fef3c7; color:#92400e; border-color:#f59e0b; }
+  .shape-btn .s-icon { font-size:22px; display:block; margin-bottom:2px; }
+
+  .calc-box {
+    background:#fffbeb; border:1.5px solid #fcd34d; border-radius:10px;
+    padding:10px 12px; font-size:12px; line-height:1.9; color:#334155;
+  }
+  .calc-box .formula { font-weight:700; color:#b45309; }
+  .calc-box .result { font-weight:800; color:#92400e; font-size:14px; }
+
+  .slider-row { display:flex; align-items:center; gap:8px; }
+  .slider-row label { font-size:11px; font-weight:600; color:#334155; min-width:36px; }
+  .slider-row input[type=range] { flex:1; accent-color:#f59e0b; }
+  .slider-row .val { font-size:12px; font-weight:700; color:#d97706; min-width:36px; text-align:right; }
+
+  .info-box { background:#fff; border:1px solid #fde68a; border-radius:10px; padding:10px 12px; font-size:11px; line-height:1.8; color:#334155; }
+  .info-box strong { color:#d97706; }
+
+  .explode-btn {
+    padding:8px 14px; border:1.5px solid #f59e0b; border-radius:8px; font-size:12px;
+    font-weight:600; cursor:pointer; font-family:var(--edu-font); background:#fff;
+    color:#d97706; transition:all .15s;
+  }
+  .explode-btn:hover { background:#f59e0b; color:#fff; }
+
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="edu-toolbar-title">🎯 组合体体积计算</span>
+      <span class="edu-toolbar-subtitle">六年级下册 · 第三单元</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="explode-btn" id="btn-explode" onclick="toggleExplode()">💥 分解/组合</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择组合体</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <button class="shape-btn active" id="sb-rocket" onclick="setShape('rocket')"><span class="s-icon">🚀</span>火箭</button>
+            <button class="shape-btn" id="sb-tower" onclick="setShape('tower')"><span class="s-icon">🗼</span>水塔</button>
+            <button class="shape-btn" id="sb-grain" onclick="setShape('grain')"><span class="s-icon">🌾</span>粮仓</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <button class="shape-btn" id="sb-cap" onclick="setShape('cap')"><span class="s-icon">🎩</span>蘑菇亭</button>
+            <button class="shape-btn" id="sb-pen" onclick="setShape('pen')"><span class="s-icon">🖊️</span>铅笔</button>
+            <button class="shape-btn" id="sb-silo" onclick="setShape('silo')"><span class="s-icon">🏗️</span>谷仓</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">调整参数</div>
+          <div id="sliders-container"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">体积计算</div>
+          <div class="calc-box" id="calc-box">选择一个组合体开始计算</div>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <strong>组合体体积解题方法</strong><br/>
+          ● 把组合体<strong>拆分</strong>为基本形体<br/>
+          ● 分别计算每部分的体积<br/>
+          ● <strong>相加</strong>得到总体积<br/>
+          ● 常见组合：圆柱+圆锥、长方体+圆柱等
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var _scene, _camera, _renderer, _controls;
+var _shapeGroup;
+var _currentShape = 'rocket';
+var _isExploded = false;
+var _animId = null;
+var _params = {};
+
+var SHAPES = {
+  rocket: {
+    name: '火箭',
+    parts: [
+      { type: 'cylinder', name: '箭身（圆柱）', color: 0x3b82f6, pos: [0, 0, 0],
+        params: { r: { label: '底面半径r', min: 0.5, max: 2, step: 0.1, def: 1 }, h: { label: '柱高h', min: 1, max: 4, step: 0.5, def: 3 } },
+        volume: function(p) { return Math.PI * p.r * p.r * p.h; },
+        formula: function(p) { return 'V圆柱 = πr²h = π×' + p.r.toFixed(1) + '²×' + p.h.toFixed(1); }
+      },
+      { type: 'cone', name: '箭头（圆锥）', color: 0xef4444, pos: [0, 'cyl_h', 0],
+        params: { r: { label: '底面半径r', min: 0.5, max: 2, step: 0.1, def: 1 }, h: { label: '锥高h', min: 0.5, max: 2, step: 0.25, def: 1.5 } },
+        volume: function(p) { return Math.PI * p.r * p.r * p.h / 3; },
+        formula: function(p) { return 'V圆锥 = ⅓πr²h = ⅓π×' + p.r.toFixed(1) + '²×' + p.h.toFixed(1); }
+      },
+    ],
+    build: function(parts, params) {
+      var r1 = params[0].r, h1 = params[0].h;
+      var r2 = params[1].r, h2 = params[1].h;
+      // Cylinder
+      var cylGeo = new THREE.CylinderGeometry(r1, r1, h1, 32);
+      var cylMat = new THREE.MeshLambertMaterial({ color: parts[0].color, transparent: true, opacity: 0.75 });
+      var cyl = new THREE.Mesh(cylGeo, cylMat);
+      cyl.position.y = h1 / 2;
+      cyl.add(new THREE.LineSegments(new THREE.EdgesGeometry(cylGeo), new THREE.LineBasicMaterial({ color: 0x1e40af, transparent: true, opacity: 0.3 })));
+      cyl.userData = { explodeY: -1.5 };
+      _shapeGroup.add(cyl);
+
+      // Cone on top
+      var coneGeo = new THREE.ConeGeometry(r2, h2, 32);
+      var coneMat = new THREE.MeshLambertMaterial({ color: parts[1].color, transparent: true, opacity: 0.75 });
+      var cone = new THREE.Mesh(coneGeo, coneMat);
+      cone.position.y = h1 + h2 / 2;
+      cone.add(new THREE.LineSegments(new THREE.EdgesGeometry(coneGeo), new THREE.LineBasicMaterial({ color: 0x991b1b, transparent: true, opacity: 0.3 })));
+      cone.userData = { explodeY: 1.5 };
+      _shapeGroup.add(cone);
+
+      // Labels
+      var l1 = Edu3D.textSprite(parts[0].name, { color: '#1e40af', scale: 0.4 });
+      l1.position.set(r1 + 1, h1 / 2, 0);
+      _shapeGroup.add(l1);
+      var l2 = Edu3D.textSprite(parts[1].name, { color: '#991b1b', scale: 0.4 });
+      l2.position.set(r2 + 1, h1 + h2 / 2, 0);
+      _shapeGroup.add(l2);
+    }
+  },
+  tower: {
+    name: '水塔',
+    parts: [
+      { type: 'cylinder', name: '塔身（圆柱）', color: 0x64748b,
+        params: { r: { label: '底面半径r', min: 0.3, max: 1.5, step: 0.1, def: 0.6 }, h: { label: '柱高h', min: 1, max: 5, step: 0.5, def: 3 } },
+        volume: function(p) { return Math.PI * p.r * p.r * p.h; },
+        formula: function(p) { return 'V柱 = π×' + p.r.toFixed(1) + '²×' + p.h.toFixed(1); }
+      },
+      { type: 'cylinder', name: '水箱（大圆柱）', color: 0x3b82f6,
+        params: { r: { label: '箱半径R', min: 0.5, max: 2.5, step: 0.1, def: 1.5 }, h: { label: '箱高H', min: 0.5, max: 2, step: 0.25, def: 1 } },
+        volume: function(p) { return Math.PI * p.r * p.r * p.h; },
+        formula: function(p) { return 'V箱 = π×' + p.r.toFixed(1) + '²×' + p.h.toFixed(1); }
+      },
+    ],
+    build: function(parts, params) {
+      var r1 = params[0].r, h1 = params[0].h;
+      var r2 = params[1].r, h2 = params[1].h;
+      // Support column
+      var c1Geo = new THREE.CylinderGeometry(r1, r1, h1, 32);
+      var c1 = new THREE.Mesh(c1Geo, new THREE.MeshLambertMaterial({ color: parts[0].color, transparent: true, opacity: 0.75 }));
+      c1.position.y = h1 / 2;
+      c1.add(new THREE.LineSegments(new THREE.EdgesGeometry(c1Geo), new THREE.LineBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.3 })));
+      c1.userData = { explodeY: -1.5 };
+      _shapeGroup.add(c1);
+
+      // Water tank on top
+      var c2Geo = new THREE.CylinderGeometry(r2, r2, h2, 32);
+      var c2 = new THREE.Mesh(c2Geo, new THREE.MeshLambertMaterial({ color: parts[1].color, transparent: true, opacity: 0.65 }));
+      c2.position.y = h1 + h2 / 2;
+      c2.add(new THREE.LineSegments(new THREE.EdgesGeometry(c2Geo), new THREE.LineBasicMaterial({ color: 0x1e40af, transparent: true, opacity: 0.3 })));
+      c2.userData = { explodeY: 1.5 };
+      _shapeGroup.add(c2);
+
+      var l1 = Edu3D.textSprite(parts[0].name, { color: '#334155', scale: 0.35 });
+      l1.position.set(r1 + 1, h1 / 2, 0); _shapeGroup.add(l1);
+      var l2 = Edu3D.textSprite(parts[1].name, { color: '#1e40af', scale: 0.35 });
+      l2.position.set(r2 + 1, h1 + h2 / 2, 0); _shapeGroup.add(l2);
+    }
+  },
+  grain: {
+    name: '粮仓',
+    parts: [
+      { type: 'cylinder', name: '仓身（圆柱）', color: 0xd97706,
+        params: { r: { label: '底面半径r', min: 0.5, max: 2, step: 0.1, def: 1.5 }, h: { label: '柱高h', min: 1, max: 4, step: 0.5, def: 2.5 } },
+        volume: function(p) { return Math.PI * p.r * p.r * p.h; },
+        formula: function(p) { return 'V圆柱 = π×' + p.r.toFixed(1) + '²×' + p.h.toFixed(1); }
+      },
+      { type: 'cone', name: '仓顶（圆锥）', color: 0x92400e,
+        params: { r: { label: '锥底半径r', min: 0.5, max: 2, step: 0.1, def: 1.5 }, h: { label: '锥高h', min: 0.5, max: 2, step: 0.25, def: 1 } },
+        volume: function(p) { return Math.PI * p.r * p.r * p.h / 3; },
+        formula: function(p) { return 'V圆锥 = ⅓π×' + p.r.toFixed(1) + '²×' + p.h.toFixed(1); }
+      },
+    ],
+    build: function(parts, params) {
+      var r1 = params[0].r, h1 = params[0].h;
+      var r2 = params[1].r, h2 = params[1].h;
+      var cylGeo = new THREE.CylinderGeometry(r1, r1, h1, 32);
+      var cyl = new THREE.Mesh(cylGeo, new THREE.MeshLambertMaterial({ color: parts[0].color, transparent: true, opacity: 0.7 }));
+      cyl.position.y = h1 / 2;
+      cyl.add(new THREE.LineSegments(new THREE.EdgesGeometry(cylGeo), new THREE.LineBasicMaterial({ color: 0x78350f, transparent: true, opacity: 0.3 })));
+      cyl.userData = { explodeY: -1.5 };
+      _shapeGroup.add(cyl);
+
+      var coneGeo = new THREE.ConeGeometry(r2, h2, 32);
+      var cone = new THREE.Mesh(coneGeo, new THREE.MeshLambertMaterial({ color: parts[1].color, transparent: true, opacity: 0.7 }));
+      cone.position.y = h1 + h2 / 2;
+      cone.add(new THREE.LineSegments(new THREE.EdgesGeometry(coneGeo), new THREE.LineBasicMaterial({ color: 0x451a03, transparent: true, opacity: 0.3 })));
+      cone.userData = { explodeY: 1.5 };
+      _shapeGroup.add(cone);
+
+      var l1 = Edu3D.textSprite(parts[0].name, { color: '#78350f', scale: 0.35 });
+      l1.position.set(r1 + 1, h1 / 2, 0); _shapeGroup.add(l1);
+      var l2 = Edu3D.textSprite(parts[1].name, { color: '#451a03', scale: 0.35 });
+      l2.position.set(r2 + 1, h1 + h2 / 2, 0); _shapeGroup.add(l2);
+    }
+  },
+  cap: {
+    name: '蘑菇亭',
+    parts: [
+      { type: 'cylinder', name: '柱子（圆柱）', color: 0x94a3b8,
+        params: { r: { label: '柱半径r', min: 0.2, max: 0.8, step: 0.05, def: 0.3 }, h: { label: '柱高h', min: 1, max: 4, step: 0.5, def: 2.5 } },
+        volume: function(p) { return Math.PI * p.r * p.r * p.h; },
+        formula: function(p) { return 'V柱 = π×' + p.r.toFixed(2) + '²×' + p.h.toFixed(1); }
+      },
+      { type: 'cone', name: '顶盖（圆锥）', color: 0xef4444,
+        params: { r: { label: '盖半径R', min: 1, max: 3, step: 0.1, def: 2 }, h: { label: '盖高H', min: 0.5, max: 2, step: 0.25, def: 1 } },
+        volume: function(p) { return Math.PI * p.r * p.r * p.h / 3; },
+        formula: function(p) { return 'V锥 = ⅓π×' + p.r.toFixed(1) + '²×' + p.h.toFixed(1); }
+      },
+    ],
+    build: function(parts, params) {
+      var r1 = params[0].r, h1 = params[0].h;
+      var r2 = params[1].r, h2 = params[1].h;
+      var cylGeo = new THREE.CylinderGeometry(r1, r1, h1, 32);
+      var cyl = new THREE.Mesh(cylGeo, new THREE.MeshLambertMaterial({ color: parts[0].color, transparent: true, opacity: 0.8 }));
+      cyl.position.y = h1 / 2;
+      cyl.userData = { explodeY: -1.5 };
+      _shapeGroup.add(cyl);
+
+      var coneGeo = new THREE.ConeGeometry(r2, h2, 32);
+      var cone = new THREE.Mesh(coneGeo, new THREE.MeshLambertMaterial({ color: parts[1].color, transparent: true, opacity: 0.65 }));
+      cone.position.y = h1 + h2 / 2;
+      cone.userData = { explodeY: 1.5 };
+      _shapeGroup.add(cone);
+
+      var l1 = Edu3D.textSprite(parts[0].name, { color: '#475569', scale: 0.35 });
+      l1.position.set(r1 + 1.2, h1 / 2, 0); _shapeGroup.add(l1);
+      var l2 = Edu3D.textSprite(parts[1].name, { color: '#991b1b', scale: 0.35 });
+      l2.position.set(r2 + 1, h1 + h2 / 2, 0); _shapeGroup.add(l2);
+    }
+  },
+  pen: {
+    name: '铅笔',
+    parts: [
+      { type: 'cylinder', name: '笔杆（圆柱）', color: 0xfbbf24,
+        params: { r: { label: '笔半径r', min: 0.2, max: 0.8, step: 0.05, def: 0.4 }, h: { label: '笔杆长h', min: 2, max: 5, step: 0.5, def: 4 } },
+        volume: function(p) { return Math.PI * p.r * p.r * p.h; },
+        formula: function(p) { return 'V杆 = π×' + p.r.toFixed(2) + '²×' + p.h.toFixed(1); }
+      },
+      { type: 'cone', name: '笔尖（圆锥）', color: 0x78350f,
+        params: { r: { label: '尖底半径r', min: 0.2, max: 0.8, step: 0.05, def: 0.4 }, h: { label: '尖高h', min: 0.3, max: 1.5, step: 0.1, def: 0.8 } },
+        volume: function(p) { return Math.PI * p.r * p.r * p.h / 3; },
+        formula: function(p) { return 'V尖 = ⅓π×' + p.r.toFixed(2) + '²×' + p.h.toFixed(1); }
+      },
+    ],
+    build: function(parts, params) {
+      var r1 = params[0].r, h1 = params[0].h;
+      var r2 = params[1].r, h2 = params[1].h;
+      var cylGeo = new THREE.CylinderGeometry(r1, r1, h1, 32);
+      var cyl = new THREE.Mesh(cylGeo, new THREE.MeshLambertMaterial({ color: parts[0].color, transparent: true, opacity: 0.75 }));
+      cyl.position.y = h1 / 2;
+      cyl.userData = { explodeY: -1.5 };
+      _shapeGroup.add(cyl);
+
+      var coneGeo = new THREE.ConeGeometry(r2, h2, 32);
+      var cone = new THREE.Mesh(coneGeo, new THREE.MeshLambertMaterial({ color: parts[1].color, transparent: true, opacity: 0.8 }));
+      cone.position.y = h1 + h2 / 2;
+      cone.userData = { explodeY: 1.5 };
+      _shapeGroup.add(cone);
+
+      var l1 = Edu3D.textSprite(parts[0].name, { color: '#92400e', scale: 0.35 });
+      l1.position.set(r1 + 1, h1 / 2, 0); _shapeGroup.add(l1);
+      var l2 = Edu3D.textSprite(parts[1].name, { color: '#451a03', scale: 0.35 });
+      l2.position.set(r2 + 1, h1 + h2 / 2, 0); _shapeGroup.add(l2);
+    }
+  },
+  silo: {
+    name: '谷仓',
+    parts: [
+      { type: 'cylinder', name: '主体（圆柱）', color: 0x92400e,
+        params: { r: { label: '底面半径r', min: 0.5, max: 2, step: 0.1, def: 1.5 }, h: { label: '柱高h', min: 1, max: 4, step: 0.5, def: 3 } },
+        volume: function(p) { return Math.PI * p.r * p.r * p.h; },
+        formula: function(p) { return 'V柱 = π×' + p.r.toFixed(1) + '²×' + p.h.toFixed(1); }
+      },
+      { type: 'cylinder', name: '顶部（小圆柱）', color: 0xd97706,
+        params: { r: { label: '顶半径R', min: 0.3, max: 1.5, step: 0.1, def: 0.8 }, h: { label: '顶高H', min: 0.3, max: 1.5, step: 0.1, def: 0.6 } },
+        volume: function(p) { return Math.PI * p.r * p.r * p.h; },
+        formula: function(p) { return 'V顶 = π×' + p.r.toFixed(1) + '²×' + p.h.toFixed(1); }
+      },
+      { type: 'cone', name: '屋顶（圆锥）', color: 0xef4444,
+        params: { r: { label: '屋顶半径', min: 0.3, max: 1.5, step: 0.1, def: 0.8 }, h: { label: '屋顶尖高', min: 0.3, max: 1.5, step: 0.1, def: 0.8 } },
+        volume: function(p) { return Math.PI * p.r * p.r * p.h / 3; },
+        formula: function(p) { return 'V顶 = ⅓π×' + p.r.toFixed(1) + '²×' + p.h.toFixed(1); }
+      },
+    ],
+    build: function(parts, params) {
+      var r1 = params[0].r, h1 = params[0].h;
+      var r2 = params[1].r, h2 = params[1].h;
+      var r3 = params[2].r, h3 = params[2].h;
+
+      var c1Geo = new THREE.CylinderGeometry(r1, r1, h1, 32);
+      var c1 = new THREE.Mesh(c1Geo, new THREE.MeshLambertMaterial({ color: parts[0].color, transparent: true, opacity: 0.7 }));
+      c1.position.y = h1 / 2;
+      c1.userData = { explodeY: -2 };
+      _shapeGroup.add(c1);
+
+      var c2Geo = new THREE.CylinderGeometry(r2, r1, h2, 32);
+      var c2 = new THREE.Mesh(c2Geo, new THREE.MeshLambertMaterial({ color: parts[1].color, transparent: true, opacity: 0.7 }));
+      c2.position.y = h1 + h2 / 2;
+      c2.userData = { explodeY: 0 };
+      _shapeGroup.add(c2);
+
+      var coneGeo = new THREE.ConeGeometry(r3, h3, 32);
+      var cone = new THREE.Mesh(coneGeo, new THREE.MeshLambertMaterial({ color: parts[2].color, transparent: true, opacity: 0.7 }));
+      cone.position.y = h1 + h2 + h3 / 2;
+      cone.userData = { explodeY: 2 };
+      _shapeGroup.add(cone);
+
+      var l1 = Edu3D.textSprite(parts[0].name, { color: '#78350f', scale: 0.35 });
+      l1.position.set(r1 + 1, h1 / 2, 0); _shapeGroup.add(l1);
+    }
+  },
+};
+
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xfdfaf4, camX: 5, camY: 4, camZ: 6 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 10, 10);
+
+  _shapeGroup = new THREE.Group();
+  _scene.add(_shapeGroup);
+
+  setShape('rocket');
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+
+function clearGroup(g) { while (g.children.length) g.remove(g.children[0]); }
+
+function setShape(key) {
+  _currentShape = key;
+  _isExploded = false;
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+
+  var shape = SHAPES[key];
+  _params = [];
+  shape.parts.forEach(function(part) {
+    var p = {};
+    Object.keys(part.params).forEach(function(k) {
+      p[k] = part.params[k].def;
+    });
+    _params.push(p);
+  });
+
+  buildSliders(shape);
+  rebuildShape();
+  updateCalc(shape);
+
+  Object.keys(SHAPES).forEach(function(k) {
+    var btn = document.getElementById('sb-' + k);
+    if (btn) btn.classList.toggle('active', k === key);
+  });
+}
+
+function buildSliders(shape) {
+  var container = document.getElementById('sliders-container');
+  container.innerHTML = '';
+  shape.parts.forEach(function(part, pi) {
+    var title = document.createElement('div');
+    title.style.cssText = 'font-size:11px;font-weight:700;color:#334155;margin-top:4px';
+    title.textContent = '● ' + part.name;
+    container.appendChild(title);
+
+    Object.keys(part.params).forEach(function(k) {
+      var def = part.params[k];
+      var row = document.createElement('div');
+      row.className = 'slider-row';
+      row.innerHTML =
+        '<label>' + def.label + '</label>' +
+        '<input type="range" min="' + def.min + '" max="' + def.max + '" step="' + def.step + '" value="' + def.def + '" data-pi="' + pi + '" data-key="' + k + '">' +
+        '<span class="val">' + def.def + '</span>';
+      row.querySelector('input').addEventListener('input', function(e) {
+        var idx = parseInt(e.target.dataset.pi);
+        var key2 = e.target.dataset.key;
+        _params[idx][key2] = parseFloat(e.target.value);
+        e.target.nextElementSibling.textContent = parseFloat(e.target.value).toFixed(key2 === 'r' && def.step < 0.1 ? 2 : 1);
+        rebuildShape();
+        updateCalc(SHAPES[_currentShape]);
+      });
+      container.appendChild(row);
+    });
+  });
+}
+
+function rebuildShape() {
+  clearGroup(_shapeGroup);
+  _isExploded = false;
+  var shape = SHAPES[_currentShape];
+  shape.build(shape.parts, _params);
+}
+
+function updateCalc(shape) {
+  var html = '';
+  var total = 0;
+  shape.parts.forEach(function(part, i) {
+    var v = part.volume(_params[i]);
+    total += v;
+    html += '<div style="margin-bottom:6px">';
+    html += '<strong>' + part.name + '</strong><br/>';
+    html += part.formula(_params[i]) + '<br/>';
+    html += '= <span class="formula">' + v.toFixed(2) + '</span>';
+    html += '</div>';
+  });
+  html += '<div style="border-top:1px dashed #d97706;padding-top:6px;margin-top:4px">';
+  html += '<span class="result">V总 = ' + total.toFixed(2) + '</span>';
+  html += '</div>';
+  document.getElementById('calc-box').innerHTML = html;
+}
+
+function toggleExplode() {
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+  _isExploded = !_isExploded;
+
+  var targets = [];
+  _shapeGroup.children.forEach(function(child) {
+    if (child.userData && child.userData.explodeY !== undefined) {
+      targets.push({ mesh: child, offset: _isExploded ? child.userData.explodeY : 0 });
+    }
+  });
+
+  // Store original Y positions
+  targets.forEach(function(t) {
+    if (t.mesh.userData._origY === undefined) t.mesh.userData._origY = t.mesh.position.y;
+  });
+
+  var t = 0, steps = 40;
+  var startOffsets = targets.map(function(t2) { return t2.mesh.position.y - t2.mesh.userData._origY; });
+
+  function anim() {
+    t++;
+    var p = Math.min(t / steps, 1);
+    var ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+    targets.forEach(function(tgt, idx) {
+      var from = startOffsets[idx];
+      var to = tgt.offset;
+      tgt.mesh.position.y = tgt.mesh.userData._origY + from + (to - from) * ease;
+    });
+    if (p < 1) _animId = requestAnimationFrame(anim);
+    else _animId = null;
+  }
+  anim();
+}
+
+function resetAll() {
+  setShape('rocket');
+}
+
+init();
+</script>
+</body>
+</html>

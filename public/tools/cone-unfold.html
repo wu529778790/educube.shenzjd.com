@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>圆锥展开图 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 300px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#fff7ed,#fdfaf4); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+
+  .slider-row { display:flex; align-items:center; gap:8px; }
+  .slider-row label { font-size:12px; font-weight:600; color:#334155; min-width:50px; }
+  .slider-row input[type=range] { flex:1; accent-color:#f97316; }
+  .slider-row .val { font-size:13px; font-weight:700; color:#ea580c; min-width:50px; text-align:right; }
+
+  .unfold-btn {
+    padding:10px; border:none; border-radius:10px; font-size:15px; font-weight:700;
+    cursor:pointer; font-family:var(--edu-font); transition:all .15s;
+    background:#f97316; color:#fff;
+  }
+  .unfold-btn:hover { background:#ea580c; }
+
+  .info-box { background:#fff; border:1px solid #fed7aa; border-radius:10px; padding:10px 12px; font-size:11px; line-height:1.8; color:#334155; }
+  .info-box strong { color:#ea580c; }
+
+  .calc-box {
+    background:#fff7ed; border:1.5px solid #fdba74; border-radius:10px;
+    padding:10px 12px; font-size:12px; line-height:2; color:#334155;
+  }
+  .calc-box .formula { font-weight:700; color:#c2410c; }
+
+  .sector-info {
+    display:grid; grid-template-columns:1fr 1fr; gap:6px;
+  }
+  .sector-item {
+    padding:8px; background:#fff; border:1px solid #e2e8f0; border-radius:8px;
+    text-align:center;
+  }
+  .sector-item .s-label { font-size:10px; color:#64748b; font-weight:600; }
+  .sector-item .s-val { font-size:16px; font-weight:800; color:#ea580c; }
+
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="edu-toolbar-title">🍦 圆锥展开图</span>
+      <span class="edu-toolbar-subtitle">六年级下册 · 第三单元</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="unfold-btn" id="btn-toggle" onclick="toggleUnfold()">🔽 展开圆锥</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">圆锥参数</div>
+          <div class="slider-row">
+            <label>底面半径 r</label>
+            <input type="range" id="sl-r" min="0.5" max="3" step="0.1" value="1.5" oninput="onSlider()">
+            <span class="val" id="val-r">1.5</span>
+          </div>
+          <div class="slider-row">
+            <label>高 h</label>
+            <input type="range" id="sl-h" min="0.5" max="4" step="0.1" value="2.5" oninput="onSlider()">
+            <span class="val" id="val-h">2.5</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">展开图参数</div>
+          <div class="sector-info">
+            <div class="sector-item"><div class="s-label">母线长 l</div><div class="s-val" id="sv-l">—</div></div>
+            <div class="sector-item"><div class="s-label">扇形半径</div><div class="s-val" id="sv-sr">—</div></div>
+            <div class="sector-item"><div class="s-label">扇形弧长</div><div class="s-val" id="sv-arc">—</div></div>
+            <div class="sector-item"><div class="s-label">圆心角 θ</div><div class="s-val" id="sv-theta">—</div></div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">公式推导</div>
+          <div class="calc-box" id="calc-box"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <strong>展开图知识</strong><br/>
+          ● 圆锥侧面展开是<strong>扇形</strong><br/>
+          ● 扇形半径 = <strong>母线长 l</strong><br/>
+          ● 扇形弧长 = <strong>底面周长 2πr</strong><br/>
+          ● θ = 360° × r / l<br/>
+          ● S侧 = πrl<br/>
+          ● S表 = πrl + πr²
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var _scene, _camera, _renderer, _controls;
+var _coneGroup, _unfoldGroup;
+var _isUnfolded = false;
+var _animId = null;
+var _r = 1.5, _h = 2.5;
+
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xfdf8f0, camX: 6, camY: 4, camZ: 6 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 10, 10);
+
+  _coneGroup = new THREE.Group();
+  _scene.add(_coneGroup);
+  _unfoldGroup = new THREE.Group();
+  _scene.add(_unfoldGroup);
+
+  buildCone();
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+
+function clearGroup(group) {
+  while (group.children.length) group.remove(group.children[0]);
+}
+
+function buildCone() {
+  clearGroup(_coneGroup);
+  clearGroup(_unfoldGroup);
+  _isUnfolded = false;
+  document.getElementById('btn-toggle').textContent = '🔽 展开圆锥';
+
+  var r = _r, h = _h;
+  var l = Math.sqrt(r * r + h * h);
+
+  // ---- Folded cone (3D solid) ----
+  // Cone body
+  var coneGeo = new THREE.ConeGeometry(r, h, 64, 1, false);
+  var coneMat = new THREE.MeshLambertMaterial({ color: 0xf97316, transparent: true, opacity: 0.65 });
+  var coneMesh = new THREE.Mesh(coneGeo, coneMat);
+  coneMesh.position.y = h / 2;
+  coneMesh.castShadow = true;
+  _coneGroup.add(coneMesh);
+
+  // Wireframe
+  var edgeGeo = new THREE.EdgesGeometry(coneGeo);
+  var edgeMat = new THREE.LineBasicMaterial({ color: 0x9a3412, transparent: true, opacity: 0.25 });
+  coneMesh.add(new THREE.LineSegments(edgeGeo, edgeMat));
+
+  // Base circle (bottom face)
+  var baseGeo = new THREE.CircleGeometry(r, 64);
+  var baseMat = new THREE.MeshLambertMaterial({ color: 0xfbbf24, side: THREE.DoubleSide });
+  var baseMesh = new THREE.Mesh(baseGeo, baseMat);
+  baseMesh.rotation.x = -Math.PI / 2;
+  baseMesh.position.y = 0.01;
+  _coneGroup.add(baseMesh);
+
+  // Slant line (母线)
+  var slantGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, h, 0),
+    new THREE.Vector3(r, 0, 0)
+  ]);
+  var slantMat = new THREE.LineBasicMaterial({ color: 0xdc2626, linewidth: 2 });
+  _coneGroup.add(new THREE.Line(slantGeo, slantMat));
+
+  // Radius line
+  var radGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(r, 0, 0)
+  ]);
+  var radMat = new THREE.LineBasicMaterial({ color: 0x2563eb });
+  _coneGroup.add(new THREE.Line(radGeo, radMat));
+
+  // Height line
+  var hGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(0, h, 0)
+  ]);
+  var hMat = new THREE.LineBasicMaterial({ color: 0x16a34a });
+  _coneGroup.add(new THREE.Line(hGeo, hMat));
+
+  // Labels
+  var lbl_r = Edu3D.textSprite('r=' + r.toFixed(1), { color: '#2563eb', scale: 0.4 });
+  lbl_r.position.set(r / 2, -0.3, 0);
+  _coneGroup.add(lbl_r);
+
+  var lbl_h = Edu3D.textSprite('h=' + h.toFixed(1), { color: '#16a34a', scale: 0.4 });
+  lbl_h.position.set(-0.4, h / 2, 0);
+  _coneGroup.add(lbl_h);
+
+  var lbl_l = Edu3D.textSprite('l=' + l.toFixed(1), { color: '#dc2626', scale: 0.4 });
+  lbl_l.position.set(r / 2 + 0.2, h / 2 + 0.3, 0);
+  _coneGroup.add(lbl_l);
+
+  // ---- Unfolded state (flat, hidden initially) ----
+  buildUnfoldedState(r, h, l);
+
+  _coneGroup.visible = true;
+  _unfoldGroup.visible = false;
+
+  updateInfo(r, h, l);
+}
+
+function buildUnfoldedState(r, h, l) {
+  clearGroup(_unfoldGroup);
+
+  // Sector (lateral surface)
+  var theta = (r / l) * Math.PI * 2; // angle in radians
+  var sectorShape = new THREE.Shape();
+  sectorShape.moveTo(0, 0);
+  var segs = 64;
+  for (var i = 0; i <= segs; i++) {
+    var a = -theta / 2 + (theta * i / segs);
+    sectorShape.lineTo(Math.sin(a) * l, Math.cos(a) * l);
+  }
+  sectorShape.lineTo(0, 0);
+
+  var sectorGeo = new THREE.ShapeGeometry(sectorShape);
+  var sectorMat = new THREE.MeshLambertMaterial({ color: 0xf97316, side: THREE.DoubleSide, transparent: true, opacity: 0.65 });
+  var sectorMesh = new THREE.Mesh(sectorGeo, sectorMat);
+  sectorMesh.position.y = 0.05;
+  sectorMesh.rotation.x = -Math.PI / 2;
+  _unfoldGroup.add(sectorMesh);
+
+  // Sector outline
+  var outlinePts = [];
+  outlinePts.push(new THREE.Vector3(0, 0.06, 0));
+  for (var j = 0; j <= segs; j++) {
+    var a2 = -theta / 2 + (theta * j / segs);
+    outlinePts.push(new THREE.Vector3(Math.sin(a2) * l, 0.06, -Math.cos(a2) * l));
+  }
+  outlinePts.push(new THREE.Vector3(0, 0.06, 0));
+  var outlineGeo = new THREE.BufferGeometry().setFromPoints(outlinePts);
+  var outlineMat = new THREE.LineBasicMaterial({ color: 0x9a3412 });
+  _unfoldGroup.add(new THREE.Line(outlineGeo, outlineMat));
+
+  // Base circle (unfolded, placed to the right of sector)
+  var circleGeo = new THREE.CircleGeometry(r, 64);
+  var circleMat = new THREE.MeshLambertMaterial({ color: 0xfbbf24, side: THREE.DoubleSide });
+  var circleMesh = new THREE.Mesh(circleGeo, circleMat);
+  circleMesh.position.set(l + r + 0.5, 0.05, 0);
+  circleMesh.rotation.x = -Math.PI / 2;
+  _unfoldGroup.add(circleMesh);
+
+  var circleEdge = new THREE.EdgesGeometry(circleGeo);
+  var circleEdgeMat = new THREE.LineBasicMaterial({ color: 0xd97706 });
+  var circleWire = new THREE.LineSegments(circleEdge, circleEdgeMat);
+  circleMesh.add(circleWire);
+
+  // Labels on unfolded
+  var lblSector = Edu3D.textSprite('侧面（扇形）', { color: '#9a3412', scale: 0.45 });
+  lblSector.position.set(0, 0.1, l * 0.4);
+  _unfoldGroup.add(lblSector);
+
+  var lblCircle = Edu3D.textSprite('底面', { color: '#d97706', scale: 0.4 });
+  lblCircle.position.set(l + r + 0.5, 0.1, 0);
+  _unfoldGroup.add(lblCircle);
+
+  var lblSl = Edu3D.textSprite('l=' + l.toFixed(1), { color: '#dc2626', scale: 0.35 });
+  lblSl.position.set(Math.sin(-theta / 2) * l * 0.5, 0.1, -Math.cos(-theta / 2) * l * 0.5);
+  _unfoldGroup.add(lblSl);
+
+  var lblSr = Edu3D.textSprite('r=' + r.toFixed(1), { color: '#2563eb', scale: 0.35 });
+  lblSr.position.set(l + r + 0.5 + r * 0.5, 0.1, 0);
+  _unfoldGroup.add(lblSr);
+}
+
+function toggleUnfold() {
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+  _isUnfolded = !_isUnfolded;
+  document.getElementById('btn-toggle').textContent = _isUnfolded ? '🔼 折叠回圆锥' : '🔽 展开圆锥';
+
+  _coneGroup.visible = !_isUnfolded;
+  _unfoldGroup.visible = _isUnfolded;
+
+  if (_isUnfolded) {
+    // Fade in unfolded group
+    _unfoldGroup.children.forEach(function(child) {
+      if (child.material) { child.material.transparent = true; child.material.opacity = 0; }
+    });
+    var t = 0, steps = 30;
+    function fadeIn() {
+      t++;
+      var p = Math.min(t / steps, 1);
+      _unfoldGroup.children.forEach(function(child) {
+        if (child.material && child.material.opacity !== undefined) {
+          child.material.opacity = p * 0.65;
+        }
+      });
+      if (p < 1) _animId = requestAnimationFrame(fadeIn);
+      else _animId = null;
+    }
+    fadeIn();
+  }
+}
+
+function onSlider() {
+  _r = parseFloat(document.getElementById('sl-r').value);
+  _h = parseFloat(document.getElementById('sl-h').value);
+  document.getElementById('val-r').textContent = _r.toFixed(1);
+  document.getElementById('val-h').textContent = _h.toFixed(1);
+
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+  buildCone();
+}
+
+function updateInfo(r, h, l) {
+  var theta_deg = (r / l) * 360;
+  var arcLen = 2 * Math.PI * r;
+  var sLateral = Math.PI * r * l;
+  var sBase = Math.PI * r * r;
+  var sTotal = sLateral + sBase;
+
+  document.getElementById('sv-l').textContent = l.toFixed(2);
+  document.getElementById('sv-sr').textContent = l.toFixed(2);
+  document.getElementById('sv-arc').textContent = arcLen.toFixed(2);
+  document.getElementById('sv-theta').textContent = theta_deg.toFixed(1) + '°';
+
+  var box = document.getElementById('calc-box');
+  box.innerHTML =
+    '<span class="formula">母线长 l = √(r² + h²)</span><br/>' +
+    '= √(' + r.toFixed(1) + '² + ' + h.toFixed(1) + '²)<br/>' +
+    '= √' + (r*r + h*h).toFixed(2) + ' = <span class="formula">' + l.toFixed(2) + '</span><br/><br/>' +
+    '<span class="formula">圆心角 θ = 360° × r/l</span><br/>' +
+    '= 360° × ' + r.toFixed(1) + '/' + l.toFixed(2) + '<br/>' +
+    '= <span class="formula">' + theta_deg.toFixed(1) + '°</span><br/><br/>' +
+    '<span class="formula">S侧 = πrl = ' + sLateral.toFixed(2) + '</span><br/>' +
+    '<span class="formula">S底 = πr² = ' + sBase.toFixed(2) + '</span><br/>' +
+    '<span class="formula">S表 = ' + sTotal.toFixed(2) + '</span>';
+}
+
+function resetAll() {
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+  _r = 1.5; _h = 2.5;
+  document.getElementById('sl-r').value = _r;
+  document.getElementById('sl-h').value = _h;
+  document.getElementById('val-r').textContent = _r.toFixed(1);
+  document.getElementById('val-h').textContent = _h.toFixed(1);
+  buildCone();
+}
+
+init();
+</script>
+</body>
+</html>
