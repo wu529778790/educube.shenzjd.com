@@ -372,38 +372,34 @@ function playFill() {
 
   var radius = parseFloat(document.getElementById('sr').value);
   var height = parseFloat(document.getElementById('sh').value);
-  _fillProgress = 0;
 
-  // 水面mesh
-  var fillGeo = new THREE.CylinderGeometry(radius * 0.98, radius * 0.98, 0.01, 32);
+  // 预创建水柱 mesh（通过 scale.y 控制高度，避免每帧重建 geometry）
+  var fillGeo = new THREE.CylinderGeometry(radius * 0.98, radius * 0.98, 1, 32);
   var fillMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.5 });
   var fillMesh = new THREE.Mesh(fillGeo, fillMat);
+  fillMesh.scale.y = 0.01;
   fillMesh.position.y = 0.005;
   _fillGroup.add(fillMesh);
 
   var t = 0;
   var steps = 90;
+  var vLabel = null;
 
   function animateFill() {
     t++;
     var p = Math.min(t / steps, 1);
     var ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-    var fillH = ease * height;
+    var fillH = Math.max(0.01, ease * height);
 
-    _fillGroup.remove(fillMesh);
-    fillGeo.dispose();
-    fillGeo = new THREE.CylinderGeometry(radius * 0.98, radius * 0.98, Math.max(0.01, fillH), 32);
-    fillMesh = new THREE.Mesh(fillGeo, fillMat);
+    // 用 scale + position 避免每帧创建/销毁 geometry
+    fillMesh.scale.y = fillH;
     fillMesh.position.y = fillH / 2;
-    _fillGroup.add(fillMesh);
 
     // 体积标注
     var V = Math.PI * radius * radius * fillH;
-    if (_fillGroup.children.length > 1) {
-      _fillGroup.remove(_fillGroup.children[1]);
-    }
+    if (vLabel) _fillGroup.remove(vLabel);
     if (fillH > 0.5) {
-      var vLabel = Edu3D.textSprite('V=' + V.toFixed(1), { color: '#0284c7', scale: 0.5 });
+      vLabel = Edu3D.textSprite('V=' + V.toFixed(1), { color: '#0284c7', scale: 0.5 });
       vLabel.position.set(radius + 1.2, fillH / 2, 0);
       _fillGroup.add(vLabel);
     }

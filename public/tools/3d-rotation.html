@@ -98,6 +98,11 @@
           <strong>尺寸信息</strong><br/>
           <span id="size-detail">长=2.4, 宽=1.6, 高=1.4</span>
         </div>
+        <div class="divider"></div>
+        <div class="info-box" style="font-size:11px;line-height:1.7;border-color:#fed7aa;background:#fffbeb">
+          <strong>欧拉公式验证</strong><br/>
+          <span id="euler-check">V - E + F = 8 - 12 + 6 = 2 ✓</span>
+        </div>
       </div>
     </div>
   </div>
@@ -273,34 +278,30 @@ function applyHighlight() {
     var edges2 = new THREE.LineSegments(edgeGeo2, edgeMat2);
     _highlightGroup.add(edges2);
   } else if (_highlight === 'face' && (_currentShape === 'cuboid' || _currentShape === 'cube')) {
-    // 高亮面
+    // 高亮面 — 正确获取各维度
+    var p = _params;
+    var l = (_currentShape === 'cube') ? p.p1 : p.p1; // 长/x
+    var w = (_currentShape === 'cube') ? p.p1 : p.p2; // 宽/z
+    var h = (_currentShape === 'cube') ? p.p1 : (p.p3 || p.p1); // 高/y
+    var hl = l/2, hw = w/2, hh = h/2;
     var faceColors = [0x4f8cff, 0x3b72e0, 0x60a5fa, 0x93c5fd, 0x2563eb, 0x7dd3fc];
     if (_currentShape === 'cube') faceColors = [0xf97316, 0xea580c, 0xfb923c, 0xfed7aa, 0xc2410c, 0xfdba74];
-    for (var i = 0; i < 6; i++) {
-      var planeSize = (i < 2) ? (_currentShape === 'cube' ? _params.p1 : _params.p1) :
-                      (i < 4) ? (_currentShape === 'cube' ? _params.p1 : _params.p1) :
-                                (_currentShape === 'cube' ? _params.p1 : _params.p2);
-      var planeH = (i < 2) ? (_currentShape === 'cube' ? _params.p1 : _params.p2) :
-                   (i < 4) ? (_currentShape === 'cube' ? _params.p1 : _params.p3) :
-                             (_currentShape === 'cube' ? _params.p1 : _params.p3);
-      var pg = new THREE.PlaneGeometry(planeSize * 0.85, planeH * 0.85);
+    var faces = [
+      { w: l, h: w, pos:[0,hh,0],  rot:[0,0,0] },          // 上面
+      { w: l, h: w, pos:[0,-hh,0], rot:[0,0,0] },           // 下面
+      { w: l, h: h, pos:[0,0,hw],  rot:[-Math.PI/2,0,0] },  // 后面
+      { w: l, h: h, pos:[0,0,-hw], rot:[Math.PI/2,0,0] },   // 前面
+      { w: w, h: h, pos:[-hl,0,0], rot:[0,0,Math.PI/2] },   // 左面
+      { w: w, h: h, pos:[hl,0,0],  rot:[0,0,-Math.PI/2] },  // 右面
+    ];
+    faces.forEach(function(f, i) {
+      var pg = new THREE.PlaneGeometry(f.w * 0.85, f.h * 0.85);
       var pm = new THREE.MeshBasicMaterial({ color: faceColors[i], transparent: true, opacity: 0.4, side: THREE.DoubleSide });
       var pp = new THREE.Mesh(pg, pm);
-      // 6个面的位置和旋转
-      var positions = [
-        { pos: [0, _params.p3/2 || _params.p1/2, 0], rot: [0,0,0] },
-        { pos: [0, -(_params.p3/2 || _params.p1/2), 0], rot: [0,0,0] },
-        { pos: [0, 0, _params.p2/2 || _params.p1/2], rot: [-Math.PI/2,0,0] },
-        { pos: [0, 0, -(_params.p2/2 || _params.p1/2)], rot: [Math.PI/2,0,0] },
-        { pos: [-(_params.p1/2 || _params.p1/2), 0, 0], rot: [0,0,Math.PI/2] },
-        { pos: [(_params.p1/2 || _params.p1/2), 0, 0], rot: [0,0,-Math.PI/2] }
-      ];
-      if (positions[i]) {
-        pp.position.set(positions[i].pos[0], positions[i].pos[1], positions[i].pos[2]);
-        pp.rotation.set(positions[i].rot[0], positions[i].rot[1], positions[i].rot[2]);
-      }
+      pp.position.set(f.pos[0], f.pos[1], f.pos[2]);
+      pp.rotation.set(f.rot[0], f.rot[1], f.rot[2]);
       _highlightGroup.add(pp);
-    }
+    });
   }
   _highlightGroup.rotation.y = _meshGroup.rotation.y;
 }
@@ -313,6 +314,11 @@ function updateInfo() {
   document.getElementById('val-vertices').textContent = def.vertices;
   document.getElementById('val-face-shape').textContent = def.faceShape;
   document.getElementById('size-detail').textContent = def.sizeText(_params);
+  // 欧拉公式验证
+  var V = def.vertices, E = def.edges, F = def.faces;
+  var euler = V - E + F;
+  document.getElementById('euler-check').textContent =
+    V + ' - ' + E + ' + ' + F + ' = ' + euler + (euler === 2 ? ' ✓' : '');
 }
 
 function setHighlight(h) {
