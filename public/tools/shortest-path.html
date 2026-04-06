@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>长方体表面最短路径 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 300px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#f0fdf4,#fdfaf4); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+
+  .path-btn {
+    padding:8px 10px; border-radius:8px; font-size:11px; font-weight:700;
+    cursor:pointer; border:2px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+  }
+  .path-btn:hover { border-color:#16a34a; }
+  .path-btn.active { background:#dcfce7; color:#166534; border-color:#16a34a; }
+  .path-btn .p-dist { font-size:10px; color:#64748b; margin-top:2px; }
+
+  .unfold-btn {
+    width:100%; padding:10px; border:none; border-radius:10px; font-size:14px; font-weight:700;
+    cursor:pointer; font-family:var(--edu-font); transition:all .15s;
+    background:#16a34a; color:#fff;
+  }
+  .unfold-btn:hover { background:#15803d; }
+
+  .slider-row { display:flex; align-items:center; gap:8px; }
+  .slider-row label { font-size:11px; font-weight:600; color:#334155; min-width:20px; }
+  .slider-row input[type=range] { flex:1; accent-color:#16a34a; }
+  .slider-row .val { font-size:12px; font-weight:700; color:#16a34a; min-width:30px; text-align:right; }
+
+  .calc-box {
+    background:#f0fdf4; border:1.5px solid #86efac; border-radius:10px;
+    padding:10px 12px; font-size:12px; line-height:2; color:#334155;
+  }
+  .calc-box .formula { font-weight:700; color:#166534; }
+  .calc-box .highlight { font-weight:800; color:#dc2626; font-size:14px; }
+
+  .result-card {
+    background:#fef3c7; border:2px solid #fbbf24; border-radius:12px;
+    padding:12px; text-align:center;
+  }
+  .result-label { font-size:12px; color:#92400e; }
+  .result-val { font-size:22px; font-weight:800; color:#b45309; margin:4px 0; }
+  .result-note { font-size:11px; color:#78350f; line-height:1.6; }
+
+  .info-box { background:#fff; border:1px solid #bbf7d0; border-radius:10px; padding:10px 12px; font-size:11px; line-height:1.8; color:#334155; }
+  .info-box strong { color:#16a34a; }
+
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="edu-toolbar-title">🐛 长方体表面最短路径</span>
+      <span class="edu-toolbar-subtitle">八年级下册 · 勾股定理</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="unfold-btn" id="btn-toggle" onclick="toggleUnfold()">📄 展开长方体</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">长方体尺寸</div>
+          <div class="slider-row">
+            <label>a</label>
+            <input type="range" id="sl-a" min="1" max="5" step="0.5" value="3" oninput="onParam()">
+            <span class="val" id="val-a">3</span>
+          </div>
+          <div class="slider-row">
+            <label>b</label>
+            <input type="range" id="sl-b" min="1" max="5" step="0.5" value="2" oninput="onParam()">
+            <span class="val" id="val-b">2</span>
+          </div>
+          <div class="slider-row">
+            <label>c</label>
+            <input type="range" id="sl-c" min="1" max="5" step="0.5" value="4" oninput="onParam()">
+            <span class="val" id="val-c">4</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择路径（A→B的不同走法）</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px" id="path-btns"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">路径计算</div>
+          <div class="calc-box" id="calc-box">选择一条路径查看计算过程</div>
+        </div>
+        <div class="divider"></div>
+        <div class="result-card">
+          <div class="result-label">最短路径长度</div>
+          <div class="result-val" id="min-dist">—</div>
+          <div class="result-note" id="min-note">比较所有路径，取最短</div>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <strong>解题方法</strong><br/>
+          ● 蚂蚁从A走到B，只能沿<strong>表面</strong>爬行<br/>
+          ● 将长方体<strong>展开</strong>成平面<br/>
+          ● 在展开图上用<strong>勾股定理</strong>求直线距离<br/>
+          ● 比较所有展开方式的距离，取最短<br/>
+          ● d = √[(a+b)² + c²] 等3种展开
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var _scene, _camera, _renderer, _controls;
+var _boxGroup, _pathGroup, _unfoldGroup;
+var _a = 3, _b = 2, _c = 4;
+var _currentPath = -1;
+var _isUnfolded = false;
+var _animId = null;
+
+// Path definitions: each path is a way to unfold and connect A to B
+// A = (0,0,0) bottom-front-left, B = (a,b,c) top-back-right
+// In 3D: A at origin, B at (a, c, b) [x=right, y=up, z=forward]
+function getPaths(a, b, c) {
+  return [
+    {
+      name: '路径1',
+      flat: '(a+b) × c',
+      desc: '展开前+右面',
+      d: Math.sqrt(Math.pow(a + b, 2) + c * c),
+      formula: 'd = √[(a+b)² + c²]',
+      // On 3D box: go from A along bottom-front edge to (a+b, 0), then up to B
+      // Actually: cross front face (width a, height c) and right face (width b, height c)
+      // Unfolded: rectangle of width (a+b) and height c
+      sides: ['front', 'right'],
+      color: 0xef4444,
+      points3D: [
+        [0, 0, 0],       // A
+        [a, 0, 0],        // corner on front-right edge
+        [a, c, 0],        // going up
+        [a, c, b]         // B (approximate)
+      ]
+    },
+    {
+      name: '路径2',
+      flat: '(a+c) × b',
+      desc: '展开前+上面',
+      d: Math.sqrt(Math.pow(a + c, 2) + b * b),
+      formula: 'd = √[(a+c)² + b²]',
+      sides: ['front', 'top'],
+      color: 0x3b82f6,
+      points3D: [
+        [0, 0, 0],       // A
+        [a, 0, 0],        // going right
+        [a, c, 0],        // going up
+        [a, c, b]         // B
+      ]
+    },
+    {
+      name: '路径3',
+      flat: '(b+c) × a',
+      desc: '展开右+上面',
+      d: Math.sqrt(Math.pow(b + c, 2) + a * a),
+      formula: 'd = √[(b+c)² + a²]',
+      sides: ['right', 'top'],
+      color: 0x8b5cf6,
+      points3D: [
+        [0, 0, 0],       // A
+        [0, 0, b],        // going forward
+        [0, c, b],        // going up
+        [a, c, b]         // B
+      ]
+    },
+    {
+      name: '路径4',
+      flat: '(a+b) × c 反向',
+      desc: '展开底+后面',
+      d: Math.sqrt(Math.pow(a + b, 2) + c * c),
+      formula: 'd = √[(a+b)² + c²]',
+      sides: ['bottom', 'back'],
+      color: 0xf97316,
+      points3D: [
+        [0, 0, 0],
+        [0, 0, -b],
+        [a, 0, -b],
+        [a, c, 0]
+      ]
+    },
+    {
+      name: '路径5',
+      flat: '(a+c) × b 反向',
+      desc: '展开底+右面',
+      d: Math.sqrt(Math.pow(a + c, 2) + b * b),
+      formula: 'd = √[(a+c)² + b²]',
+      sides: ['bottom', 'right'],
+      color: 0x06b6d4,
+      points3D: [
+        [0, 0, 0],
+        [a, 0, 0],
+        [a, 0, b],
+        [a, c, b]
+      ]
+    },
+    {
+      name: '路径6',
+      flat: '(b+c) × a 反向',
+      desc: '展开左+上面',
+      d: Math.sqrt(Math.pow(b + c, 2) + a * a),
+      formula: 'd = √[(b+c)² + a²]',
+      sides: ['left', 'top'],
+      color: 0xf43f5e,
+      points3D: [
+        [0, 0, 0],
+        [-a, 0, 0],
+        [-a, c, 0],
+        [0, c, 0]
+      ]
+    },
+  ];
+}
+
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xf0fdf4, camX: 7, camY: 5, camZ: 7 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 10, 10);
+
+  _boxGroup = new THREE.Group();
+  _scene.add(_boxGroup);
+  _pathGroup = new THREE.Group();
+  _scene.add(_pathGroup);
+  _unfoldGroup = new THREE.Group();
+  _scene.add(_unfoldGroup);
+
+  buildAll();
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+
+function clearGroup(g) { while (g.children.length) g.remove(g.children[0]); }
+
+function buildAll() {
+  clearGroup(_boxGroup);
+  clearGroup(_pathGroup);
+  clearGroup(_unfoldGroup);
+  _isUnfolded = false;
+  _currentPath = -1;
+  document.getElementById('btn-toggle').textContent = '📄 展开长方体';
+  _boxGroup.visible = true;
+  _unfoldGroup.visible = false;
+
+  var a = _a, b = _b, c = _c;
+
+  // Build box
+  var boxGeo = new THREE.BoxGeometry(a, c, b);
+  var boxMat = new THREE.MeshLambertMaterial({ color: 0x86efac, transparent: true, opacity: 0.25 });
+  var box = new THREE.Mesh(boxGeo, boxMat);
+  box.position.set(a / 2, c / 2, b / 2);
+  box.castShadow = true;
+  box.add(new THREE.LineSegments(
+    new THREE.EdgesGeometry(boxGeo),
+    new THREE.LineBasicMaterial({ color: 0x166534 })
+  ));
+  _boxGroup.add(box);
+
+  // Labels for A and B
+  var aLbl = Edu3D.textSprite('A', { color: '#dc2626', scale: 0.5 });
+  aLbl.position.set(-0.3, -0.3, -0.3);
+  _boxGroup.add(aLbl);
+
+  var bLbl = Edu3D.textSprite('B', { color: '#dc2626', scale: 0.5 });
+  bLbl.position.set(a + 0.3, c + 0.3, b + 0.3);
+  _boxGroup.add(bLbl);
+
+  // Dimension labels
+  var laLbl = Edu3D.textSprite('a=' + a, { color: '#166534', scale: 0.35 });
+  laLbl.position.set(a / 2, -0.4, b + 0.5);
+  _boxGroup.add(laLbl);
+
+  var lbLbl = Edu3D.textSprite('b=' + b, { color: '#166534', scale: 0.35 });
+  lbLbl.position.set(a + 0.5, -0.4, b / 2);
+  _boxGroup.add(lbLbl);
+
+  var lcLbl = Edu3D.textSprite('c=' + c, { color: '#166534', scale: 0.35 });
+  lcLbl.position.set(-0.5, c / 2, b + 0.5);
+  _boxGroup.add(lcLbl);
+
+  // Dots at A and B
+  var dotGeo = new THREE.SphereGeometry(0.1, 12, 12);
+  var dotMat = new THREE.MeshBasicMaterial({ color: 0xdc2626 });
+  var dotA = new THREE.Mesh(dotGeo, dotMat);
+  dotA.position.set(0, 0, 0);
+  _boxGroup.add(dotA);
+  var dotB = new THREE.Mesh(dotGeo.clone(), dotMat.clone());
+  dotB.position.set(a, c, b);
+  _boxGroup.add(dotB);
+
+  // Build path buttons
+  buildPathBtns();
+  updateMinDist();
+}
+
+function buildPathBtns() {
+  var paths = getPaths(_a, _b, _c);
+  var container = document.getElementById('path-btns');
+  container.innerHTML = '';
+  paths.forEach(function(p, idx) {
+    var btn = document.createElement('button');
+    btn.className = 'path-btn' + (idx === _currentPath ? ' active' : '');
+    btn.id = 'pb-' + idx;
+    btn.innerHTML = p.name + '<div class="p-dist">d≈' + p.d.toFixed(2) + '</div>';
+    btn.onclick = (function(i) { return function() { selectPath(i); }; })(idx);
+    container.appendChild(btn);
+  });
+}
+
+function selectPath(idx) {
+  _currentPath = idx;
+  clearGroup(_pathGroup);
+
+  var paths = getPaths(_a, _b, _c);
+  var p = paths[idx];
+  var a = _a, b = _b, c = _c;
+
+  // Highlight selected button
+  paths.forEach(function(_, i) {
+    var btn = document.getElementById('pb-' + i);
+    if (btn) btn.classList.toggle('active', i === idx);
+  });
+
+  // Draw path line on the 3D box (straight line through unfolded surface)
+  // We show a simplified straight line from A to B in 3D
+  var lineMat = new THREE.LineBasicMaterial({ color: p.color, linewidth: 3 });
+  var lineGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(a, c, b)
+  ]);
+  var line = new THREE.Line(lineGeo, lineMat);
+  _pathGroup.add(line);
+
+  // Update calculation
+  var box = document.getElementById('calc-box');
+  box.innerHTML =
+    '<span class="formula">' + p.formula + '</span><br/>' +
+    '= √[(' + p.flat.split('×')[0].trim() + ')² + ' + p.flat.split('×')[1].trim() + '²]<br/>';
+
+  // Parse which dimensions are involved
+  var parts = p.flat.replace(/[()反正向]/g, '').split('×');
+  var dim1Expr = parts[0].trim();
+  var dim2 = parseFloat(parts[1].trim());
+  var dim1 = 0;
+  if (dim1Expr.indexOf('a+b') >= 0) dim1 = a + b;
+  else if (dim1Expr.indexOf('a+c') >= 0) dim1 = a + c;
+  else if (dim1Expr.indexOf('b+c') >= 0) dim1 = b + c;
+
+  box.innerHTML +=
+    '= √[' + dim1 + '² + ' + dim2 + '²]<br/>' +
+    '= √[' + (dim1 * dim1) + ' + ' + (dim2 * dim2) + ']<br/>' +
+    '= √' + (dim1 * dim1 + dim2 * dim2) + '<br/>' +
+    '<span class="highlight">≈ ' + p.d.toFixed(2) + '</span>';
+}
+
+function updateMinDist() {
+  var paths = getPaths(_a, _b, _c);
+  var minD = Infinity, minIdx = 0;
+  paths.forEach(function(p, i) {
+    if (p.d < minD) { minD = p.d; minIdx = i; }
+  });
+
+  document.getElementById('min-dist').textContent = '≈ ' + minD.toFixed(2);
+  document.getElementById('min-note').innerHTML =
+    '最短路径为 <strong>' + paths[minIdx].name + '</strong>（' + paths[minIdx].desc + '）<br/>' +
+    paths[minIdx].formula;
+}
+
+function toggleUnfold() {
+  _isUnfolded = !_isUnfolded;
+  document.getElementById('btn-toggle').textContent = _isUnfolded ? '📦 折叠回长方体' : '📄 展开长方体';
+
+  if (_isUnfolded) {
+    _boxGroup.visible = false;
+    _pathGroup.visible = false;
+    buildUnfolded();
+    _unfoldGroup.visible = true;
+  } else {
+    _unfoldGroup.visible = false;
+    _boxGroup.visible = true;
+    _pathGroup.visible = true;
+  }
+}
+
+function buildUnfolded() {
+  clearGroup(_unfoldGroup);
+  var a = _a, b = _b, c = _c;
+  var paths = getPaths(a, b, c);
+  var gap = 0.08;
+
+  // Layout: center cross pattern
+  //   [top]
+  // [left][front][right][back]
+  //   [bottom]
+
+  var faceW, faceH, faceX, faceZ;
+  var faces = [
+    { name: '前', w: a, h: c, x: 0, z: 0, color: 0x86efac },        // front (center)
+    { name: '右', w: b, h: c, x: a + gap, z: 0, color: 0x6ee7b7 },   // right
+    { name: '后', w: a, h: c, x: a + b + gap * 2, z: 0, color: 0x86efac }, // back
+    { name: '左', w: b, h: c, x: -b - gap, z: 0, color: 0x6ee7b7 },  // left
+    { name: '上', w: a, h: b, x: 0, z: -(b + gap), color: 0xfbbf24 }, // top (above front)
+    { name: '下', w: a, h: b, x: 0, z: c + gap, color: 0xfde68a },   // bottom (below front)
+  ];
+
+  var totalW = (b + gap) + a + (b + gap) + a;
+  var totalH = (b + gap) + c + (b + gap);
+  var offsetX = -totalW / 2;
+  var offsetZ = -totalH / 2;
+
+  faces.forEach(function(f) {
+    var geo = new THREE.PlaneGeometry(f.w - 0.02, f.h - 0.02);
+    var mat = new THREE.MeshLambertMaterial({ color: f.color, side: THREE.DoubleSide, transparent: true, opacity: 0.6 });
+    var mesh = new THREE.Mesh(geo, mat);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.set(offsetX + f.x + f.w / 2, 0.01, offsetZ + f.z + f.h / 2);
+    mesh.add(new THREE.LineSegments(
+      new THREE.EdgesGeometry(geo),
+      new THREE.LineBasicMaterial({ color: 0x166534, transparent: true, opacity: 0.4 })
+    ));
+
+    var lbl = Edu3D.textSprite(f.name, { color: '#166534', scale: 0.35 });
+    lbl.position.y = 0.05;
+    mesh.add(lbl);
+
+    _unfoldGroup.add(mesh);
+  });
+
+  // Mark A and B on the unfolded layout
+  // A is at bottom-left-front corner → on front face, bottom-left
+  var aPos = new THREE.Vector3(offsetX + 0, 0.05, offsetZ + c);
+  var bPos = new THREE.Vector3(offsetX + a, 0.05, offsetZ + 0); // top-right of front
+
+  var dotGeo = new THREE.SphereGeometry(0.12, 12, 12);
+  var dotMatA = new THREE.MeshBasicMaterial({ color: 0xdc2626 });
+  var dotMatB = new THREE.MeshBasicMaterial({ color: 0x2563eb });
+
+  var dotA = new THREE.Mesh(dotGeo, dotMatA);
+  dotA.position.copy(aPos);
+  _unfoldGroup.add(dotA);
+
+  var dotB = new THREE.Mesh(dotGeo.clone(), dotMatB);
+  dotB.position.copy(bPos);
+  _unfoldGroup.add(dotB);
+
+  // A/B labels
+  var al = Edu3D.textSprite('A', { color: '#dc2626', scale: 0.4 });
+  al.position.copy(aPos); al.position.y = 0.3;
+  _unfoldGroup.add(al);
+
+  var bl = Edu3D.textSprite('B', { color: '#2563eb', scale: 0.4 });
+  bl.position.copy(bPos); bl.position.y = 0.3;
+  _unfoldGroup.add(bl);
+
+  // Draw all paths on unfolded surface
+  if (_currentPath >= 0) {
+    var p = paths[_currentPath];
+    // For the selected path, draw the straight line on the unfolded faces
+    // Path 0 (front+right): A at front-bottom-left → B at right-top-right
+    var linePoints = [];
+    switch (_currentPath) {
+      case 0: // front + right
+        linePoints = [aPos, new THREE.Vector3(offsetX + a + b, 0.05, offsetZ + 0)];
+        break;
+      case 1: // front + top
+        linePoints = [aPos, new THREE.Vector3(offsetX + a, 0.05, offsetZ - b)];
+        break;
+      case 2: // right + top
+        linePoints = [new THREE.Vector3(offsetX + a + b, 0.05, offsetZ + c), new THREE.Vector3(offsetX + a + b, 0.05, offsetZ - b)];
+        break;
+      case 3: // bottom + back
+        linePoints = [aPos.clone(), aPos.clone()];
+        linePoints[1].z += b; linePoints[1].x += a + b;
+        break;
+      case 4: // bottom + right
+        linePoints = [aPos.clone(), aPos.clone()];
+        linePoints[1].z += b; linePoints[1].x += a + c;
+        break;
+      case 5: // left + top
+        linePoints = [new THREE.Vector3(offsetX - b, 0.05, offsetZ + c), new THREE.Vector3(offsetX - b, 0.05, offsetZ - b + a)];
+        break;
+    }
+
+    if (linePoints.length >= 2) {
+      var lineGeo = new THREE.BufferGeometry().setFromPoints(linePoints);
+      var lineMat = new THREE.LineBasicMaterial({ color: p.color, linewidth: 3 });
+      var line = new THREE.Line(lineGeo, lineMat);
+      _unfoldGroup.add(line);
+    }
+  }
+
+  // Offset everything up a bit
+  _unfoldGroup.position.y = 1;
+}
+
+function onParam() {
+  _a = parseFloat(document.getElementById('sl-a').value);
+  _b = parseFloat(document.getElementById('sl-b').value);
+  _c = parseFloat(document.getElementById('sl-c').value);
+  document.getElementById('val-a').textContent = _a;
+  document.getElementById('val-b').textContent = _b;
+  document.getElementById('val-c').textContent = _c;
+  buildAll();
+}
+
+function resetAll() {
+  _a = 3; _b = 2; _c = 4;
+  document.getElementById('sl-a').value = _a;
+  document.getElementById('sl-b').value = _b;
+  document.getElementById('sl-c').value = _c;
+  document.getElementById('val-a').textContent = _a;
+  document.getElementById('val-b').textContent = _b;
+  document.getElementById('val-c').textContent = _c;
+  _isUnfolded = false;
+  buildAll();
+}
+
+init();
+</script>
+</body>
+</html>

@@ -7,8 +7,9 @@ import { p4Tools } from "./p4";
 import { p5Tools } from "./p5";
 import { p6Tools } from "./p6";
 import { j7Tools } from "./j7";
+import { j8Tools } from "./j8";
 
-export const tools: Tool[] = [...p3Tools, ...p4Tools, ...p5Tools, ...p6Tools, ...j7Tools];
+export const tools: Tool[] = [...p3Tools, ...p4Tools, ...p5Tools, ...p6Tools, ...j7Tools, ...j8Tools];
 
 export function filterToolsByCatalog(
   list: Tool[],
