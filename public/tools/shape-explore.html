@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>认识立体图形 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 280px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#fef3c7,#fdfaf4); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fffdf5; border-left:1px solid #e2e8f0; padding:16px; display:flex; flex-direction:column; gap:12px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+  .info-box { background:#fff; border:1px solid #fde68a; border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.9; color:#334155; }
+  .info-box strong { color:#d97706; }
+  .shape-btn {
+    padding:10px 14px; border-radius:10px; font-size:13px; font-weight:700;
+    cursor:pointer; border:2px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+  }
+  .shape-btn:hover { border-color:#f59e0b; transform:scale(1.02); }
+  .shape-btn.active { background:#fef3c7; color:#92400e; border-color:#f59e0b; box-shadow:0 2px 8px rgba(245,158,11,0.2); }
+  .shape-btn .shape-icon { font-size:24px; }
+  .prop-row { display:flex; justify-content:space-between; align-items:center; padding:6px 10px; background:#fff; border-radius:6px; border:1px solid #f1f5f9; font-size:12px; }
+  .prop-label { color:#64748b; }
+  .prop-value { font-weight:700; color:#1e293b; }
+  .real-life { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+  .life-tag { padding:3px 10px; border-radius:12px; font-size:11px; background:#fef3c7; color:#92400e; font-weight:600; }
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
+  .name-big { font-size:22px; font-weight:800; color:#d97706; text-align:center; font-family:var(--edu-serif); }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="edu-toolbar-title">🎲 认识立体图形</span>
+      <span class="edu-toolbar-subtitle">三年级 · 空间启蒙</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择图形</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button class="shape-btn active" id="btn-cube" onclick="setShape('cube')"><span class="shape-icon">🎲</span>正方体</button>
+            <button class="shape-btn" id="btn-cuboid" onclick="setShape('cuboid')"><span class="shape-icon">📦</span>长方体</button>
+            <button class="shape-btn" id="btn-cylinder" onclick="setShape('cylinder')"><span class="shape-icon">🥫</span>圆柱体</button>
+            <button class="shape-btn" id="btn-sphere" onclick="setShape('sphere')"><span class="shape-icon">⚽</span>球体</button>
+            <button class="shape-btn" id="btn-cone" onclick="setShape('cone')"><span class="shape-icon">🍦</span>圆锥体</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="name-big" id="shape-name">正方体</div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">特征</div>
+          <div class="info-box" id="shape-props"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">生活中的例子</div>
+          <div class="real-life" id="real-life"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">小知识</div>
+          <div class="info-box" id="shape-fact"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var _scene, _camera, _renderer, _controls;
+var _meshGroup, _labelGroup;
+
+var SHAPES = {
+  cube: {
+    name: '正方体',
+    create: function() {
+      var geo = new THREE.BoxGeometry(2, 2, 2);
+      var colors = [0xfbbf24, 0xf59e0b, 0xfde68a, 0xd97706, 0xfbbf24, 0xf59e0b];
+      var mat = colors.map(function(c) { return new THREE.MeshLambertMaterial({ color: c }); });
+      return new THREE.Mesh(geo, mat);
+    },
+    props: '面数：<strong>6</strong> 个（都是正方形）<br/>棱数：<strong>12</strong> 条（都一样长）<br/>顶点：<strong>8</strong> 个<br/>特征：6个面完全相同，12条棱长度相等',
+    life: ['骰子', '魔方', '积木', '礼品盒'],
+    fact: '正方体是最特殊的立体图形，它是长方体的"亲戚"——所有棱都相等的长方体就是正方体！'
+  },
+  cuboid: {
+    name: '长方体',
+    create: function() {
+      var geo = new THREE.BoxGeometry(3, 2, 1.5);
+      var colors = [0x60a5fa, 0x3b82f6, 0x93c5fd, 0x2563eb, 0x60a5fa, 0x3b82f6];
+      var mat = colors.map(function(c) { return new THREE.MeshLambertMaterial({ color: c }); });
+      return new THREE.Mesh(geo, mat);
+    },
+    props: '面数：<strong>6</strong> 个（都是长方形）<br/>棱数：<strong>12</strong> 条（相对的棱一样长）<br/>顶点：<strong>8</strong> 个<br/>特征：相对的两个面完全相同',
+    life: ['书本', '冰箱', '砖头', '铅笔盒'],
+    fact: '长方体有6个面，每个面都是长方形。相对的两个面形状和大小完全相同！'
+  },
+  cylinder: {
+    name: '圆柱体',
+    create: function() {
+      var geo = new THREE.CylinderGeometry(1, 1, 2.5, 32);
+      var mat = new THREE.MeshLambertMaterial({ color: 0x22c55e });
+      return new THREE.Mesh(geo, mat);
+    },
+    props: '面数：<strong>3</strong> 个<br/>上面：<strong>1个圆形</strong><br/>下面：<strong>1个圆形</strong>（和上面一样大）<br/>侧面：<strong>1个曲面</strong><br/>特征：上下两个圆一样大，从上到下一样粗',
+    life: ['易拉罐', '水管', '蜡烛', '电池'],
+    fact: '圆柱的侧面如果展开来，就是一个长方形！长方形的长等于底面圆的周长。'
+  },
+  sphere: {
+    name: '球体',
+    create: function() {
+      var geo = new THREE.SphereGeometry(1.2, 32, 32);
+      var mat = new THREE.MeshLambertMaterial({ color: 0xef4444 });
+      return new THREE.Mesh(geo, mat);
+    },
+    props: '面数：<strong>1个曲面</strong><br/>棱数：<strong>0</strong><br/>顶点：<strong>0</strong><br/>特征：只有一个弯曲的面，从任何方向看都是圆形',
+    life: ['篮球', '足球', '地球仪', '橙子'],
+    fact: '球体从任何方向看都是圆的！球面上每一点到球心的距离都相等。'
+  },
+  cone: {
+    name: '圆锥体',
+    create: function() {
+      var geo = new THREE.ConeGeometry(1.2, 2.5, 32);
+      var mat = new THREE.MeshLambertMaterial({ color: 0xa855f7 });
+      return new THREE.Mesh(geo, mat);
+    },
+    props: '面数：<strong>2</strong> 个<br/>底面：<strong>1个圆形</strong><br/>侧面：<strong>1个曲面</strong><br/>顶点：<strong>1个</strong>（尖尖的）<br/>特征：下面是圆，越往上越尖',
+    life: ['冰淇淋蛋筒', '生日帽', '交通锥', '漏斗'],
+    fact: '圆锥的侧面展开来是一个扇形（像一块披萨）。尖尖的那个点叫"顶点"。'
+  }
+};
+
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xfefce8, camX: 4, camY: 3, camZ: 5 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 10, 10);
+
+  _meshGroup = new THREE.Group();
+  _scene.add(_meshGroup);
+  _labelGroup = new THREE.Group();
+  _scene.add(_labelGroup);
+
+  setShape('cube');
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+
+function setShape(key) {
+  while (_meshGroup.children.length) _meshGroup.remove(_meshGroup.children[0]);
+  while (_labelGroup.children.length) _labelGroup.remove(_labelGroup.children[0]);
+
+  var def = SHAPES[key];
+  var mesh = def.create();
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  _meshGroup.add(mesh);
+
+  // 边框（非球体时显示）
+  if (key !== 'sphere') {
+    var edgeGeo = new THREE.EdgesGeometry(mesh.geometry);
+    var edgeMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.2 });
+    _meshGroup.add(new THREE.LineSegments(edgeGeo, edgeMat));
+  }
+
+  // 名字标签悬浮在上方
+  var label = Edu3D.textSprite(def.name, { color: '#92400e', scale: 0.6 });
+  label.position.set(0, 2.5, 0);
+  _labelGroup.add(label);
+
+  // 更新面板
+  document.getElementById('shape-name').textContent = def.name;
+  document.getElementById('shape-props').innerHTML = def.props;
+  document.getElementById('shape-fact').innerHTML = def.fact;
+
+  var lifeDiv = document.getElementById('real-life');
+  lifeDiv.innerHTML = '';
+  def.life.forEach(function(item) {
+    var span = document.createElement('span');
+    span.className = 'life-tag';
+    span.textContent = item;
+    lifeDiv.appendChild(span);
+  });
+
+  // 按钮状态
+  Object.keys(SHAPES).forEach(function(k) {
+    document.getElementById('btn-' + k).classList.toggle('active', k === key);
+  });
+}
+
+function resetAll() {
+  _meshGroup.rotation.set(0, 0, 0);
+  _camera.position.set(4, 3, 5);
+  _controls.target.set(0, 0, 0);
+  _controls.update();
+  setShape('cube');
+}
+
+init();
+</script>
+</body>
+</html>

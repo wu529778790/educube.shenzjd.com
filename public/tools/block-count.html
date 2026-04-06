@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>搭积木数一数 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 280px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#ecfdf5,#fdfaf4); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+  .preset-btn {
+    padding:8px 12px; border-radius:8px; font-size:12px; font-weight:600;
+    cursor:pointer; border:2px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+  }
+  .preset-btn:hover { border-color:#22c55e; }
+  .preset-btn.active { background:#dcfce7; color:#166534; border-color:#22c55e; }
+  .answer-area {
+    background:#f0fdf4; border:2px solid #86efac; border-radius:12px;
+    padding:14px; text-align:center;
+  }
+  .answer-label { font-size:12px; color:#64748b; margin-bottom:6px; }
+  .answer-input {
+    width:80px; padding:8px; border:2px solid #86efac; border-radius:8px;
+    font-size:20px; font-weight:800; text-align:center; color:#166534;
+    font-family:var(--edu-font); outline:none;
+  }
+  .answer-input:focus { border-color:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,0.2); }
+  .check-btn {
+    padding:8px 20px; border:none; border-radius:8px; font-size:14px; font-weight:700;
+    cursor:pointer; font-family:var(--edu-font); transition:all .15s;
+    background:#22c55e; color:#fff; margin-top:8px;
+  }
+  .check-btn:hover { background:#16a34a; }
+  .result-msg { font-size:14px; font-weight:700; margin-top:8px; min-height:20px; }
+  .result-correct { color:#16a34a; }
+  .result-wrong { color:#ef4444; }
+  .reveal-btn {
+    padding:6px 14px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:12px;
+    font-weight:600; cursor:pointer; font-family:var(--edu-font); background:#fff;
+    color:#64748b; transition:all .15s;
+  }
+  .reveal-btn:hover { border-color:#64748b; }
+  .info-box { background:#fff; border:1px solid #bbf7d0; border-radius:10px; padding:8px 10px; font-size:11px; line-height:1.7; color:#334155; }
+  .info-box strong { color:#16a34a; }
+  .view-card { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:6px; display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .view-title { font-size:10px; font-weight:700; color:#1a3a5c; }
+  canvas.view-canvas { border:none; border-radius:4px; background:#f8fafc; display:block; }
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="edu-toolbar-title">🧱 搭积木数一数</span>
+      <span class="edu-toolbar-subtitle">三年级 · 空间推理</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="reveal-btn" id="btn-reveal" onclick="toggleReveal()">👁 显示隐藏积木</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择题目</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+            <button class="preset-btn active" id="pb-1" onclick="loadPuzzle(1)">第1题</button>
+            <button class="preset-btn" id="pb-2" onclick="loadPuzzle(2)">第2题</button>
+            <button class="preset-btn" id="pb-3" onclick="loadPuzzle(3)">第3题</button>
+            <button class="preset-btn" id="pb-4" onclick="loadPuzzle(4)">第4题</button>
+            <button class="preset-btn" id="pb-5" onclick="loadPuzzle(5)">第5题</button>
+            <button class="preset-btn" id="pb-6" onclick="loadPuzzle(6)">第6题</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="answer-area">
+          <div class="answer-label">这个图形一共有多少块积木？</div>
+          <input type="number" class="answer-input" id="answer-input" min="1" max="50" placeholder="?"/>
+          <span style="font-size:14px;font-weight:600;color:#64748b;margin-left:4px">块</span>
+          <div><button class="check-btn" onclick="checkAnswer()">检查答案</button></div>
+          <div class="result-msg" id="result-msg"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">三视图参考</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+            <div class="view-card">
+              <div class="view-title" style="color:#3b82f6;">正面</div>
+              <canvas class="view-canvas" id="cv-front" width="80" height="60"></canvas>
+            </div>
+            <div class="view-card">
+              <div class="view-title" style="color:#22c55e;">侧面</div>
+              <canvas class="view-canvas" id="cv-side" width="80" height="60"></canvas>
+            </div>
+            <div class="view-card">
+              <div class="view-title" style="color:#f97316;">上面</div>
+              <canvas class="view-canvas" id="cv-top" width="80" height="60"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <strong>解题技巧</strong><br/>
+          ● 先数能看到的积木<br/>
+          ● 再想想哪些被挡住了<br/>
+          ● 分层来数不容易遗漏<br/>
+          ● 可以用三视图帮助思考
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var _scene, _camera, _renderer, _controls;
+var _blockGroup;
+var _showHidden = false;
+var _currentPuzzle = 1;
+
+// 每道题：grid[row][col] = 层数，answer = 总数
+var PUZZLES = {
+  1: { grid: [[2,1],[1,1]], answer: 5 },    // 简单 L
+  2: { grid: [[3,1],[1,0]], answer: 5 },    // 高 L
+  3: { grid: [[1,1,1],[1,2,1]], answer: 7 }, // 中间凸起
+  4: { grid: [[2,2],[2,1]], answer: 7 },    // 缺一角
+  5: { grid: [[1,1,1],[1,1,1],[1,1,2]], answer: 10 }, // 角上高
+  6: { grid: [[2,1,0],[1,2,1],[0,1,1]], answer: 8 }, // 对角
+};
+
+var COLORS = [0x22c55e, 0x16a34a, 0x15803d, 0x166534, 0x14532d];
+var HIDDEN_COLOR = 0xfbbf24; // 隐藏积木用黄色
+
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xf0fdf4, camX: 5, camY: 4, camZ: 5 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 8, 8);
+
+  _blockGroup = new THREE.Group();
+  _scene.add(_blockGroup);
+
+  loadPuzzle(1);
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+
+function loadPuzzle(num) {
+  _currentPuzzle = num;
+  _showHidden = false;
+  document.getElementById('btn-reveal').textContent = '👁 显示隐藏积木';
+  document.getElementById('result-msg').textContent = '';
+  document.getElementById('result-msg').className = 'result-msg';
+  document.getElementById('answer-input').value = '';
+
+  for (var j = 1; j <= 6; j++) {
+    var el = document.getElementById('pb-' + j);
+    if (el) el.classList.toggle('active', j === num);
+  }
+
+  buildBlocks();
+}
+
+function buildBlocks() {
+  while (_blockGroup.children.length) _blockGroup.remove(_blockGroup.children[0]);
+
+  var puzzle = PUZZLES[_currentPuzzle];
+  var grid = puzzle.grid;
+  var rows = grid.length;
+  var cols = grid[0].length;
+
+  var blockGeo = new THREE.BoxGeometry(0.92, 0.92, 0.92);
+  var edgeGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(0.92, 0.92, 0.92));
+  var edgeMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.15 });
+
+  for (var r = 0; r < rows; r++) {
+    for (var c = 0; c < cols; c++) {
+      var h = grid[r][c];
+      for (var l = 0; l < h; l++) {
+        // 判断是否被遮挡（上面有积木遮挡）
+        var isHidden = false;
+        if (l < h - 1) {
+          // 上方有积木，只有 reveal 时用不同颜色
+        }
+
+        var color = COLORS[l % COLORS.length];
+        var mat = new THREE.MeshLambertMaterial({ color: color, transparent: true, opacity: 0.85 });
+        var mesh = new THREE.Mesh(blockGeo, mat);
+        mesh.position.set(c - cols / 2 + 0.5, l + 0.46, r - rows / 2 + 0.5);
+        mesh.castShadow = true;
+        var wire = new THREE.LineSegments(edgeGeo, edgeMat);
+        mesh.add(wire);
+        _blockGroup.add(mesh);
+      }
+
+      // 隐藏积木（被上方遮挡的）- 用透明黄色显示
+      if (_showHidden) {
+        for (var l2 = 0; l2 < h - 1; l2++) {
+          // 已经在上面添加了，只是颜色不同
+        }
+      }
+    }
+  }
+
+  drawViews();
+}
+
+function toggleReveal() {
+  _showHidden = !_showHidden;
+  document.getElementById('btn-reveal').textContent = _showHidden ? '🙈 隐藏透视' : '👁 显示隐藏积木';
+
+  // 简单方式：为下层积木改变颜色表示被隐藏的
+  var puzzle = PUZZLES[_currentPuzzle];
+  var grid = puzzle.grid;
+  var rows = grid.length;
+  var cols = grid[0].length;
+
+  var idx = 0;
+  for (var r = 0; r < rows; r++) {
+    for (var c = 0; c < cols; c++) {
+      var h = grid[r][c];
+      for (var l = 0; l < h; l++) {
+        var mesh = _blockGroup.children[idx];
+        if (mesh) {
+          if (_showHidden && l < h - 1) {
+            // 被上方遮挡的积木用黄色半透明
+            mesh.material.color.setHex(HIDDEN_COLOR);
+            mesh.material.opacity = 0.4;
+          } else {
+            mesh.material.color.setHex(COLORS[l % COLORS.length]);
+            mesh.material.opacity = 0.85;
+          }
+        }
+        idx++;
+      }
+    }
+  }
+}
+
+function checkAnswer() {
+  var input = parseInt(document.getElementById('answer-input').value);
+  var puzzle = PUZZLES[_currentPuzzle];
+  var msg = document.getElementById('result-msg');
+
+  if (isNaN(input)) {
+    msg.textContent = '请输入数字';
+    msg.className = 'result-msg result-wrong';
+    return;
+  }
+
+  if (input === puzzle.answer) {
+    msg.textContent = '🎉 回答正确！一共 ' + puzzle.answer + ' 块';
+    msg.className = 'result-msg result-correct';
+  } else {
+    var diff = input - puzzle.answer;
+    if (diff > 0) {
+      msg.textContent = '多了 ' + Math.abs(diff) + ' 块，再想想哪些被挡住了';
+    } else {
+      msg.textContent = '少了 ' + Math.abs(diff) + ' 块，注意被遮挡的部分';
+    }
+    msg.className = 'result-msg result-wrong';
+  }
+}
+
+// ===== 三视图 =====
+function drawViews() {
+  var puzzle = PUZZLES[_currentPuzzle];
+  var grid = puzzle.grid;
+  var rows = grid.length;
+  var cols = grid[0].length;
+  var maxH = 0;
+  for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) maxH = Math.max(maxH, grid[r][c]);
+
+  // 正视图
+  drawOneView('cv-front', '#3b82f6', '#93c5fd', function(c) {
+    var m = 0; for (var r = 0; r < rows; r++) m = Math.max(m, grid[r][c]); return m;
+  }, cols, maxH);
+
+  // 侧视图
+  drawOneView('cv-side', '#22c55e', '#86efac', function(r) {
+    var m = 0; for (var c = 0; c < cols; c++) m = Math.max(m, grid[r][c]); return m;
+  }, rows, maxH);
+
+  // 俯视图
+  drawTopView2D(grid, rows, cols);
+}
+
+function drawOneView(id, strokeColor, fillColor, fn, count, maxH) {
+  var cv = document.getElementById(id);
+  var ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  var cw = (cv.width - 16) / count;
+  var ch = (cv.height - 10) / maxH;
+  var offX = 8, base = cv.height - 4;
+  for (var i = 0; i < count; i++) {
+    var h = fn(i);
+    if (h > 0) {
+      ctx.fillStyle = fillColor;
+      ctx.fillRect(offX + i * cw, base - h * ch, cw - 2, h * ch);
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(offX + i * cw, base - h * ch, cw - 2, h * ch);
+    }
+  }
+  ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(offX, base); ctx.lineTo(offX + count * cw, base); ctx.stroke();
+}
+
+function drawTopView2D(grid, rows, cols) {
+  var cv = document.getElementById('cv-top');
+  var ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  var cw = (cv.width - 16) / cols;
+  var ch = (cv.height - 10) / rows;
+  var offX = 8, offY = 5;
+  for (var r = 0; r < rows; r++) {
+    for (var c = 0; c < cols; c++) {
+      var x = offX + c * cw;
+      var y = offY + r * ch;
+      if (grid[r][c] > 0) {
+        ctx.fillStyle = '#fed7aa';
+        ctx.fillRect(x, y, cw - 1, ch - 1);
+        ctx.strokeStyle = '#f97316'; ctx.lineWidth = 1;
+        ctx.strokeRect(x, y, cw - 1, ch - 1);
+        ctx.fillStyle = '#92400e'; ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(grid[r][c], x + (cw - 1) / 2, y + (ch - 1) / 2);
+      } else {
+        ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 0.5;
+        ctx.strokeRect(x, y, cw - 1, ch - 1);
+      }
+    }
+  }
+}
+
+function resetAll() {
+  loadPuzzle(1);
+}
+
+init();
+</script>
+</body>
+</html>
