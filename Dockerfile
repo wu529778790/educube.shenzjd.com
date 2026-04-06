@@ -15,7 +15,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # --- 生产层 ---
-FROM base AS runner
+FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -38,8 +38,9 @@ USER nextjs
 
 EXPOSE 3000
 
+# 使用 Node.js 进行健康检查（Alpine 不一定有 wget）
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+  CMD node -e "const http = require('http'); const req = http.get('http://localhost:3000/', (res) => { process.exit(res.statusCode < 500 ? 0 : 1); }); req.on('error', () => process.exit(1)); req.setTimeout(3000, () => { req.destroy(); process.exit(1); })"
 
 # 持久化生成工具的卷（容器重启后数据不丢失）
 # 启动时挂载：docker run -v educube-data:/app/data -v educube-gen:/app/public/tools/gen educube

@@ -68,11 +68,31 @@ jobs:
             type=sha
 
       - name: Build and push
+        id: docker_build
         uses: docker/build-push-action@v6
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Smoke test
+        if: github.event_name == 'pull_request'
+        run: |
+          TAG=$(echo '${{ steps.meta.outputs.tags }}' | head -1 | tr -d '\n')
+          docker run -d --name smoke -p 3001:3000 "$TAG"
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3001/ > /dev/null 2>&1; then
+              echo "Smoke test passed"
+              docker stop smoke
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Smoke test failed — container logs:"
+          docker logs smoke
+          docker stop smoke
+          exit 1

@@ -106,7 +106,23 @@ function validateToolRecord(
     };
   }
 
-  return { valid: true, tool: tool as unknown as Tool };
+  return {
+    valid: true,
+    tool: {
+      id: tool.id as string,
+      name: tool.name as string,
+      subtitle: tool.subtitle as string,
+      chapter: tool.chapter as string,
+      semester: tool.semester as "上册" | "下册",
+      unitNum: tool.unitNum as number,
+      gradeId: tool.gradeId as string,
+      subjectId: tool.subjectId as string,
+      description: tool.description as string,
+      tags: tool.tags as string[],
+      gradient: tool.gradient as [string, string],
+      icon: tool.icon as string,
+    } satisfies Tool,
+  };
 }
 
 /** 中文停用词表（轻量版） */
@@ -145,6 +161,12 @@ function cleanName(name: string): string {
   if (name.length <= 30) return name;
   return name.slice(0, 27) + "...";
 }
+
+/** Tool 类型定义中已知字段的 key 集合，用于索引压缩和字段校验 */
+const KNOWN_TOOL_KEYS = new Set([
+  "id", "name", "subtitle", "chapter", "semester", "unitNum",
+  "gradeId", "subjectId", "description", "tags", "gradient", "icon",
+]);
 
 /** 最大保存记录数，超出后 FIFO 裁剪 */
 const MAX_RECORDS = 500;
@@ -185,11 +207,7 @@ async function compactIndexFile(
   for (const rec of records) {
     // 检查是否存在 Tool schema 之外的 key
     const toolKeys = Object.keys(rec.tool as object);
-    const knownKeys = new Set([
-      "id", "name", "subtitle", "chapter", "semester", "unitNum",
-      "gradeId", "subjectId", "description", "tags", "gradient", "icon",
-    ]);
-    if (toolKeys.some((k) => !knownKeys.has(k))) {
+    if (toolKeys.some((k) => !KNOWN_TOOL_KEYS.has(k))) {
       needsRewrite = true;
       break;
     }
@@ -250,11 +268,7 @@ export async function loadGeneratedTools(): Promise<Tool[]> {
           const rec = parsed[i] as GeneratedToolRecord;
           // 检查是否存在多余字段
           const toolKeys = Object.keys(rec.tool as object);
-          const knownKeys = new Set([
-            "id", "name", "subtitle", "chapter", "semester", "unitNum",
-            "gradeId", "subjectId", "description", "tags", "gradient", "icon",
-          ]);
-          if (toolKeys.some((k) => !knownKeys.has(k))) hadExtraFields = true;
+          if (toolKeys.some((k) => !KNOWN_TOOL_KEYS.has(k))) hadExtraFields = true;
           const recKeys = Object.keys(rec);
           if (recKeys.some((k) => k !== "tool" && k !== "createdAt")) hadExtraFields = true;
 

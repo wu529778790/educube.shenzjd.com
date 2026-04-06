@@ -1,3 +1,5 @@
+"use client";
+
 import { useMemo } from "react";
 import type { SemesterFilter, Tool } from "@/data/tools";
 import { getPathLabel, grades, subjects } from "@/data/curriculum";

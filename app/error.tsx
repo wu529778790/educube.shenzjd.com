@@ -14,6 +14,7 @@ export default function Error({
 
   return (
     <div
+      id="main-content"
       className="min-h-screen flex items-center justify-center"
       style={{ background: "var(--edu-bg)" }}
     >

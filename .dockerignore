@@ -7,3 +7,13 @@ node_modules
 *.local
 *.md
 LICENSE
+.vscode
+.idea
+coverage
+__tests__
+docs
+.github
+*.tsbuildinfo
+*.log
+data/generated-tools.json
+public/tools/gen/

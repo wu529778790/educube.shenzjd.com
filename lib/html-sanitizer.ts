@@ -6,76 +6,122 @@
  * 2. 使用 sanitize-html（基于 htmlparser2 真正的 HTML 解析器）白名单清洗
  * 3. 后置验证（script src 白名单、script 内容危险 API 检测）
  * 4. 确保 edu-base.css 链接存在
+ *
+ * 注意：正则检测是纵深防御的一层，不是安全边界。
+ * 主要安全边界是 iframe sandbox="allow-scripts"（无 allow-same-origin）
+ * 以及为生成的 HTML 文件设置的 CSP sandbox 头。
  */
 import sanitize from "sanitize-html";
 
 /* ── 允许的 script src 路径前缀（仅允许本地 edu-lib 资源） ── */
 const ALLOWED_SCRIPT_SRC_PREFIXES = ["../edu-lib/"];
 
-/* ── script 内容安全 API 白名单（预留，用于未来更精细的静态分析） ── */
-
 /**
  * 验证 script 内容是否安全。
- * 采用正则启发式检测：拦截已知的危险 API 调用模式，包括字符串拼接绕过。
+ * 采用正则启发式检测：拦截已知的危险 API 调用模式。
+ * 这不是完美的安全边界（JS 有无穷种编码方式），而是最佳努力过滤。
+ * 真正的安全边界是 iframe sandbox + CSP sandbox 头。
  */
 function validateScriptContent(content: string): void {
   // 先去除注释，防止注释混淆绕过：eval/*comment*/(payload)
-  const stripped = content.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  const stripped = content
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/.*$/gm, "");
 
   const DANGEROUS_PATTERNS: ReadonlyArray<{ pattern: RegExp; label: string }> = [
+    // 网络请求
     { pattern: /\bfetch\s*\(/, label: "fetch()" },
     { pattern: /\bXMLHttpRequest\b/, label: "XMLHttpRequest" },
     { pattern: /\bWebSocket\b/, label: "WebSocket" },
+
+    // 动态代码执行
     { pattern: /\beval\s*\(/, label: "eval()" },
     { pattern: /\bnew\s+Function\s*\(/, label: "new Function()" },
     { pattern: /\bimport\s*\(/, label: "import()" },
     { pattern: /\brequire\s*\(/, label: "require()" },
+
+    // 消息与窗口
     { pattern: /\.postMessage\s*\(/, label: "postMessage()" },
+    { pattern: /\bwindow\.open\s*\(/, label: "window.open()" },
+
+    // 存储
     { pattern: /\bdocument\.cookie\b/, label: "document.cookie" },
     { pattern: /\blocalStorage\b/, label: "localStorage" },
     { pattern: /\bsessionStorage\b/, label: "sessionStorage" },
-    { pattern: /\bwindow\.open\s*\(/, label: "window.open()" },
+
+    // 浏览器 API
     { pattern: /\bnavigator\b/, label: "navigator" },
+
+    // Web Workers
     { pattern: /\bimportScripts\s*\(/, label: "importScripts()" },
     { pattern: /\bWorker\b/, label: "Worker" },
     { pattern: /\bSharedWorker\b/, label: "SharedWorker" },
     { pattern: /\bServiceWorker\b/, label: "ServiceWorker" },
+
     // setTimeout/setInterval 字符串参数（经典代码执行向量）
     { pattern: /\bsetTimeout\s*\(\s*["']/, label: "setTimeout(string)" },
     { pattern: /\bsetInterval\s*\(\s*["']/, label: "setInterval(string)" },
+
     // Reflect.apply 间接调用
     { pattern: /\bReflect\.apply\s*\(/, label: "Reflect.apply()" },
+
     // 检测字符串拼接绕过尝试：window['fetch'], obj["eval"] 等
     { pattern: /\[[\s"']*["'](?:fetch|eval|Function|import|require|XMLHttpRequest|localStorage|sessionStorage|document\.cookie|navigator)["'][\s"']*\]/, label: "动态属性访问（绕过检测）" },
-    // 检测全局对象动态属性访问：window['...'], self["..."]
+
+    // 检测全局对象动态属性访问：window['...'], self["..."], globalThis['...']
     { pattern: /(?:window|self|globalThis)\s*\[\s*["']/, label: "全局对象动态属性访问" },
+
     // 检测间接调用：(0, eval)(payload)
     { pattern: /\(\s*\d+\s*,\s*(?:eval|Function|fetch)\s*\)/, label: "间接调用绕过" },
-    // 检测 atob/btoa 可能用于编码绕过
+
+    // 编码绕过
     { pattern: /\batob\s*\(/, label: "atob()" },
     { pattern: /\bbtoa\s*\(/, label: "btoa()" },
-    // 检测 String.fromCharCode 用于动态构造被禁标识符
     { pattern: /\bString\.fromCharCode\b/, label: "String.fromCharCode()" },
-    // 检测模板字面量拼接绕过：`fetch` → window[`fet`+`ch`]
+
+    // 字符串拼接绕过：`fetch` → window[`fet`+`ch`]、模板字面量拼接
     { pattern: /[`']\s*\+\s*[`']/, label: "字符串拼接绕过" },
-    // 检测十六进制/Unicode 转义绕过：\x66\x65\x74\x63\x68 = fetch
-    { pattern: /\\x[0-9a-fA-F]{2}.*\\x[0-9a-fA-F]{2}.*\\x[0-9a-fA-F]{2}/, label: "十六进制转义绕过" },
-    { pattern: /\\u[0-9a-fA-F]{4}.*\\u[0-9a-fA-F]{4}.*\\u[0-9a-fA-F]{4}/, label: "Unicode 转义绕过" },
-    // 检测 document.write
+    // 模板字面量内插值绕过：window[`fet${x}ch`]
+    { pattern: /[`'][^`']*\$\{[^}]*\}[^`']*[`']/, label: "模板字面量注入" },
+
+    // 十六进制/Unicode 转义绕过：\x66\x65\x74\x63\x68 = fetch
+    { pattern: /\\x[0-9a-fA-F]{2}.*\\x[0-9a-fA-F]{2}/, label: "十六进制转义绕过" },
+    { pattern: /\\u[0-9a-fA-F]{4}.*\\u[0-9a-fA-F]{4}/, label: "Unicode 转义绕过" },
+
+    // DOM 操作
     { pattern: /\bdocument\.write\s*\(/, label: "document.write()" },
-    // 检测 location 赋值（导航劫持）
     { pattern: /\blocation\s*(?:\.href\s*)?=/, label: "location 赋值" },
-    // 检测 WebAssembly 使用
+
+    // 高级绕过
     { pattern: /\bWebAssembly\b/, label: "WebAssembly" },
-    // 检测 Proxy 对象（可用于动态分发绕过检测）
     { pattern: /\bnew\s+Proxy\s*\(/, label: "Proxy()" },
-    // 检测原型链污染
-    { pattern: /__proto__|\.constructor\s*\[/, label: "原型链操作" },
+
+    // 原型链污染
+    { pattern: /__proto__/, label: "__proto__" },
+    { pattern: /\.constructor\s*\[/, label: "constructor 括号访问" },
+    { pattern: /\.constructor\s*\.\s*constructor/, label: "constructor.constructor 绕过" },
     { pattern: /Object\.defineProperty\s*\(/, label: "Object.defineProperty()" },
-    // 检测 script 元素动态创建
+
+    // 动态创建 script 元素
     { pattern: /createElement\s*\(\s*["']script["']\s*\)/, label: "动态创建 script 元素" },
-    // 检测 MutationObserver 可能用于 DOM 篡改
+
+    // DOM 篡改
     { pattern: /\bMutationObserver\b/, label: "MutationObserver" },
+
+    // with 语句（可改变作用域，用于绕过检测）
+    { pattern: /\bwith\s*\(/, label: "with 语句" },
+
+    // 解构别名绕过：const {fetch: f} = window / self / globalThis
+    { pattern: /\{\s*(?:fetch|eval|Function|XMLHttpRequest|localStorage|sessionStorage)\s*:/, label: "解构别名绕过" },
+
+    // getter/setter 滥用：{get fetch() { ... }}
+    { pattern: /\bget\s+(?:fetch|eval|Function)\s*\(/, label: "getter 滥用" },
+
+    // Generator/Iterator 滥用
+    { pattern: /\bGenerator(?:Function)?\b/, label: "Generator" },
+
+    // AsyncFunction 构造器
+    { pattern: /\bAsyncFunction\b/, label: "AsyncFunction" },
   ];
 
   for (const { pattern, label } of DANGEROUS_PATTERNS) {
@@ -260,8 +306,6 @@ function buildSanitizeConfig(
       th: ["colspan", "rowspan"],
     },
     allowedSchemes: ["http", "https"],
-    // 不允许 sanitize-html 自动过滤 script 内容——我们需要保留它来做后续检查
-    // 但要禁止不安全的 selfClosingTags 行为
     disallowedTagsMode: "discard",
   };
 }
@@ -316,13 +360,19 @@ export function sanitizeHtml(
     }
   }
 
-  // ── 6. 验证 script 内容安全性（白名单 + 正则启发式） ──
+  // ── 6. 验证 script 内容安全性 ──
   const scriptContentRe = /<script[^>]*>([\s\S]*?)<\/script>/gi;
   while ((match = scriptContentRe.exec(html)) !== null) {
     validateScriptContent(match[1]);
   }
 
-  // ── 7. 确保 edu-base.css 链接存在 ──
+  // ── 7. 验证 style 内容（防止 CSS 注入外泄数据） ──
+  const styleContentRe = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+  while ((match = styleContentRe.exec(html)) !== null) {
+    validateStyleContent(match[1]);
+  }
+
+  // ── 8. 确保 edu-base.css 链接存在 ──
   const hasEduBaseLink = /edu-lib\/edu-base\.css/.test(html);
   if (!hasEduBaseLink) {
     html = html.replace(
@@ -331,10 +381,19 @@ export function sanitizeHtml(
     );
   }
 
-  // ── 8. 验证闭合 ──
+  // ── 9. 验证闭合 ──
   if (!html.includes("</html>")) {
     throw new Error("AI 输出缺少 </html> 闭合标签");
   }
 
   return html;
+}
+
+/** 检测 CSS 中的数据外泄向量（url() 指向外部） */
+function validateStyleContent(content: string): void {
+  // 检测 url() 中引用外部资源
+  const urlPattern = /url\s*\(\s*["']?\s*(https?:|\/\/)/gi;
+  if (urlPattern.test(content)) {
+    throw new Error("AI 输出的 CSS 包含不允许的外部 URL 引用");
+  }
 }

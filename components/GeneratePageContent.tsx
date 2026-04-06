@@ -189,7 +189,7 @@ export default function GeneratePageContent() {
   const currentStepIndex = stage === "idle" ? -1 : STAGE_ORDER.indexOf(stage);
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--edu-bg)" }}>
+    <div id="main-content" className="min-h-screen" style={{ background: "var(--edu-bg)" }}>
       <header
         className="sticky top-0 z-50 backdrop-blur-xl border-b shadow-sm"
         style={{

@@ -10,6 +10,9 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+export const dynamicParams = true;
+export const revalidate = 3600; // 1 小时 ISR，降低 generated tool 页面的 SSR 压力
+
 export async function generateStaticParams() {
   return tools.map((tool) => ({ id: tool.id }));
 }

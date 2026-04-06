@@ -45,7 +45,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" className={`h-full ${notoSerifSC.variable}`}>
       <body className="min-h-full antialiased">
-        <a href="#tools" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:bg-white focus:text-black focus:px-4 focus:py-2 focus:rounded focus:shadow-lg">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:bg-white focus:text-black focus:px-4 focus:py-2 focus:rounded focus:shadow-lg">
           跳转到主要内容
         </a>
         {children}
