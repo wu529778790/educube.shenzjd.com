@@ -24,6 +24,13 @@
     transition:all .15s; font-family:var(--edu-font);
   }
   .mode-btn.active { background:#22c55e; color:#fff; border-color:#22c55e; }
+  .preset-btn {
+    padding:4px 8px; border-radius:6px; font-size:10px; font-weight:600;
+    cursor:pointer; border:1.5px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font);
+  }
+  .preset-btn:hover { border-color:#94a3b8; }
+  .preset-btn.active { background:#16a34a; color:#fff; border-color:#16a34a; }
   .view-section { display:flex; flex-direction:column; gap:4px; }
   .view-title { font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px; }
   .view-dot { width:8px; height:8px; border-radius:2px; }
@@ -48,8 +55,7 @@
       <button class="mode-btn" id="mode-remove" onclick="setMode('remove')">➖ 移除</button>
       <button class="mode-btn" id="mode-height" onclick="setMode('height')">↑ 叠高</button>
       <div class="edu-divider"></div>
-      <button class="edu-btn edu-btn-outline" onclick="loadPreset('L')">预设L形</button>
-      <button class="edu-btn edu-btn-outline" onclick="loadPreset('T')">预设T形</button>
+      <button class="edu-btn edu-btn-outline" onclick="undoAction()">↩ 撤销</button>
       <button class="edu-btn edu-btn-outline" onclick="clearAll()">清空</button>
     </div>
   </div>
@@ -61,8 +67,19 @@
       </div>
       <div class="control-panel">
         <div class="ctrl-section">
-          <div class="ctrl-label">当前模式</div>
-          <div id="mode-hint" style="font-size:12px;color:#16a34a;font-weight:600;">点击空格添加积木</div>
+          <div class="ctrl-label">预设形状</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <button class="preset-btn" onclick="loadPreset('L')">L形</button>
+            <button class="preset-btn" onclick="loadPreset('T')">T形</button>
+            <button class="preset-btn" onclick="loadPreset('Z')">Z形</button>
+            <button class="preset-btn" onclick="loadPreset('U')">U形</button>
+            <button class="preset-btn" onclick="loadPreset('stair')">阶梯</button>
+            <button class="preset-btn" onclick="loadPreset('cross')">十字</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label" id="mode-hint">点击空格添加积木</div>
         </div>
         <div class="divider"></div>
         <div class="ctrl-section">
@@ -88,6 +105,7 @@
           ● 点击网格空位添加积木<br/>
           ● 点击已有积木可叠高<br/>
           ● 切换「移除」模式删除<br/>
+          ● 撤销按钮可回退操作<br/>
           ● 三视图实时联动更新
         </div>
       </div>
@@ -99,6 +117,8 @@ var COLS = 5, ROWS = 5, MAX_H = 5;
 var grid = [];
 for (var i = 0; i < ROWS; i++) { grid[i] = []; for (var j = 0; j < COLS; j++) grid[i][j] = 0; }
 var mode = 'add';
+var history = [];
+
 var _scene, _camera, _renderer, _controls;
 var _blockGroup, _gridGroup;
 var _raycaster = new THREE.Raycaster();
@@ -137,6 +157,18 @@ function buildBaseGrid() {
       _gridGroup.add(plane);
     }
   }
+}
+
+function saveHistory() {
+  var snap = grid.map(function(row) { return row.slice(); });
+  history.push(snap);
+  if (history.length > 50) history.shift();
+}
+
+function undoAction() {
+  if (history.length === 0) return;
+  grid = history.pop();
+  rebuildBlocks();
 }
 
 function rebuildBlocks() {
@@ -194,6 +226,7 @@ function onCanvasClick(event) {
     col = hit.userData.col;
   } else return;
 
+  saveHistory();
   if (mode === 'add') {
     if (grid[row][col] === 0) grid[row][col] = 1;
   } else if (mode === 'remove') {
@@ -302,17 +335,27 @@ function drawTopView() {
 }
 
 function loadPreset(type) {
+  saveHistory();
   for (var i = 0; i < ROWS; i++) for (var j = 0; j < COLS; j++) grid[i][j] = 0;
   if (type === 'L') {
     grid[1][1] = 2; grid[2][1] = 1; grid[3][1] = 1; grid[3][2] = 1; grid[3][3] = 1;
   } else if (type === 'T') {
     grid[1][1] = 2; grid[1][2] = 1; grid[1][3] = 1;
     grid[2][2] = 2; grid[3][2] = 1;
+  } else if (type === 'Z') {
+    grid[1][1] = 1; grid[1][2] = 1; grid[2][2] = 2; grid[2][3] = 1; grid[3][3] = 1;
+  } else if (type === 'U') {
+    grid[1][1] = 1; grid[1][3] = 1; grid[2][1] = 2; grid[2][2] = 1; grid[2][3] = 2;
+  } else if (type === 'stair') {
+    grid[1][1] = 1; grid[2][1] = 1; grid[2][2] = 1; grid[3][1] = 1; grid[3][2] = 1; grid[3][3] = 1;
+  } else if (type === 'cross') {
+    grid[1][2] = 1; grid[2][1] = 1; grid[2][2] = 2; grid[2][3] = 1; grid[3][2] = 1;
   }
   rebuildBlocks();
 }
 
 function clearAll() {
+  saveHistory();
   for (var i = 0; i < ROWS; i++) for (var j = 0; j < COLS; j++) grid[i][j] = 0;
   rebuildBlocks();
 }

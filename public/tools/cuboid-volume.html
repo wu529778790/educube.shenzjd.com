@@ -29,6 +29,13 @@
     transition:all .15s; font-family:var(--edu-font); text-align:center;
   }
   .highlight-btn.active { background:#8B5CF6; color:#fff; border-color:#8B5CF6; }
+  .preset-btn {
+    padding:4px 10px; border-radius:6px; font-size:11px; font-weight:600;
+    cursor:pointer; border:1.5px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font);
+  }
+  .preset-btn:hover { border-color:#94a3b8; }
+  .preset-btn.active { background:#6D28D9; color:#fff; border-color:#6D28D9; }
   .orbit-hint {
     position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
     background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
@@ -59,6 +66,18 @@
           <div class="slider-row"><label>长</label><input type="range" id="sl" min="1" max="6" value="4" step="1" oninput="rebuild()"/><span class="val" id="vl">4</span></div>
           <div class="slider-row"><label>宽</label><input type="range" id="sw" min="1" max="5" value="3" step="1" oninput="rebuild()"/><span class="val" id="vw">3</span></div>
           <div class="slider-row"><label>高</label><input type="range" id="sh" min="1" max="5" value="2" step="1" oninput="rebuild()"/><span class="val" id="vh">2</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">预设尺寸</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <button class="preset-btn" onclick="loadPreset(4,3,2)">4×3×2</button>
+            <button class="preset-btn" onclick="loadPreset(5,4,3)">5×4×3</button>
+            <button class="preset-btn" onclick="loadPreset(3,3,3)">正方体</button>
+            <button class="preset-btn" onclick="loadPreset(6,2,1)">扁形</button>
+            <button class="preset-btn" onclick="loadPreset(2,2,5)">柱形</button>
+            <button class="preset-btn" onclick="loadPreset(1,1,1)">最小</button>
+          </div>
         </div>
         <div class="divider"></div>
         <div class="ctrl-section">
@@ -141,26 +160,26 @@ function buildCuboid(l, w, h) {
   // 高亮面
   _faceGroup = new THREE.Group();
   var faceData = [
-    { pos: [0, halfH, 0], rot: [0, 0, 0], label: '上面 ' + l + '×' + w },
-    { pos: [0, -halfH, 0], rot: [0, 0, 0], label: '下面 ' + l + '×' + w },
-    { pos: [0, 0, halfW], rot: [-Math.PI / 2, 0, 0], label: '后面 ' + l + '×' + h },
-    { pos: [0, 0, -halfW], rot: [Math.PI / 2, 0, 0], label: '前面 ' + l + '×' + h },
-    { pos: [-halfL, 0, 0], rot: [0, 0, Math.PI / 2], label: '左面 ' + w + '×' + h },
-    { pos: [halfL, 0, 0], rot: [0, 0, -Math.PI / 2], label: '右面 ' + w + '×' + h },
+    { pos:[0,halfH,0], rot:[0,0,0], label:'上面 '+l+'×'+w },
+    { pos:[0,-halfH,0], rot:[0,0,0], label:'下面 '+l+'×'+w },
+    { pos:[0,0,halfW], rot:[-Math.PI/2,0,0], label:'后面 '+l+'×'+h },
+    { pos:[0,0,-halfW], rot:[Math.PI/2,0,0], label:'前面 '+l+'×'+h },
+    { pos:[-halfL,0,0], rot:[0,0,Math.PI/2], label:'左面 '+w+'×'+h },
+    { pos:[halfL,0,0], rot:[0,0,-Math.PI/2], label:'右面 '+w+'×'+h },
   ];
-  var faceColors = [0xa78bfa, 0xa78bfa, 0x8B5CF6, 0x8B5CF6, 0x7c3aed, 0x7c3aed];
-  faceData.forEach(function (f, i) {
-    var sizeA = (i < 2) ? l : (i < 4) ? l : w;
-    var sizeB = (i < 2) ? w : (i < 4) ? h : h;
-    var fg = new THREE.PlaneGeometry(sizeA * 0.9, sizeB * 0.9);
-    var fm = new THREE.MeshBasicMaterial({ color: faceColors[i], transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+  var faceColors = [0xa78bfa,0xa78bfa,0x8B5CF6,0x8B5CF6,0x7c3aed,0x7c3aed];
+  faceData.forEach(function(f, i) {
+    var sizeA = (i<2)?l:(i<4)?l:w;
+    var sizeB = (i<2)?w:(i<4)?h:h;
+    var fg = new THREE.PlaneGeometry(sizeA*0.9, sizeB*0.9);
+    var fm = new THREE.MeshBasicMaterial({ color: faceColors[i], transparent:true, opacity:0.5, side:THREE.DoubleSide });
     var fp = new THREE.Mesh(fg, fm);
     fp.position.set(f.pos[0], f.pos[1], f.pos[2]);
     fp.rotation.set(f.rot[0], f.rot[1], f.rot[2]);
     _faceGroup.add(fp);
 
-    var lb = Edu3D.textSprite(f.label, { color: '#5b21b6', scale: 0.5 });
-    lb.position.set(f.pos[0] * 1.3, f.pos[1] * 1.3, f.pos[2] * 1.3);
+    var lb = Edu3D.textSprite(f.label, { color:'#5b21b6', scale:0.5 });
+    lb.position.set(f.pos[0]*1.3, f.pos[1]*1.3, f.pos[2]*1.3);
     _faceGroup.add(lb);
   });
   _faceGroup.visible = _highlight === 'face';
@@ -174,7 +193,7 @@ function buildCuboid(l, w, h) {
     for (var y = 0; y < h; y++) {
       for (var z = 0; z < w; z++) {
         var layerColor = colors[y % colors.length];
-        var unitMat = new THREE.MeshLambertMaterial({ color: layerColor, transparent: true, opacity: 0.6 });
+        var unitMat = new THREE.MeshLambertMaterial({ color: layerColor, transparent:true, opacity:0.6 });
         var unitMesh = new THREE.Mesh(unitGeo, unitMat);
         unitMesh.position.set(x - halfL + 0.5, y - halfH + 0.5, z - halfW + 0.5);
         _fillGroup.add(unitMesh);
@@ -183,15 +202,25 @@ function buildCuboid(l, w, h) {
   }
   _fillGroup.visible = _highlight === 'fill';
   _scene.add(_fillGroup);
+
+  // 正方体检测
+  var isCube = (l === w && w === h);
+  if (isCube) {
+    var cubeLabel = Edu3D.textSprite('正方体 (特殊长方体)', { color: '#6D28D9', scale: 0.5 });
+    cubeLabel.position.set(0, h / 2 + 1.2, 0);
+    _faceGroup.add(cubeLabel);
+    _faceGroup.children[_faceGroup.children.length - 1].visible = true;
+  }
 }
 
 function updateInfo(l, w, h) {
   var lw = l * w, lh = l * h, wh = w * h;
   var sa = 2 * (lw + lh + wh);
   var vol = l * w * h;
+  var isCube = (l === w && w === h);
 
   document.getElementById('calc-result').innerHTML =
-    '<div>长=' + l + '，宽=' + w + '，高=' + h + '</div>' +
+    '<div>长=' + l + '，宽=' + w + '，高=' + h + (isCube ? ' (正方体)' : '') + '</div>' +
     '<div>表面积 = 2(' + lw + '+' + lh + '+' + wh + ')</div>' +
     '<div class="result-big">' + sa + '</div>' +
     '<div>体积 = ' + l + '×' + w + '×' + h + '</div>' +
@@ -205,7 +234,7 @@ function updateInfo(l, w, h) {
 
 function setHighlight(mode) {
   _highlight = _highlight === mode ? 'solid' : mode;
-  ['solid', 'face', 'fill'].forEach(function (k) {
+  ['solid', 'face', 'fill'].forEach(function(k) {
     document.getElementById('hb-' + k).classList.toggle('active', _highlight === k);
   });
   if (_cuboid) _cuboid.visible = _highlight === 'solid';
@@ -214,12 +243,19 @@ function setHighlight(mode) {
   if (_fillGroup) _fillGroup.visible = _highlight === 'fill';
 }
 
+function loadPreset(l, w, h) {
+  document.getElementById('sl').value = l;
+  document.getElementById('sw').value = w;
+  document.getElementById('sh').value = h;
+  rebuild();
+}
+
 function resetAll() {
   document.getElementById('sl').value = 4;
   document.getElementById('sw').value = 3;
   document.getElementById('sh').value = 2;
   _highlight = 'solid';
-  ['solid', 'face', 'fill'].forEach(function (k) {
+  ['solid', 'face', 'fill'].forEach(function(k) {
     document.getElementById('hb-' + k).classList.toggle('active', k === 'solid');
   });
   rebuild();

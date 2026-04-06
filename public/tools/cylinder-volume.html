@@ -27,11 +27,24 @@
   .formula-calc { font-family:'Courier New',monospace; font-weight:600; color:#334155; font-size:12px; }
   .formula-result { font-weight:800; color:#8b5cf6; min-width:70px; text-align:right; }
   .bar-visual { width:100%; height:28px; border-radius:14px; overflow:hidden; display:flex; }
+  .mode-btn {
+    padding:6px 10px; border-radius:8px; font-size:11px; font-weight:600;
+    cursor:pointer; border:1.5px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+  }
+  .mode-btn.active { background:#8b5cf6; color:#fff; border-color:#8b5cf6; }
   .orbit-hint {
     position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
     background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
     font-size:11px; color:#64748b; pointer-events:none;
   }
+  .anim-btn {
+    padding:6px 14px; border-radius:8px; font-size:12px; font-weight:600;
+    cursor:pointer; border:none; background:#8b5cf6; color:#fff;
+    transition:all .15s; font-family:var(--edu-font);
+  }
+  .anim-btn:hover { background:#7c3aed; }
+  .anim-btn:disabled { opacity:0.5; cursor:not-allowed; }
 </style>
 </head>
 <body>
@@ -42,6 +55,9 @@
       <span class="edu-toolbar-subtitle">下册 · 第三单元</span>
     </div>
     <div class="edu-toolbar-actions">
+      <button class="anim-btn" id="btn-cut" onclick="playCut()">✂ 切割展开</button>
+      <button class="anim-btn" id="btn-fill" onclick="playFill()" style="background:#22c55e">💧 注水体积</button>
+      <div class="edu-divider"></div>
       <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
     </div>
   </div>
@@ -59,6 +75,15 @@
         <div class="ctrl-section">
           <div class="ctrl-label">高 h（cm）</div>
           <div class="slider-row"><label>h</label><input type="range" id="sh" min="1" max="8" value="4" step="0.5" oninput="rebuild()"/><span class="val" id="vh">4</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">显示模式</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <button class="mode-btn active" id="mb-solid" onclick="setMode('solid')">实体</button>
+            <button class="mode-btn" id="mb-wire" onclick="setMode('wire')">线框</button>
+            <button class="mode-btn" id="mb-expand" onclick="setMode('expand')">展开</button>
+          </div>
         </div>
         <div class="divider"></div>
         <div class="ctrl-section">
@@ -90,7 +115,10 @@
 </div>
 <script>
 var _scene, _camera, _renderer, _controls;
-var _cylMesh, _cylEdges, _labelGroup;
+var _cylMesh, _cylEdges, _labelGroup, _expandGroup, _fillGroup;
+var _mode = 'solid';
+var _animId = null;
+var _fillProgress = 0;
 
 function init() {
   var canvas = document.getElementById('c3d');
@@ -101,6 +129,10 @@ function init() {
 
   _labelGroup = new THREE.Group();
   _scene.add(_labelGroup);
+  _expandGroup = new THREE.Group();
+  _scene.add(_expandGroup);
+  _fillGroup = new THREE.Group();
+  _scene.add(_fillGroup);
 
   rebuild();
   Edu3D.startLoop(_scene, _camera, _renderer, _controls);
@@ -114,6 +146,8 @@ function rebuild() {
 
   if (_cylMesh) { _scene.remove(_cylMesh); _scene.remove(_cylEdges); }
   while (_labelGroup.children.length) _labelGroup.remove(_labelGroup.children[0]);
+  while (_expandGroup.children.length) _expandGroup.remove(_expandGroup.children[0]);
+  while (_fillGroup.children.length) _fillGroup.remove(_fillGroup.children[0]);
 
   // 圆柱
   var geo = new THREE.CylinderGeometry(radius, radius, height, 32);
@@ -136,7 +170,23 @@ function rebuild() {
   rLabel.position.set(radius / 2, height + 0.6, 0);
   _labelGroup.add(rLabel);
 
-  // 计算
+  // 底面圆周标注
+  var cLabel = Edu3D.textSprite('C=2πr=' + (2 * Math.PI * radius).toFixed(1), { color: '#3b82f6', scale: 0.4 });
+  cLabel.position.set(0, -0.6, radius + 0.5);
+  _labelGroup.add(cLabel);
+
+  applyMode();
+  updateCalc(radius, height);
+}
+
+function applyMode() {
+  _expandGroup.visible = _mode === 'expand';
+  _cylMesh.visible = _mode !== 'expand';
+  _cylEdges.visible = _mode === 'wire';
+  _labelGroup.visible = _mode !== 'expand';
+}
+
+function updateCalc(radius, height) {
   var C = 2 * Math.PI * radius;
   var Sbase = Math.PI * radius * radius;
   var Slateral = 2 * Math.PI * radius * height;
@@ -161,9 +211,226 @@ function rebuild() {
     '<div style="width:' + s1Pct + '%;background:#22c55e;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:600">下 ' + s1Pct.toFixed(0) + '%</div>';
 }
 
+function setMode(m) {
+  _mode = m;
+  ['solid', 'wire', 'expand'].forEach(function (k) {
+    document.getElementById('mb-' + k).classList.toggle('active', k === m);
+  });
+  if (m === 'expand') buildExpand();
+  applyMode();
+}
+
+function buildExpand() {
+  while (_expandGroup.children.length) _expandGroup.remove(_expandGroup.children[0]);
+
+  var radius = parseFloat(document.getElementById('sr').value);
+  var height = parseFloat(document.getElementById('sh').value);
+  var circumference = 2 * Math.PI * radius;
+  var scale = Math.min(4 / Math.max(circumference, 0.01), 4 / Math.max(height, 0.01));
+
+  // 侧面展开矩形
+  var rectW = circumference * scale;
+  var rectH = height * scale;
+  var rectShape = new THREE.Shape();
+  rectShape.moveTo(-rectW / 2, -rectH / 2);
+  rectShape.lineTo(rectW / 2, -rectH / 2);
+  rectShape.lineTo(rectW / 2, rectH / 2);
+  rectShape.lineTo(-rectW / 2, rectH / 2);
+  rectShape.closePath();
+  var rectGeo = new THREE.ShapeGeometry(rectShape);
+  var rectMesh = new THREE.Mesh(rectGeo, new THREE.MeshBasicMaterial({ color: 0x8b5cf6, transparent: true, opacity: 0.25, side: THREE.DoubleSide }));
+  rectMesh.position.set(0, 0.02, -5);
+  rectMesh.rotation.x = -Math.PI / 2;
+  _expandGroup.add(rectMesh);
+
+  var rectEdge = new THREE.EdgesGeometry(rectGeo);
+  var rectLine = new THREE.LineSegments(rectEdge, new THREE.LineBasicMaterial({ color: 0x8b5cf6 }));
+  rectLine.position.copy(rectMesh.position);
+  rectLine.rotation.copy(rectMesh.rotation);
+  _expandGroup.add(rectLine);
+
+  var rectLabel = Edu3D.textSprite('侧面 (长=C=' + circumference.toFixed(1) + ', 宽=h=' + height + ')', { color: '#7c3aed', scale: 0.5 });
+  rectLabel.position.set(0, 0.1, -5);
+  _expandGroup.add(rectLabel);
+
+  // 上底面圆
+  var circR = radius * scale;
+  var circGeo = new THREE.CircleGeometry(circR, 32);
+  var circMat = new THREE.MeshBasicMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
+  var circ1 = new THREE.Mesh(circGeo, circMat);
+  circ1.position.set(0, 0.02, -5 + rectW / 2 + circR + 0.5);
+  circ1.rotation.x = -Math.PI / 2;
+  _expandGroup.add(circ1);
+  var circEdge1 = new THREE.EdgesGeometry(circGeo);
+  var line1 = new THREE.LineSegments(circEdge1, new THREE.LineBasicMaterial({ color: 0x0ea5e9 }));
+  line1.position.copy(circ1.position);
+  line1.rotation.copy(circ1.rotation);
+  _expandGroup.add(line1);
+  var cl1 = Edu3D.textSprite('上底面 r=' + radius, { color: '#0ea5e9', scale: 0.35 });
+  cl1.position.set(circ1.position.x, 0.1, circ1.position.z);
+  _expandGroup.add(cl1);
+
+  // 下底面圆
+  var circ2 = new THREE.Mesh(circGeo.clone(), new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.25, side: THREE.DoubleSide }));
+  circ2.position.set(0, 0.02, -5 - rectW / 2 - circR - 0.5);
+  circ2.rotation.x = -Math.PI / 2;
+  _expandGroup.add(circ2);
+  var circEdge2 = new THREE.EdgesGeometry(circGeo);
+  var line2 = new THREE.LineSegments(circEdge2, new THREE.LineBasicMaterial({ color: 0x22c55e }));
+  line2.position.copy(circ2.position);
+  line2.rotation.copy(circ2.rotation);
+  _expandGroup.add(line2);
+  var cl2 = Edu3D.textSprite('下底面 r=' + radius, { color: '#22c55e', scale: 0.35 });
+  cl2.position.set(circ2.position.x, 0.1, circ2.position.z);
+  _expandGroup.add(cl2);
+}
+
+// ===== 切割展开动画 =====
+function playCut() {
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+  var btn = document.getElementById('btn-cut');
+  btn.disabled = true;
+
+  var radius = parseFloat(document.getElementById('sr').value);
+  var height = parseFloat(document.getElementById('sh').value);
+  var circumference = 2 * Math.PI * radius;
+  var t = 0;
+  var steps = 60;
+
+  // 创建切割半透明展示
+  while (_expandGroup.children.length) _expandGroup.remove(_expandGroup.children[0]);
+  _expandGroup.visible = true;
+  _cylMesh.visible = false;
+  _cylEdges.visible = false;
+  _labelGroup.visible = false;
+
+  // 侧面（从圆柱位置展开到平面）
+  var sideGeo = new THREE.PlaneGeometry(circumference, height, 32, 1);
+  var sideMat = new THREE.MeshBasicMaterial({ color: 0x8b5cf6, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+  var sideMesh = new THREE.Mesh(sideGeo, sideMat);
+  sideMesh.rotation.x = -Math.PI / 2;
+  _expandGroup.add(sideMesh);
+
+  // 上底面
+  var topGeo = new THREE.CircleGeometry(radius, 32);
+  var topMesh = new THREE.Mesh(topGeo, new THREE.MeshBasicMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.4, side: THREE.DoubleSide }));
+  topMesh.rotation.x = -Math.PI / 2;
+  _expandGroup.add(topMesh);
+
+  // 下底面
+  var botMesh = new THREE.Mesh(topGeo.clone(), new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.4, side: THREE.DoubleSide }));
+  botMesh.rotation.x = -Math.PI / 2;
+  _expandGroup.add(botMesh);
+
+  function animateCut() {
+    t++;
+    var p = Math.min(t / steps, 1);
+    var ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+
+    // 侧面：从弯曲（类似圆柱壁）展平到地面
+    var bendAngle = (1 - ease) * Math.PI * 2;
+    var flatY = 0.02;
+    var cylY = height / 2;
+    sideMesh.position.y = cylY * (1 - ease) + flatY * ease;
+    sideMesh.position.z = -5 * ease;
+
+    // 上底面飞上去然后平落到旁边
+    topMesh.position.y = (height + 1) * (1 - ease) + flatY * ease;
+    topMesh.position.z = (-circumference / 2 - radius - 1) * ease;
+    topMesh.material.opacity = 0.2 + 0.3 * ease;
+
+    // 下底面
+    botMesh.position.y = -0.5 * (1 - ease) + flatY * ease;
+    botMesh.position.z = (circumference / 2 + radius + 1) * ease;
+    botMesh.material.opacity = 0.2 + 0.3 * ease;
+
+    if (p < 1) {
+      _animId = requestAnimationFrame(animateCut);
+    } else {
+      _animId = null;
+      btn.disabled = false;
+    }
+  }
+  animateCut();
+}
+
+// ===== 注水体积动画 =====
+function playFill() {
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+  var btn = document.getElementById('btn-fill');
+  btn.disabled = true;
+
+  _mode = 'solid';
+  _expandGroup.visible = false;
+  _cylMesh.visible = true;
+  _cylMesh.material.opacity = 0.2;
+  _cylEdges.visible = true;
+  _labelGroup.visible = true;
+
+  while (_fillGroup.children.length) _fillGroup.remove(_fillGroup.children[0]);
+  _fillGroup.visible = true;
+
+  var radius = parseFloat(document.getElementById('sr').value);
+  var height = parseFloat(document.getElementById('sh').value);
+  _fillProgress = 0;
+
+  // 水面mesh
+  var fillGeo = new THREE.CylinderGeometry(radius * 0.98, radius * 0.98, 0.01, 32);
+  var fillMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.5 });
+  var fillMesh = new THREE.Mesh(fillGeo, fillMat);
+  fillMesh.position.y = 0.005;
+  _fillGroup.add(fillMesh);
+
+  var t = 0;
+  var steps = 90;
+
+  function animateFill() {
+    t++;
+    var p = Math.min(t / steps, 1);
+    var ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+    var fillH = ease * height;
+
+    _fillGroup.remove(fillMesh);
+    fillGeo.dispose();
+    fillGeo = new THREE.CylinderGeometry(radius * 0.98, radius * 0.98, Math.max(0.01, fillH), 32);
+    fillMesh = new THREE.Mesh(fillGeo, fillMat);
+    fillMesh.position.y = fillH / 2;
+    _fillGroup.add(fillMesh);
+
+    // 体积标注
+    var V = Math.PI * radius * radius * fillH;
+    if (_fillGroup.children.length > 1) {
+      _fillGroup.remove(_fillGroup.children[1]);
+    }
+    if (fillH > 0.5) {
+      var vLabel = Edu3D.textSprite('V=' + V.toFixed(1), { color: '#0284c7', scale: 0.5 });
+      vLabel.position.set(radius + 1.2, fillH / 2, 0);
+      _fillGroup.add(vLabel);
+    }
+
+    if (p < 1) {
+      _animId = requestAnimationFrame(animateFill);
+    } else {
+      _animId = null;
+      btn.disabled = false;
+    }
+  }
+  animateFill();
+}
+
 function resetAll() {
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+  document.getElementById('btn-cut').disabled = false;
+  document.getElementById('btn-fill').disabled = false;
   document.getElementById('sr').value = 2;
   document.getElementById('sh').value = 4;
+  _mode = 'solid';
+  _fillProgress = 0;
+  while (_fillGroup.children.length) _fillGroup.remove(_fillGroup.children[0]);
+  while (_expandGroup.children.length) _expandGroup.remove(_expandGroup.children[0]);
+  ['solid', 'wire', 'expand'].forEach(function (k) {
+    document.getElementById('mb-' + k).classList.toggle('active', k === 'solid');
+  });
   rebuild();
 }
 

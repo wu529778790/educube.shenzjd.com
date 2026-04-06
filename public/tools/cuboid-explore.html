@@ -75,6 +75,7 @@
             <div>顶点数：<strong>8</strong> 个</div>
             <div>棱数：<strong>12</strong> 条</div>
             <div>面数：<strong>6</strong> 个</div>
+            <div>棱长总和：<strong id="total-edge">48</strong></div>
           </div>
         </div>
         <div class="divider"></div>
@@ -93,7 +94,7 @@
 </div>
 <script>
 var _s, _scene, _camera, _renderer, _controls;
-var _cuboid, _edges, _vertexGroup, _faceGroup, _labelGroup;
+var _cuboid, _edges, _vertexGroup, _faceGroup, _labelGroup, _arrowGroup;
 var _highlight = '';
 
 function init() {
@@ -103,6 +104,10 @@ function init() {
   Edu3D.addLights(_scene);
   Edu3D.addGrid(_scene, 12, 12);
   _s = { scene: _scene };
+
+  _arrowGroup = new THREE.Group();
+  _scene.add(_arrowGroup);
+
   rebuild();
   Edu3D.startLoop(_scene, _camera, _renderer, _controls);
 }
@@ -119,19 +124,17 @@ function rebuild() {
 }
 
 function buildCuboid(l, w, h) {
-  // 清除旧对象
   if (_cuboid) { _scene.remove(_cuboid); _scene.remove(_edges); }
   if (_vertexGroup) _scene.remove(_vertexGroup);
   if (_faceGroup) _scene.remove(_faceGroup);
   if (_labelGroup) _scene.remove(_labelGroup);
+  while (_arrowGroup.children.length) _arrowGroup.remove(_arrowGroup.children[0]);
 
   var halfL = l / 2, halfW = w / 2, halfH = h / 2;
 
   // 长方体网格
   var geo = new THREE.BoxGeometry(l, h, w);
-  var mat = new THREE.MeshLambertMaterial({
-    color: 0x3B82F6, transparent: true, opacity: 0.35,
-  });
+  var mat = new THREE.MeshLambertMaterial({ color: 0x3B82F6, transparent: true, opacity: 0.35 });
   _cuboid = new THREE.Mesh(geo, mat);
   _cuboid.castShadow = true;
   _scene.add(_cuboid);
@@ -141,17 +144,42 @@ function buildCuboid(l, w, h) {
   _edges.visible = _highlight !== 'face';
   _scene.add(_edges);
 
+  // 尺寸标注箭头
+  // 长度标注（底部前方）
+  var lArrow = createDimensionLine(
+    new THREE.Vector3(-halfL, -halfH - 0.4, halfW + 0.2),
+    new THREE.Vector3(halfL, -halfH - 0.4, halfW + 0.2),
+    '长=' + l, '#ef4444'
+  );
+  _arrowGroup.add(lArrow);
+
+  // 宽度标注（底部右侧）
+  var wArrow = createDimensionLine(
+    new THREE.Vector3(halfL + 0.2, -halfH - 0.4, -halfW),
+    new THREE.Vector3(halfL + 0.2, -halfH - 0.4, halfW),
+    '宽=' + w, '#22c55e'
+  );
+  _arrowGroup.add(wArrow);
+
+  // 高度标注（右侧前方）
+  var hArrow = createDimensionLine(
+    new THREE.Vector3(halfL + 0.4, -halfH, halfW + 0.2),
+    new THREE.Vector3(halfL + 0.4, halfH, halfW + 0.2),
+    '高=' + h, '#3b82f6'
+  );
+  _arrowGroup.add(hArrow);
+
   // 顶点球
   _vertexGroup = new THREE.Group();
   var verts = [
-    [-halfL, -halfH, -halfW], [halfL, -halfH, -halfW],
-    [halfL, -halfH, halfW], [-halfL, -halfH, halfW],
-    [-halfL, halfH, -halfW], [halfL, halfH, -halfW],
-    [halfL, halfH, halfW], [-halfL, halfH, halfW],
+    [-halfL,-halfH,-halfW],[halfL,-halfH,-halfW],
+    [halfL,-halfH,halfW],[-halfL,-halfH,halfW],
+    [-halfL,halfH,-halfW],[halfL,halfH,-halfW],
+    [halfL,halfH,halfW],[-halfL,halfH,halfW],
   ];
   var labels = ['A','B','C','D','E','F','G','H'];
   verts.forEach(function(v, i) {
-    var sg = new THREE.SphereGeometry(0.08, 12, 12);
+    var sg = new THREE.SphereGeometry(0.1, 12, 12);
     var sm = new THREE.MeshLambertMaterial({ color: 0x2563EB });
     var sp = new THREE.Mesh(sg, sm);
     sp.position.set(v[0], v[1], v[2]);
@@ -167,36 +195,66 @@ function buildCuboid(l, w, h) {
   // 高亮面
   _faceGroup = new THREE.Group();
   var faceData = [
-    { pos: [0, halfH, 0], rot: [0, 0, 0], label: '上面 ' + l + '×' + w },
-    { pos: [0, -halfH, 0], rot: [0, 0, 0], label: '下面 ' + l + '×' + w },
-    { pos: [0, 0, halfW], rot: [-Math.PI/2, 0, 0], label: '后面 ' + l + '×' + h },
-    { pos: [0, 0, -halfW], rot: [Math.PI/2, 0, 0], label: '前面 ' + l + '×' + h },
-    { pos: [-halfL, 0, 0], rot: [0, 0, Math.PI/2], label: '左面 ' + w + '×' + h },
-    { pos: [halfL, 0, 0], rot: [0, 0, -Math.PI/2], label: '右面 ' + w + '×' + h },
+    { pos:[0,halfH,0], rot:[0,0,0], label:'上面 '+l+'×'+w },
+    { pos:[0,-halfH,0], rot:[0,0,0], label:'下面 '+l+'×'+w },
+    { pos:[0,0,halfW], rot:[-Math.PI/2,0,0], label:'后面 '+l+'×'+h },
+    { pos:[0,0,-halfW], rot:[Math.PI/2,0,0], label:'前面 '+l+'×'+h },
+    { pos:[-halfL,0,0], rot:[0,0,Math.PI/2], label:'左面 '+w+'×'+h },
+    { pos:[halfL,0,0], rot:[0,0,-Math.PI/2], label:'右面 '+w+'×'+h },
   ];
-  var faceColors = [0x60a5fa, 0x60a5fa, 0x3b82f6, 0x3b82f6, 0x2563eb, 0x2563eb];
+  var faceColors = [0x60a5fa,0x60a5fa,0x3b82f6,0x3b82f6,0x2563eb,0x2563eb];
   faceData.forEach(function(f, i) {
-    var fg = new THREE.PlaneGeometry(l * 0.9, w * 0.9);
-    var fm = new THREE.MeshBasicMaterial({ color: faceColors[i], transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+    var sizeA = (i<2)?l:(i<4)?l:w;
+    var sizeB = (i<2)?w:(i<4)?h:h;
+    var fg = new THREE.PlaneGeometry(sizeA*0.9, sizeB*0.9);
+    var fm = new THREE.MeshBasicMaterial({ color: faceColors[i], transparent:true, opacity:0.5, side:THREE.DoubleSide });
     var fp = new THREE.Mesh(fg, fm);
     fp.position.set(f.pos[0], f.pos[1], f.pos[2]);
     fp.rotation.set(f.rot[0], f.rot[1], f.rot[2]);
     _faceGroup.add(fp);
 
-    var lb = Edu3D.textSprite(f.label, { color: '#1e40af', scale: 0.5 });
-    lb.position.set(f.pos[0] * 1.3, f.pos[1] * 1.3, f.pos[2] * 1.3);
+    var lb = Edu3D.textSprite(f.label, { color:'#1e40af', scale:0.5 });
+    lb.position.set(f.pos[0]*1.3, f.pos[1]*1.3, f.pos[2]*1.3);
     _faceGroup.add(lb);
   });
   _faceGroup.visible = _highlight === 'face';
   _scene.add(_faceGroup);
 }
 
+function createDimensionLine(from, to, text, color) {
+  var group = new THREE.Group();
+
+  var lineGeo = new THREE.BufferGeometry().setFromPoints([from, to]);
+  var lineMat = new THREE.LineBasicMaterial({ color: new THREE.Color(color) });
+  group.add(new THREE.Line(lineGeo, lineMat));
+
+  // 端点标记
+  [from, to].forEach(function(p) {
+    var sg = new THREE.SphereGeometry(0.06, 8, 8);
+    var sm = new THREE.MeshBasicMaterial({ color: new THREE.Color(color) });
+    var sp = new THREE.Mesh(sg, sm);
+    sp.position.copy(p);
+    group.add(sp);
+  });
+
+  // 标签
+  var mid = from.clone().add(to).multiplyScalar(0.5);
+  var label = Edu3D.textSprite(text, { color: color, scale: 0.4 });
+  label.position.copy(mid);
+  label.position.y -= 0.3;
+  group.add(label);
+
+  return group;
+}
+
 function updateInfo(l, w, h) {
+  var totalEdge = (l + w + h) * 4;
+  document.getElementById('total-edge').textContent = totalEdge;
   document.getElementById('edge-detail').innerHTML =
     '<div>长棱(4条)：<strong>' + l + '×4=' + (l * 4) + '</strong></div>' +
     '<div>宽棱(4条)：<strong>' + w + '×4=' + (w * 4) + '</strong></div>' +
     '<div>高棱(4条)：<strong>' + h + '×4=' + (h * 4) + '</strong></div>' +
-    '<div>棱长总和：<strong>' + ((l + w + h) * 4) + '</strong></div>';
+    '<div>棱长总和：<strong>' + totalEdge + '</strong></div>';
 
   var lw = l * w, lh = l * h, wh = w * h;
   document.getElementById('face-detail').innerHTML =
@@ -217,6 +275,7 @@ function setHighlight(h) {
   if (_cuboid) {
     _cuboid.material.opacity = _highlight === 'face' ? 0.15 : 0.35;
   }
+  _arrowGroup.visible = _highlight !== 'face';
 }
 
 function resetAll() {

@@ -28,12 +28,13 @@
   .compare-box { background:#fff; border:2px solid #f97316; border-radius:12px; padding:12px; text-align:center; }
   .compare-box .vs { font-size:18px; font-weight:800; color:#f97316; }
   .fill-bar { height:36px; border-radius:8px; overflow:hidden; background:#f1f5f9; margin:8px 0; position:relative; }
-  .fill-level { height:100%; background:linear-gradient(90deg,#f97316,#fb923c); border-radius:8px; transition:width .5s; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:12px; }
+  .fill-level { height:100%; border-radius:8px; transition:width .5s; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:12px; }
   .orbit-hint {
     position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
     background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
     font-size:11px; color:#64748b; pointer-events:none;
   }
+  .pour-count { font-size:22px; font-weight:800; color:#f97316; text-align:center; }
 </style>
 </head>
 <body>
@@ -44,7 +45,8 @@
       <span class="edu-toolbar-subtitle">下册 · 第三单元</span>
     </div>
     <div class="edu-toolbar-actions">
-      <button class="edu-btn edu-btn-accent" onclick="playPour()">倒沙实验</button>
+      <button class="edu-btn edu-btn-accent" id="btn-pour" onclick="playPour()">🪣 倒沙实验</button>
+      <button class="edu-btn edu-btn-outline" id="btn-drain" onclick="drainFill()" style="display:none">↩ 倒回</button>
       <div class="edu-divider"></div>
       <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
     </div>
@@ -77,10 +79,11 @@
         <div class="compare-box">
           <div style="font-size:11px;color:#64748b">等底等高对比</div>
           <div class="vs">V圆锥 = ⅓ V圆柱</div>
+          <div class="pour-count" id="pour-count">0 / 3</div>
           <div style="font-size:12px;font-weight:700;color:#f97316">圆锥 = <span id="cV">12.6</span></div>
           <div style="font-size:12px;font-weight:700;color:#3b82f6">圆柱 = <span id="cyV">37.7</span></div>
           <div class="fill-bar">
-            <div class="fill-level" id="fillBar" style="width:33.3%">⅓</div>
+            <div class="fill-level" id="fillBar" style="width:0%;background:linear-gradient(90deg,#f97316,#fb923c)">0%</div>
           </div>
         </div>
         <div class="divider"></div>
@@ -90,7 +93,8 @@
           ● 侧面展开是扇形<br/>
           ● 母线 l² = r² + h²<br/>
           ● V圆锥 = ⅓ × S底 × h<br/>
-          ● 等底等高：V圆锥 = ⅓ V圆柱
+          ● 等底等高：V圆锥 = ⅓ V圆柱<br/>
+          ● 倒沙3次恰好装满圆柱
         </div>
       </div>
     </div>
@@ -102,6 +106,8 @@ var _coneMesh, _cylMesh, _coneEdges, _cylEdges;
 var _axisGroup, _fillGroup;
 var _pourId = null;
 var _pourProgress = 0;
+var _pourCount = 0;
+var _pourMesh = null;
 
 function init() {
   var canvas = document.getElementById('c3d');
@@ -117,7 +123,7 @@ function init() {
 
   rebuild();
   Edu3D.startLoop(_scene, _camera, _renderer, _controls, function () {
-    if (_pourProgress > 0) updatePour();
+    if (_pourProgress > 0 && _pourProgress < 3) updatePour();
   });
 }
 
@@ -127,11 +133,11 @@ function rebuild() {
   document.getElementById('vr').textContent = radius;
   document.getElementById('vh').textContent = height;
 
-  // 清除旧对象
   if (_coneMesh) { _scene.remove(_coneMesh); _scene.remove(_coneEdges); }
   if (_cylMesh) { _scene.remove(_cylMesh); _scene.remove(_cylEdges); }
   while (_axisGroup.children.length) _axisGroup.remove(_axisGroup.children[0]);
   while (_fillGroup.children.length) _fillGroup.remove(_fillGroup.children[0]);
+  _pourMesh = null;
 
   var coneSpacing = radius * 2 + 2;
 
@@ -167,21 +173,19 @@ function rebuild() {
   cylLabel.position.set(coneSpacing / 2, height + 0.8, 0);
   _axisGroup.add(cylLabel);
 
-  // 高线（圆锥）
+  // 高线
   var hLineGeo = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(-coneSpacing / 2, 0, 0),
     new THREE.Vector3(-coneSpacing / 2, height, 0)
   ]);
-  var hLineMat = new THREE.LineBasicMaterial({ color: 0xef4444 });
-  _axisGroup.add(new THREE.Line(hLineGeo, hLineMat));
+  _axisGroup.add(new THREE.Line(hLineGeo, new THREE.LineBasicMaterial({ color: 0xef4444 })));
 
-  // 半径线（圆锥底部）
+  // 半径线
   var rLineGeo = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(-coneSpacing / 2, 0.02, 0),
     new THREE.Vector3(-coneSpacing / 2 + radius, 0.02, 0)
   ]);
-  var rLineMat = new THREE.LineBasicMaterial({ color: 0x22c55e });
-  _axisGroup.add(new THREE.Line(rLineGeo, rLineMat));
+  _axisGroup.add(new THREE.Line(rLineGeo, new THREE.LineBasicMaterial({ color: 0x22c55e })));
 
   // 更新计算
   var l = Math.sqrt(radius * radius + height * height);
@@ -199,71 +203,121 @@ function rebuild() {
 }
 
 function playPour() {
-  if (_pourId) clearInterval(_pourId);
-  _pourProgress = 0;
-  while (_fillGroup.children.length) _fillGroup.remove(_fillGroup.children[0]);
+  if (_pourCount >= 3) {
+    // Already full, reset
+    _pourCount = 0;
+    _pourProgress = 0;
+    while (_fillGroup.children.length) _fillGroup.remove(_fillGroup.children[0]);
+    _pourMesh = null;
+  }
+
+  if (_pourId) { clearInterval(_pourId); _pourId = null; }
 
   var radius = parseFloat(document.getElementById('sr').value);
   var height = parseFloat(document.getElementById('sh').value);
   var coneSpacing = radius * 2 + 2;
 
-  // 填充圆柱
-  var fillGeo = new THREE.CylinderGeometry(radius * 0.95, radius * 0.95, 0.01, 32);
-  var fillMat = new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.4 });
-  var fillMesh = new THREE.Mesh(fillGeo, fillMat);
-  fillMesh.position.set(coneSpacing / 2, 0.005, 0);
-  _fillGroup.add(fillMesh);
+  var startProgress = _pourCount;
+  var targetProgress = _pourCount + 1;
+  _pourProgress = startProgress;
 
   var bar = document.getElementById('fillBar');
-  bar.style.width = '0%';
-  bar.textContent = '';
-  bar.style.background = 'linear-gradient(90deg,#f97316,#fb923c)';
+  document.getElementById('btn-drain').style.display = 'none';
 
   _pourId = setInterval(function () {
-    _pourProgress += 0.03;
-    if (_pourProgress >= 3) {
-      _pourProgress = 3;
+    _pourProgress += 0.04;
+    if (_pourProgress >= targetProgress) {
+      _pourProgress = targetProgress;
+      _pourCount = targetProgress;
       clearInterval(_pourId);
       _pourId = null;
-      bar.style.width = '100%';
-      bar.textContent = '倒满！V圆锥 = ⅓ V圆柱';
-      bar.style.background = 'linear-gradient(90deg,#22c55e,#16a34a)';
-    } else {
-      var pct = (_pourProgress / 3 * 100);
+
+      document.getElementById('pour-count').textContent = _pourCount + ' / 3';
+      var pct = (_pourCount / 3 * 100);
       bar.style.width = pct + '%';
+
+      if (_pourCount >= 3) {
+        bar.textContent = '倒满！V圆锥 = ⅓ V圆柱';
+        bar.style.background = 'linear-gradient(90deg,#22c55e,#16a34a)';
+        document.getElementById('btn-drain').style.display = '';
+        document.getElementById('btn-pour').textContent = '🔄 重新实验';
+      } else {
+        bar.textContent = '第' + _pourCount + '次倒沙 ' + pct.toFixed(0) + '%';
+        bar.style.background = 'linear-gradient(90deg,#f97316,#fb923c)';
+        document.getElementById('btn-pour').textContent = '🪣 继续倒沙';
+      }
+    } else {
+      var pctNow = (_pourProgress / 3 * 100);
+      bar.style.width = pctNow + '%';
       var pourNum = Math.ceil(_pourProgress);
-      bar.textContent = '第' + pourNum + '次倒沙 ' + pct.toFixed(0) + '%';
+      bar.textContent = '第' + pourNum + '次倒沙 ' + pctNow.toFixed(0) + '%';
     }
   }, 30);
 }
 
 function updatePour() {
-  if (_fillGroup.children.length === 0) return;
-  var fillMesh = _fillGroup.children[0];
+  if (_pourProgress <= 0) return;
   var radius = parseFloat(document.getElementById('sr').value);
   var height = parseFloat(document.getElementById('sh').value);
   var coneSpacing = radius * 2 + 2;
 
   var fillH = Math.min(_pourProgress / 3, 1) * height;
-  _fillGroup.remove(fillMesh);
+
+  if (_pourMesh) { _fillGroup.remove(_pourMesh); _pourMesh.geometry.dispose(); }
 
   var fillGeo = new THREE.CylinderGeometry(radius * 0.95, radius * 0.95, Math.max(0.01, fillH), 32);
   var fillMat = new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.4 });
-  fillMesh = new THREE.Mesh(fillGeo, fillMat);
-  fillMesh.position.set(coneSpacing / 2, fillH / 2, 0);
-  _fillGroup.add(fillMesh);
+  _pourMesh = new THREE.Mesh(fillGeo, fillMat);
+  _pourMesh.position.set(coneSpacing / 2, fillH / 2, 0);
+  _fillGroup.add(_pourMesh);
+}
+
+function drainFill() {
+  if (_pourId) { clearInterval(_pourId); _pourId = null; }
+
+  var bar = document.getElementById('fillBar');
+  var t = _pourProgress;
+
+  _pourId = setInterval(function () {
+    t -= 0.06;
+    if (t <= 0) {
+      t = 0;
+      _pourProgress = 0;
+      _pourCount = 0;
+      clearInterval(_pourId);
+      _pourId = null;
+      while (_fillGroup.children.length) _fillGroup.remove(_fillGroup.children[0]);
+      _pourMesh = null;
+      bar.style.width = '0%';
+      bar.textContent = '0%';
+      bar.style.background = 'linear-gradient(90deg,#f97316,#fb923c)';
+      document.getElementById('pour-count').textContent = '0 / 3';
+      document.getElementById('btn-drain').style.display = 'none';
+      document.getElementById('btn-pour').textContent = '🪣 倒沙实验';
+    } else {
+      _pourProgress = t;
+      bar.style.width = (t / 3 * 100) + '%';
+      bar.textContent = (t / 3 * 100).toFixed(0) + '%';
+      updatePour();
+    }
+  }, 30);
 }
 
 function resetAll() {
+  if (_pourId) { clearInterval(_pourId); _pourId = null; }
+  _pourProgress = 0;
+  _pourCount = 0;
+  while (_fillGroup.children.length) _fillGroup.remove(_fillGroup.children[0]);
+  _pourMesh = null;
+  var bar = document.getElementById('fillBar');
+  bar.style.width = '0%';
+  bar.textContent = '0%';
+  bar.style.background = 'linear-gradient(90deg,#f97316,#fb923c)';
+  document.getElementById('pour-count').textContent = '0 / 3';
+  document.getElementById('btn-drain').style.display = 'none';
+  document.getElementById('btn-pour').textContent = '🪣 倒沙实验';
   document.getElementById('sr').value = 2;
   document.getElementById('sh').value = 3;
-  _pourProgress = 0;
-  if (_pourId) { clearInterval(_pourId); _pourId = null; }
-  while (_fillGroup.children.length) _fillGroup.remove(_fillGroup.children[0]);
-  var bar = document.getElementById('fillBar');
-  bar.style.width = '33.3%';
-  bar.textContent = '⅓';
-  bar.style.background = 'linear-gradient(90deg,#f97316,#fb923c)';
   rebuild();
 }
 

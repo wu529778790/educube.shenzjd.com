@@ -25,6 +25,10 @@
   }
   .pattern-btn.active { background:#8b5cf6; color:#fff; border-color:#8b5cf6; }
   .pattern-btn:hover:not(.active) { border-color:#94a3b8; }
+  .slider-row { display:flex; align-items:center; gap:8px; }
+  .slider-row label { font-size:12px; font-weight:600; color:#64748b; min-width:40px; }
+  .slider-row input[type=range] { flex:1; }
+  .slider-row .val { font-size:13px; font-weight:700; color:#8b5cf6; min-width:36px; text-align:right; }
   .progress-bar { width:100%;height:4px;background:#e2e8f0;border-radius:2px;overflow:hidden; }
   .progress-fill { height:100%;background:linear-gradient(90deg,#3b82f6,#8b5cf6);transition:width .1s;border-radius:2px; }
   .orbit-hint {
@@ -43,6 +47,7 @@
     </div>
     <div class="edu-toolbar-actions">
       <button class="edu-btn edu-btn-primary" id="btn-toggle" onclick="toggleAnimation()">▶ 展开</button>
+      <button class="edu-btn edu-btn-outline" onclick="playAll()">▶ 全部动画</button>
       <div class="edu-divider"></div>
       <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
     </div>
@@ -61,6 +66,17 @@
             <button class="pattern-btn" id="pb-1" onclick="setPattern(1)">L形</button>
             <button class="pattern-btn" id="pb-2" onclick="setPattern(2)">Z形</button>
             <button class="pattern-btn" id="pb-3" onclick="setPattern(3)">T形</button>
+            <button class="pattern-btn" id="pb-4" onclick="setPattern(4)">阶梯形</button>
+            <button class="pattern-btn" id="pb-5" onclick="setPattern(5)">一字形</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">手动控制</div>
+          <div class="slider-row">
+            <label>展开</label>
+            <input type="range" id="manual-slider" min="0" max="100" value="0" oninput="onManualSlider(this.value)"/>
+            <span class="val" id="manual-val">0%</span>
           </div>
         </div>
         <div class="divider"></div>
@@ -71,18 +87,18 @@
         </div>
         <div class="divider"></div>
         <div class="info-box">
-          <div class="info-row" style="display:flex;justify-content:space-between"><span>面数</span><strong>6</strong></div>
-          <div class="info-row" style="display:flex;justify-content:space-between"><span>棱数</span><strong>12</strong></div>
-          <div class="info-row" style="display:flex;justify-content:space-between"><span>顶点数</span><strong>8</strong></div>
+          <div style="display:flex;justify-content:space-between"><span>面数</span><strong>6</strong></div>
+          <div style="display:flex;justify-content:space-between"><span>棱数</span><strong>12</strong></div>
+          <div style="display:flex;justify-content:space-between"><span>顶点数</span><strong>8</strong></div>
         </div>
         <div class="divider"></div>
         <div class="info-box">
           <strong>正方体展开</strong><br/>
-          ● 正方体有 11 种展开方式<br/>
+          ● 正方体有 <strong>11</strong> 种展开方式<br/>
           ● 每个面是正方形<br/>
           ● 展开后 6 个面相连不断开<br/>
           ● 相对的面不相邻<br/>
-          ● 展开图是判断空间想象的好工具
+          ● 拖动滑块可手动控制
         </div>
       </div>
     </div>
@@ -93,47 +109,63 @@ var _scene, _camera, _renderer, _controls;
 var _faceMeshes = [];
 var _animTimer = null;
 var _isUnfolded = false;
-var _animT = 0; // 0=folded, 1=unfolded
+var _animT = 0;
 var _currentPattern = 0;
 
-// 每种展开图：6个面在网格中的位置 (col, row)，以"底"面为中心
-// 面：底(0) 前(1) 后(2) 左(3) 右(4) 顶(5)
 var PATTERNS = [
   // 十字形
   [
-    { col: 1, row: 1, label: '底', color: 0x4f8cff },
-    { col: 1, row: 2, label: '前', color: 0x38c6a0 },
-    { col: 1, row: 0, label: '后', color: 0xf97316 },
-    { col: 0, row: 1, label: '左', color: 0xa78bfa },
-    { col: 2, row: 1, label: '右', color: 0xfbbf24 },
-    { col: 1, row: 3, label: '顶', color: 0xf472b6 },
+    { col:1, row:1, label:'底', color:0x4f8cff },
+    { col:1, row:2, label:'前', color:0x38c6a0 },
+    { col:1, row:0, label:'后', color:0xf97316 },
+    { col:0, row:1, label:'左', color:0xa78bfa },
+    { col:2, row:1, label:'右', color:0xfbbf24 },
+    { col:1, row:3, label:'顶', color:0xf472b6 },
   ],
   // L形
   [
-    { col: 0, row: 0, label: '底', color: 0x4f8cff },
-    { col: 1, row: 0, label: '前', color: 0x38c6a0 },
-    { col: 2, row: 0, label: '后', color: 0xf97316 },
-    { col: 3, row: 0, label: '左', color: 0xa78bfa },
-    { col: 3, row: 1, label: '右', color: 0xfbbf24 },
-    { col: 3, row: 2, label: '顶', color: 0xf472b6 },
+    { col:0, row:0, label:'底', color:0x4f8cff },
+    { col:1, row:0, label:'前', color:0x38c6a0 },
+    { col:2, row:0, label:'后', color:0xf97316 },
+    { col:3, row:0, label:'左', color:0xa78bfa },
+    { col:3, row:1, label:'右', color:0xfbbf24 },
+    { col:3, row:2, label:'顶', color:0xf472b6 },
   ],
   // Z形
   [
-    { col: 0, row: 0, label: '底', color: 0x4f8cff },
-    { col: 1, row: 0, label: '前', color: 0x38c6a0 },
-    { col: 2, row: 0, label: '后', color: 0xf97316 },
-    { col: 2, row: 1, label: '左', color: 0xa78bfa },
-    { col: 3, row: 1, label: '右', color: 0xfbbf24 },
-    { col: 1, row: 1, label: '顶', color: 0xf472b6 },
+    { col:0, row:0, label:'底', color:0x4f8cff },
+    { col:1, row:0, label:'前', color:0x38c6a0 },
+    { col:2, row:0, label:'后', color:0xf97316 },
+    { col:2, row:1, label:'左', color:0xa78bfa },
+    { col:3, row:1, label:'右', color:0xfbbf24 },
+    { col:1, row:1, label:'顶', color:0xf472b6 },
   ],
   // T形
   [
-    { col: 1, row: 0, label: '底', color: 0x4f8cff },
-    { col: 1, row: 1, label: '前', color: 0x38c6a0 },
-    { col: 0, row: 1, label: '后', color: 0xf97316 },
-    { col: 2, row: 1, label: '左', color: 0xa78bfa },
-    { col: 3, row: 1, label: '右', color: 0xfbbf24 },
-    { col: 1, row: 2, label: '顶', color: 0xf472b6 },
+    { col:1, row:0, label:'底', color:0x4f8cff },
+    { col:1, row:1, label:'前', color:0x38c6a0 },
+    { col:0, row:1, label:'后', color:0xf97316 },
+    { col:2, row:1, label:'左', color:0xa78bfa },
+    { col:3, row:1, label:'右', color:0xfbbf24 },
+    { col:1, row:2, label:'顶', color:0xf472b6 },
+  ],
+  // 阶梯形
+  [
+    { col:0, row:0, label:'底', color:0x4f8cff },
+    { col:1, row:0, label:'前', color:0x38c6a0 },
+    { col:1, row:1, label:'后', color:0xf97316 },
+    { col:2, row:1, label:'左', color:0xa78bfa },
+    { col:2, row:2, label:'右', color:0xfbbf24 },
+    { col:3, row:2, label:'顶', color:0xf472b6 },
+  ],
+  // 一字形
+  [
+    { col:0, row:0, label:'底', color:0x4f8cff },
+    { col:1, row:0, label:'前', color:0x38c6a0 },
+    { col:2, row:0, label:'后', color:0xf97316 },
+    { col:3, row:0, label:'左', color:0xa78bfa },
+    { col:4, row:0, label:'右', color:0xfbbf24 },
+    { col:5, row:0, label:'顶', color:0xf472b6 },
   ],
 ];
 
@@ -185,15 +217,14 @@ function getUnfoldedPos(col, row) {
 }
 
 function getFoldedPos(index) {
-  // 6 faces of a cube at center
   var h = FACE_SIZE / 2;
   var positions = [
-    { x: 0, y: 0, z: -h, rx: 0, ry: 0, rz: 0 },       // 底 - front
-    { x: 0, y: -h, z: 0, rx: -Math.PI / 2, ry: 0, rz: 0 }, // 前 - bottom
-    { x: 0, y: h, z: 0, rx: Math.PI / 2, ry: 0, rz: 0 },   // 后 - top
-    { x: -h, y: 0, z: 0, rx: 0, ry: Math.PI / 2, rz: 0 },  // 左 - left
-    { x: h, y: 0, z: 0, rx: 0, ry: -Math.PI / 2, rz: 0 },  // 右 - right
-    { x: 0, y: 0, z: h, rx: Math.PI, ry: 0, rz: 0 },       // 顶 - back
+    { x:0, y:0, z:-h, rx:0, ry:0, rz:0 },
+    { x:0, y:-h, z:0, rx:-Math.PI/2, ry:0, rz:0 },
+    { x:0, y:h, z:0, rx:Math.PI/2, ry:0, rz:0 },
+    { x:-h, y:0, z:0, rx:0, ry:Math.PI/2, rz:0 },
+    { x:h, y:0, z:0, rx:0, ry:-Math.PI/2, rz:0 },
+    { x:0, y:0, z:h, rx:Math.PI, ry:0, rz:0 },
   ];
   return positions[index];
 }
@@ -209,7 +240,6 @@ function applyPositions(t) {
 
     item.mesh.position.set(x, y, z);
 
-    // Rotation: folded has rotation, unfolded faces camera (flat)
     var rx = lerp(folded.rx || 0, 0, t);
     var ry = lerp(folded.ry || 0, 0, t);
     var rz = lerp(folded.rz || 0, 0, t);
@@ -220,12 +250,23 @@ function applyPositions(t) {
   });
 
   document.getElementById('progressFill').style.width = (t * 100) + '%';
+  document.getElementById('manual-slider').value = (t * 100);
+  document.getElementById('manual-val').textContent = Math.round(t * 100) + '%';
   if (t < 0.05) document.getElementById('statusText').textContent = '已折叠';
   else if (t > 0.95) document.getElementById('statusText').textContent = '已展开';
   else document.getElementById('statusText').textContent = '动画中...';
 }
 
 function lerp(a, b, t) { return a + (b - a) * t; }
+
+function onManualSlider(val) {
+  if (_animTimer) { clearInterval(_animTimer); _animTimer = null; }
+  var t = parseInt(val) / 100;
+  _animT = t;
+  _isUnfolded = t > 0.95;
+  document.getElementById('btn-toggle').textContent = _isUnfolded ? '↩ 折叠' : '▶ 展开';
+  applyPositions(t);
+}
 
 function toggleAnimation() {
   if (_animTimer) { clearInterval(_animTimer); _animTimer = null; }
@@ -251,10 +292,32 @@ function toggleAnimation() {
   }
 }
 
+function playAll() {
+  if (_animTimer) { clearInterval(_animTimer); _animTimer = null; }
+  _animT = 0;
+  _isUnfolded = false;
+  createFaces();
+
+  var t = 0;
+  _animTimer = setInterval(function () {
+    t += 0.02;
+    if (t >= 1) {
+      t = 1;
+      clearInterval(_animTimer);
+      _animTimer = null;
+      _isUnfolded = true;
+      document.getElementById('btn-toggle').textContent = '↩ 折叠';
+    }
+    _animT = t;
+    applyPositions(t);
+  }, 16);
+}
+
 function setPattern(i) {
   _currentPattern = i;
-  for (var j = 0; j < 4; j++) {
-    document.getElementById('pb-' + j).classList.toggle('active', j === i);
+  for (var j = 0; j < 6; j++) {
+    var el = document.getElementById('pb-' + j);
+    if (el) el.classList.toggle('active', j === i);
   }
   _animT = 0;
   _isUnfolded = false;

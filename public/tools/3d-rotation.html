@@ -6,72 +6,41 @@
 <title>立体图形旋转观察</title>
 <link rel="stylesheet" href="../edu-lib/edu-base.css"/>
 <script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
 <style>
+  .main-layout { display:grid; grid-template-columns:1fr 280px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#fff7ed 0%,#fdfaf4 100%); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:16px; display:flex; flex-direction:column; gap:12px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+  .info-box { background:#fff; border:1px solid #fed7aa; border-radius:10px; padding:10px 12px; font-size:12px; color:#334155; line-height:1.8; }
+  .info-box strong { color:#f97316; }
+  .info-item { display:flex; justify-content:space-between; align-items:center; font-size:13px; color:#64748b; padding:4px 0; border-bottom:1px solid #f1f5f9; }
+  .info-item:last-child { border-bottom:none; }
+  .info-val { font-weight:700; color:#f97316; font-size:15px; }
   .shape-btn {
-    padding: 6px 14px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    border: 2px solid #e2e8f0;
-    background: #fff;
-    color: #64748b;
-    transition: all 0.15s;
-    font-family: var(--edu-font);
+    padding:6px 10px; border-radius:8px; font-size:12px; font-weight:600;
+    cursor:pointer; border:1.5px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
   }
-  .shape-btn:hover:not(.active) { border-color: #f97316; }
-  .shape-btn.active { background: #f97316; color: #fff; border-color: #f97316; }
-
-  #info-panel {
-    position: absolute;
-    bottom: 24px;
-    left: 24px;
-    background: rgba(255,255,255,0.94);
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 14px 18px;
-    min-width: 160px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  .shape-btn.active { background:#f97316; color:#fff; border-color:#f97316; }
+  .slider-row { display:flex; align-items:center; gap:8px; }
+  .slider-row label { font-size:12px; font-weight:600; color:#64748b; min-width:20px; }
+  .slider-row input[type=range] { flex:1; }
+  .slider-row .val { font-size:14px; font-weight:700; color:#f97316; min-width:30px; text-align:right; }
+  .highlight-btn {
+    padding:5px 10px; border-radius:6px; font-size:11px; font-weight:600;
+    cursor:pointer; border:1.5px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font);
   }
-  .info-title {
-    font-size: 14px;
-    font-weight: 700;
-    color: #1a3a5c;
-    margin-bottom: 10px;
-  }
-  .info-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 13px;
-    color: #64748b;
-    padding: 4px 0;
-    border-bottom: 1px solid #f1f5f9;
-  }
-  .info-item:last-child { border-bottom: none; }
-  .info-val { font-weight: 700; color: #f97316; font-size: 15px; }
-
-  #drag-hint {
-    position: absolute;
-    top: 16px;
-    right: 20px;
-    background: rgba(249,115,22,0.1);
-    border: 1px solid rgba(249,115,22,0.3);
-    border-radius: 10px;
-    padding: 8px 14px;
-    font-size: 12px;
-    color: #c2410c;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .color-dot {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 2px;
-    margin-right: 6px;
+  .highlight-btn.active { background:#f97316; color:#fff; border-color:#f97316; }
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
   }
 </style>
 </head>
@@ -90,203 +59,293 @@
       <button class="shape-btn" id="btn-cone" onclick="setShape('cone')">圆锥</button>
       <div class="edu-divider"></div>
       <button class="edu-btn edu-btn-outline" id="btn-auto" onclick="toggleAuto()">▶ 自动旋转</button>
-      <button class="edu-btn edu-btn-outline" onclick="resetCamera()">重置</button>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
     </div>
   </div>
-
-  <div class="edu-content" style="position:relative;background:linear-gradient(135deg,#fff7ed 0%,#fdfaf4 100%);">
-    <canvas id="canvas" class="edu-canvas-full"></canvas>
-    <div id="drag-hint">✋ 拖拽旋转 · 滚轮缩放</div>
-    <div id="info-panel">
-      <div class="info-title" id="shape-name">长方体</div>
-      <div class="info-item"><span>面数</span><span class="info-val" id="val-faces">6</span></div>
-      <div class="info-item"><span>棱数</span><span class="info-val" id="val-edges">12</span></div>
-      <div class="info-item"><span>顶点数</span><span class="info-val" id="val-vertices">8</span></div>
-      <div class="info-item" style="margin-top:6px;">
-        <span style="font-size:11px;color:#94a3b8;">面的形状</span>
-        <span style="font-size:11px;color:#64748b;" id="val-face-shape">长方形</span>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">调整尺寸</div>
+          <div id="sliders-area"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">高亮显示</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <button class="highlight-btn" id="hb-vertex" onclick="setHighlight('vertex')">顶点</button>
+            <button class="highlight-btn" id="hb-edge" onclick="setHighlight('edge')">棱</button>
+            <button class="highlight-btn" id="hb-face" onclick="setHighlight('face')">面</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">特征信息</div>
+          <div class="info-box">
+            <div class="info-item"><span>图形</span><span class="info-val" id="shape-name">长方体</span></div>
+            <div class="info-item"><span>面数</span><span class="info-val" id="val-faces">6</span></div>
+            <div class="info-item"><span>棱数</span><span class="info-val" id="val-edges">12</span></div>
+            <div class="info-item"><span>顶点数</span><span class="info-val" id="val-vertices">8</span></div>
+            <div class="info-item"><span>面的形状</span><span style="font-size:11px;color:#64748b;" id="val-face-shape">长方形</span></div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box" id="size-info" style="font-size:11px;line-height:1.7;border-color:#e2e8f0">
+          <strong>尺寸信息</strong><br/>
+          <span id="size-detail">长=2.4, 宽=1.6, 高=1.4</span>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<script src="../edu-lib/edu-tools.js"></script>
 <script>
-const canvas = document.getElementById('canvas');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.shadowMap.enabled = true;
+var _scene, _camera, _renderer, _controls;
+var _meshGroup, _highlightGroup;
+var _currentShape = 'cuboid';
+var _autoRotate = false;
+var _highlight = '';
+var _params = {};
 
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-camera.position.set(4, 3, 5);
-camera.lookAt(0, 0, 0);
-
-// 灯光
-scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-const dl = new THREE.DirectionalLight(0xffffff, 0.85);
-dl.position.set(6, 8, 6);
-dl.castShadow = true;
-scene.add(dl);
-scene.add(new THREE.DirectionalLight(0xffeedd, 0.3).position.set(-4, 2, -4));
-const hl = new THREE.HemisphereLight(0xe8f4ff, 0xfff3e0, 0.4);
-scene.add(hl);
-
-// 地面
-const floor = new THREE.Mesh(
-  new THREE.PlaneGeometry(12, 12),
-  new THREE.MeshLambertMaterial({ color: 0xf8f8f8 })
-);
-floor.rotation.x = -Math.PI / 2;
-floor.position.y = -1.6;
-floor.receiveShadow = true;
-scene.add(floor);
-scene.add(new THREE.GridHelper(12, 12, 0xe0e7ef, 0xe0e7ef));
-scene.children[scene.children.length-1].position.y = -1.6;
-
-// 形状定义
-const SHAPES = {
+var SHAPES = {
   cuboid: {
-    name: '长方体',
-    faces: 6, edges: 12, vertices: 8,
-    faceShape: '长方形',
-    geo: () => new THREE.BoxGeometry(2.4, 1.4, 1.6),
-    colors: [0x4f8cff, 0x3b72e0, 0x60a5fa, 0x93c5fd, 0x2563eb, 0x7dd3fc]
+    name: '长方体', faces: 6, edges: 12, vertices: 8, faceShape: '长方形',
+    sliders: [
+      { id: 'p1', label: '长', min: 1, max: 5, val: 2.4, step: 0.2 },
+      { id: 'p2', label: '宽', min: 0.5, max: 4, val: 1.6, step: 0.2 },
+      { id: 'p3', label: '高', min: 0.5, max: 4, val: 1.4, step: 0.2 }
+    ],
+    geo: function (p) { return new THREE.BoxGeometry(p.p1, p.p3, p.p2); },
+    colors: [0x4f8cff, 0x3b72e0, 0x60a5fa, 0x93c5fd, 0x2563eb, 0x7dd3fc],
+    sizeText: function (p) { return '长=' + p.p1 + ', 宽=' + p.p2 + ', 高=' + p.p3; },
+    vertices3d: function (p) {
+      var hl=p.p1/2, hw=p.p2/2, hh=p.p3/2;
+      return [[-hl,-hh,-hw],[hl,-hh,-hw],[hl,-hh,hw],[-hl,-hh,hw],[-hl,hh,-hw],[hl,hh,-hw],[hl,hh,hw],[-hl,hh,hw]];
+    }
   },
   cube: {
-    name: '正方体',
-    faces: 6, edges: 12, vertices: 8,
-    faceShape: '正方形',
-    geo: () => new THREE.BoxGeometry(1.8, 1.8, 1.8),
-    colors: [0xf97316, 0xea580c, 0xfb923c, 0xfed7aa, 0xc2410c, 0xfdba74]
+    name: '正方体', faces: 6, edges: 12, vertices: 8, faceShape: '正方形',
+    sliders: [
+      { id: 'p1', label: '边长', min: 1, max: 4, val: 1.8, step: 0.2 }
+    ],
+    geo: function (p) { return new THREE.BoxGeometry(p.p1, p.p1, p.p1); },
+    colors: [0xf97316, 0xea580c, 0xfb923c, 0xfed7aa, 0xc2410c, 0xfdba74],
+    sizeText: function (p) { return '边长=' + p.p1 + '（所有棱相等）'; },
+    vertices3d: function (p) {
+      var h=p.p1/2;
+      return [[-h,-h,-h],[h,-h,-h],[h,-h,h],[-h,-h,h],[-h,h,-h],[h,h,-h],[h,h,h],[-h,h,h]];
+    }
   },
   cylinder: {
-    name: '圆柱',
-    faces: 3, edges: 2, vertices: 0,
-    faceShape: '2个圆形 + 1个矩形',
-    geo: () => new THREE.CylinderGeometry(0.9, 0.9, 2, 32),
-    colors: [0x22c55e, 0x16a34a, 0x4ade80, 0x86efac, 0x15803d, 0xa3e635]
+    name: '圆柱', faces: 3, edges: 2, vertices: 0, faceShape: '2个圆形 + 1个曲面',
+    sliders: [
+      { id: 'p1', label: '半径', min: 0.5, max: 3, val: 0.9, step: 0.1 },
+      { id: 'p2', label: '高', min: 1, max: 5, val: 2, step: 0.2 }
+    ],
+    geo: function (p) { return new THREE.CylinderGeometry(p.p1, p.p1, p.p2, 32); },
+    colors: [0x22c55e, 0x16a34a, 0x4ade80],
+    sizeText: function (p) { return '半径=' + p.p1 + ', 高=' + p.p2 + ', 底面周长=' + (2*Math.PI*p.p1).toFixed(1); },
+    vertices3d: function () { return []; }
   },
   cone: {
-    name: '圆锥',
-    faces: 2, edges: 1, vertices: 1,
-    faceShape: '1个圆形 + 1个扇形',
-    geo: () => new THREE.ConeGeometry(1, 2.2, 32),
-    colors: [0xa855f7, 0x9333ea, 0xc084fc, 0xe9d5ff, 0x7e22ce, 0xd8b4fe]
+    name: '圆锥', faces: 2, edges: 1, vertices: 1, faceShape: '1个圆形 + 1个曲面',
+    sliders: [
+      { id: 'p1', label: '半径', min: 0.5, max: 3, val: 1, step: 0.1 },
+      { id: 'p2', label: '高', min: 1, max: 5, val: 2.2, step: 0.2 }
+    ],
+    geo: function (p) { return new THREE.ConeGeometry(p.p1, p.p2, 32); },
+    colors: [0xa855f7, 0x9333ea, 0xc084fc],
+    sizeText: function (p) { var l=Math.sqrt(p.p1*p.p1+p.p2*p.p2); return '半径=' + p.p1 + ', 高=' + p.p2 + ', 母线=' + l.toFixed(1); },
+    vertices3d: function (p) { return [[0, p.p2/2, 0]]; }
   }
 };
 
-let currentMesh = null;
-let autoRotate = false;
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xfdfaf4, camX: 4, camY: 3, camZ: 5 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 10, 10);
+
+  _meshGroup = new THREE.Group();
+  _scene.add(_meshGroup);
+  _highlightGroup = new THREE.Group();
+  _scene.add(_highlightGroup);
+
+  setShape('cuboid');
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls, function () {
+    if (_autoRotate && _meshGroup.children.length > 0) {
+      _meshGroup.rotation.y += 0.008;
+      _highlightGroup.rotation.y = _meshGroup.rotation.y;
+    }
+  });
+}
+
+function buildSliders(key) {
+  var def = SHAPES[key];
+  var area = document.getElementById('sliders-area');
+  area.innerHTML = '';
+  def.sliders.forEach(function (s) {
+    var div = document.createElement('div');
+    div.className = 'slider-row';
+    div.innerHTML = '<label>' + s.label + '</label>' +
+      '<input type="range" id="sl-' + s.id + '" min="' + s.min + '" max="' + s.max + '" value="' + s.val + '" step="' + s.step + '" oninput="onSliderChange()"/>' +
+      '<span class="val" id="sv-' + s.id + '">' + s.val + '</span>';
+    area.appendChild(div);
+  });
+}
+
+function onSliderChange() {
+  var def = SHAPES[_currentShape];
+  def.sliders.forEach(function (s) {
+    _params[s.id] = parseFloat(document.getElementById('sl-' + s.id).value);
+    document.getElementById('sv-' + s.id).textContent = _params[s.id];
+  });
+  buildMesh();
+  updateInfo();
+}
 
 function setShape(key) {
-  // 移除旧网格
-  if (currentMesh) {
-    scene.remove(currentMesh);
-    currentMesh.geometry.dispose();
-  }
+  _currentShape = key;
+  _params = {};
+  var def = SHAPES[key];
+  def.sliders.forEach(function (s) { _params[s.id] = s.val; });
 
-  const def = SHAPES[key];
+  buildSliders(key);
+  buildMesh();
+  updateInfo();
 
-  // 多面材质（区分各面颜色）
-  const geo = def.geo();
-  let mat;
-  if (key === 'cuboid' || key === 'cube') {
-    mat = def.colors.map(c => new THREE.MeshLambertMaterial({ color: c }));
+  Object.keys(SHAPES).forEach(function (k) {
+    document.getElementById('btn-' + k).classList.toggle('active', k === key);
+  });
+}
+
+function buildMesh() {
+  while (_meshGroup.children.length) _meshGroup.remove(_meshGroup.children[0]);
+  while (_highlightGroup.children.length) _highlightGroup.remove(_highlightGroup.children[0]);
+
+  var def = SHAPES[_currentShape];
+  var geo = def.geo(_params);
+
+  var mat;
+  if (_currentShape === 'cuboid' || _currentShape === 'cube') {
+    mat = def.colors.map(function (c) { return new THREE.MeshLambertMaterial({ color: c }); });
   } else {
-    mat = def.colors.slice(0, 3).map(c => new THREE.MeshLambertMaterial({ color: c }));
+    mat = def.colors.map(function (c) { return new THREE.MeshLambertMaterial({ color: c }); });
   }
 
-  const mesh = new THREE.Mesh(geo, mat);
+  var mesh = new THREE.Mesh(geo, mat);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
-  scene.add(mesh);
-  currentMesh = mesh;
+  _meshGroup.add(mesh);
 
-  // 更新信息面板
+  // 边框
+  var edgeGeo = new THREE.EdgesGeometry(geo);
+  var edgeMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25 });
+  var edges = new THREE.LineSegments(edgeGeo, edgeMat);
+  _meshGroup.add(edges);
+
+  applyHighlight();
+}
+
+function applyHighlight() {
+  while (_highlightGroup.children.length) _highlightGroup.remove(_highlightGroup.children[0]);
+  var def = SHAPES[_currentShape];
+  var geo = def.geo(_params);
+
+  if (_highlight === 'vertex') {
+    var verts = def.vertices3d(_params);
+    verts.forEach(function (v) {
+      var sg = new THREE.SphereGeometry(0.08, 12, 12);
+      var sm = new THREE.MeshBasicMaterial({ color: 0xf97316 });
+      var sp = new THREE.Mesh(sg, sm);
+      sp.position.set(v[0], v[1], v[2]);
+      _highlightGroup.add(sp);
+    });
+  } else if (_highlight === 'edge') {
+    // 边框加粗加亮
+    var edgeGeo2 = new THREE.EdgesGeometry(geo);
+    var edgeMat2 = new THREE.LineBasicMaterial({ color: 0xf97316, linewidth: 2 });
+    var edges2 = new THREE.LineSegments(edgeGeo2, edgeMat2);
+    _highlightGroup.add(edges2);
+  } else if (_highlight === 'face' && (_currentShape === 'cuboid' || _currentShape === 'cube')) {
+    // 高亮面
+    var faceColors = [0x4f8cff, 0x3b72e0, 0x60a5fa, 0x93c5fd, 0x2563eb, 0x7dd3fc];
+    if (_currentShape === 'cube') faceColors = [0xf97316, 0xea580c, 0xfb923c, 0xfed7aa, 0xc2410c, 0xfdba74];
+    for (var i = 0; i < 6; i++) {
+      var planeSize = (i < 2) ? (_currentShape === 'cube' ? _params.p1 : _params.p1) :
+                      (i < 4) ? (_currentShape === 'cube' ? _params.p1 : _params.p1) :
+                                (_currentShape === 'cube' ? _params.p1 : _params.p2);
+      var planeH = (i < 2) ? (_currentShape === 'cube' ? _params.p1 : _params.p2) :
+                   (i < 4) ? (_currentShape === 'cube' ? _params.p1 : _params.p3) :
+                             (_currentShape === 'cube' ? _params.p1 : _params.p3);
+      var pg = new THREE.PlaneGeometry(planeSize * 0.85, planeH * 0.85);
+      var pm = new THREE.MeshBasicMaterial({ color: faceColors[i], transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+      var pp = new THREE.Mesh(pg, pm);
+      // 6个面的位置和旋转
+      var positions = [
+        { pos: [0, _params.p3/2 || _params.p1/2, 0], rot: [0,0,0] },
+        { pos: [0, -(_params.p3/2 || _params.p1/2), 0], rot: [0,0,0] },
+        { pos: [0, 0, _params.p2/2 || _params.p1/2], rot: [-Math.PI/2,0,0] },
+        { pos: [0, 0, -(_params.p2/2 || _params.p1/2)], rot: [Math.PI/2,0,0] },
+        { pos: [-(_params.p1/2 || _params.p1/2), 0, 0], rot: [0,0,Math.PI/2] },
+        { pos: [(_params.p1/2 || _params.p1/2), 0, 0], rot: [0,0,-Math.PI/2] }
+      ];
+      if (positions[i]) {
+        pp.position.set(positions[i].pos[0], positions[i].pos[1], positions[i].pos[2]);
+        pp.rotation.set(positions[i].rot[0], positions[i].rot[1], positions[i].rot[2]);
+      }
+      _highlightGroup.add(pp);
+    }
+  }
+  _highlightGroup.rotation.y = _meshGroup.rotation.y;
+}
+
+function updateInfo() {
+  var def = SHAPES[_currentShape];
   document.getElementById('shape-name').textContent = def.name;
   document.getElementById('val-faces').textContent = def.faces;
   document.getElementById('val-edges').textContent = def.edges;
   document.getElementById('val-vertices').textContent = def.vertices;
   document.getElementById('val-face-shape').textContent = def.faceShape;
-
-  // 更新按钮
-  Object.keys(SHAPES).forEach(k => {
-    document.getElementById('btn-' + k).classList.toggle('active', k === key);
-  });
+  document.getElementById('size-detail').textContent = def.sizeText(_params);
 }
 
-function resetCamera() {
-  camera.position.set(4, 3, 5);
-  camera.lookAt(0, 0, 0);
-  if (currentMesh) {
-    currentMesh.rotation.set(0, 0, 0);
-  }
+function setHighlight(h) {
+  _highlight = _highlight === h ? '' : h;
+  ['vertex', 'edge', 'face'].forEach(function (k) {
+    document.getElementById('hb-' + k).classList.toggle('active', _highlight === k);
+  });
+  applyHighlight();
 }
 
 function toggleAuto() {
-  autoRotate = !autoRotate;
-  document.getElementById('btn-auto').textContent = autoRotate ? '⏸ 停止旋转' : '▶ 自动旋转';
-  document.getElementById('btn-auto').classList.toggle('edu-btn-primary', autoRotate);
+  _autoRotate = !_autoRotate;
+  document.getElementById('btn-auto').textContent = _autoRotate ? '⏸ 停止旋转' : '▶ 自动旋转';
+  document.getElementById('btn-auto').classList.toggle('edu-btn-primary', _autoRotate);
 }
 
-// 鼠标拖拽旋转
-let isDragging = false, prevX = 0, prevY = 0;
-
-canvas.addEventListener('mousedown', e => {
-  isDragging = true;
-  prevX = e.clientX;
-  prevY = e.clientY;
-});
-document.addEventListener('mousemove', e => {
-  if (!isDragging || !currentMesh) return;
-  const dx = e.clientX - prevX;
-  const dy = e.clientY - prevY;
-  currentMesh.rotation.y += dx * 0.012;
-  currentMesh.rotation.x += dy * 0.012;
-  prevX = e.clientX;
-  prevY = e.clientY;
-});
-document.addEventListener('mouseup', () => isDragging = false);
-
-// 触摸支持
-let lastTouch = null;
-canvas.addEventListener('touchstart', e => {
-  lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-}, { passive: true });
-canvas.addEventListener('touchmove', e => {
-  if (!lastTouch || !currentMesh) return;
-  const dx = e.touches[0].clientX - lastTouch.x;
-  const dy = e.touches[0].clientY - lastTouch.y;
-  currentMesh.rotation.y += dx * 0.012;
-  currentMesh.rotation.x += dy * 0.012;
-  lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-}, { passive: true });
-canvas.addEventListener('touchend', () => lastTouch = null);
-
-// 滚轮缩放
-canvas.addEventListener('wheel', e => {
-  camera.position.multiplyScalar(1 + e.deltaY * 0.001);
-}, { passive: true });
-
-function resize() {
-  const w = canvas.clientWidth, h = canvas.clientHeight;
-  renderer.setSize(w, h, false);
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
+function resetAll() {
+  _meshGroup.rotation.set(0, 0, 0);
+  _highlightGroup.rotation.set(0, 0, 0);
+  _autoRotate = false;
+  _highlight = '';
+  document.getElementById('btn-auto').textContent = '▶ 自动旋转';
+  document.getElementById('btn-auto').classList.remove('edu-btn-primary');
+  ['vertex', 'edge', 'face'].forEach(function (k) {
+    document.getElementById('hb-' + k).classList.remove('active');
+  });
+  _camera.position.set(4, 3, 5);
+  _controls.target.set(0, 0, 0);
+  _controls.update();
+  setShape(_currentShape);
 }
 
-function animate() {
-  requestAnimationFrame(animate);
-  resize();
-  if (autoRotate && currentMesh) {
-    currentMesh.rotation.y += 0.008;
-  }
-  renderer.render(scene, camera);
-}
-
-setShape('cuboid');
-animate();
+init();
 </script>
 </body>
 </html>
