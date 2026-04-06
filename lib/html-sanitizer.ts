@@ -8,7 +8,7 @@
  * 4. 确保 edu-base.css 链接存在
  *
  * 注意：正则检测是纵深防御的一层，不是安全边界。
- * 主要安全边界是 iframe sandbox="allow-scripts"（无 allow-same-origin）
+ * 线上教具壳使用 sandbox="allow-scripts allow-same-origin"（本站首方 HTML）；生成页预览仍为仅脚本沙箱
  * 以及为生成的 HTML 文件设置的 CSP sandbox 头。
  */
 import sanitize from "sanitize-html";

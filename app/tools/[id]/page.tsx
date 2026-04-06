@@ -129,7 +129,8 @@ export default async function ToolPage({ params }: PageProps) {
           src={iframeSrc}
           className="w-full h-full border-0"
           title={tool.name}
-          sandbox="allow-scripts"
+          /* allow-same-origin：仅 allow-scripts 时文档为不透明源，易触发「Unsafe attempt to load URL」且同域子资源异常 */
+          sandbox="allow-scripts allow-same-origin"
         />
       </div>
     </div>

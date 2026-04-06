@@ -34,12 +34,13 @@ const securityHeaders: Record<string, string> = {
  * - 禁止外部网络请求 (connect-src 'none')
  */
 const generatedToolHeaders: Record<string, string> = {
+  /* 与全站 /(.*) CSP 同时生效时须分别满足；须含 Cloudflare Analytics，否则第二份 policy 会拦 beacon */
   "Content-Security-Policy": [
     "sandbox allow-scripts",
     "default-src 'self' 'unsafe-inline' 'unsafe-eval'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com",
     "style-src 'self' 'unsafe-inline'",
-    "connect-src 'none'",
+    "connect-src https://cloudflareinsights.com",
     "img-src 'self' data: blob:",
     "font-src 'self'",
   ].join("; "),
