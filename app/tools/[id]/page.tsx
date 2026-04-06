@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import BackArrow from "@/components/BackArrow";
 import ShareButton from "@/components/ShareButton";
+import ToolIframe from "@/components/ToolIframe";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -123,16 +124,7 @@ export default async function ToolPage({ params }: PageProps) {
         </div>
       </header>
 
-      {/* 教具 iframe */}
-      <div className="flex-1 overflow-hidden">
-        <iframe
-          src={iframeSrc}
-          className="w-full h-full border-0"
-          title={tool.name}
-          /* allow-same-origin：仅 allow-scripts 时文档为不透明源，易触发「Unsafe attempt to load URL」且同域子资源异常 */
-          sandbox="allow-scripts allow-same-origin"
-        />
-      </div>
+      <ToolIframe src={iframeSrc} title={tool.name} />
     </div>
   );
 }
