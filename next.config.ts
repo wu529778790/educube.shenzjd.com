@@ -15,11 +15,12 @@ const securityHeaders: Record<string, string> = {
   "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
   "Content-Security-Policy": [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+    /* Cloudflare Web Analytics 会注入 static.cloudflareinsights.com；不加入则控制台报 CSP 拦截 */
+    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://static.cloudflareinsights.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob:",
-    "connect-src 'self'",
+    "connect-src 'self' https://cloudflareinsights.com",
     "frame-src 'self' blob:",
     "worker-src 'self' blob:",
   ].join("; "),

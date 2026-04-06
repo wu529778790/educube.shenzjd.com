@@ -125,7 +125,8 @@ var COLS = 5, ROWS = 5, MAX_H = 5;
 var grid = [];
 for (var i = 0; i < ROWS; i++) { grid[i] = []; for (var j = 0; j < COLS; j++) grid[i][j] = 0; }
 var mode = 'add';
-var history = [];
+// 勿用变量名 history，会与只读的 window.history 冲突
+var undoStack = [];
 
 var _scene, _camera, _renderer, _controls;
 var _blockGroup, _gridGroup;
@@ -169,13 +170,13 @@ function buildBaseGrid() {
 
 function saveHistory() {
   var snap = grid.map(function(row) { return row.slice(); });
-  history.push(snap);
-  if (history.length > 50) history.shift();
+  undoStack.push(snap);
+  if (undoStack.length > 50) undoStack.shift();
 }
 
 function undoAction() {
-  if (history.length === 0) return;
-  grid = history.pop();
+  if (undoStack.length === 0) return;
+  grid = undoStack.pop();
   rebuildBlocks();
 }
 
