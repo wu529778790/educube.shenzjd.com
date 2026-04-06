@@ -3,6 +3,7 @@ import { getToolById, tools } from "@/data/tools";
 import { loadGeneratedTools } from "@/data/generated-tools";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import BackArrow from "@/components/BackArrow";
 import ShareButton from "@/components/ShareButton";
 
 interface PageProps {
@@ -14,8 +15,11 @@ export async function generateStaticParams() {
 }
 
 async function findTool(id: string) {
+  // 快速路径：静态工具直接命中，无需加载生成工具索引
   const staticTool = getToolById(id);
   if (staticTool) return { tool: staticTool, isGenerated: false };
+  // 只有 gen- 前缀的 ID 才会去查生成工具（避免对每个静态工具页面读 JSON 索引）
+  if (!id.startsWith("gen-")) return null;
   const generated = await loadGeneratedTools();
   const genTool = generated.find((t) => t.id === id);
   if (genTool) return { tool: genTool, isGenerated: true };
@@ -26,9 +30,20 @@ export async function generateMetadata({ params }: PageProps) {
   const { id } = await params;
   const result = await findTool(id);
   if (!result) return {};
+  const title = `${result.tool.name} — 教立方 EduCube`;
   return {
-    title: `${result.tool.name} — 教立方 EduCube`,
+    title,
     description: result.tool.description,
+    openGraph: {
+      title,
+      description: result.tool.description,
+      type: "article",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description: result.tool.description,
+    },
   };
 }
 
@@ -57,19 +72,7 @@ export default async function ToolPage({ params }: PageProps) {
           href="/"
           className="flex items-center gap-1.5 text-white/60 hover:text-white transition-colors text-sm flex-shrink-0"
         >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
+          <BackArrow />
           <span className="hidden sm:inline">返回</span>
         </Link>
 
@@ -78,12 +81,12 @@ export default async function ToolPage({ params }: PageProps) {
           <span className="text-lg flex-shrink-0">{tool.icon}</span>
           <span
             className="text-sm font-semibold text-white truncate"
-            style={{ fontFamily: "'Noto Serif SC', serif" }}
+            style={{ fontFamily: "var(--edu-font-serif)" }}
           >
             {tool.name}
           </span>
           <span
-            className="hidden sm:inline text-xs text-white/40 flex-shrink-0 truncate max-w-[min(280px,40vw)]"
+            className="hidden sm:inline text-xs text-white/60 flex-shrink-0 truncate max-w-[min(280px,40vw)]"
             title={getPathLabel(tool.gradeId, tool.subjectId)}
           >
             · {getPathLabel(tool.gradeId, tool.subjectId)}
@@ -93,7 +96,7 @@ export default async function ToolPage({ params }: PageProps) {
         {/* 右侧：操作按钮 */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <ShareButton toolName={tool.name} />
-          <span className="hidden md:inline-flex items-center gap-1 text-xs text-white/40 px-2 py-1 rounded-md"
+          <span className="hidden md:inline-flex items-center gap-1 text-xs text-white/60 px-2 py-1 rounded-md"
             style={{ background: "rgba(255,255,255,0.08)" }}
           >
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

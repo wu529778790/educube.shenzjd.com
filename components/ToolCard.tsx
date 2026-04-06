@@ -12,13 +12,9 @@ const ToolCard = memo(function ToolCard({ tool, index }: ToolCardProps) {
   return (
     <Link
       href={`/tools/${tool.id}`}
-      className="group block rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1"
-      style={{
-        background: "var(--edu-surface)",
-        border: "1px solid var(--edu-border)",
-        boxShadow: "0 1px 3px rgba(44,44,44,0.04), 0 4px 16px rgba(44,44,44,0.03)",
-        animationDelay: `${index * 80}ms`,
-      }}
+      className="group block edu-card-elevated overflow-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+      style={{ animationDelay: `${Math.min(index * 80, 800)}ms` }}
+      role="listitem"
     >
       {/* 顶部渐变条 — 更宽更圆润 */}
       <div
@@ -54,17 +50,16 @@ const ToolCard = memo(function ToolCard({ tool, index }: ToolCardProps) {
           className="text-[15px] font-bold mb-1 transition-colors leading-snug"
           style={{
             color: "var(--edu-text)",
-            fontFamily: "'Noto Serif SC', serif",
+            fontFamily: "var(--edu-font-serif)",
           }}
         >
-          <span
-            className="group-hover:hidden"
-          >
+          <span className="group-hover:hidden">
             {tool.name}
           </span>
           <span
             className="hidden group-hover:inline"
             style={{ color: tool.gradient[0] }}
+            aria-hidden="true"
           >
             {tool.name}
           </span>

@@ -8,18 +8,24 @@
 const EDU_BASE_CSS = `/* 教立方 EduCube — 教具公共基础样式 */
 
 :root {
-  --edu-bg: #fdfbf7;
+  --edu-bg: #faf8f3;
   --edu-surface: #ffffff;
-  --edu-primary: #1a3a5c;
-  --edu-accent: #f97316;
-  --edu-accent2: #0ea5e9;
-  --edu-success: #22c55e;
-  --edu-text: #1e293b;
-  --edu-text-muted: #64748b;
-  --edu-border: #e2e8f0;
-  --edu-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --edu-primary: #2d3a8c;
+  --edu-primary-light: #3d4ea8;
+  --edu-accent: #e8890c;
+  --edu-accent-light: #f5a623;
+  --edu-accent2: #4f9cf7;
+  --edu-success: #3dab5c;
+  --edu-danger: #e5484d;
+  --edu-text: #2c2c2c;
+  --edu-text-secondary: #5c5650;
+  --edu-text-muted: #8b8680;
+  --edu-border: #e8e4dd;
+  --edu-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
   --edu-radius: 12px;
+  --edu-radius-sm: 8px;
   --edu-font: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --edu-serif: "'Noto Serif SC', serif";
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,22 +33,29 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: var(--edu
 
 .edu-tool { width: 100vw; height: 100vh; display: flex; flex-direction: column; background: var(--edu-bg); overflow: hidden; }
 .edu-toolbar { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: var(--edu-surface); border-bottom: 1px solid var(--edu-border); box-shadow: 0 1px 4px rgba(0,0,0,.06); gap: 12px; }
-.edu-toolbar-title { font-size: 15px; font-weight: 700; color: var(--edu-primary); white-space: nowrap; }
+.edu-toolbar-title { font-size: 15px; font-weight: 700; color: var(--edu-primary); white-space: nowrap; font-family: var(--edu-serif); }
 .edu-toolbar-subtitle { font-size: 12px; color: var(--edu-text-muted); padding: 3px 8px; background: #f1f5f9; border-radius: 20px; white-space: nowrap; }
 .edu-toolbar-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .edu-content { flex: 1; overflow: hidden; position: relative; }
 .edu-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s ease; font-family: var(--edu-font); white-space: nowrap; user-select: none; }
 .edu-btn:active { transform: scale(.97); }
 .edu-btn-primary { background: var(--edu-primary); color: #fff; }
-.edu-btn-primary:hover { background: #1e4a76; }
+.edu-btn-primary:hover { background: var(--edu-primary-light); }
 .edu-btn-accent { background: var(--edu-accent); color: #fff; }
-.edu-btn-accent:hover { background: #ea6c0a; }
+.edu-btn-accent:hover { background: var(--edu-accent-light); }
 .edu-btn-outline { background: transparent; color: var(--edu-primary); border: 1.5px solid var(--edu-border); }
 .edu-btn-outline:hover { background: #f1f5f9; border-color: var(--edu-primary); }
+.edu-btn-active { background: var(--edu-primary); color: #fff; }
 .edu-divider { width: 1px; height: 20px; background: var(--edu-border); flex-shrink: 0; }
+.edu-panel { background: var(--edu-surface); border: 1px solid var(--edu-border); border-radius: var(--edu-radius); padding: 16px; box-shadow: var(--edu-shadow); }
+.edu-tag-group { display: flex; gap: 6px; flex-wrap: wrap; }
+.edu-tag { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s ease; border: 1.5px solid transparent; user-select: none; }
+.edu-canvas-full { width: 100%; height: 100%; display: block; }
+.edu-hint { font-size: 12px; color: var(--edu-text-muted); text-align: center; padding: 6px 0; }
 .value-display { font-size: 14px; font-weight: 700; color: var(--edu-accent); min-width: 40px; text-align: center; }
 input[type="range"] { -webkit-appearance: none; height: 4px; border-radius: 2px; background: var(--edu-border); outline: none; cursor: pointer; }
-input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--edu-primary); cursor: pointer; }`;
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--edu-primary); cursor: pointer; transition: background .15s; }
+input[type="range"]::-webkit-slider-thumb:hover { background: var(--edu-accent); }`;
 
 /* ================================================================
  * Section B: 角色与规则
@@ -105,16 +118,17 @@ const SKELETON_TEMPLATE = `
   <title>{教具名称} — 教立方</title>
   <link rel="stylesheet" href="../edu-lib/edu-base.css"/>
   <style>
-    .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; } @media(max-width:640px){.main-layout{grid-template-columns:1fr!important;grid-template-rows:1fr auto!important;overflow-y:auto!important} .main-layout .control-panel{max-height:45vh;overflow-y:auto;border-top:1px solid #e2e8f0} .main-layout .canvas-area{min-height:50vh}}
-    .canvas-area { padding:24px; overflow-y:auto; background:linear-gradient(...); display:flex; flex-direction:column; align-items:center; }
-    .control-panel { background:#fdfaf4; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:12px; overflow:auto; }
+    .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; }
+    /* 响应式断点已由 edu-base.css 提供 */
+    .canvas-area { padding:24px; overflow-y:auto; background:linear-gradient(135deg,var(--edu-bg),#fff); display:flex; flex-direction:column; align-items:center; }
+    .control-panel { background:#fdfaf4; border-left:1px solid var(--edu-border); padding:14px; display:flex; flex-direction:column; gap:12px; overflow:auto; }
     .ctrl-section { display:flex; flex-direction:column; gap:6px; }
-    .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
-    .divider { height:1px; background:#e2e8f0; }
-    .info-box { background:#fff; border:1px solid ...; border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.8; color:#334155; }
+    .ctrl-label { font-size:11px; font-weight:700; color:var(--edu-text-muted); letter-spacing:.05em; }
+    .divider { height:1px; background:var(--edu-border); }
+    .info-box { background:#fff; border:1px solid var(--edu-border); border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.8; color:var(--edu-text); }
     .slider-row { display:flex; align-items:center; gap:8px; }
     .slider-row input[type=range] { flex:1; }
-    .slider-row .val { font-size:14px; font-weight:700; color:...; min-width:24px; text-align:right; }
+    .slider-row .val { font-size:14px; font-weight:700; color:var(--edu-accent); min-width:24px; text-align:right; }
     /* 其他工具特定样式 */
   </style>
 </head>
@@ -138,7 +152,7 @@ const SKELETON_TEMPLATE = `
       <div class="control-panel">
         <div class="ctrl-section">
           <div class="ctrl-label">参数名</div>
-          <div class="slider-row"><input type="range" .../><span class="val">值</span></div>
+          <div class="slider-row"><input type="range" id="sl1" min="1" max="10" value="5" oninput="update()"/><span class="val" id="v1">5</span></div>
         </div>
         <div class="divider"></div>
         <div class="info-box">
@@ -174,9 +188,9 @@ const EXAMPLE_1 = `
   <title>分数的初步认识 — 教立方</title>
   <link rel="stylesheet" href="../edu-lib/edu-base.css"/>
   <style>
-    .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; } @media(max-width:640px){.main-layout{grid-template-columns:1fr!important;grid-template-rows:1fr auto!important;overflow-y:auto!important} .main-layout .control-panel{max-height:45vh;overflow-y:auto;border-top:1px solid #e2e8f0} .main-layout .canvas-area{min-height:50vh}}
+    .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; }
     .canvas-area { padding:24px; overflow-y:auto; background:linear-gradient(135deg,#fdf2f8,#fce7f3); display:flex; flex-direction:column; align-items:center; }
-    .control-panel { background:#fdfaf4; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:12px; overflow:auto; }
+    .control-panel { background:#fdfaf4; border-left:1px solid var(--edu-border); padding:14px; display:flex; flex-direction:column; gap:12px; overflow:auto; }
     .ctrl-section { display:flex; flex-direction:column; gap:6px; }
     .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
     .divider { height:1px; background:#e2e8f0; }
@@ -377,337 +391,8 @@ update();
 </body>
 </html>`;
 
-/* ================================================================
- * Section D: 参考示例 2 — find-fake.html（交互按钮 + 分步逻辑）
- * ================================================================ */
-const EXAMPLE_2 = `
-## 参考示例 2：找次品（交互按钮 + 分步逻辑 + 动态DOM）
-
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>找次品 — 教立方</title>
-  <link rel="stylesheet" href="../edu-lib/edu-base.css"/>
-  <style>
-    .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; } @media(max-width:640px){.main-layout{grid-template-columns:1fr!important;grid-template-rows:1fr auto!important;overflow-y:auto!important} .main-layout .control-panel{max-height:45vh;overflow-y:auto;border-top:1px solid #e2e8f0} .main-layout .canvas-area{min-height:50vh}}
-    .canvas-area { padding:24px; overflow-y:auto; background:linear-gradient(135deg,#fff7ed,#fdfaf4); display:flex; flex-direction:column; align-items:center; }
-    .control-panel { background:#fdfaf4; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:14px; overflow:auto; }
-    .ctrl-section { display:flex; flex-direction:column; gap:6px; }
-    .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
-    .divider { height:1px; background:#e2e8f0; }
-    .info-box { background:#fff; border:1px solid #fed7aa; border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.8; color:#334155; }
-    .slider-row { display:flex; align-items:center; gap:10px; }
-    .slider-row input { flex:1; }
-    .slider-row .value-display { min-width:40px; font-weight:700; }
-    .balls-row { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin:12px 0; }
-    .ball { width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800; color:#fff; background:#94a3b8; cursor:pointer; transition:all .15s; box-shadow:0 2px 6px rgba(0,0,0,.1); }
-    .ball:hover { transform:scale(1.1); }
-    .ball.group-a { background:#3b82f6; }
-    .ball.group-b { background:#f97316; }
-    .ball.group-c { background:#22c55e; }
-    .ball.found { background:#ef4444; animation:pulse .6s infinite alternate; }
-    @keyframes pulse { from { transform:scale(1); } to { transform:scale(1.15); } }
-    .balance { display:flex; align-items:flex-end; justify-content:center; gap:40px; margin:16px 0; }
-    .pan { width:120px; min-height:50px; border:2px solid #94a3b8; border-radius:0 0 12px 12px; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:#64748b; background:#f8fafc; transition:all .3s; }
-    .pan.heavy { border-color:#ef4444; background:#fef2f2; color:#ef4444; transform:translateY(8px); }
-    .pan.light { border-color:#22c55e; background:#f0fdf4; color:#22c55e; transform:translateY(-4px); }
-    .pan-label { font-size:12px; font-weight:700; color:#64748b; text-align:center; margin-top:4px; }
-    .fulcrum { font-size:30px; color:#94a3b8; margin-top:-8px; }
-    .step-card { background:#fff; border:2px solid #f97316; border-radius:14px; padding:16px; width:100%; max-width:460px; }
-    .step-line { margin:4px 0; font-size:14px; line-height:1.8; }
-    .step-line .hl { color:#f97316; font-weight:700; }
-    .result-box { background:#f0fdf4; border:2px solid #22c55e; border-radius:12px; padding:14px; text-align:center; margin-top:10px; }
-    .result-big { font-size:22px; font-weight:800; color:#22c55e; }
-    .preset-btn { padding:8px 0; border-radius:8px; font-size:13px; font-weight:600; background:#fff; border:1.5px solid #e2e8f0; cursor:pointer; transition:all .15s; }
-    .preset-btn:hover { border-color:#f97316; color:#f97316; }
-  </style>
-</head>
-<body>
-<div class="edu-tool">
-  <div class="edu-toolbar">
-    <div style="display:flex;align-items:center;gap:10px">
-      <div class="edu-toolbar-title">🔍 找次品</div>
-      <div class="edu-toolbar-subtitle">下册 · 数学广角</div>
-    </div>
-    <div class="edu-toolbar-actions">
-      <button class="edu-btn edu-btn-primary" onclick="weigh()">称量</button>
-      <button class="edu-btn edu-btn-accent" onclick="autoSolve()">自动求解</button>
-      <div class="edu-divider"></div>
-      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
-    </div>
-  </div>
-  <div class="edu-content">
-    <div class="main-layout">
-      <div class="canvas-area">
-        <div class="balls-row" id="ballsRow"></div>
-        <div class="balance" id="balanceArea">
-          <div><div class="pan" id="panL">左盘</div><div class="pan-label">A 组</div></div>
-          <div class="fulcrum">∧</div>
-          <div><div class="pan" id="panR">右盘</div><div class="pan-label">B 组</div></div>
-        </div>
-        <div class="step-card" id="stepCard"></div>
-      </div>
-      <div class="control-panel">
-        <div class="ctrl-section">
-          <div class="ctrl-label">物品数量</div>
-          <div class="slider-row"><input type="range" id="numSlider" min="3" max="15" value="9" oninput="resetAll()"/><span class="value-display" id="numVal">9</span></div>
-        </div>
-        <div class="ctrl-section">
-          <div class="ctrl-label">次品位置（点击设置）</div>
-          <div style="font-size:13px;color:#64748b" id="fakeInfo">点击球设置次品位置</div>
-        </div>
-        <div class="divider"></div>
-        <div class="ctrl-section">
-          <div class="ctrl-label">快速设置</div>
-          <button class="preset-btn" onclick="load(5)">5 个物品</button>
-          <button class="preset-btn" onclick="load(9)">9 个物品</button>
-          <button class="preset-btn" onclick="load(12)">12 个物品</button>
-        </div>
-        <div class="divider"></div>
-        <div class="info-box">
-          <b>找次品策略</b><br/>
-          ● 把物品分成3组<br/>
-          ● 尽量让3组一样多<br/>
-          ● 称两组，确定次品在哪组<br/>
-          ● 重复以上步骤<br/>
-          ● n个物品最少⌈log₃n⌉次
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-<script>
-let total = 9, fakeIdx = 0, weighCount = 0, found = false, steps = [];
-
-function resetAll() {
-  total = parseInt(document.getElementById('numSlider').value) || 9;
-  document.getElementById('numVal').textContent = total;
-  fakeIdx = 0; weighCount = 0; found = false; steps = [];
-  renderBalls();
-  document.getElementById('panL').className = 'pan'; document.getElementById('panL').textContent = '左盘';
-  document.getElementById('panR').className = 'pan'; document.getElementById('panR').textContent = '右盘';
-  document.getElementById('stepCard').innerHTML = '<div style="text-align:center;color:#94a3b8">点击球设置次品位置，然后点击"称量"</div>';
-  document.getElementById('fakeInfo').textContent = '点击球设置次品位置';
-}
-
-function renderBalls() {
-  const el = document.getElementById('ballsRow');
-  el.innerHTML = Array.from({length:total}, (_,i) =>
-    '<div class="ball'+(i===fakeIdx?' found':'')+'" onclick="setFake('+i+')">'+(i+1)+'</div>'
-  ).join('');
-}
-
-function setFake(i) { fakeIdx = i; found = false; renderBalls(); document.getElementById('fakeInfo').textContent = '次品是第 '+(i+1)+' 号'; }
-
-function weigh() {
-  if (found) return;
-  const n = total, third = Math.ceil(n/3);
-  const a = [], b = [], c = [];
-  for (let i = 0; i < n; i++) { if (i < third) a.push(i); else if (i < third*2) b.push(i); else c.push(i); }
-  weighCount++;
-  const aHas = a.includes(fakeIdx), bHas = b.includes(fakeIdx);
-  const panL = document.getElementById('panL'), panR = document.getElementById('panR');
-  if (aHas) { panL.className='pan heavy'; panL.textContent='A: '+a.map(i=>i+1).join(','); panR.className='pan light'; panR.textContent='B: '+b.map(i=>i+1).join(','); steps.push({n:weighCount,result:'A重，次品在A组',group:a}); }
-  else if (bHas) { panL.className='pan light'; panL.textContent='A: '+a.map(i=>i+1).join(','); panR.className='pan heavy'; panR.textContent='B: '+b.map(i=>i+1).join(','); steps.push({n:weighCount,result:'B重，次品在B组',group:b}); }
-  else { panL.className='pan'; panL.textContent='A: '+a.map(i=>i+1).join(','); panR.className='pan'; panR.textContent='B: '+b.map(i=>i+1).join(','); steps.push({n:weighCount,result:'平衡，次品在C组',group:c}); }
-  const lastGroup = steps[steps.length-1].group;
-  document.querySelectorAll('.ball').forEach((b,i) => { b.style.opacity = lastGroup.includes(i) ? '1' : '0.3'; });
-  total = lastGroup.length;
-  renderSteps();
-  if (total <= 1) { found = true; document.querySelectorAll('.ball').forEach((b,i) => { b.style.opacity = i===fakeIdx ? '1' : '0.3'; }); }
-}
-
-function autoSolve() { resetAll(); function step() { if (total<=1) return; weigh(); setTimeout(step,600); } step(); }
-
-function renderSteps() {
-  const card = document.getElementById('stepCard');
-  let html = '';
-  steps.forEach(s => { html += '<div class="step-line">第'+s.n+'次称量：<span class="hl">'+s.result+'</span>（'+s.group.length+'个物品）</div>'; });
-  const minW = Math.ceil(Math.log(parseInt(document.getElementById('numSlider').value))/Math.log(3));
-  html += '<div style="margin-top:6px;font-size:13px;color:#64748b">理论最少次数：'+minW+' 次</div>';
-  if (found) html += '<div class="result-box"><div class="result-big">找到次品！第 '+(fakeIdx+1)+' 号</div><div style="font-size:14px;color:#64748b">共称了 '+weighCount+' 次</div></div>';
-  else html += '<div style="font-size:13px;color:#64748b">剩余 '+total+' 个物品，继续称量...</div>';
-  card.innerHTML = html;
-}
-
-function load(n) { document.getElementById('numSlider').value = n; resetAll(); }
-resetAll();
-</script>
-</body>
-</html>`;
-
-/* ================================================================
- * Section D-3: 参考示例 3 — shape-scale.html（对比展示 + 数据卡片 + 动态计算）
- * ================================================================ */
-const EXAMPLE_3 = `
-## 参考示例 3：图形放大与缩小（双Canvas对比 + 实时计算 + 图形切换 + 预设按钮）
-
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>图形放大与缩小 — 教立方</title>
-  <link rel="stylesheet" href="../edu-lib/edu-base.css"/>
-  <style>
-    .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; } @media(max-width:640px){.main-layout{grid-template-columns:1fr!important;grid-template-rows:1fr auto!important;overflow-y:auto!important} .main-layout .control-panel{max-height:45vh;overflow-y:auto;border-top:1px solid #e2e8f0} .main-layout .canvas-area{min-height:50vh}}
-    .canvas-area { padding:24px; overflow-y:auto; background:linear-gradient(135deg,#eff6ff,#fdfaf4); display:flex; flex-direction:column; align-items:center; }
-    .control-panel { background:#fdfaf4; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:14px; overflow:auto; }
-    .ctrl-section { display:flex; flex-direction:column; gap:6px; }
-    .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
-    .divider { height:1px; background:#e2e8f0; }
-    .info-box { background:#fff; border:1px solid #bfdbfe; border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.8; color:#334155; }
-    .slider-row { display:flex; align-items:center; gap:10px; }
-    .slider-row input { flex:1; }
-    .slider-row .value-display { min-width:50px; font-weight:700; text-align:right; }
-    .compare-area { display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
-    .shape-box { text-align:center; }
-    .shape-box .title { font-size:14px; font-weight:700; margin-bottom:8px; }
-    canvas { border-radius:12px; background:#fff; box-shadow:0 2px 12px rgba(0,0,0,.06); }
-    .scale-badge { display:inline-block; padding:4px 12px; border-radius:20px; font-size:14px; font-weight:800; margin-top:8px; }
-    .shape-selector { display:flex; gap:6px; flex-wrap:wrap; }
-    .shape-btn { padding:6px 12px; border-radius:8px; border:1.5px solid #e2e8f0; background:#fff; font-size:13px; cursor:pointer; transition:all .15s; font-weight:600; }
-    .shape-btn.active { background:#3b82f6; color:#fff; border-color:#3b82f6; }
-    .result-card { background:#fff; border:2px solid #3b82f6; border-radius:14px; padding:16px; width:100%; max-width:520px; margin-top:16px; }
-    .result-row { display:flex; justify-content:space-between; padding:6px 0; font-size:14px; }
-    .result-row .label { color:#64748b; }
-    .result-row .val { font-weight:800; font-family:'Courier New',monospace; }
-    .preset-btn { padding:8px 0; border-radius:8px; font-size:13px; font-weight:600; background:#fff; border:1.5px solid #e2e8f0; cursor:pointer; transition:all .15s; }
-    .preset-btn:hover { border-color:#3b82f6; color:#3b82f6; }
-  </style>
-</head>
-<body>
-<div class="edu-tool">
-  <div class="edu-toolbar">
-    <div style="display:flex;align-items:center;gap:10px">
-      <div class="edu-toolbar-title">🔍 图形放大与缩小</div>
-      <div class="edu-toolbar-subtitle">下册 · 第四单元</div>
-    </div>
-    <div class="edu-toolbar-actions">
-      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
-    </div>
-  </div>
-  <div class="edu-content">
-    <div class="main-layout">
-      <div class="canvas-area">
-        <div class="shape-selector" id="shapeSelector"></div>
-        <div class="compare-area" style="margin-top:16px">
-          <div class="shape-box">
-            <div class="title" style="color:#94a3b8">原图形</div>
-            <canvas id="cvsOrig" width="220" height="220"></canvas>
-            <div class="scale-badge" style="background:#f1f5f9;color:#64748b">1 : 1</div>
-          </div>
-          <div style="font-size:28px;display:flex;align-items:center;color:#94a3b8">→</div>
-          <div class="shape-box">
-            <div class="title" style="color:#3b82f6" id="scaleTitle">放大 2:1</div>
-            <canvas id="cvsScaled" width="220" height="220"></canvas>
-            <div class="scale-badge" id="scaleBadge" style="background:#eff6ff;color:#3b82f6">2 : 1</div>
-          </div>
-        </div>
-        <div class="result-card" id="resultCard"></div>
-      </div>
-      <div class="control-panel">
-        <div class="ctrl-section">
-          <div class="ctrl-label">缩放比例</div>
-          <div class="slider-row">
-            <input type="range" id="scaleSlider" min="0.5" max="3" step="0.1" value="2" oninput="drawAll()"/>
-            <span class="value-display" id="scaleVal">2.0</span>
-          </div>
-        </div>
-        <div class="divider"></div>
-        <div class="ctrl-section">
-          <div class="ctrl-label">选择图形</div>
-          <div class="shape-selector" id="shapeList"></div>
-        </div>
-        <div class="divider"></div>
-        <div class="ctrl-section">
-          <div class="ctrl-label">预设比例</div>
-          <button class="preset-btn" onclick="setScale(0.5)">缩小 1:2</button>
-          <button class="preset-btn" onclick="setScale(1.5)">放大 3:2</button>
-          <button class="preset-btn" onclick="setScale(2)">放大 2:1</button>
-          <button class="preset-btn" onclick="setScale(3)">放大 3:1</button>
-        </div>
-        <div class="divider"></div>
-        <div class="info-box">
-          <b>图形放大与缩小</b><br/>
-          ● 按 k:1 放大，边长×k<br/>
-          ● 按 1:k 缩小，边长÷k<br/>
-          ● 放大/缩小后形状不变<br/>
-          ● 面积比 = k²<br/>
-          ● 周长比 = k<br/>
-          ● 对应角的大小不变
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-<script>
-let currentShape = 'rect';
-const shapes = {
-  rect: { name: '长方形', w: 4, h: 3 },
-  square: { name: '正方形', w: 4, h: 4 },
-  triangle: { name: '三角形', w: 6, h: 5 },
-  lshape: { name: 'L形', w: 4, h: 4 },
-};
-
-function buildShapeSelector() {
-  const el = document.getElementById('shapeList');
-  el.innerHTML = Object.entries(shapes).map(([k, v]) =>
-    '<button class="shape-btn '+(k===currentShape?'active':'')+'" onclick="selectShape(\\''+k+'\\')">'+v.name+'</button>'
-  ).join('');
-}
-
-function selectShape(s) { currentShape = s; buildShapeSelector(); drawAll(); }
-function setScale(v) { document.getElementById('scaleSlider').value = v; drawAll(); }
-
-function drawShape(ctx, type, cx, cy, w, h, scale, color) {
-  const sw = w * scale, sh = h * scale;
-  ctx.save(); ctx.translate(cx, cy);
-  ctx.beginPath();
-  if (type === 'rect') { ctx.rect(-sw/2,-sh/2,sw,sh); }
-  else if (type === 'square') { ctx.rect(-sw/2,-sw/2,sw,sw); }
-  else if (type === 'triangle') { ctx.moveTo(0,-sh/2); ctx.lineTo(sw/2,sh/2); ctx.lineTo(-sw/2,sh/2); ctx.closePath(); }
-  else if (type === 'lshape') { const s=sw/2,u=sw/4; ctx.moveTo(-s,-s); ctx.lineTo(-s+u,-s); ctx.lineTo(-s+u,s-u); ctx.lineTo(s,s-u); ctx.lineTo(s,s); ctx.lineTo(-s,s); ctx.closePath(); }
-  ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = color + '15'; ctx.fill();
-  ctx.restore();
-}
-
-function drawAll() {
-  const k = parseFloat(document.getElementById('scaleSlider').value);
-  document.getElementById('scaleVal').textContent = k.toFixed(1);
-  const isEnlarge = k >= 1;
-  const titleEl = document.getElementById('scaleTitle');
-  const badgeEl = document.getElementById('scaleBadge');
-  if (k === 1) { titleEl.textContent = '原大小'; badgeEl.textContent = '1 : 1'; }
-  else if (isEnlarge) { titleEl.textContent = '放大 '+k+':1'; badgeEl.textContent = k+' : 1'; titleEl.style.color='#3b82f6'; badgeEl.style.background='#eff6ff'; badgeEl.style.color='#3b82f6'; }
-  else { titleEl.textContent = '缩小 1:'+(1/k).toFixed(1); badgeEl.textContent = '1 : '+(1/k).toFixed(1); titleEl.style.color='#f97316'; badgeEl.style.background='#fff7ed'; badgeEl.style.color='#f97316'; }
-
-  const shape = shapes[currentShape]; const baseScale = 22;
-  const c1 = document.getElementById('cvsOrig'); const ctx1 = c1.getContext('2d');
-  ctx1.clearRect(0,0,c1.width,c1.height); drawShape(ctx1,currentShape,c1.width/2,c1.height/2,shape.w,shape.h,baseScale,'#94a3b8');
-  const c2 = document.getElementById('cvsScaled'); const ctx2 = c2.getContext('2d');
-  ctx2.clearRect(0,0,c2.width,c2.height);
-  const drawScale = Math.min(baseScale*k, c2.width*0.4/Math.max(shape.w,shape.h));
-  drawShape(ctx2,currentShape,c2.width/2,c2.height/2,shape.w,shape.h,drawScale,isEnlarge?'#3b82f6':'#f97316');
-
-  const card = document.getElementById('resultCard');
-  const oW=shape.w,oH=shape.h,nW=oW*k,nH=oH*k;
-  let oA,nA; if(currentShape==='triangle'){oA=oW*oH/2;nA=nW*nH/2;}else{oA=oW*oH;nA=nW*nH;}
-  card.innerHTML = '<div style="font-size:16px;font-weight:700;color:#334155;margin-bottom:12px">'+shape.name+' · 缩放比例 '+k+':1</div>'
-    +'<div class="result-row"><span class="label">原宽 → 新宽</span><span class="val">'+oW+' → '+nW.toFixed(1)+' (= '+oW+'×'+k+')</span></div>'
-    +'<div class="result-row"><span class="label">原高 → 新高</span><span class="val">'+oH+' → '+nH.toFixed(1)+' (= '+oH+'×'+k+')</span></div>'
-    +'<div class="result-row" style="background:#f8fafc;border-radius:6px;padding:8px"><span class="label">原面积 → 新面积</span><span class="val" style="color:#3b82f6">'+oA+' → '+nA.toFixed(1)+' (= ×'+(k*k).toFixed(1)+')</span></div>'
-    +'<div class="result-row"><span class="label">面积比</span><span class="val" style="color:#8b5cf6">1 : '+(k*k).toFixed(1)+' (= '+k+'²)</span></div>';
-}
-
-function resetAll() { currentShape='rect'; document.getElementById('scaleSlider').value=2; buildShapeSelector(); drawAll(); }
-buildShapeSelector(); drawAll();
-</script>
-</body>
-</html>`;
+/* EXAMPLE_2 和 EXAMPLE_3 已移除以减少系统提示词 token 开销。
+ * 保留 EXAMPLE_1（2D Canvas 典范）和 EXAMPLE_4（3D Three.js 典范）即可。 */
 
 /* ================================================================
  * Section D-4: 3D API 文档（edu-3d.js）
@@ -739,11 +424,14 @@ Edu3D.addGrid(scene, 12, 12);
 // 4. 创建边框线
 var edgeLine = Edu3D.edges(geometry, 0x334155);
 
-// 5. 创建文字精灵（3D 空间中的文字标签）
+// 5. 创建标准材质（可选透明度）
+var mat = Edu3D.material(0x3B82F6, { opacity: 0.5 });
+
+// 6. 创建文字精灵（3D 空间中的文字标签）
 var label = Edu3D.textSprite('文字', { color: '#1e293b', scale: 0.5 });
 label.position.set(x, y, z);
 
-// 6. 启动渲染循环（可选第5个参数为每帧回调）
+// 7. 启动渲染循环（可选第5个参数为每帧回调）
 Edu3D.startLoop(scene, camera, renderer, controls);
 \`\`\`
 
@@ -803,10 +491,10 @@ const EXAMPLE_4 = `
   <script src="../edu-lib/OrbitControls.js"></script>
   <script src="../edu-lib/edu-3d.js"></script>
   <style>
-    .main-layout { display:grid; grid-template-columns:1fr 280px; height:100%; } @media(max-width:640px){.main-layout{grid-template-columns:1fr!important;grid-template-rows:1fr auto!important;overflow-y:auto!important} .main-layout .control-panel{max-height:45vh;overflow-y:auto;border-top:1px solid #e2e8f0} .main-layout .canvas-area{min-height:50vh}}
+    .main-layout { display:grid; grid-template-columns:1fr 260px; height:100%; }
     .canvas-area { position:relative; background:linear-gradient(135deg,#eff6ff,#dbeafe); overflow:hidden; }
     .canvas-area canvas { width:100%; height:100%; display:block; }
-    .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:16px; display:flex; flex-direction:column; gap:12px; overflow:auto; }
+    .control-panel { background:#fff; border-left:1px solid var(--edu-border); padding:16px; display:flex; flex-direction:column; gap:12px; overflow:auto; }
     .ctrl-section { display:flex; flex-direction:column; gap:6px; }
     .ctrl-label { font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.05em; }
     .divider { height:1px; background:#e2e8f0; }
@@ -934,16 +622,25 @@ export const REFINE_SYSTEM = `你是资深小学/初中教研员兼产品经理�
 
 语言简洁、可执行，总字数建议 200～500 字。不要输出 HTML。`;
 
+/** 对用户输入做基本清理，降低提示注入风险 */
+function sanitizeUserInput(input: string): string {
+  return input
+    .replace(/ignore\s+(?:all\s+)?previous\s+instructions?/gi, "[已过滤]")
+    .replace(/system\s*:/gi, "[已过滤]")
+    .replace(/<\/?(?:system|user|assistant)>/gi, "");
+}
+
 export function buildRefineUserPrompt(params: {
   gradeLabel: string;
   subjectLabel: string;
   userIntent: string;
 }): string {
+  const safeIntent = sanitizeUserInput(params.userIntent);
   return `年级：${params.gradeLabel}
 学科：${params.subjectLabel}
 
 用户原始想法：
-${params.userIntent}
+${safeIntent}
 
 请按系统要求的格式输出【教具名称】与【需求规格】。`;
 }
@@ -982,10 +679,6 @@ ${EDU_BASE_CSS}
 ${SKELETON_TEMPLATE}
 
 ${EXAMPLE_1}
-
-${EXAMPLE_2}
-
-${EXAMPLE_3}
 
 ${EDU_3D_API}
 

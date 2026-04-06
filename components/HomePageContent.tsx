@@ -35,7 +35,7 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
   const [searchInput, setSearchInput] = useState(searchParams.get("q") ?? "");
   const searchQuery = useDeferredValue(searchInput);
 
-  // 同步筛选条件到 URL（仅年级/学科/册别即时同步）
+  // 同步筛选条件到 URL（仅年级/学科/册别，搜索词由单独的 useEffect 管理）
   const syncFilterParams = useCallback(
     (overrides: { grade?: string; subject?: string; semester?: string }) => {
       const next = new URLSearchParams(searchParams);
@@ -52,14 +52,15 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
       if (semester) next.set("semester", semester);
       else next.delete("semester");
 
-      // 保留当前搜索词
-      if (searchInput) next.set("q", searchInput);
+      // 保留当前搜索词（从 URL params 读取，避免闭包过时）
+      const currentQ = searchParams.get("q") ?? "";
+      if (currentQ) next.set("q", currentQ);
       else next.delete("q");
 
       const qs = next.toString();
       router.replace(qs ? `?${qs}` : "/", { scroll: false });
     },
-    [searchParams, gradeId, subjectId, semesterFilter, searchInput, router],
+    [searchParams, gradeId, subjectId, semesterFilter, router],
   );
 
   // 搜索词延迟同步到 URL（避免每次按键都触发 router.replace）
@@ -141,7 +142,7 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
           <div className="max-w-2xl">
             <h1
               className="text-2xl sm:text-3xl leading-snug mb-2"
-              style={{ color: "var(--edu-text)", fontFamily: "'Noto Serif SC', serif", fontWeight: 700 }}
+              style={{ color: "var(--edu-text)", fontFamily: "var(--edu-font-serif)", fontWeight: 700 }}
             >
               课堂上的数学，
               <br />
@@ -189,6 +190,7 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
                 value={searchInput}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder="搜索教具（如：分数、面积、时钟…）"
+                aria-label="搜索教具"
                 className="w-full rounded-xl border bg-white pl-10 pr-3 py-2.5 text-sm outline-none transition-all focus:border-[var(--edu-accent)] focus:ring-[3px] focus:ring-[rgba(232,137,12,0.15)]"
                 style={{
                   borderColor: "var(--edu-border)",
@@ -200,6 +202,7 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
                 <button
                   type="button"
                   onClick={() => handleSearchChange("")}
+                  aria-label="清除搜索"
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-xs transition-colors"
                   style={{ background: "var(--edu-border)", color: "var(--edu-text-muted)" }}
                 >

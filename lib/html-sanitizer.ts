@@ -19,6 +19,9 @@ const ALLOWED_SCRIPT_SRC_PREFIXES = ["../edu-lib/"];
  * 采用正则启发式检测：拦截已知的危险 API 调用模式，包括字符串拼接绕过。
  */
 function validateScriptContent(content: string): void {
+  // 先去除注释，防止注释混淆绕过：eval/*comment*/(payload)
+  const stripped = content.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
   const DANGEROUS_PATTERNS: ReadonlyArray<{ pattern: RegExp; label: string }> = [
     { pattern: /\bfetch\s*\(/, label: "fetch()" },
     { pattern: /\bXMLHttpRequest\b/, label: "XMLHttpRequest" },
@@ -37,17 +40,46 @@ function validateScriptContent(content: string): void {
     { pattern: /\bWorker\b/, label: "Worker" },
     { pattern: /\bSharedWorker\b/, label: "SharedWorker" },
     { pattern: /\bServiceWorker\b/, label: "ServiceWorker" },
+    // setTimeout/setInterval 字符串参数（经典代码执行向量）
+    { pattern: /\bsetTimeout\s*\(\s*["']/, label: "setTimeout(string)" },
+    { pattern: /\bsetInterval\s*\(\s*["']/, label: "setInterval(string)" },
+    // Reflect.apply 间接调用
+    { pattern: /\bReflect\.apply\s*\(/, label: "Reflect.apply()" },
     // 检测字符串拼接绕过尝试：window['fetch'], obj["eval"] 等
     { pattern: /\[[\s"']*["'](?:fetch|eval|Function|import|require|XMLHttpRequest|localStorage|sessionStorage|document\.cookie|navigator)["'][\s"']*\]/, label: "动态属性访问（绕过检测）" },
     // 检测全局对象动态属性访问：window['...'], self["..."]
     { pattern: /(?:window|self|globalThis)\s*\[\s*["']/, label: "全局对象动态属性访问" },
+    // 检测间接调用：(0, eval)(payload)
+    { pattern: /\(\s*\d+\s*,\s*(?:eval|Function|fetch)\s*\)/, label: "间接调用绕过" },
     // 检测 atob/btoa 可能用于编码绕过
     { pattern: /\batob\s*\(/, label: "atob()" },
     { pattern: /\bbtoa\s*\(/, label: "btoa()" },
+    // 检测 String.fromCharCode 用于动态构造被禁标识符
+    { pattern: /\bString\.fromCharCode\b/, label: "String.fromCharCode()" },
+    // 检测模板字面量拼接绕过：`fetch` → window[`fet`+`ch`]
+    { pattern: /[`']\s*\+\s*[`']/, label: "字符串拼接绕过" },
+    // 检测十六进制/Unicode 转义绕过：\x66\x65\x74\x63\x68 = fetch
+    { pattern: /\\x[0-9a-fA-F]{2}.*\\x[0-9a-fA-F]{2}.*\\x[0-9a-fA-F]{2}/, label: "十六进制转义绕过" },
+    { pattern: /\\u[0-9a-fA-F]{4}.*\\u[0-9a-fA-F]{4}.*\\u[0-9a-fA-F]{4}/, label: "Unicode 转义绕过" },
+    // 检测 document.write
+    { pattern: /\bdocument\.write\s*\(/, label: "document.write()" },
+    // 检测 location 赋值（导航劫持）
+    { pattern: /\blocation\s*(?:\.href\s*)?=/, label: "location 赋值" },
+    // 检测 WebAssembly 使用
+    { pattern: /\bWebAssembly\b/, label: "WebAssembly" },
+    // 检测 Proxy 对象（可用于动态分发绕过检测）
+    { pattern: /\bnew\s+Proxy\s*\(/, label: "Proxy()" },
+    // 检测原型链污染
+    { pattern: /__proto__|\.constructor\s*\[/, label: "原型链操作" },
+    { pattern: /Object\.defineProperty\s*\(/, label: "Object.defineProperty()" },
+    // 检测 script 元素动态创建
+    { pattern: /createElement\s*\(\s*["']script["']\s*\)/, label: "动态创建 script 元素" },
+    // 检测 MutationObserver 可能用于 DOM 篡改
+    { pattern: /\bMutationObserver\b/, label: "MutationObserver" },
   ];
 
   for (const { pattern, label } of DANGEROUS_PATTERNS) {
-    if (pattern.test(content)) {
+    if (pattern.test(stripped)) {
       throw new Error(`AI 输出包含禁止的 API：${label}`);
     }
   }
@@ -83,6 +115,8 @@ function buildSanitizeConfig(
   const eventAttrs = preserveInlineEvents ? INLINE_EVENT_ATTRS : [];
 
   return {
+    // 教具需要 script/style 标签——通过后续正则验证确保内容安全
+    allowVulnerableTags: true,
     allowedTags: [
       // 文档结构
       "html",

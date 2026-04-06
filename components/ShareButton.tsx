@@ -14,10 +14,10 @@ export default function ShareButton({ toolName }: ShareButtonProps) {
   const url =
     typeof window !== "undefined" ? window.location.href : "";
 
-  // 点击外部关闭
+  // 点击外部关闭 & Escape 关闭
   useEffect(() => {
     if (!open) return;
-    const handler = (e: MouseEvent) => {
+    const clickHandler = (e: MouseEvent) => {
       if (
         popoverRef.current &&
         !popoverRef.current.contains(e.target as Node)
@@ -25,8 +25,17 @@ export default function ShareButton({ toolName }: ShareButtonProps) {
         setOpen(false);
       }
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", clickHandler);
+    document.addEventListener("keydown", keyHandler);
+    return () => {
+      document.removeEventListener("mousedown", clickHandler);
+      document.removeEventListener("keydown", keyHandler);
+    };
   }, [open]);
 
   const handleCopy = useCallback(async () => {
@@ -34,16 +43,11 @@ export default function ShareButton({ toolName }: ShareButtonProps) {
       await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // fallback
-      const input = document.createElement("input");
-      input.value = url;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand("copy");
-      document.body.removeChild(input);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      // Clipboard API 不可用时，静默失败
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[ShareButton] 复制失败:", err);
+      }
     }
   }, [url]);
 
@@ -54,6 +58,7 @@ export default function ShareButton({ toolName }: ShareButtonProps) {
         onClick={() => setOpen(!open)}
         className="flex items-center gap-1.5 text-xs text-slate-300 bg-slate-700 hover:bg-slate-600 hover:text-white px-3 py-1.5 rounded transition-colors"
         title="分享教具"
+        aria-label="分享教具"
       >
         <svg
           className="w-3.5 h-3.5"
@@ -72,7 +77,7 @@ export default function ShareButton({ toolName }: ShareButtonProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 p-4 z-50">
+        <div role="dialog" aria-label="分享选项" className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 p-4 z-50">
           <p className="text-sm font-semibold text-slate-800 mb-3">
             分享「{toolName}」
           </p>
@@ -113,13 +118,21 @@ export default function ShareButton({ toolName }: ShareButtonProps) {
   );
 }
 
+interface QRCodeSVGProps {
+  text: string;
+  size: number;
+}
+
 /** 轻量 QR 码 SVG 渲染，基于 qrcode-generator */
-function QRCodeSVG({ text, size }: { text: string; size: number }) {
+function QRCodeSVG({ text, size }: QRCodeSVGProps) {
   // 动态导入会复杂化，直接用 inline 生成
   const [svg, setSvg] = useState<React.ReactNode>(null);
 
   useEffect(() => {
-    import("qrcode-generator").then((QRCode) => {
+    let cancelled = false;
+    import("qrcode-generator")
+      .then((QRCode) => {
+      if (cancelled) return;
       const qr = QRCode.default(0, "M");
       qr.addData(text);
       qr.make();
@@ -155,7 +168,15 @@ function QRCodeSVG({ text, size }: { text: string; size: number }) {
           {rects}
         </svg>,
       );
+    })
+    .catch((err) => {
+      if (cancelled) return;
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[QRCode] 加载失败:", err);
+      }
+      setSvg(<span className="text-xs text-red-400">二维码加载失败</span>);
     });
+    return () => { cancelled = true; };
   }, [text, size]);
 
   return (

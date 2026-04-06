@@ -89,7 +89,7 @@ docker run -p 3000:3000 educube
 ## 如何新增一个教具
 
 1. 在 `public/tools/` 新增 `{id}.html`（建议引入 `../edu-lib/edu-base.css`）。
-2. 在 [`data/tools.ts`](data/tools.ts) 的 `tools` 数组中增加一条记录，字段包括：`id`、`publisherId`、`gradeId`、`subjectId`、`semester`、`unitNum`、`chapter`、`name`、`description`、`tags`、`gradient`、`icon` 等。
+2. 在 [`data/tools/`](data/tools/) 对应年级文件（如 `p5.ts`）的数组中增加一条记录，字段包括：`id`、`gradeId`、`subjectId`、`semester`、`unitNum`、`chapter`、`name`、`subtitle`、`description`、`tags`、`gradient`、`icon` 等。
 3. 构建后自动生成静态路由 `/tools/{id}`（由 `generateStaticParams` 驱动）。
 
 ---

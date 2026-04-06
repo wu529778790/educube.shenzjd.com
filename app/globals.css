@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap");
 @import "tailwindcss";
 
 /* ──────────────────────────────────────────────
@@ -20,7 +19,7 @@
   /* 文字色 */
   --edu-text: #2c2c2c;          /* 温暖深灰 */
   --edu-text-secondary: #5c5650; /* 次级文字 */
-  --edu-text-muted: #8b8680;    /* 弱化文字 */
+  --edu-text-muted: #706b65;    /* 弱化文字（WCAG AA ≥ 4.5:1 on #faf8f3） */
   --edu-text-inverse: #ffffff;  /* 反色文字 */
 
   /* 边框 & 阴影 */
@@ -40,11 +39,16 @@
   /* 字体 */
   --edu-font-sans: -apple-system, "PingFang SC", "Microsoft YaHei",
     "Noto Sans SC", sans-serif;
-  --edu-font-serif: "Noto Serif SC", "Songti SC", "SimSun", serif;
+  --edu-font-serif: var(--font-noto-serif, "Noto Serif SC"), "Songti SC", "SimSun", serif;
 
   /* 动效 */
   --edu-transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --edu-transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* 组件变量 */
+  --edu-header-bg: rgba(45, 58, 140, 0.97);
+  --edu-header-border: rgba(45, 58, 140, 0.2);
+  --edu-accent-gradient: linear-gradient(135deg, var(--edu-accent), var(--edu-accent-light));
 
   /* 兼容旧变量 */
   --edu-cream: var(--edu-bg);

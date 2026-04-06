@@ -1,9 +1,40 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Noto_Serif_SC } from "next/font/google";
 import "./globals.css";
 
+const notoSerifSC = Noto_Serif_SC({
+  weight: ["600", "700"],
+  variable: "--font-noto-serif",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
+  metadataBase: new URL("https://educube.cn"),
+  alternates: { canonical: "/" },
   title: "教立方 EduCube — 中小学数学交互教具平台",
-  description: "为数学老师提供即用型交互式教具，拿来就能上课。",
+  description: "为数学老师提供即用型交互式教具，拿来就能上课。浏览器打开即用，按教材与年级浏览。",
+  openGraph: {
+    title: "教立方 EduCube — 中小学数学交互教具平台",
+    description: "为数学老师提供即用型交互式教具，拿来就能上课。浏览器打开即用，无需安装。",
+    type: "website",
+    locale: "zh_CN",
+    siteName: "教立方 EduCube",
+  },
+  twitter: {
+    card: "summary",
+    title: "教立方 EduCube — 中小学数学交互教具平台",
+    description: "为数学老师提供即用型交互式教具，拿来就能上课。",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({
@@ -12,12 +43,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN" className="h-full">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      </head>
-      <body className="min-h-full antialiased">{children}</body>
+    <html lang="zh-CN" className={`h-full ${notoSerifSC.variable}`}>
+      <body className="min-h-full antialiased">
+        <a href="#tools" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:bg-white focus:text-black focus:px-4 focus:py-2 focus:rounded focus:shadow-lg">
+          跳转到主要内容
+        </a>
+        {children}
+      </body>
     </html>
   );
 }

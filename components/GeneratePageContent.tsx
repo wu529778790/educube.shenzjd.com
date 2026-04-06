@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { grades, subjects } from "@/data/curriculum";
 import type { Tool } from "@/data/tools";
 import Link from "next/link";
+import BackArrow from "@/components/BackArrow";
 
-const BTN_GRADIENT = "linear-gradient(135deg, #e8890c, #f5a623)";
+const DISABLED_BG = "#94a3b8";
 
 type Stage = "idle" | "refining" | "generating" | "saving";
 
@@ -30,12 +31,31 @@ export default function GeneratePageContent() {
   const [refinedSpec, setRefinedSpec] = useState("");
   const [remaining, setRemaining] = useState<number | null>(null);
 
+  // 用于在组件卸载（导航离开）时中止正在进行的生成
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
+
   // 拉取剩余次数
   useEffect(() => {
-    fetch("/api/generate")
-      .then((r) => r.json())
-      .then((d) => setRemaining(d.remaining))
-      .catch(() => {});
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/generate");
+        if (cancelled) return;
+        const data = await res.json();
+        setRemaining(data.remaining);
+      } catch (err) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[generate] 获取剩余次数失败:", err);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
   }, [stage]); // 每次生成完成后刷新
 
   const handleGenerate = useCallback(async () => {
@@ -49,6 +69,10 @@ export default function GeneratePageContent() {
     setRefinedSpec("");
     setStage("refining");
 
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const timeoutId = setTimeout(() => controller.abort(), 3 * 60 * 1000); // 3 分钟超时
+
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -58,6 +82,7 @@ export default function GeneratePageContent() {
           subject: subjectId,
           description: description.trim(),
         }),
+        signal: controller.signal,
       });
 
       // 429 等非 SSE 响应
@@ -126,14 +151,24 @@ export default function GeneratePageContent() {
                 setStage("idle");
                 break;
             }
-          } catch {
-            // 忽略解析错误
+          } catch (parseErr) {
+            // SSE 消息解析错误，跳过此条
+            if (process.env.NODE_ENV === "development") {
+              console.warn("[generate] SSE 消息解析错误:", parseErr);
+            }
           }
         }
       }
-    } catch {
-      setError("网络错误，请检查连接后重试");
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setError("生成超时，请稍后重试");
+      } else {
+        setError("网络错误，请检查连接后重试");
+      }
       setStage("idle");
+    } finally {
+      clearTimeout(timeoutId);
+      abortRef.current = null;
     }
   }, [description, gradeId, subjectId]);
 
@@ -158,8 +193,8 @@ export default function GeneratePageContent() {
       <header
         className="sticky top-0 z-50 backdrop-blur-xl border-b shadow-sm"
         style={{
-          background: "rgba(45, 58, 140, 0.97)",
-          borderColor: "rgba(45, 58, 140, 0.2)",
+          background: "var(--edu-header-bg)",
+          borderColor: "var(--edu-header-border)",
         }}
       >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
@@ -168,30 +203,18 @@ export default function GeneratePageContent() {
               href="/"
               className="flex items-center gap-1.5 text-white/60 hover:text-white transition-colors text-sm"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
+              <BackArrow />
               返回首页
             </Link>
             <div className="w-px h-5" style={{ background: "rgba(255,255,255,0.2)" }} />
-            <span className="font-bold text-white" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+            <span className="font-bold text-white" style={{ fontFamily: "var(--edu-font-serif)" }}>
               AI 生成教具
             </span>
-            <span className="text-white/50 text-sm hidden sm:inline">
+            <span className="text-white/60 text-sm hidden sm:inline">
               描述需求，自动生成交互式教具
             </span>
             {remaining !== null && (
-              <span className="ml-auto text-xs text-white/50 shrink-0">
+              <span className="ml-auto text-xs text-white/60 shrink-0">
                 剩余 {remaining} 次
               </span>
             )}
@@ -206,7 +229,7 @@ export default function GeneratePageContent() {
               className="rounded-xl border shadow-sm p-5 space-y-4"
               style={{ background: "var(--edu-surface)", borderColor: "var(--edu-border)" }}
             >
-              <h2 className="text-base font-bold" style={{ color: "var(--edu-text)", fontFamily: "'Noto Serif SC', serif" }}>
+              <h2 className="text-base font-bold" style={{ color: "var(--edu-text)", fontFamily: "var(--edu-font-serif)" }}>
                 描述你的教具需求
               </h2>
               <p className="text-xs leading-relaxed" style={{ color: "var(--edu-text-muted)" }}>
@@ -215,10 +238,11 @@ export default function GeneratePageContent() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1.5">
+                  <label htmlFor="grade-select" className="block text-xs font-bold text-slate-500 mb-1.5">
                     年级
                   </label>
                   <select
+                    id="grade-select"
                     value={gradeId}
                     onChange={(e) => setGradeId(e.target.value)}
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
@@ -231,10 +255,11 @@ export default function GeneratePageContent() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1.5">
+                  <label htmlFor="subject-select" className="block text-xs font-bold text-slate-500 mb-1.5">
                     学科
                   </label>
                   <select
+                    id="subject-select"
                     value={subjectId}
                     onChange={(e) => setSubjectId(e.target.value)}
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
@@ -249,10 +274,11 @@ export default function GeneratePageContent() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">
+                <label htmlFor="description-input" className="block text-xs font-bold text-slate-500 mb-1.5">
                   需求描述
                 </label>
                 <textarea
+                  id="description-input"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="例如：做一个认识长方体和正方体的教具，能拖拽改变长宽高的滑块，立体图形用简单透视画出来，并显示体积公式。"
@@ -268,7 +294,7 @@ export default function GeneratePageContent() {
 
             {/* 分阶段进度指示 */}
             {loading && (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3" role="status" aria-live="polite">
                 <div className="flex items-center gap-3">
                   <svg
                     className="w-5 h-5 animate-spin text-blue-500 shrink-0"
@@ -338,10 +364,8 @@ export default function GeneratePageContent() {
                 type="button"
                 onClick={handleGenerate}
                 disabled={loading}
-                className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{
-                  background: loading ? "#94a3b8" : BTN_GRADIENT,
-                }}
+                className={`flex-1 py-2.5 rounded-xl font-semibold text-sm text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed ${loading ? "" : "edu-btn-accent"}`}
+                style={loading ? { background: DISABLED_BG } : undefined}
               >
                 {loading ? "生成中…" : "生成教具"}
               </button>
@@ -372,13 +396,13 @@ export default function GeneratePageContent() {
             </div>
 
             {error && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {error}
               </div>
             )}
 
             {savedTool && (
-              <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+              <div role="status" className="rounded-xl border border-green-200 bg-green-50 px-4 py-3">
                 <p className="text-sm font-semibold text-green-800 mb-2">
                   教具生成成功！
                 </p>
@@ -436,7 +460,11 @@ export default function GeneratePageContent() {
   );
 }
 
-function PreviewIframe({ html }: { html: string }) {
+interface PreviewIframeProps {
+  html: string;
+}
+
+function PreviewIframe({ html }: PreviewIframeProps) {
   const url = useMemo(() => {
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
     return URL.createObjectURL(blob);
@@ -450,7 +478,7 @@ function PreviewIframe({ html }: { html: string }) {
     <iframe
       src={url}
       className="w-full h-full border-0"
-      title="预览"
+      title="AI生成教具预览"
       sandbox="allow-scripts"
     />
   );

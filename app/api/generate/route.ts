@@ -1,6 +1,7 @@
 import { generateToolHtml, generateRefinedSpec } from "@/lib/ai-client";
 import { sanitizeHtml } from "@/lib/html-sanitizer";
 import { saveGeneratedTool } from "@/data/generated-tools";
+import { logger } from "@/lib/logger";
 import {
   REFINE_SYSTEM,
   buildRefineUserPrompt,
@@ -26,11 +27,20 @@ let lastCleanup = Date.now();
 const IP_REGEX =
   /^(?:(?:\d{1,3}\.){3}\d{1,3}|(?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}|unknown)$/;
 
+/**
+ * 提取客户端真实 IP。
+ * 策略：取 x-forwarded-for 最右侧（由最近的受信代理追加）的 IP，
+ * 而非最左侧（可被客户端伪造）。如果配置了 TRUSTED_PROXY_COUNT，
+ * 则从右侧跳过指定数量的代理层。
+ */
 function extractClientIp(request: Request): string {
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim() ?? "";
-    if (IP_REGEX.test(first)) return first;
+    const parts = forwarded.split(",").map((s) => s.trim()).filter(Boolean);
+    const skipCount = parseInt(process.env.TRUSTED_PROXY_COUNT || "1", 10);
+    const idx = Math.max(0, parts.length - skipCount);
+    const ip = parts[idx];
+    if (ip && IP_REGEX.test(ip)) return ip;
   }
   const realIp = request.headers.get("x-real-ip");
   if (realIp && IP_REGEX.test(realIp)) return realIp;
@@ -129,20 +139,53 @@ export async function GET(request: Request): Promise<Response> {
 /* ================================================================
  * POST /api/generate — SSE 流式生成
  * ================================================================ */
+const MAX_HTML_SIZE = 1_024 * 1024; // 1MB 上限
+
 export async function POST(request: Request): Promise<Response> {
   const startTime = Date.now();
   const ip = extractClientIp(request);
+
+  // CSRF 防护：校验 Origin 头（浏览器自动携带，无法被 fetch 跨域伪造）
+  const origin = request.headers.get("origin");
+  if (origin) {
+    const host = request.headers.get("host");
+    if (host) {
+      try {
+        const originHost = new URL(origin).host;
+        if (originHost !== host) {
+          return new Response(
+            JSON.stringify({ error: "不允许的请求来源" }),
+            { status: 403, headers: { "Content-Type": "application/json" } },
+          );
+        }
+      } catch {
+        return new Response(
+          JSON.stringify({ error: "无效的请求来源" }),
+          { status: 403, headers: { "Content-Type": "application/json" } },
+        );
+      }
+    }
+  }
+
   if (!checkRateLimit(ip)) {
-    console.warn(`[generate] IP ${ip} 限流拒绝`);
+    logger.warn("生成请求被限流拒绝", { ip });
     return new Response(
       JSON.stringify({ error: "生成次数已达上限，请一小时后再试" }),
       { status: 429, headers: { "Content-Type": "application/json" } },
     );
   }
 
+  /* ── 请求体解析与大小检查 ── */
   let body: Partial<GenerateRequest>;
   try {
-    body = await request.json();
+    const rawBody = await request.text();
+    if (rawBody.length > 10_000) {
+      return new Response(
+        JSON.stringify({ error: "请求体过大" }),
+        { status: 413, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    body = JSON.parse(rawBody);
   } catch {
     return new Response(
       JSON.stringify({ error: "请求格式错误" }),
@@ -161,7 +204,7 @@ export async function POST(request: Request): Promise<Response> {
   const gradeId = body.grade || "p5";
   const subjectId = body.subject || "math";
   const userIntent = body.description!.trim();
-  console.log(`[generate] IP ${ip} 开始生成: grade=${gradeId} subject=${subjectId} desc="${userIntent.slice(0, 50)}..."`);
+  logger.info("开始生成", { ip, grade: gradeId, subject: subjectId });
 
   const gradeLabel = grades.find((g) => g.id === gradeId)?.name ?? gradeId;
   const subjectLabel =
@@ -174,6 +217,24 @@ export async function POST(request: Request): Promise<Response> {
         controller.enqueue(encoder.encode(sseMessage(event, data)));
       };
 
+      // 心跳保活：每 15s 发送 SSE 注释，防止反向代理超时断连
+      const heartbeat = setInterval(() => {
+        try { controller.enqueue(encoder.encode(":\n\n")); } catch {}
+      }, 15_000);
+
+      // 统一清理函数：清除所有定时器，防止泄漏
+      const cleanup = () => {
+        clearInterval(heartbeat);
+        clearTimeout(serverTimeout);
+      };
+
+      // 服务端超时：3 分钟后强制关闭
+      const serverTimeout = setTimeout(() => {
+        try { send("error", { error: "生成超时，请稍后重试" }); } catch {}
+        cleanup();
+        try { controller.close(); } catch {}
+      }, 3 * 60 * 1000);
+
       try {
         // ── 阶段 1：整理需求 ──
         send("stage", { stage: "refining", message: "正在分析需求并整理规格说明…" });
@@ -185,9 +246,8 @@ export async function POST(request: Request): Promise<Response> {
             buildRefineUserPrompt({ gradeLabel, subjectLabel, userIntent }),
           );
         } catch (err) {
-          const message =
-            err instanceof Error ? err.message : "AI 服务暂时不可用";
-          send("error", { error: `整理需求失败：${message}` });
+          send("error", { error: "整理需求失败，请稍后重试" });
+          cleanup();
           controller.close();
           return;
         }
@@ -210,11 +270,17 @@ export async function POST(request: Request): Promise<Response> {
         let html: string;
         try {
           const raw = await generateToolHtml(systemPrompt, userPrompt);
+          // 生成的 HTML 大小限制
+          if (raw.length > MAX_HTML_SIZE) {
+            send("error", { error: "生成的教具过大，请简化需求后重试" });
+            cleanup();
+            controller.close();
+            return;
+          }
           html = sanitizeHtml(raw, { preserveInlineEventHandlers: true });
         } catch (err) {
-          const message =
-            err instanceof Error ? err.message : "AI 服务暂时不可用";
-          send("error", { error: message });
+          send("error", { error: "生成失败，请稍后重试" });
+          cleanup();
           controller.close();
           return;
         }
@@ -237,13 +303,13 @@ export async function POST(request: Request): Promise<Response> {
         revalidatePath("/");
 
         send("done", { tool, html, refinedName: name, refinedSpec: spec });
-        console.log(`[generate] 成功: id=${id} name="${name}" 耗时 ${Date.now() - startTime}ms`);
+        logger.info("生成成功", { id, name, durationMs: Date.now() - startTime });
+        cleanup();
         controller.close();
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "未知错误";
-        console.error(`[generate] 失败: ${message} 耗时 ${Date.now() - startTime}ms`);
-        send("error", { error: message });
+        logger.error("生成失败", { message: err instanceof Error ? err.message : "未知错误", durationMs: Date.now() - startTime });
+        send("error", { error: "生成失败，请稍后重试" });
+        cleanup();
         controller.close();
       }
     },
@@ -253,7 +319,6 @@ export async function POST(request: Request): Promise<Response> {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
-      Connection: "keep-alive",
     },
   });
 }

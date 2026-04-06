@@ -195,21 +195,24 @@ export default function FilterPanel({
   );
 }
 
+interface FilterButtonProps {
+  active: boolean;
+  onClick: () => void;
+  count: number;
+  children: React.ReactNode;
+}
+
 function FilterButton({
   active,
   onClick,
   count,
   children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  count: number;
-  children: React.ReactNode;
-}) {
+}: FilterButtonProps) {
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium transition-all"
       style={{
         borderColor: active ? "var(--edu-primary)" : "var(--edu-border)",

@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 
 /* AI 调用超时（毫秒），可通过环境变量覆盖 */
-const AI_TIMEOUT = parseInt(process.env.AI_TIMEOUT || "120000");
+const AI_TIMEOUT = parseInt(process.env.AI_TIMEOUT || "120000", 10);
 
 /* 重试配置 */
 const MAX_RETRIES = 2;
@@ -47,7 +47,7 @@ export async function generateToolHtml(
   userPrompt: string,
 ): Promise<string> {
   return generateChatText(systemPrompt, userPrompt, {
-    maxTokens: parseInt(process.env.AI_MAX_TOKENS || "16000"),
+    maxTokens: parseInt(process.env.AI_MAX_TOKENS || "16000", 10),
     temperature: 0.3,
   });
 }
@@ -59,7 +59,7 @@ export async function generateRefinedSpec(
 ): Promise<string> {
   const cap = Math.min(
     4096,
-    parseInt(process.env.AI_MAX_TOKENS || "16000"),
+    parseInt(process.env.AI_MAX_TOKENS || "16000", 10),
   );
   return generateChatText(systemPrompt, userPrompt, {
     maxTokens: Math.min(2048, cap),
