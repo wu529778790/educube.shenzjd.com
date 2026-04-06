@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>体积单位与换算 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 300px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#ecfdf5,#fdfaf4); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+
+  .unit-btn {
+    padding:10px; border-radius:10px; font-size:13px; font-weight:700;
+    cursor:pointer; border:2px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+  }
+  .unit-btn:hover { border-color:#22c55e; }
+  .unit-btn.active { background:#dcfce7; color:#166534; border-color:#22c55e; }
+  .unit-btn .unit-icon { font-size:22px; display:block; margin-bottom:2px; }
+
+  .info-box { background:#fff; border:1px solid #bbf7d0; border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.9; color:#334155; }
+  .info-box strong { color:#16a34a; }
+
+  .convert-card {
+    background:#f0fdf4; border:2px solid #86efac; border-radius:12px;
+    padding:14px; text-align:center;
+  }
+  .convert-equation {
+    font-size:20px; font-weight:800; color:#166534; margin:8px 0;
+    font-family:var(--edu-font);
+  }
+  .convert-detail { font-size:12px; color:#64748b; line-height:1.8; }
+
+  .anim-btn {
+    padding:8px 16px; border:none; border-radius:8px; font-size:13px; font-weight:700;
+    cursor:pointer; font-family:var(--edu-font); transition:all .15s;
+    background:#22c55e; color:#fff;
+  }
+  .anim-btn:hover { background:#16a34a; }
+  .anim-btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+  .compare-row {
+    display:flex; align-items:center; gap:6px; padding:6px 10px;
+    background:#fff; border-radius:8px; border:1px solid #e2e8f0; font-size:12px;
+  }
+  .compare-row .label { color:#64748b; min-width:50px; }
+  .compare-row .val { font-weight:700; color:#166534; flex:1; text-align:right; }
+
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="edu-toolbar-title">📏 体积单位与换算</span>
+      <span class="edu-toolbar-subtitle">五年级下册 · 第三单元</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="anim-btn" id="btn-stack" onclick="playStack()">🎬 堆叠演示</button>
+      <button class="anim-btn" id="btn-fill" onclick="playFill()" style="background:#3b82f6">💧 填充动画</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择体积单位</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+            <button class="unit-btn active" id="ub-cm" onclick="setUnit('cm')"><span class="unit-icon">🟦</span>cm³</button>
+            <button class="unit-btn" id="ub-dm" onclick="setUnit('dm')"><span class="unit-icon">🟩</span>dm³</button>
+            <button class="unit-btn" id="ub-m" onclick="setUnit('m')"><span class="unit-icon">🟨</span>m³</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">单位信息</div>
+          <div class="info-box" id="unit-info"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">换算关系</div>
+          <div class="convert-card" id="convert-card"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">单位对比</div>
+          <div style="display:flex;flex-direction:column;gap:4px" id="compare-list"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <strong>体积单位知识</strong><br/>
+          ● 1 cm³ = 棱长1cm的小正方体<br/>
+          ● 1 dm³ = 棱长1dm的正方体<br/>
+          ● 1 m³ = 棱长1m的正方体<br/>
+          ● 相邻单位进率 = <strong>1000</strong><br/>
+          ● 1 dm³ = 1 升 (L)<br/>
+          ● 1 cm³ = 1 毫升 (mL)
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var _scene, _camera, _renderer, _controls;
+var _unitGroup, _animGroup;
+var _currentUnit = 'cm';
+var _animId = null;
+
+var UNITS = {
+  cm: {
+    name: '立方厘米',
+    symbol: 'cm³',
+    size: 0.5,       // display size in 3D
+    color: 0x60a5fa,
+    edgeColor: 0x2563eb,
+    info: '棱长为 <strong>1厘米</strong> 的正方体，体积就是 <strong>1立方厘米</strong>（1cm³）<br/><br/>● 约等于一颗骰子的大小<br/>● 一粒花生米大约 1 cm³<br/>● 一个粉笔头大约 2-3 cm³<br/>● 1cm³ = 1mL（毫升）',
+    convert: '1 dm³ = <strong>1000</strong> cm³<br/>1 m³ = <strong>1,000,000</strong> cm³',
+    equation: '1 dm³ = 1000 cm³',
+    detail: '把1000个1cm³的小正方体<br/>排成 10×10×10 = 1000<br/>就得到一个1dm³的正方体',
+    compares: [
+      { label: '1 cm³', val: '棱长 1 cm' },
+      { label: '1 dm³', val: '棱长 1 dm = 10 cm' },
+      { label: '进率', val: '1 dm³ = 10³ = 1000 cm³' },
+      { label: '容积', val: '1 cm³ = 1 mL' },
+    ]
+  },
+  dm: {
+    name: '立方分米',
+    symbol: 'dm³',
+    size: 1.2,
+    color: 0x4ade80,
+    edgeColor: 0x16a34a,
+    info: '棱长为 <strong>1分米</strong> 的正方体，体积就是 <strong>1立方分米</strong>（1dm³）<br/><br/>● 约等于一个粉笔盒的大小<br/>● 一盒牛奶大约 250 dm³ = 250mL<br/>● 1dm³ = 1L（升）',
+    convert: '1 m³ = <strong>1000</strong> dm³<br/>1 dm³ = <strong>1000</strong> cm³',
+    equation: '1 m³ = 1000 dm³',
+    detail: '把1000个1dm³的正方体<br/>排成 10×10×10 = 1000<br/>就得到一个1m³的正方体',
+    compares: [
+      { label: '1 dm³', val: '棱长 1 dm' },
+      { label: '1 m³', val: '棱长 1 m = 10 dm' },
+      { label: '进率', val: '1 m³ = 10³ = 1000 dm³' },
+      { label: '容积', val: '1 dm³ = 1 L' },
+    ]
+  },
+  m: {
+    name: '立方米',
+    symbol: 'm³',
+    size: 2.5,
+    color: 0xfbbf24,
+    edgeColor: 0xd97706,
+    info: '棱长为 <strong>1米</strong> 的正方体，体积就是 <strong>1立方米</strong>（1m³）<br/><br/>● 约等于一台洗衣机的体积<br/>● 一个衣柜大约 1-2 m³<br/>● 教室大约 150-200 m³',
+    convert: '1 m³ = <strong>1000</strong> dm³<br/>1 m³ = <strong>1,000,000</strong> cm³',
+    equation: '1 m³ = 1,000,000 cm³',
+    detail: '1m³ = 1000 dm³ = 1,000,000 cm³<br/>每相邻两个单位间的进率都是1000',
+    compares: [
+      { label: '1 m³', val: '棱长 1 m' },
+      { label: '= dm³', val: '1000 dm³' },
+      { label: '= cm³', val: '1,000,000 cm³' },
+      { label: '≈ 物体', val: '洗衣机大小' },
+    ]
+  }
+};
+
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xf0fdf4, camX: 6, camY: 4, camZ: 6 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 10, 10);
+
+  _unitGroup = new THREE.Group();
+  _scene.add(_unitGroup);
+  _animGroup = new THREE.Group();
+  _scene.add(_animGroup);
+
+  setUnit('cm');
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+
+function setUnit(key) {
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+  _currentUnit = key;
+  while (_unitGroup.children.length) _unitGroup.remove(_unitGroup.children[0]);
+  while (_animGroup.children.length) _animGroup.remove(_animGroup.children[0]);
+
+  document.getElementById('btn-stack').disabled = false;
+  document.getElementById('btn-fill').disabled = false;
+
+  var def = UNITS[key];
+
+  // Build the cube
+  var s = def.size;
+  var geo = new THREE.BoxGeometry(s, s, s);
+  var mat = new THREE.MeshLambertMaterial({ color: def.color, transparent: true, opacity: 0.6 });
+  var mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = s / 2;
+  mesh.castShadow = true;
+  _unitGroup.add(mesh);
+
+  // Edges
+  var edgeGeo = new THREE.EdgesGeometry(geo);
+  var edgeMat = new THREE.LineBasicMaterial({ color: def.edgeColor });
+  var edges = new THREE.LineSegments(edgeGeo, edgeMat);
+  edges.position.copy(mesh.position);
+  _unitGroup.add(edges);
+
+  // Dimension labels
+  var halfS = s / 2;
+  var l1 = Edu3D.textSprite('1' + key, { color: '#166534', scale: 0.5 });
+  l1.position.set(s + 0.6, halfS, 0);
+  _unitGroup.add(l1);
+
+  var l2 = Edu3D.textSprite('1' + key, { color: '#166534', scale: 0.5 });
+  l2.position.set(0, s + 0.6, 0);
+  _unitGroup.add(l2);
+
+  var l3 = Edu3D.textSprite('1' + key, { color: '#166534', scale: 0.5 });
+  l3.position.set(0, halfS, s + 0.6);
+  _unitGroup.add(l3);
+
+  // Volume label on top
+  var vLabel = Edu3D.textSprite('V = 1 ' + def.symbol, { color: '#dc2626', scale: 0.6 });
+  vLabel.position.set(0, s + 1.2, 0);
+  _unitGroup.add(vLabel);
+
+  // Corner dots to show vertices
+  var verts = [
+    [-halfS, 0, -halfS], [halfS, 0, -halfS], [halfS, 0, halfS], [-halfS, 0, halfS],
+    [-halfS, s, -halfS], [halfS, s, -halfS], [halfS, s, halfS], [-halfS, s, halfS]
+  ];
+  var dotGeo = new THREE.SphereGeometry(0.04, 8, 8);
+  var dotMat = new THREE.MeshBasicMaterial({ color: def.edgeColor });
+  verts.forEach(function(v) {
+    var dot = new THREE.Mesh(dotGeo, dotMat);
+    dot.position.set(v[0], v[1], v[2]);
+    _unitGroup.add(dot);
+  });
+
+  // Update UI
+  document.getElementById('unit-info').innerHTML = def.info;
+  document.getElementById('convert-card').innerHTML =
+    '<div class="convert-equation">' + def.equation + '</div>' +
+    '<div class="convert-detail">' + def.detail + '</div>';
+  document.getElementById('convert-card').innerHTML += '<div style="margin-top:8px;font-size:11px;color:#64748b">' + def.convert.replace(/<br\/>/g, '；') + '</div>';
+
+  var list = document.getElementById('compare-list');
+  list.innerHTML = '';
+  def.compares.forEach(function(item) {
+    var row = document.createElement('div');
+    row.className = 'compare-row';
+    row.innerHTML = '<span class="label">' + item.label + '</span><span class="val">' + item.val + '</span>';
+    list.appendChild(row);
+  });
+
+  ['cm', 'dm', 'm'].forEach(function(k) {
+    document.getElementById('ub-' + k).classList.toggle('active', k === key);
+  });
+}
+
+// ===== 堆叠动画: show 10×10×10 = 1000 =====
+function playStack() {
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+  while (_animGroup.children.length) _animGroup.remove(_animGroup.children[0];
+  while (_unitGroup.children.length) _unitGroup.children[0].visible = false;
+
+  document.getElementById('btn-stack').disabled = true;
+  document.getElementById('btn-fill').disabled = true;
+
+  var def = UNITS[_currentUnit];
+  var s = def.size;
+  var n = 3; // Show 3x3x3 for visual clarity (represents the 10x10x10 concept)
+  var cubeSize = s / n;
+  var gap = 0.03;
+
+  // Pre-create all small cubes
+  var smallGeo = new THREE.BoxGeometry(cubeSize - gap, cubeSize - gap, cubeSize - gap);
+  var smallEdgeGeo = new THREE.EdgesGeometry(smallGeo);
+  var smallEdgeMat = new THREE.LineBasicMaterial({ color: def.edgeColor, transparent: true, opacity: 0.3 });
+
+  var cubes = [];
+  for (var x = 0; x < n; x++) {
+    for (var y = 0; y < n; y++) {
+      for (var z = 0; z < n; z++) {
+        var mat = new THREE.MeshLambertMaterial({
+          color: def.color,
+          transparent: true,
+          opacity: 0.7
+        });
+        var mesh = new THREE.Mesh(smallGeo, mat);
+        mesh.position.set(
+          (x - n / 2 + 0.5) * cubeSize,
+          y * cubeSize + cubeSize / 2,
+          (z - n / 2 + 0.5) * cubeSize
+        );
+        var wire = new THREE.LineSegments(smallEdgeGeo, smallEdgeMat);
+        mesh.add(wire);
+        _animGroup.add(mesh);
+        cubes.push({ mesh: mesh, x: x, y: y, z: z, placed: false });
+      }
+    }
+  }
+
+  // Hide all initially
+  cubes.forEach(function(c) { c.mesh.visible = false; });
+
+  // Place cubes layer by layer
+  var t = 0;
+  var placeInterval = 4; // frames between each cube
+  var placed = 0;
+
+  // Count label
+  var countLabel = Edu3D.textSprite('0 / ' + (n*n*n), { color: '#dc2626', scale: 0.6 });
+  countLabel.position.set(0, s + 1.5, 0);
+  _animGroup.add(countLabel);
+
+  function animateStack() {
+    t++;
+    var toPlace = Math.floor(t / placeInterval);
+    if (toPlace > placed && placed < cubes.length) {
+      cubes[placed].mesh.visible = true;
+      placed++;
+      // Update count
+      _animGroup.remove(countLabel);
+      var ratioText = placed + ' / ' + (n*n*n);
+      if (_currentUnit === 'cm') ratioText += '  (实际: ' + (placed * 1000 / (n*n*n)).toFixed(0) + ' / 1000 cm³)';
+      countLabel = Edu3D.textSprite(ratioText, { color: '#dc2626', scale: 0.5 });
+      countLabel.position.set(0, s + 1.5, 0);
+      _animGroup.add(countLabel);
+    }
+
+    if (placed < cubes.length) {
+      _animId = requestAnimationFrame(animateStack);
+    } else {
+      _animId = null;
+      document.getElementById('btn-stack').disabled = false;
+      document.getElementById('btn-fill').disabled = false;
+      // Final label
+      _animGroup.remove(countLabel);
+      var finalLabel = Edu3D.textSprite(n + '×' + n + '×' + n + ' = ' + (n*n*n) + ' 小块 → 实际10×10×10 = 1000', { color: '#dc2626', scale: 0.5 });
+      finalLabel.position.set(0, s + 1.5, 0);
+      _animGroup.add(finalLabel);
+    }
+  }
+  animateStack();
+}
+
+// ===== 填充动画: water fill the cube =====
+function playFill() {
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+  while (_animGroup.children.length) _animGroup.remove(_animGroup.children[0];
+
+  // Show original cube
+  setUnit(_currentUnit);
+  document.getElementById('btn-stack').disabled = true;
+  document.getElementById('btn-fill').disabled = true;
+
+  var def = UNITS[_currentUnit];
+  var s = def.size;
+
+  // Create water fill mesh
+  var fillGeo = new THREE.BoxGeometry(s * 0.98, 1, s * 0.98);
+  var fillMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.4 });
+  var fillMesh = new THREE.Mesh(fillGeo, fillMat);
+  fillMesh.scale.y = 0.01;
+  fillMesh.position.y = 0.005;
+  _animGroup.add(fillMesh);
+
+  var t = 0;
+  var steps = 80;
+
+  function animateFill() {
+    t++;
+    var p = Math.min(t / steps, 1);
+    var ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+    var fillH = Math.max(0.01, ease * s);
+
+    fillMesh.scale.y = fillH;
+    fillMesh.position.y = fillH / 2;
+
+    if (p < 1) {
+      _animId = requestAnimationFrame(animateFill);
+    } else {
+      _animId = null;
+      document.getElementById('btn-stack').disabled = false;
+      document.getElementById('btn-fill').disabled = false;
+
+      // Add label
+      var volLabel = Edu3D.textSprite('V = 1 ' + def.symbol + ' = 1' + (_currentUnit === 'dm' ? 'L' : _currentUnit === 'cm' ? 'mL' : 'kL'), { color: '#0284c7', scale: 0.5 });
+      volLabel.position.set(0, s + 1.5, 0);
+      _animGroup.add(volLabel);
+    }
+  }
+  animateFill();
+}
+
+function resetAll() {
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+  while (_animGroup.children.length) _animGroup.remove(_animGroup.children[0];
+  setUnit('cm');
+}
+
+init();
+</script>
+</body>
+</html>
