@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>投影类型探究 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 300px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#faf5ff,#fdfaf4); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+
+  .type-btn {
+    padding:10px 8px; border-radius:10px; font-size:12px; font-weight:700;
+    cursor:pointer; border:2px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+  }
+  .type-btn:hover { border-color:#8b5cf6; }
+  .type-btn.active { background:#f3e8ff; color:#6d28d9; border-color:#8b5cf6; }
+  .type-btn .t-icon { font-size:20px; display:block; margin-bottom:2px; }
+
+  .obj-btn {
+    padding:8px; border-radius:8px; font-size:11px; font-weight:700;
+    cursor:pointer; border:2px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+  }
+  .obj-btn:hover { border-color:#8b5cf6; }
+  .obj-btn.active { background:#f3e8ff; color:#6d28d9; border-color:#8b5cf6; }
+
+  .info-card {
+    background:#faf5ff; border:2px solid #c4b5fd; border-radius:12px;
+    padding:12px; text-align:left; font-size:12px; line-height:1.9; color:#334155;
+  }
+  .info-card strong { color: #6d28d9; }
+  .info-card .title { font-size:14px; font-weight:800; color:#5b21b6; margin-bottom:6px; }
+
+  .slider-row { display:flex; align-items:center; gap:8px; }
+  .slider-row label { font-size:11px; font-weight:600; color:#334155; min-width:40px; }
+  .slider-row input[type=range] { flex:1; accent-color:#8b5cf6; }
+  .slider-row .val { font-size:12px; font-weight:700; color:#6d28d9; min-width:30px; text-align:right; }
+
+  .info-box { background:#fff; border:1px solid #ddd6fe; border-radius:10px; padding:10px 12px; font-size:11px; line-height:1.8; color:#334155; }
+  .info-box strong { color:#6d28d9; }
+
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="edu-toolbar-title">🔦 投影类型探究</span>
+      <span class="edu-toolbar-subtitle">九年级下册 · 第二十九章</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择投影类型</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <button class="type-btn active" id="tb-parallel" onclick="setType('parallel')"><span class="t-icon">☀️</span>平行投影</button>
+            <button class="type-btn" id="tb-central" onclick="setType('central')"><span class="t-icon">💡</span>中心投影</button>
+            <button class="type-btn" id="tb-ortho" onclick="setType('ortho')"><span class="t-icon">📐</span>正投影</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择物体</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <button class="obj-btn active" id="ob-cube" onclick="setObj('cube')">正方体</button>
+            <button class="obj-btn" id="ob-cylinder" onclick="setObj('cylinder')">圆柱</button>
+            <button class="obj-btn" id="ob-cone" onclick="setObj('cone')">圆锥</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+            <button class="obj-btn" id="ob-prism" onclick="setObj('prism')">三棱柱</button>
+            <button class="obj-btn" id="ob-combo" onclick="setObj('combo')">组合体</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="slider-row">
+            <label>光源高度</label>
+            <input type="range" id="sl-height" min="3" max="8" step="0.5" value="6" oninput="onSlider()">
+            <span class="val" id="val-height">6</span>
+          </div>
+          <div class="slider-row">
+            <label>光源角度</label>
+            <input type="range" id="sl-angle" min="0" max="80" step="1" value="30" oninput="onSlider()">
+            <span class="val" id="val-angle">30°</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">投影说明</div>
+          <div class="info-card" id="info-card"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <strong>投影知识</strong><br/>
+          ● <strong>平行投影</strong>：光线平行（如太阳光）<br/>
+          ● <strong>中心投影</strong>：光线从一点发出（如灯泡）<br/>
+          ● <strong>正投影</strong>：光线垂直于投影面的平行投影<br/>
+          ● 正投影是三视图的理论基础
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var _scene, _camera, _renderer, _controls;
+var _group;
+var _currentType = 'parallel';
+var _currentObj = 'cube';
+var _lightHeight = 6, _lightAngle = 30;
+
+var TYPE_INFO = {
+  parallel: {
+    title: '☀️ 平行投影',
+    desc: '投影线互相<strong>平行</strong>的投影叫做平行投影。<br/><br/>' +
+      '● 太阳光可近似看作平行光线<br/>' +
+      '● 不同时刻太阳位置不同，影子长短变化<br/>' +
+      '● 物体与投影面平行时，影子与物体形状相同<br/>' +
+      '● <strong>正投影</strong>是特殊的平行投影'
+  },
+  central: {
+    title: '💡 中心投影',
+    desc: '投影线从<strong>一点</strong>（投影中心）发出的投影叫做中心投影。<br/><br/>' +
+      '● 灯泡、手电筒发出的光是中心投影<br/>' +
+      '● 物体离光源越近，影子越<strong>大</strong><br/>' +
+      '● 物体离光源越远，影子越<strong>小</strong><br/>' +
+      '● 中心投影的影子形状会<strong>变形</strong>'
+  },
+  ortho: {
+    title: '📐 正投影',
+    desc: '投影线<strong>垂直于</strong>投影面的平行投影叫做正投影。<br/><br/>' +
+      '● 正投影是<strong>三视图</strong>的理论基础<br/>' +
+      '● 正投影能真实反映物体的形状和大小<br/>' +
+      '● 正放的正方体正投影是正方形<br/>' +
+      '● 正放的圆柱正投影是长方形'
+  }
+};
+
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xfaf5ff, camX: 7, camY: 5, camZ: 7, lookY: 0.5 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 12, 12);
+
+  _group = new THREE.Group();
+  _scene.add(_group);
+
+  setType('parallel');
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+
+function clearGroup() { while (_group.children.length) _group.remove(_group.children[0]); }
+
+function build() {
+  clearGroup();
+  var h = _lightHeight, angle = _lightAngle;
+
+  // Ground plane (projection surface)
+  var groundGeo = new THREE.PlaneGeometry(10, 10);
+  var groundMat = new THREE.MeshLambertMaterial({ color: 0xe2e8f0, side: THREE.DoubleSide });
+  var ground = new THREE.Mesh(groundGeo, groundMat);
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = 0;
+  _group.add(ground);
+
+  // Build the object
+  var objGeo, objColor = 0x8b5cf6;
+  var objY = 0;
+  switch (_currentObj) {
+    case 'cube':
+      objGeo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+      objY = 0.75;
+      break;
+    case 'cylinder':
+      objGeo = new THREE.CylinderGeometry(0.8, 0.8, 2, 32);
+      objY = 1;
+      break;
+    case 'cone':
+      objGeo = new THREE.ConeGeometry(0.8, 2, 32);
+      objY = 1;
+      break;
+    case 'prism':
+      objGeo = new THREE.CylinderGeometry(0.9, 0.9, 1.8, 3);
+      objY = 0.9;
+      break;
+    case 'combo':
+      objGeo = null;
+      break;
+  }
+
+  if (_currentObj === 'combo') {
+    // Cylinder + cone on top
+    var cylGeo = new THREE.CylinderGeometry(0.7, 0.7, 1.5, 32);
+    var cyl = new THREE.Mesh(cylGeo, new THREE.MeshLambertMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.7 }));
+    cyl.position.set(0, 0.75, 0);
+    cyl.castShadow = true;
+    cyl.add(new THREE.LineSegments(new THREE.EdgesGeometry(cylGeo), new THREE.LineBasicMaterial({ color: 0x1e40af, transparent: true, opacity: 0.3 })));
+    _group.add(cyl);
+
+    var conGeo = new THREE.ConeGeometry(0.7, 1, 32);
+    var con = new THREE.Mesh(conGeo, new THREE.MeshLambertMaterial({ color: 0xf97316, transparent: true, opacity: 0.7 }));
+    con.position.set(0, 2, 0);
+    con.castShadow = true;
+    con.add(new THREE.LineSegments(new THREE.EdgesGeometry(conGeo), new THREE.LineBasicMaterial({ color: 0x9a3412, transparent: true, opacity: 0.3 })));
+    _group.add(con);
+  } else {
+    var objMat = new THREE.MeshLambertMaterial({ color: objColor, transparent: true, opacity: 0.7 });
+    var obj = new THREE.Mesh(objGeo, objMat);
+    obj.position.y = objY;
+    obj.castShadow = true;
+    obj.add(new THREE.LineSegments(new THREE.EdgesGeometry(objGeo), new THREE.LineBasicMaterial({ color: 0x4c1d95, transparent: true, opacity: 0.3 })));
+    _group.add(obj);
+  }
+
+  // Build light source and rays
+  var angleRad = angle * Math.PI / 180;
+  var lightX, lightY, lightZ;
+
+  if (_currentType === 'central') {
+    lightX = Math.sin(angleRad) * h * 0.5;
+    lightY = h;
+    lightZ = 0;
+
+    // Light source sphere
+    var lightGeo = new THREE.SphereGeometry(0.2, 16, 16);
+    var lightMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24 });
+    var lightMesh = new THREE.Mesh(lightGeo, lightMat);
+    lightMesh.position.set(lightX, lightY, lightZ);
+    _group.add(lightMesh);
+
+    var ll = Edu3D.textSprite('光源', { color: '#d97706', scale: 0.35 });
+    ll.position.set(lightX, lightY + 0.4, lightZ);
+    _group.add(ll);
+
+    // Rays from light source to object corners
+    var rayMat = new THREE.LineBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.5 });
+    var targets = getObjCorners();
+    targets.forEach(function(t) {
+      var rayGeo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(lightX, lightY, lightZ),
+        new THREE.Vector3(t.x, t.y, t.z)
+      ]);
+      _group.add(new THREE.Line(rayGeo, rayMat));
+    });
+
+    // Shadow on ground (approximate projection)
+    buildShadowCentral(lightX, lightY, targets);
+
+  } else if (_currentType === 'parallel') {
+    // Parallel rays from the direction
+    var dirX = Math.sin(angleRad);
+    var dirY = -Math.cos(angleRad);
+    var startH = h;
+
+    // Draw parallel ray arrows
+    var rayMat2 = new THREE.LineBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.4 });
+    var targets2 = getObjCorners();
+    targets2.forEach(function(t) {
+      var startX = t.x - dirX * startH;
+      var startY = t.y - dirY * startH;
+      var rayGeo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(startX, startY, t.z),
+        new THREE.Vector3(t.x, t.y, t.z)
+      ]);
+      _group.add(new THREE.Line(rayGeo, rayMat2));
+    });
+
+    // Shadow on ground
+    buildShadowParallel(dirX, dirY, targets2);
+
+    // Sun indicator
+    var sunGeo = new THREE.SphereGeometry(0.35, 16, 16);
+    var sunMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24 });
+    var sun = new THREE.Mesh(sunGeo, sunMat);
+    sun.position.set(-dirX * h, -dirY * h, 0);
+    _group.add(sun);
+    var sunL = Edu3D.textSprite('太阳光', { color: '#d97706', scale: 0.35 });
+    sunL.position.set(-dirX * h, -dirY * h + 0.5, 0);
+    _group.add(sunL);
+
+  } else {
+    // Orthographic projection - vertical rays
+    var rayMat3 = new THREE.LineBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.4 });
+    var targets3 = getObjCorners();
+    targets3.forEach(function(t) {
+      var rayGeo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(t.x, h, t.z),
+        new THREE.Vector3(t.x, 0, t.z)
+      ]);
+      _group.add(new THREE.Line(rayGeo, rayMat3));
+    });
+
+    // Vertical arrows label
+    var arrL = Edu3D.textSprite('投影线 ⊥ 投影面', { color: '#d97706', scale: 0.35 });
+    arrL.position.set(2, h - 0.5, 0);
+    _group.add(arrL);
+
+    // Shadow on ground (same as ortho = just the top-down silhouette)
+    buildShadowOrtho();
+  }
+
+  // Ground labels
+  var groundL = Edu3D.textSprite('投影面', { color: '#64748b', scale: 0.4 });
+  groundL.position.set(4.5, 0.1, 4.5);
+  _group.add(groundL);
+}
+
+function getObjCorners() {
+  var corners = [];
+  var s, h, r;
+
+  switch (_currentObj) {
+    case 'cube':
+      s = 0.75;
+      corners = [
+        {x:-s, y:0, z:-s}, {x:s, y:0, z:-s}, {x:s, y:0, z:s}, {x:-s, y:0, z:s},
+        {x:-s, y:2*s, z:-s}, {x:s, y:2*s, z:-s}, {x:s, y:2*s, z:s}, {x:-s, y:2*s, z:s}
+      ];
+      break;
+    case 'cylinder':
+      r = 0.8; h = 2;
+      for (var i = 0; i < 8; i++) {
+        var a = Math.PI * 2 * i / 8;
+        corners.push({x: Math.cos(a)*r, y: 0, z: Math.sin(a)*r});
+        corners.push({x: Math.cos(a)*r, y: h, z: Math.sin(a)*r});
+      }
+      break;
+    case 'cone':
+      r = 0.8; h = 2;
+      for (var j = 0; j < 8; j++) {
+        var a2 = Math.PI * 2 * j / 8;
+        corners.push({x: Math.cos(a2)*r, y: 0, z: Math.sin(a2)*r});
+      }
+      corners.push({x: 0, y: h, z: 0});
+      break;
+    case 'prism':
+      r = 0.9; h = 1.8;
+      for (var k = 0; k < 3; k++) {
+        var a3 = Math.PI * 2 * k / 3 - Math.PI / 2;
+        corners.push({x: Math.cos(a3)*r, y: 0, z: Math.sin(a3)*r});
+        corners.push({x: Math.cos(a3)*r, y: h, z: Math.sin(a3)*r});
+      }
+      break;
+    case 'combo':
+      r = 0.7;
+      for (var m = 0; m < 8; m++) {
+        var a4 = Math.PI * 2 * m / 8;
+        corners.push({x: Math.cos(a4)*r, y: 0, z: Math.sin(a4)*r});
+        corners.push({x: Math.cos(a4)*r, y: 1.5, z: Math.sin(a4)*r});
+      }
+      corners.push({x: 0, y: 2.5, z: 0});
+      break;
+  }
+  return corners;
+}
+
+function buildShadowCentral(lx, ly, targets) {
+  // For each target point, extend ray from light through target to y=0
+  var shadowPts = [];
+  targets.forEach(function(t) {
+    if (ly - t.y === 0) return;
+    var s = -t.y / (ly - t.y);
+    var sx = t.x + s * (t.x - lx);
+    var sz = t.z + s * (t.z - 0);
+    shadowPts.push({x: sx, z: sz});
+  });
+
+  drawShadowPoints(shadowPts);
+}
+
+function buildShadowParallel(dirX, dirY, targets) {
+  if (dirY >= 0) return;
+  var shadowPts = [];
+  targets.forEach(function(t) {
+    var s = -t.y / dirY;
+    shadowPts.push({x: t.x + dirX * s, z: t.z});
+  });
+  drawShadowPoints(shadowPts);
+}
+
+function buildShadowOrtho() {
+  // Just use a shape on the ground
+  var shadowMat = new THREE.MeshBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
+
+  switch (_currentObj) {
+    case 'cube': {
+      var sg = new THREE.PlaneGeometry(1.5, 1.5);
+      var sm = new THREE.Mesh(sg, shadowMat);
+      sm.rotation.x = -Math.PI / 2; sm.position.y = 0.02;
+      _group.add(sm);
+      break;
+    }
+    case 'cylinder': case 'combo': {
+      var sg2 = new THREE.CircleGeometry(0.8, 32);
+      var sm2 = new THREE.Mesh(sg2, shadowMat);
+      sm2.rotation.x = -Math.PI / 2; sm2.position.y = 0.02;
+      _group.add(sm2);
+      break;
+    }
+    case 'cone': {
+      var sg3 = new THREE.CircleGeometry(0.8, 32);
+      var sm3 = new THREE.Mesh(sg3, shadowMat);
+      sm3.rotation.x = -Math.PI / 2; sm3.position.y = 0.02;
+      _group.add(sm3);
+      break;
+    }
+    case 'prism': {
+      var shape = new THREE.Shape();
+      for (var i = 0; i < 3; i++) {
+        var a = Math.PI * 2 * i / 3 - Math.PI / 2;
+        if (i === 0) shape.moveTo(Math.cos(a) * 0.9, Math.sin(a) * 0.9);
+        else shape.lineTo(Math.cos(a) * 0.9, Math.sin(a) * 0.9);
+      }
+      shape.closePath();
+      var sg4 = new THREE.ShapeGeometry(shape);
+      var sm4 = new THREE.Mesh(sg4, shadowMat);
+      sm4.rotation.x = -Math.PI / 2; sm4.position.y = 0.02;
+      _group.add(sm4);
+      break;
+    }
+  }
+}
+
+function drawShadowPoints(pts) {
+  if (pts.length === 0) return;
+  // Convex hull approximation: just draw all projected points as a filled shape
+  var shadowMat = new THREE.MeshBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
+  // Simple: draw circles at each shadow point
+  pts.forEach(function(p) {
+    var dg = new THREE.CircleGeometry(0.08, 8);
+    var dm = new THREE.Mesh(dg, shadowMat.clone());
+    dm.rotation.x = -Math.PI / 2;
+    dm.position.set(p.x, 0.02, p.z);
+    _group.add(dm);
+  });
+
+  // Connect outer boundary lines
+  if (pts.length > 2) {
+    var lineMat = new THREE.LineBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.3 });
+    var linePts = pts.map(function(p) { return new THREE.Vector3(p.x, 0.03, p.z); });
+    linePts.push(linePts[0].clone());
+    var lineGeo = new THREE.BufferGeometry().setFromPoints(linePts);
+    _group.add(new THREE.Line(lineGeo, lineMat));
+  }
+}
+
+function setType(key) {
+  _currentType = key;
+  build();
+
+  var info = TYPE_INFO[key];
+  document.getElementById('info-card').innerHTML =
+    '<div class="title">' + info.title + '</div>' + info.desc;
+
+  ['parallel', 'central', 'ortho'].forEach(function(k) {
+    var btn = document.getElementById('tb-' + k);
+    if (btn) btn.classList.toggle('active', k === key);
+  });
+}
+
+function setObj(key) {
+  _currentObj = key;
+  build();
+  ['cube', 'cylinder', 'cone', 'prism', 'combo'].forEach(function(k) {
+    var btn = document.getElementById('ob-' + k);
+    if (btn) btn.classList.toggle('active', k === key);
+  });
+}
+
+function onSlider() {
+  _lightHeight = parseFloat(document.getElementById('sl-height').value);
+  _lightAngle = parseFloat(document.getElementById('sl-angle').value);
+  document.getElementById('val-height').textContent = _lightHeight;
+  document.getElementById('val-angle').textContent = _lightAngle + '°';
+  build();
+}
+
+function resetAll() {
+  _currentType = 'parallel'; _currentObj = 'cube';
+  _lightHeight = 6; _lightAngle = 30;
+  document.getElementById('sl-height').value = 6;
+  document.getElementById('sl-angle').value = 30;
+  document.getElementById('val-height').textContent = '6';
+  document.getElementById('val-angle').textContent = '30°';
+  setType('parallel');
+  setObj('cube');
+}
+
+init();
+</script>
+</body>
+</html>

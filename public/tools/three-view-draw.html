@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>三视图绘制与识别 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 320px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#fff7ed,#fdfaf4); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+
+  .shape-btn {
+    padding:8px; border-radius:8px; font-size:11px; font-weight:700;
+    cursor:pointer; border:2px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+  }
+  .shape-btn:hover { border-color:#f97316; }
+  .shape-btn.active { background:#fff7ed; color:#92400e; border-color:#f97316; }
+
+  .view-layout {
+    display:grid; grid-template-columns:auto auto;
+    grid-template-rows:auto auto; gap:4px;
+  }
+  .view-cell {
+    background:#fff; border:1px solid #e2e8f0; border-radius:8px;
+    padding:4px; display:flex; flex-direction:column; align-items:center;
+  }
+  .view-cell canvas { display:block; }
+  .view-title { font-size:10px; font-weight:700; margin-bottom:2px; }
+  .vt-main { color:#f97316; }
+  .vt-top { color:#22c55e; }
+  .vt-left { color:#3b82f6; }
+  .view-size { font-size:9px; color:#64748b; margin-top:2px; }
+  .empty-cell { visibility:hidden; }
+
+  .rule-box {
+    background:#fff7ed; border:1.5px solid #fdba74; border-radius:8px;
+    padding:8px 10px; font-size:11px; line-height:1.8; color:#334155;
+  }
+  .rule-box strong { color:#92400e; }
+
+  .quiz-btn {
+    width:100%; padding:10px; border:none; border-radius:10px; font-size:14px; font-weight:700;
+    cursor:pointer; font-family:var(--edu-font); transition:all .15s;
+    background:#f97316; color:#fff;
+  }
+  .quiz-btn:hover { background:#ea580c; }
+
+  .quiz-card {
+    background:#fef3c7; border:2px solid #fbbf24; border-radius:12px;
+    padding:12px; text-align:center;
+  }
+  .quiz-q { font-size:13px; font-weight:700; color:#92400e; margin-bottom:8px; }
+  .quiz-opts { display:flex; flex-direction:column; gap:4px; }
+  .quiz-opt {
+    padding:8px; border:2px solid #e2e8f0; border-radius:8px; font-size:12px;
+    font-weight:600; cursor:pointer; background:#fff; text-align:left;
+    font-family:var(--edu-font); transition:all .15s;
+  }
+  .quiz-opt:hover { border-color:#f97316; }
+  .quiz-opt.correct { background:#dcfce7; border-color:#22c55e; color:#166534; }
+  .quiz-opt.wrong { background:#fef2f2; border-color:#ef4444; color:#991b1b; }
+  .quiz-result { font-size:12px; font-weight:700; margin-top:8px; min-height:18px; }
+
+  .info-box { background:#fff; border:1px solid #fed7aa; border-radius:10px; padding:10px 12px; font-size:11px; line-height:1.8; color:#334155; }
+  .info-box strong { color:#ea580c; }
+
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="edu-toolbar-title">📐 三视图绘制与识别</span>
+      <span class="edu-toolbar-subtitle">九年级下册 · 第二十九章</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="quiz-btn" style="width:auto;padding:6px 14px;font-size:12px" onclick="nextQuiz()">🧪 三视图测验</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择几何体</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <button class="shape-btn active" id="sb-cube" onclick="setShape('cube')">正方体</button>
+            <button class="shape-btn" id="sb-cuboid" onclick="setShape('cuboid')">长方体</button>
+            <button class="shape-btn" id="sb-cylinder" onclick="setShape('cylinder')">圆柱</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <button class="shape-btn" id="sb-cone" onclick="setShape('cone')">圆锥</button>
+            <button class="shape-btn" id="sb-sphere" onclick="setShape('sphere')">球体</button>
+            <button class="shape-btn" id="sb-prism" onclick="setShape('prism')">三棱柱</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+            <button class="shape-btn" id="sb-pyramid" onclick="setShape('pyramid')">四棱锥</button>
+            <button class="shape-btn" id="sb-combo" onclick="setShape('combo')">组合体</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">三视图（标准排列）</div>
+          <div class="view-layout">
+            <div class="view-cell">
+              <div class="view-title vt-main">主视图</div>
+              <canvas id="cv-main" width="100" height="80"></canvas>
+            </div>
+            <div class="view-cell">
+              <div class="view-title vt-left">左视图</div>
+              <canvas id="cv-left" width="80" height="80"></canvas>
+            </div>
+            <div class="view-cell">
+              <div class="view-title vt-top">俯视图</div>
+              <canvas id="cv-top" width="100" height="80"></canvas>
+            </div>
+            <div class="view-cell empty-cell"><div></div></div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="rule-box">
+          <strong>三视图画法口诀</strong><br/>
+          ● <strong>长对正</strong>：主视图与俯视图长度对齐<br/>
+          ● <strong>高平齐</strong>：主视图与左视图高度对齐<br/>
+          ● <strong>宽相等</strong>：俯视图与左视图宽度相等<br/>
+          ● 可见轮廓用<strong>实线</strong>，被遮挡用<strong>虚线</strong>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section" id="quiz-section" style="display:none">
+          <div class="quiz-card" id="quiz-card"></div>
+        </div>
+        <div class="info-box">
+          <strong>三视图知识</strong><br/>
+          ● 主视图：从<strong>正面</strong>看（反映长和高）<br/>
+          ● 俯视图：从<strong>上面</strong>看（反映长和宽）<br/>
+          ● 左视图：从<strong>左面</strong>看（反映宽和高）<br/>
+          ● 三视图是正投影的应用
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var _scene, _camera, _renderer, _controls;
+var _group;
+var _currentShape = 'cube';
+
+// View data for each shape
+var VIEWS = {
+  cube: {
+    main: { type: 'rect', w: 1, h: 1, label: '正方形' },
+    top: { type: 'rect', w: 1, h: 1, label: '正方形' },
+    left: { type: 'rect', w: 1, h: 1, label: '正方形' },
+    desc: '正方体三个视图都是正方形'
+  },
+  cuboid: {
+    main: { type: 'rect', w: 1.5, h: 0.8, label: '长方形' },
+    top: { type: 'rect', w: 1.5, h: 1, label: '长方形' },
+    left: { type: 'rect', w: 1, h: 0.8, label: '长方形' },
+    desc: '长方体三个视图都是长方形（大小可能不同）'
+  },
+  cylinder: {
+    main: { type: 'rect', w: 1.2, h: 1.6, label: '长方形' },
+    top: { type: 'circle', r: 0.6, label: '圆' },
+    left: { type: 'rect', w: 1.2, h: 1.6, label: '长方形' },
+    desc: '圆柱主视图和左视图是长方形，俯视图是圆'
+  },
+  cone: {
+    main: { type: 'tri', base: 1.2, h: 1.4, label: '三角形' },
+    top: { type: 'circle', r: 0.6, label: '圆（含圆心点）' },
+    left: { type: 'tri', base: 1.2, h: 1.4, label: '三角形' },
+    desc: '圆锥主视图和左视图是等腰三角形，俯视图是圆+圆心'
+  },
+  sphere: {
+    main: { type: 'circle', r: 0.7, label: '圆' },
+    top: { type: 'circle', r: 0.7, label: '圆' },
+    left: { type: 'circle', r: 0.7, label: '圆' },
+    desc: '球体三个视图都是相同大小的圆'
+  },
+  prism: {
+    main: { type: 'rect', w: 1.6, h: 1.4, label: '长方形' },
+    top: { type: 'tri', base: 1.6, h: 0.8, label: '三角形' },
+    left: { type: 'rect', w: 0.8, h: 1.4, label: '长方形' },
+    desc: '三棱柱主视图是长方形，俯视图是三角形，左视图是长方形'
+  },
+  pyramid: {
+    main: { type: 'tri', base: 1.4, h: 1.6, label: '三角形' },
+    top: { type: 'rect', w: 1.4, h: 1.4, label: '正方形（含对角线）' },
+    left: { type: 'tri', base: 1.4, h: 1.6, label: '三角形' },
+    desc: '四棱锥主视图和左视图是三角形，俯视图是正方形+对角线'
+  },
+  combo: {
+    main: { type: 'combo-rect-tri', w: 1.2, h1: 1.2, h2: 0.7, label: '长方形+三角形' },
+    top: { type: 'circle', r: 0.6, label: '圆' },
+    left: { type: 'combo-rect-tri', w: 1.2, h1: 1.2, h2: 0.7, label: '长方形+三角形' },
+    desc: '圆柱+圆锥组合体，主视图是长方形上面加三角形'
+  },
+};
+
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xfdf8f0, camX: 6, camY: 4, camZ: 6 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 10, 10);
+
+  _group = new THREE.Group();
+  _scene.add(_group);
+
+  setShape('cube');
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+
+function clearGroup() { while (_group.children.length) _group.remove(_group.children[0]); }
+
+function buildShape() {
+  clearGroup();
+  var mat = new THREE.MeshLambertMaterial({ color: 0xf97316, transparent: true, opacity: 0.7 });
+  var edgeMat = new THREE.LineBasicMaterial({ color: 0x9a3412, transparent: true, opacity: 0.4 });
+  var geo;
+
+  switch (_currentShape) {
+    case 'cube': geo = new THREE.BoxGeometry(1.6, 1.6, 1.6); break;
+    case 'cuboid': geo = new THREE.BoxGeometry(2.2, 1.2, 1.4); break;
+    case 'cylinder': geo = new THREE.CylinderGeometry(0.8, 0.8, 2, 32); break;
+    case 'cone': geo = new THREE.ConeGeometry(0.8, 1.8, 32); break;
+    case 'sphere': geo = new THREE.SphereGeometry(0.9, 32, 32); break;
+    case 'prism': geo = new THREE.CylinderGeometry(0.9, 0.9, 1.8, 3); break;
+    case 'pyramid': geo = new THREE.CylinderGeometry(0, 1, 2, 4); break;
+    case 'combo': geo = null; break;
+  }
+
+  if (_currentShape === 'combo') {
+    var cylGeo = new THREE.CylinderGeometry(0.8, 0.8, 1.6, 32);
+    var cyl = new THREE.Mesh(cylGeo, new THREE.MeshLambertMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.7 }));
+    cyl.position.y = 0.8;
+    cyl.add(new THREE.LineSegments(new THREE.EdgesGeometry(cylGeo), edgeMat));
+    _group.add(cyl);
+
+    var conGeo = new THREE.ConeGeometry(0.8, 1, 32);
+    var con = new THREE.Mesh(conGeo, new THREE.MeshLambertMaterial({ color: 0xf97316, transparent: true, opacity: 0.7 }));
+    con.position.y = 2.1;
+    con.add(new THREE.LineSegments(new THREE.EdgesGeometry(conGeo), edgeMat));
+    _group.add(con);
+  } else {
+    var mesh = new THREE.Mesh(geo, mat);
+    var yOff = _currentShape === 'sphere' ? 0.9 : _currentShape === 'cone' ? 0.9 : _currentShape === 'cube' ? 0.8 : 0.9;
+    mesh.position.y = yOff;
+    mesh.castShadow = true;
+    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 15), edgeMat));
+    _group.add(mesh);
+  }
+
+  // Axis arrows
+  var arrowLen = 2.5;
+  var xArrow = new THREE.ArrowHelper(new THREE.Vector3(1,0,0), new THREE.Vector3(0,0,0), arrowLen, 0xef4444, 0.2, 0.15);
+  var yArrow = new THREE.ArrowHelper(new THREE.Vector3(0,1,0), new THREE.Vector3(0,0,0), arrowLen, 0x22c55e, 0.2, 0.15);
+  var zArrow = new THREE.ArrowHelper(new THREE.Vector3(0,0,1), new THREE.Vector3(0,0,0), arrowLen, 0x3b82f6, 0.2, 0.15);
+  _group.add(xArrow); _group.add(yArrow); _group.add(zArrow);
+
+  var xl = Edu3D.textSprite('前', { color: '#ef4444', scale: 0.3 });
+  xl.position.set(arrowLen + 0.3, 0, 0); _group.add(xl);
+  var yl = Edu3D.textSprite('上', { color: '#22c55e', scale: 0.3 });
+  yl.position.set(0, arrowLen + 0.3, 0); _group.add(yl);
+  var zl = Edu3D.textSprite('右', { color: '#3b82f6', scale: 0.3 });
+  zl.position.set(0, 0, arrowLen + 0.3); _group.add(zl);
+
+  drawViews();
+}
+
+function drawViews() {
+  var v = VIEWS[_currentShape];
+  drawView('cv-main', v.main, '#f97316');
+  drawView('cv-top', v.top, '#22c55e');
+  drawView('cv-left', v.left, '#3b82f6');
+}
+
+function drawView(canvasId, view, color) {
+  var cv = document.getElementById(canvasId);
+  var ctx = cv.getContext('2d');
+  var w = cv.width, h = cv.height;
+  ctx.clearRect(0, 0, w, h);
+
+  var cx = w / 2, cy = h / 2;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+
+  var scale = 30;
+  switch (view.type) {
+    case 'rect':
+      var rw = view.w * scale, rh = view.h * scale;
+      ctx.strokeRect(cx - rw/2, cy - rh/2, rw, rh);
+      break;
+    case 'circle':
+      var rr = view.r * scale;
+      ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2); ctx.stroke();
+      if (view.label.indexOf('圆心') >= 0) {
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill();
+      }
+      break;
+    case 'tri':
+      var tb = view.base * scale, th = view.h * scale;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - th/2);
+      ctx.lineTo(cx + tb/2, cy + th/2);
+      ctx.lineTo(cx - tb/2, cy + th/2);
+      ctx.closePath(); ctx.stroke();
+      break;
+    case 'combo-rect-tri':
+      var cw = view.w * scale, ch1 = view.h1 * scale, ch2 = view.h2 * scale;
+      // Rectangle on bottom
+      ctx.strokeRect(cx - cw/2, cy - ch1/2 + ch2/2, cw, ch1);
+      // Triangle on top
+      ctx.beginPath();
+      ctx.moveTo(cx - cw/2, cy - ch1/2 + ch2/2);
+      ctx.lineTo(cx, cy - ch1/2 - ch2/2);
+      ctx.lineTo(cx + cw/2, cy - ch1/2 + ch2/2);
+      ctx.closePath(); ctx.stroke();
+      break;
+  }
+
+  // Label
+  ctx.fillStyle = '#64748b';
+  ctx.font = '9px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(view.label, cx, h - 3);
+}
+
+function setShape(key) {
+  _currentShape = key;
+  buildShape();
+  var allKeys = ['cube','cuboid','cylinder','cone','sphere','prism','pyramid','combo'];
+  allKeys.forEach(function(k) {
+    var btn = document.getElementById('sb-' + k);
+    if (btn) btn.classList.toggle('active', k === key);
+  });
+  document.getElementById('quiz-section').style.display = 'none';
+}
+
+// ===== Quiz =====
+var _quizIdx = 0;
+var _quizzes = [
+  { q: '圆柱的主视图是什么形状？', opts: ['圆', '长方形', '三角形', '梯形'], ans: 1 },
+  { q: '圆锥的俯视图是什么形状？', opts: ['三角形', '长方形', '圆（含圆心点）', '椭圆'], ans: 2 },
+  { q: '正方体的三个视图分别是什么？', opts: ['三个正方形', '三个长方形', '两个正方形一个三角形', '三个三角形'], ans: 0 },
+  { q: '球体的三个视图分别是什么？', opts: ['三个椭圆', '三个不同大小的圆', '三个相同大小的圆', '两个圆一个正方形'], ans: 2 },
+  { q: '三棱柱的俯视图是什么形状？', opts: ['长方形', '三角形', '梯形', '圆'], ans: 1 },
+  { q: '四棱锥的主视图是什么形状？', opts: ['正方形', '长方形', '三角形', '圆'], ans: 2 },
+  { q: '"长对正、高平齐、宽相等"描述的是什么规则？', opts: ['展开图画法', '三视图画法', '截面画法', '旋转体画法'], ans: 1 },
+  { q: '被遮挡的轮廓线在三视图中用什么表示？', opts: ['实线', '虚线', '点划线', '波浪线'], ans: 1 },
+];
+
+function nextQuiz() {
+  _quizIdx = Math.floor(Math.random() * _quizzes.length);
+  var q = _quizzes[_quizIdx];
+  var section = document.getElementById('quiz-section');
+  section.style.display = '';
+  var card = document.getElementById('quiz-card');
+  var html = '<div class="quiz-q">' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(opt, i) {
+    html += '<button class="quiz-opt" onclick="answerQuiz(' + i + ')">' + ['A','B','C','D'][i] + '. ' + opt + '</button>';
+  });
+  html += '</div><div class="quiz-result" id="quiz-result"></div>';
+  card.innerHTML = html;
+}
+
+function answerQuiz(idx) {
+  var q = _quizzes[_quizIdx];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(btn, i) {
+    btn.onclick = null;
+    btn.style.cursor = 'default';
+    if (i === q.ans) btn.classList.add('correct');
+    if (i === idx && i !== q.ans) btn.classList.add('wrong');
+  });
+  var result = document.getElementById('quiz-result');
+  if (idx === q.ans) {
+    result.textContent = '✓ 正确！';
+    result.style.color = '#16a34a';
+  } else {
+    result.textContent = '✗ 错误，正确答案是 ' + ['A','B','C','D'][q.ans];
+    result.style.color = '#ef4444';
+  }
+}
+
+function resetAll() {
+  _currentShape = 'cube';
+  setShape('cube');
+}
+
+init();
+</script>
+</body>
+</html>
