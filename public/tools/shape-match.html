@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>立体图形认识与分类 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 320px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#fef3c7,#fefce8); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; margin-bottom:4px; }
+  .divider { height:1px; background:#e2e8f0; }
+
+  .shape-card {
+    padding:12px 10px; border-radius:14px; font-size:14px; font-weight:700;
+    cursor:pointer; border:3px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .2s; font-family:var(--edu-font); text-align:center;
+  }
+  .shape-card:hover { border-color:#f59e0b; transform:scale(1.03); }
+  .shape-card.active { color:#92400e; border-color:#f59e0b; box-shadow:0 2px 12px rgba(245,158,11,.2); }
+  .shape-card .sc-icon { font-size:28px; display:block; margin-bottom:4px; }
+
+  .shape-info {
+    background:#fffbeb; border:2px solid #fde68a; border-radius:14px;
+    padding:14px; font-size:13px; line-height:2; color:#334155;
+  }
+  .shape-info .si-title { font-size:18px; font-weight:800; color:#b45309; text-align:center; margin-bottom:6px; }
+  .shape-info .si-prop { display:flex; align-items:center; gap:6px; margin:2px 0; }
+  .shape-info .si-dot { width:8px; height:8px; border-radius:50%; }
+
+  .match-area { display:flex; flex-direction:column; gap:6px; }
+  .match-row {
+    display:flex; align-items:center; gap:8px; padding:8px 10px;
+    border-radius:10px; cursor:pointer; border:2px solid #e2e8f0;
+    background:#fff; transition:all .15s; font-size:13px; font-weight:600;
+  }
+  .match-row:hover { border-color:#f59e0b; }
+  .match-row .mr-icon { font-size:22px; }
+  .match-row .mr-arrow { color:#d97706; font-weight:800; }
+  .match-row .mr-target {
+    flex:1; text-align:right; font-size:12px; color:#64748b;
+  }
+  .match-row.matched { background:#dcfce7; border-color:#22c55e; color:#166534; }
+  .match-row.wrong { background:#fef2f2; border-color:#ef4444; }
+
+  .score-bar {
+    display:flex; align-items:center; gap:8px; padding:8px 12px;
+    background:#fffbeb; border-radius:8px; font-size:13px; font-weight:700; color:#b45309;
+  }
+
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="edu-toolbar-title">🧊 立体图形认识与分类</span>
+      <span class="edu-toolbar-subtitle">一年级上册 · 认识图形</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">用手指旋转看看立体图形 🖐️</div>
+      </div>
+      <div class="control-panel">
+        <div>
+          <div class="ctrl-label">点一点，认识立体图形</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <button class="shape-card active" id="sc-cube" onclick="selectShape('cube')"><span class="sc-icon">🟦</span>正方体</button>
+            <button class="shape-card" id="sc-cuboid" onclick="selectShape('cuboid')"><span class="sc-icon">🟪</span>长方体</button>
+            <button class="shape-card" id="sc-cylinder" onclick="selectShape('cylinder')"><span class="sc-icon">🟡</span>圆柱</button>
+            <button class="shape-card" id="sc-sphere" onclick="selectShape('sphere')"><span class="sc-icon">🟢</span>球</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="shape-info" id="shape-info"></div>
+        <div class="divider"></div>
+        <div>
+          <div class="ctrl-label">连一连：物品属于哪种形状？</div>
+          <div class="score-bar">答对：<span id="score">0</span> / <span id="total">8</span></div>
+          <div class="match-area" id="match-area"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var _scene, _camera, _renderer, _controls;
+var _group;
+var _currentShape = 'cube';
+var _score = 0;
+var _matched = {};
+
+var SHAPES = {
+  cube: {
+    name: '正方体', color: 0x3b82f6, icon: '🟦',
+    faces: 6, edges: 12, vertices: 8,
+    faceShape: '6个面是正方形，每个面都一样大',
+    realLife: ['骰子', '魔方', '积木块'],
+    funFact: '正方体是特殊的长方体哦！',
+    build: function(g) {
+      var geo = new THREE.BoxGeometry(1.6, 1.6, 1.6);
+      var colors = [0x60a5fa, 0x3b82f6, 0x2563eb, 0x93c5fd, 0x1d4ed8, 0xbfdbfe];
+      var mats = colors.map(function(c) { return new THREE.MeshLambertMaterial({ color: c, transparent: true, opacity: 0.75 }); });
+      var mesh = new THREE.Mesh(geo, mats);
+      mesh.position.y = 1.2;
+      mesh.castShadow = true;
+      mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x1e3a5f })));
+      g.add(mesh);
+    }
+  },
+  cuboid: {
+    name: '长方体', color: 0x8b5cf6, icon: '🟪',
+    faces: 6, edges: 12, vertices: 8,
+    faceShape: '6个面是长方形（对面相等）',
+    realLife: ['书本', '牙膏盒', '砖头'],
+    funFact: '长方体相对的面大小相同！',
+    build: function(g) {
+      var geo = new THREE.BoxGeometry(2.2, 1.2, 1.4);
+      var colors = [0xa78bfa, 0x8b5cf6, 0x7c3aed, 0xc4b5fd, 0x6d28d9, 0xddd6fe];
+      var mats = colors.map(function(c) { return new THREE.MeshLambertMaterial({ color: c, transparent: true, opacity: 0.75 }); });
+      var mesh = new THREE.Mesh(geo, mats);
+      mesh.position.y = 1.0;
+      mesh.castShadow = true;
+      mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x3b0764 })));
+      g.add(mesh);
+    }
+  },
+  cylinder: {
+    name: '圆柱', color: 0xfbbf24, icon: '🟡',
+    faces: 3, edges: 0, vertices: 0,
+    faceShape: '2个圆面（上下）+ 1个弯曲的侧面',
+    realLife: ['易拉罐', '铅笔', '蜡烛'],
+    funFact: '圆柱的侧面展开后是一个长方形！',
+    build: function(g) {
+      var geo = new THREE.CylinderGeometry(0.8, 0.8, 2, 32);
+      var topGeo = new THREE.CircleGeometry(0.8, 32);
+      var botGeo = new THREE.CircleGeometry(0.8, 32);
+      var bodyMat = new THREE.MeshLambertMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.7 });
+      var mesh = new THREE.Mesh(geo, bodyMat);
+      mesh.position.y = 1.2;
+      mesh.castShadow = true;
+      mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x92400e, transparent: true, opacity: 0.3 })));
+
+      var topMesh = new THREE.Mesh(topGeo, new THREE.MeshLambertMaterial({ color: 0xfde68a, side: THREE.DoubleSide }));
+      topMesh.rotation.x = -Math.PI / 2;
+      topMesh.position.y = 2.01;
+      g.add(topMesh);
+
+      var botMesh = new THREE.Mesh(botGeo, new THREE.MeshLambertMaterial({ color: 0xfde68a, side: THREE.DoubleSide }));
+      botMesh.rotation.x = Math.PI / 2;
+      botMesh.position.y = 0.41;
+      g.add(botMesh);
+
+      g.add(mesh);
+    }
+  },
+  sphere: {
+    name: '球', color: 0x22c55e, icon: '🟢',
+    faces: 1, edges: 0, vertices: 0,
+    faceShape: '1个弯曲的面，没有棱和顶点',
+    realLife: ['篮球', '足球', '乒乓球'],
+    funFact: '球从哪个方向看都是圆形！',
+    build: function(g) {
+      var geo = new THREE.SphereGeometry(1, 32, 32);
+      var mat = new THREE.MeshLambertMaterial({ color: 0x4ade80, transparent: true, opacity: 0.7 });
+      var mesh = new THREE.Mesh(geo, mat);
+      mesh.position.y = 1.2;
+      mesh.castShadow = true;
+      g.add(mesh);
+
+      // Latitude/longitude lines
+      var lineMat = new THREE.LineBasicMaterial({ color: 0x166534, transparent: true, opacity: 0.2 });
+      for (var i = 1; i < 4; i++) {
+        var r2 = Math.sin(Math.PI * i / 4) * 1;
+        var y2 = Math.cos(Math.PI * i / 4) * 1;
+        var pts = [];
+        for (var j = 0; j <= 64; j++) {
+          var a = Math.PI * 2 * j / 64;
+          pts.push(new THREE.Vector3(Math.cos(a) * r2, y2, Math.sin(a) * r2));
+        }
+        var lineGeo = new THREE.BufferGeometry().setFromPoints(pts);
+        g.add(new THREE.Line(lineGeo, lineMat));
+      }
+    }
+  },
+};
+
+// Match quiz items
+var QUIZ_ITEMS = [
+  { icon: '🎲', name: '骰子', answer: 'cube' },
+  { icon: '📖', name: '语文书', answer: 'cuboid' },
+  { icon: '🥫', name: '易拉罐', answer: 'cylinder' },
+  { icon: '⚽', name: '足球', answer: 'sphere' },
+  { icon: '📦', name: '牙膏盒', answer: 'cuboid' },
+  { icon: '✏️', name: '铅笔', answer: 'cylinder' },
+  { icon: '🔮', name: '魔方', answer: 'cube' },
+  { icon: '🏀', name: '篮球', answer: 'sphere' },
+];
+
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xfefce8, camX: 4, camY: 3, camZ: 4, maxDist: 10 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+
+  _group = new THREE.Group();
+  _scene.add(_group);
+
+  selectShape('cube');
+  buildQuiz();
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+
+function clearGroup() { while (_group.children.length) _group.remove(_group.children[0]); }
+
+function selectShape(key) {
+  _currentShape = key;
+  clearGroup();
+
+  var s = SHAPES[key];
+  s.build(_group);
+
+  // Name label
+  var lbl = Edu3D.textSprite(s.name, { color: '#92400e', scale: 0.6 });
+  lbl.position.set(0, 3, 0);
+  _group.add(lbl);
+
+  // Update info panel
+  var info = document.getElementById('shape-info');
+  info.innerHTML =
+    '<div class="si-title">' + s.icon + ' ' + s.name + '</div>' +
+    '<div class="si-prop"><div class="si-dot" style="background:#3b82f6"></div>有 <strong>' + s.faces + '</strong> 个面</div>' +
+    '<div class="si-prop"><div class="si-dot" style="background:#8b5cf6"></div>有 <strong>' + s.edges + '</strong> 条棱</div>' +
+    '<div class="si-prop"><div class="si-dot" style="background:#f59e0b"></div>有 <strong>' + s.vertices + '</strong> 个顶点</div>' +
+    '<div style="margin-top:4px;font-size:12px;color:#78350f">' + s.faceShape + '</div>' +
+    '<div style="margin-top:6px;font-size:12px"><strong>生活中的' + s.name + '：</strong>' + s.realLife.join('、') + '</div>' +
+    '<div style="margin-top:4px;font-size:11px;color:#b45309">💡 ' + s.funFact + '</div>';
+
+  // Update buttons
+  Object.keys(SHAPES).forEach(function(k) {
+    var btn = document.getElementById('sc-' + k);
+    if (btn) {
+      btn.classList.toggle('active', k === key);
+      btn.style.background = k === key ? '#fff7ed' : '';
+      btn.style.borderColor = k === key ? '#f59e0b' : '';
+    }
+  });
+}
+
+function buildQuiz() {
+  _score = 0;
+  _matched = {};
+  var area = document.getElementById('match-area');
+  area.innerHTML = '';
+  document.getElementById('score').textContent = '0';
+
+  // Shuffle
+  var items = QUIZ_ITEMS.slice().sort(function() { return Math.random() - 0.5; });
+
+  items.forEach(function(item, idx) {
+    var row = document.createElement('div');
+    row.className = 'match-row';
+    row.id = 'mr-' + idx;
+    row.innerHTML =
+      '<span class="mr-icon">' + item.icon + '</span>' +
+      '<span>' + item.name + '</span>' +
+      '<span class="mr-arrow">→</span>' +
+      '<span class="mr-target">点击选择形状</span>';
+    row.onclick = (function(i, it) { return function() { cycleAnswer(i, it); }; })(idx, item);
+    area.appendChild(row);
+  });
+}
+
+var ANSWER_ORDER = ['cube', 'cuboid', 'cylinder', 'sphere'];
+var ANSWER_NAMES = { cube: '正方体', cuboid: '长方体', cylinder: '圆柱', sphere: '球' };
+
+function cycleAnswer(idx, item) {
+  if (_matched[idx]) return;
+  var row = document.getElementById('mr-' + idx);
+  var current = row.dataset.answer || '';
+  var currentIdx = ANSWER_ORDER.indexOf(current);
+  var nextIdx = (currentIdx + 1) % ANSWER_ORDER.length;
+  var next = ANSWER_ORDER[nextIdx];
+
+  row.dataset.answer = next;
+  row.querySelector('.mr-target').textContent = ANSWER_NAMES[next];
+
+  row.classList.remove('matched', 'wrong');
+
+  // Check if answer is correct
+  if (next === item.answer) {
+    row.classList.add('matched');
+    _matched[idx] = true;
+    _score++;
+    document.getElementById('score').textContent = _score;
+    if (_score >= QUIZ_ITEMS.length) {
+      setTimeout(function() { alert('🎉 全部答对！你真棒！'); }, 200);
+    }
+  }
+}
+
+function resetAll() {
+  selectShape('cube');
+  buildQuiz();
+}
+
+init();
+</script>
+</body>
+</html>

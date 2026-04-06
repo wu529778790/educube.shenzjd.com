@@ -2,6 +2,8 @@ export type { Semester, SemesterFilter } from "./types";
 export type { Tool } from "./types";
 
 import type { Tool } from "./types";
+import { p1Tools } from "./p1";
+import { p2Tools } from "./p2";
 import { p3Tools } from "./p3";
 import { p4Tools } from "./p4";
 import { p5Tools } from "./p5";
@@ -10,7 +12,7 @@ import { j7Tools } from "./j7";
 import { j8Tools } from "./j8";
 import { j9Tools } from "./j9";
 
-export const tools: Tool[] = [...p3Tools, ...p4Tools, ...p5Tools, ...p6Tools, ...j7Tools, ...j8Tools, ...j9Tools];
+export const tools: Tool[] = [...p1Tools, ...p2Tools, ...p3Tools, ...p4Tools, ...p5Tools, ...p6Tools, ...j7Tools, ...j8Tools, ...j9Tools];
 
 export function filterToolsByCatalog(
   list: Tool[],

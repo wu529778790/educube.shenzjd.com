@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>观察物体初步 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 300px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#eff6ff,#fdfaf4); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+
+  .preset-btn {
+    padding:10px; border-radius:10px; font-size:12px; font-weight:700;
+    cursor:pointer; border:2px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+  }
+  .preset-btn:hover { border-color:#3b82f6; }
+  .preset-btn.active { background:#dbeafe; color:#1e40af; border-color:#3b82f6; }
+
+  .view-btn {
+    padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700;
+    cursor:pointer; border:2px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font);
+  }
+  .view-btn:hover { border-color:#3b82f6; }
+  .view-btn.active { background:#3b82f6; color:#fff; border-color:#3b82f6; }
+
+  .view-card {
+    background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px;
+    padding:6px; display:flex; flex-direction:column; align-items:center;
+  }
+  .view-title { font-size:10px; font-weight:700; margin-bottom:2px; }
+  canvas.view-cv { display:block; border-radius:4px; background:#fff; }
+
+  .direction-label {
+    position:absolute; font-size:13px; font-weight:800; padding:4px 10px;
+    border-radius:8px; pointer-events:none; z-index:10;
+  }
+
+  .quiz-card {
+    background:#fef3c7; border:2px solid #fbbf24; border-radius:12px;
+    padding:12px; text-align:center;
+  }
+  .quiz-q { font-size:14px; font-weight:700; color:#92400e; margin-bottom:8px; }
+  .quiz-opts { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+  .quiz-opt {
+    padding:8px; border:2px solid #e2e8f0; border-radius:8px; font-size:20px;
+    cursor:pointer; background:#fff; text-align:center; transition:all .15s;
+    font-family:var(--edu-font);
+  }
+  .quiz-opt:hover { border-color:#f59e0b; }
+  .quiz-opt.correct { background:#dcfce7; border-color:#22c55e; }
+  .quiz-opt.wrong { background:#fef2f2; border-color:#ef4444; }
+  .quiz-result { font-size:12px; font-weight:700; margin-top:6px; min-height:18px; }
+
+  .score-bar {
+    display:flex; align-items:center; gap:8px; padding:6px 10px;
+    background:#eff6ff; border-radius:8px; font-size:12px; font-weight:700; color:#1d4ed8;
+  }
+
+  .info-box { background:#fff; border:1px solid #bfdbfe; border-radius:10px; padding:10px 12px; font-size:11px; line-height:1.8; color:#334155; }
+  .info-box strong { color:#2563eb; }
+
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="edu-toolbar-title">👀 观察物体初步</span>
+      <span class="edu-toolbar-subtitle">二年级上册 · 观察物体</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area" id="canvas-wrap">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转观察物体 🖐️</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择要观察的物体</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <button class="preset-btn active" id="pb-cup" onclick="setObj('cup')">🥤 水杯</button>
+            <button class="preset-btn" id="pb-car" onclick="setObj('car')">🚗 小车</button>
+            <button class="preset-btn" id="pb-house" onclick="setObj('house')">🏠 小房子</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">从不同方向看</div>
+          <div style="display:flex;gap:4px">
+            <button class="view-btn active" id="vb-front" onclick="goView('front')">👁️ 正面</button>
+            <button class="view-btn" id="vb-side" onclick="goView('side')">👁️ 侧面</button>
+            <button class="view-btn" id="vb-top" onclick="goView('top')">👁️ 上面</button>
+            <button class="view-btn" id="vb-back" onclick="goView('back')">👁️ 背面</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">你看到的形状</div>
+          <div style="display:grid;grid-template-columns:1fr;gap:4px">
+            <div class="view-card">
+              <div class="view-title" id="view-title" style="color:#3b82f6">正面看</div>
+              <canvas class="view-cv" id="cv-view" width="260" height="120"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="score-bar">答对：<span id="score">0</span> / <span id="total">6</span></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">测验：这个形状从哪个方向看到的？</div>
+          <div class="quiz-card" id="quiz-card">
+            <div class="quiz-q" id="quiz-q">点击开始测验</div>
+            <div class="quiz-opts" id="quiz-opts"></div>
+            <div class="quiz-result" id="quiz-result"></div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <strong>观察物体小知识</strong><br/>
+          ● 从<strong>正面</strong>看：看到物体的前面<br/>
+          ● 从<strong>侧面</strong>看：看到物体的左边或右边<br/>
+          ● 从<strong>上面</strong>看：看到物体的顶部<br/>
+          ● 同一个物体，从不同方向看，看到的形状可能<strong>不同</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var _scene, _camera, _renderer, _controls;
+var _group;
+var _currentObj = 'cup';
+var _score = 0;
+var _animId = null;
+
+var OBJECTS = {
+  cup: {
+    name: '水杯',
+    build: function(g) {
+      // Cup body (cylinder)
+      var bodyGeo = new THREE.CylinderGeometry(0.6, 0.5, 1.8, 24);
+      var bodyMat = new THREE.MeshLambertMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.75 });
+      var body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.position.y = 0.9;
+      body.castShadow = true;
+      body.add(new THREE.LineSegments(new THREE.EdgesGeometry(bodyGeo), new THREE.LineBasicMaterial({ color: 0x1e40af, transparent: true, opacity: 0.3 })));
+      g.add(body);
+
+      // Handle (torus)
+      var handleGeo = new THREE.TorusGeometry(0.3, 0.06, 8, 16, Math.PI);
+      var handleMat = new THREE.MeshLambertMaterial({ color: 0x60a5fa });
+      var handle = new THREE.Mesh(handleGeo, handleMat);
+      handle.position.set(0.6, 1.0, 0);
+      handle.rotation.z = -Math.PI / 2;
+      handle.rotation.y = Math.PI / 2;
+      g.add(handle);
+
+      // Water inside
+      var waterGeo = new THREE.CylinderGeometry(0.55, 0.45, 0.1, 24);
+      var waterMat = new THREE.MeshBasicMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.6 });
+      var water = new THREE.Mesh(waterGeo, waterMat);
+      water.position.y = 1.6;
+      g.add(water);
+    },
+    views: {
+      front: '有把手的一侧，看到杯身+把手',
+      side: '看到完整的圆柱形杯身',
+      top: '看到圆形杯口',
+      back: '没有把手的一侧，只看到杯身'
+    }
+  },
+  car: {
+    name: '小车',
+    build: function(g) {
+      // Car body (lower)
+      var bodyGeo = new THREE.BoxGeometry(2.4, 0.6, 1.2);
+      var bodyMat = new THREE.MeshLambertMaterial({ color: 0xef4444 });
+      var body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.position.y = 0.5;
+      body.castShadow = true;
+      body.add(new THREE.LineSegments(new THREE.EdgesGeometry(bodyGeo), new THREE.LineBasicMaterial({ color: 0x991b1b })));
+      g.add(body);
+
+      // Cabin (upper)
+      var cabGeo = new THREE.BoxGeometry(1.2, 0.6, 1.1);
+      var cabMat = new THREE.MeshLambertMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.7 });
+      var cab = new THREE.Mesh(cabGeo, cabMat);
+      cab.position.set(-0.2, 1.1, 0);
+      cab.castShadow = true;
+      cab.add(new THREE.LineSegments(new THREE.EdgesGeometry(cabGeo), new THREE.LineBasicMaterial({ color: 0x92400e })));
+      g.add(cab);
+
+      // Wheels
+      var wheelGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.15, 16);
+      var wheelMat = new THREE.MeshLambertMaterial({ color: 0x1e293b });
+      [[-0.7, 0.25, 0.65], [0.7, 0.25, 0.65], [-0.7, 0.25, -0.65], [0.7, 0.25, -0.65]].forEach(function(p) {
+        var w = new THREE.Mesh(wheelGeo, wheelMat);
+        w.position.set(p[0], p[1], p[2]);
+        w.rotation.x = Math.PI / 2;
+        g.add(w);
+      });
+
+      // Headlight
+      var hlGeo = new THREE.SphereGeometry(0.1, 8, 8);
+      var hlMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24 });
+      var hl = new THREE.Mesh(hlGeo, hlMat);
+      hl.position.set(1.25, 0.5, 0);
+      g.add(hl);
+    },
+    views: {
+      front: '看到车头和车灯',
+      side: '看到车身侧面和2个车轮',
+      top: '看到车顶和车身的轮廓',
+      back: '看到车尾'
+    }
+  },
+  house: {
+    name: '小房子',
+    build: function(g) {
+      // House body
+      var bodyGeo = new THREE.BoxGeometry(2, 1.5, 1.6);
+      var bodyMat = new THREE.MeshLambertMaterial({ color: 0xfbbf24 });
+      var body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.position.y = 0.75;
+      body.castShadow = true;
+      body.add(new THREE.LineSegments(new THREE.EdgesGeometry(bodyGeo), new THREE.LineBasicMaterial({ color: 0x92400e })));
+      g.add(body);
+
+      // Roof (triangular prism using custom geometry)
+      var roofShape = new THREE.Shape();
+      roofShape.moveTo(-1.2, 0);
+      roofShape.lineTo(0, 1);
+      roofShape.lineTo(1.2, 0);
+      roofShape.closePath();
+      var roofGeo = new THREE.ExtrudeGeometry(roofShape, { depth: 1.8, bevelEnabled: false });
+      var roofMat = new THREE.MeshLambertMaterial({ color: 0xef4444 });
+      var roof = new THREE.Mesh(roofGeo, roofMat);
+      roof.position.set(0, 1.5, -0.9);
+      roof.castShadow = true;
+      g.add(roof);
+
+      // Door
+      var doorGeo = new THREE.BoxGeometry(0.4, 0.7, 0.05);
+      var doorMat = new THREE.MeshLambertMaterial({ color: 0x92400e });
+      var door = new THREE.Mesh(doorGeo, doorMat);
+      door.position.set(0, 0.35, 0.82);
+      g.add(door);
+
+      // Window
+      var winGeo = new THREE.BoxGeometry(0.4, 0.35, 0.05);
+      var winMat = new THREE.MeshLambertMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.8 });
+      var win1 = new THREE.Mesh(winGeo, winMat);
+      win1.position.set(0.6, 0.9, 0.82);
+      g.add(win1);
+      var win2 = new THREE.Mesh(winGeo.clone(), winMat.clone());
+      win2.position.set(-0.6, 0.9, 0.82);
+      g.add(win2);
+    },
+    views: {
+      front: '看到门、窗户和三角屋顶',
+      side: '看到墙壁和斜屋顶',
+      top: '看到长方形屋顶',
+      back: '看到墙壁（没有门）'
+    }
+  }
+};
+
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xf0f4ff, camX: 4, camY: 3, camZ: 4 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 8, 8);
+
+  _group = new THREE.Group();
+  _scene.add(_group);
+
+  setObj('cup');
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+
+function clearGroup() { while (_group.children.length) _group.remove(_group.children[0]); }
+
+function setObj(key) {
+  _currentObj = key;
+  clearGroup();
+  OBJECTS[key].build(_group);
+
+  // Name label
+  var lbl = Edu3D.textSprite(OBJECTS[key].name, { color: '#1e40af', scale: 0.5 });
+  lbl.position.set(0, 3, 0);
+  _group.add(lbl);
+
+  // Update buttons
+  Object.keys(OBJECTS).forEach(function(k) {
+    var btn = document.getElementById('pb-' + k);
+    if (btn) btn.classList.toggle('active', k === key);
+  });
+
+  goView('front');
+}
+
+function goView(dir) {
+  // Update view buttons
+  ['front', 'side', 'top', 'back'].forEach(function(d) {
+    var btn = document.getElementById('vb-' + d);
+    if (btn) btn.classList.toggle('active', d === dir);
+  });
+
+  // Animate camera
+  var targetPos;
+  switch (dir) {
+    case 'front': targetPos = { x: 0, y: 1.2, z: 5 }; break;
+    case 'side': targetPos = { x: 5, y: 1.2, z: 0 }; break;
+    case 'top': targetPos = { x: 0, y: 6, z: 0.01 }; break;
+    case 'back': targetPos = { x: 0, y: 1.2, z: -5 }; break;
+  }
+
+  // Smooth camera transition
+  var startPos = { x: _camera.position.x, y: _camera.position.y, z: _camera.position.z };
+  var t = 0, steps = 30;
+
+  if (_animId) cancelAnimationFrame(_animId);
+
+  function anim() {
+    t++;
+    var p = Math.min(t / steps, 1);
+    var ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+    _camera.position.x = startPos.x + (targetPos.x - startPos.x) * ease;
+    _camera.position.y = startPos.y + (targetPos.y - startPos.y) * ease;
+    _camera.position.z = startPos.z + (targetPos.z - startPos.z) * ease;
+    _camera.lookAt(0, 1, 0);
+    _controls.target.set(0, 1, 0);
+
+    if (p < 1) _animId = requestAnimationFrame(anim);
+    else _animId = null;
+  }
+  anim();
+
+  // Update view description
+  var titleMap = { front: '正面看', side: '侧面看', top: '上面看', back: '背面看' };
+  document.getElementById('view-title').textContent = titleMap[dir];
+  drawView(dir);
+}
+
+function drawView(dir) {
+  var cv = document.getElementById('cv-view');
+  var ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  var cx = cv.width / 2, cy = cv.height / 2;
+
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 2.5;
+  ctx.fillStyle = 'rgba(59,130,246,0.1)';
+
+  if (_currentObj === 'cup') {
+    if (dir === 'front' || dir === 'back') {
+      // Trapezoid cup shape
+      ctx.beginPath();
+      ctx.moveTo(cx - 30, cy - 35);
+      ctx.lineTo(cx + 30, cy - 35);
+      ctx.lineTo(cx + 25, cy + 35);
+      ctx.lineTo(cx - 25, cy + 35);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      if (dir === 'front') {
+        // Handle
+        ctx.beginPath();
+        ctx.arc(cx + 40, cy, 12, -Math.PI / 2, Math.PI / 2);
+        ctx.stroke();
+      }
+    } else if (dir === 'side') {
+      ctx.beginPath();
+      ctx.moveTo(cx - 30, cy - 35);
+      ctx.lineTo(cx + 30, cy - 35);
+      ctx.lineTo(cx + 25, cy + 35);
+      ctx.lineTo(cx - 25, cy + 35);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.ellipse(cx, cy, 30, 20, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+  } else if (_currentObj === 'car') {
+    if (dir === 'front' || dir === 'back') {
+      ctx.strokeRect(cx - 30, cy - 20, 60, 40);
+      ctx.beginPath(); ctx.arc(cx, cy + 20, 8, 0, Math.PI * 2); ctx.stroke();
+    } else if (dir === 'side') {
+      ctx.strokeRect(cx - 60, cy - 5, 120, 25);
+      ctx.strokeRect(cx - 25, cy - 25, 40, 20);
+      ctx.beginPath(); ctx.arc(cx - 35, cy + 20, 12, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx + 35, cy + 20, 12, 0, Math.PI * 2); ctx.stroke();
+    } else {
+      ctx.strokeRect(cx - 60, cy - 25, 120, 50);
+      ctx.strokeRect(cx - 25, cy - 15, 40, 30);
+    }
+  } else if (_currentObj === 'house') {
+    if (dir === 'front' || dir === 'back') {
+      // Body
+      ctx.strokeRect(cx - 50, cy, 100, 40);
+      // Roof
+      ctx.beginPath();
+      ctx.moveTo(cx - 55, cy);
+      ctx.lineTo(cx, cy - 40);
+      ctx.lineTo(cx + 55, cy);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      if (dir === 'front') {
+        // Door
+        ctx.strokeRect(cx - 8, cy + 10, 16, 30);
+        // Windows
+        ctx.strokeRect(cx - 35, cy + 8, 15, 12);
+        ctx.strokeRect(cx + 20, cy + 8, 15, 12);
+      }
+    } else if (dir === 'side') {
+      ctx.strokeRect(cx - 50, cy, 100, 40);
+      // Sloped roof line
+      ctx.beginPath();
+      ctx.moveTo(cx - 55, cy);
+      ctx.lineTo(cx, cy - 40);
+      ctx.lineTo(cx + 55, cy);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    } else {
+      ctx.strokeRect(cx - 55, cy - 25, 110, 50);
+    }
+  }
+
+  // Description text
+  ctx.fillStyle = '#64748b';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(OBJECTS[_currentObj].views[dir], cx, cv.height - 5);
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { obj: 'house', dir: 'front', q: '看到门和窗户的是从哪个方向看？', answer: 'front' },
+  { obj: 'car', dir: 'side', q: '看到车轮侧面的是从哪个方向看？', answer: 'side' },
+  { obj: 'cup', dir: 'top', q: '看到圆形杯口的是从哪个方向看？', answer: 'top' },
+  { obj: 'house', dir: 'top', q: '小房子从上面看到什么形状？', answer: 'top' },
+  { obj: 'car', dir: 'front', q: '看到车灯的是从哪个方向看？', answer: 'front' },
+  { obj: 'cup', dir: 'side', q: '水杯从侧面看到什么形状？', answer: 'side' },
+];
+var _quizIdx = 0;
+var _quizAnswered = {};
+
+function startQuiz() {
+  _score = 0; _quizAnswered = {};
+  document.getElementById('score').textContent = '0';
+  showQuizQ(0);
+}
+
+function showQuizQ(idx) {
+  _quizIdx = idx;
+  if (idx >= _quizQs.length) {
+    document.getElementById('quiz-q').textContent = '🎉 测验完成！';
+    document.getElementById('quiz-opts').innerHTML = '';
+    document.getElementById('quiz-result').textContent = '你答对了 ' + _score + ' / ' + _quizQs.length + ' 题';
+    document.getElementById('quiz-result').style.color = _score >= 4 ? '#16a34a' : '#ef4444';
+    return;
+  }
+  var q = _quizQs[idx];
+  document.getElementById('quiz-q').textContent = '第' + (idx + 1) + '题：' + q.q;
+  document.getElementById('quiz-result').textContent = '';
+  var opts = document.getElementById('quiz-opts');
+  opts.innerHTML = '';
+  [{ l: '👁️ 正面', v: 'front' }, { l: '👁️ 侧面', v: 'side' }, { l: '👁️ 上面', v: 'top' }, { l: '👁️ 背面', v: 'back' }].forEach(function(o) {
+    var btn = document.createElement('button');
+    btn.className = 'quiz-opt';
+    btn.textContent = o.l;
+    btn.onclick = function() { answerQ(idx, o.v, q.answer, btn); };
+    opts.appendChild(btn);
+  });
+}
+
+function answerQ(idx, val, answer, btn) {
+  if (_quizAnswered[idx]) return;
+  _quizAnswered[idx] = true;
+
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b) {
+    b.onclick = null;
+    b.style.cursor = 'default';
+  });
+
+  if (val === answer) {
+    btn.classList.add('correct');
+    _score++;
+    document.getElementById('score').textContent = _score;
+    document.getElementById('quiz-result').textContent = '✓ 正确！';
+    document.getElementById('quiz-result').style.color = '#16a34a';
+  } else {
+    btn.classList.add('wrong');
+    opts.forEach(function(b) { if (b.textContent.indexOf({front:'正面',side:'侧面',top:'上面',back:'背面'}[answer]) >= 0) b.classList.add('correct'); });
+    document.getElementById('quiz-result').textContent = '✗ 再想想';
+    document.getElementById('quiz-result').style.color = '#ef4444';
+  }
+
+  setTimeout(function() { showQuizQ(idx + 1); }, 1200);
+}
+
+function resetAll() {
+  setObj('cup');
+  startQuiz();
+}
+
+init();
+startQuiz();
+</script>
+</body>
+</html>
