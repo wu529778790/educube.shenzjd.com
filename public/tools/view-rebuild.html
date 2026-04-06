@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>根据视图还原积木 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 300px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#fff7ed,#fdfaf4); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+
+  .preset-btn {
+    padding:7px 10px; border-radius:8px; font-size:12px; font-weight:600;
+    cursor:pointer; border:2px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+  }
+  .preset-btn:hover { border-color:#f97316; }
+  .preset-btn.active { background:#fff7ed; color:#92400e; border-color:#f97316; }
+
+  .view-card { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:6px; display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .view-title { font-size:10px; font-weight:700; }
+  canvas.view-canvas { border:none; border-radius:4px; background:#f8fafc; display:block; }
+  .view-match { font-size:9px; font-weight:700; margin-top:2px; }
+  .view-match.ok { color:#16a34a; }
+  .view-match.no { color:#ef4444; }
+
+  .mode-btn {
+    padding:6px 10px; border-radius:8px; font-size:12px; font-weight:600;
+    cursor:pointer; border:2px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+  }
+  .mode-btn.active { background:#f97316; color:#fff; border-color:#f97316; }
+
+  .check-btn {
+    width:100%; padding:10px; border:none; border-radius:10px; font-size:14px; font-weight:700;
+    cursor:pointer; font-family:var(--edu-font); transition:all .15s;
+    background:#f97316; color:#fff;
+  }
+  .check-btn:hover { background:#ea580c; }
+  .check-btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+  .result-msg { font-size:14px; font-weight:700; text-align:center; min-height:22px; }
+  .result-correct { color:#16a34a; }
+  .result-wrong { color:#ef4444; }
+
+  .info-box { background:#fff; border:1px solid #fed7aa; border-radius:10px; padding:10px 12px; font-size:11px; line-height:1.8; color:#334155; }
+  .info-box strong { color:#f97316; }
+
+  .score-bar {
+    display:flex; align-items:center; gap:8px; padding:8px 12px;
+    background:#fff7ed; border-radius:8px; font-size:13px; font-weight:600; color:#ea580c;
+  }
+
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
+
+  .hint-btn {
+    padding:6px 12px; border:1.5px solid #f97316; border-radius:8px; font-size:12px;
+    font-weight:600; cursor:pointer; font-family:var(--edu-font); background:#fff;
+    color:#f97316; transition:all .15s;
+  }
+  .hint-btn:hover { background:#f97316; color:#fff; }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="edu-toolbar-title">🏗️ 根据视图还原积木</span>
+      <span class="edu-toolbar-subtitle">四年级下册 · 观察物体</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="hint-btn" onclick="showHint()">💡 提示</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放 · 点击网格操作积木</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="score-bar">得分：<span id="score">0</span> / <span id="total-q">0</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择题目</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px" id="puzzle-btns"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">操作模式</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <button class="mode-btn active" id="mb-add" onclick="setMode('add')">➕ 添加</button>
+            <button class="mode-btn" id="mb-remove" onclick="setMode('remove')">➖ 移除</button>
+            <button class="mode-btn" id="mb-height" onclick="setMode('height')">↑ 叠高</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">目标三视图</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <div class="view-card">
+              <div class="view-title" style="color:#3b82f6">正面</div>
+              <canvas class="view-canvas" id="cv-target-front" width="80" height="60"></canvas>
+            </div>
+            <div class="view-card">
+              <div class="view-title" style="color:#22c55e">侧面</div>
+              <canvas class="view-canvas" id="cv-target-side" width="80" height="60"></canvas>
+            </div>
+            <div class="view-card">
+              <div class="view-title" style="color:#f97316">上面</div>
+              <canvas class="view-canvas" id="cv-target-top" width="80" height="60"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">你的三视图</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <div class="view-card">
+              <div class="view-title" style="color:#3b82f6">正面</div>
+              <canvas class="view-canvas" id="cv-user-front" width="80" height="60"></canvas>
+              <div class="view-match" id="match-front"></div>
+            </div>
+            <div class="view-card">
+              <div class="view-title" style="color:#22c55e">侧面</div>
+              <canvas class="view-canvas" id="cv-user-side" width="80" height="60"></canvas>
+              <div class="view-match" id="match-side"></div>
+            </div>
+            <div class="view-card">
+              <div class="view-title" style="color:#f97316">上面</div>
+              <canvas class="view-canvas" id="cv-user-top" width="80" height="60"></canvas>
+              <div class="view-match" id="match-top"></div>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <button class="check-btn" onclick="checkAnswer()">检查答案</button>
+        <div class="result-msg" id="result-msg"></div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <strong>解题步骤</strong><br/>
+          ● 先看俯视图确定底面位置<br/>
+          ● 再看正视图确定每列高度<br/>
+          ● 最后用侧视图验证宽度<br/>
+          ● 点击网格积木进行搭建
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var COLS = 4, ROWS = 4, MAX_H = 4;
+var userGrid = [];
+for (var i = 0; i < ROWS; i++) { userGrid[i] = []; for (var j = 0; j < COLS; j++) userGrid[i][j] = 0; }
+var _mode = 'add';
+var _currentPuzzle = 0;
+var _answers = [];
+
+var PUZZLES = [
+  { // 题1: 简单L形
+    name: '第1题', grid: [[1,0,0,0],[1,0,0,0],[1,1,0,0],[0,0,0,0]]
+  },
+  { // 题2: 阶梯形
+    name: '第2题', grid: [[1,0,0,0],[1,1,0,0],[1,1,1,0],[0,0,0,0]]
+  },
+  { // 题3: T字形
+    name: '第3题', grid: [[0,1,0,0],[1,1,1,0],[0,1,0,0],[0,0,0,0]]
+  },
+  { // 题4: L形有高度
+    name: '第4题', grid: [[2,1,0,0],[1,0,0,0],[0,0,0,0],[0,0,0,0]]
+  },
+  { // 题5: 对角线
+    name: '第5题', grid: [[2,0,0,0],[0,2,0,0],[0,0,2,0],[0,0,0,0]]
+  },
+  { // 题6: 塔形
+    name: '第6题', grid: [[0,0,0,0],[0,3,0,0],[0,0,0,0],[0,0,0,0]]
+  },
+  { // 题7: 凸字形
+    name: '第7题', grid: [[0,1,1,0],[1,2,2,1],[0,1,1,0],[0,0,0,0]]
+  },
+  { // 题8: 复杂
+    name: '第8题', grid: [[2,1,0,0],[1,3,1,0],[0,1,2,0],[0,0,0,0]]
+  },
+  { // 题9: 角落
+    name: '第9题', grid: [[3,2,0,0],[2,1,0,0],[0,0,0,0],[0,0,0,0]]
+  },
+  { // 题10: 挑战
+    name: '第10题', grid: [[1,2,1,0],[2,3,2,0],[1,2,1,0],[0,0,0,0]]
+  },
+];
+
+var _scene, _camera, _renderer, _controls;
+var _blockGroup, _gridGroup;
+var _raycaster = new THREE.Raycaster();
+var _mouse = new THREE.Vector2();
+var _revealed = false;
+
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xfdfaf4, camX: 5, camY: 4, camZ: 5 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 8, 8);
+
+  _blockGroup = new THREE.Group();
+  _scene.add(_blockGroup);
+  _gridGroup = new THREE.Group();
+  _scene.add(_gridGroup);
+
+  buildBaseGrid();
+  buildPuzzleBtns();
+  loadPuzzle(0);
+
+  canvas.addEventListener('click', onCanvasClick);
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+
+function buildPuzzleBtns() {
+  var container = document.getElementById('puzzle-btns');
+  container.innerHTML = '';
+  PUZZLES.forEach(function(p, idx) {
+    var btn = document.createElement('button');
+    btn.className = 'preset-btn' + (idx === 0 ? ' active' : '');
+    btn.id = 'pb-' + idx;
+    btn.textContent = p.name;
+    btn.onclick = (function(i) { return function() { loadPuzzle(i); }; })(idx);
+    container.appendChild(btn);
+  });
+}
+
+function buildBaseGrid() {
+  while (_gridGroup.children.length) _gridGroup.remove(_gridGroup.children[0]);
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      var geo = new THREE.PlaneGeometry(0.92, 0.92);
+      var mat = new THREE.MeshBasicMaterial({ color: 0xd1d5db, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+      var plane = new THREE.Mesh(geo, mat);
+      plane.rotation.x = -Math.PI / 2;
+      plane.position.set(c - COLS / 2 + 0.5, 0.01, r - ROWS / 2 + 0.5);
+      plane.userData = { type: 'base', row: r, col: c };
+      _gridGroup.add(plane);
+    }
+  }
+}
+
+function loadPuzzle(idx) {
+  _currentPuzzle = idx;
+  _revealed = false;
+  document.getElementById('result-msg').textContent = '';
+  document.getElementById('result-msg').className = 'result-msg';
+
+  // Clear user grid
+  for (var i = 0; i < ROWS; i++) for (var j = 0; j < COLS; j++) userGrid[i][j] = 0;
+
+  // Update buttons
+  PUZZLES.forEach(function(p, i) {
+    var btn = document.getElementById('pb-' + i);
+    if (btn) btn.classList.toggle('active', i === idx);
+  });
+
+  // Draw target views
+  drawTargetViews(PUZZLES[idx].grid);
+  drawUserViews();
+  rebuildBlocks();
+  updateScore();
+}
+
+function rebuildBlocks() {
+  while (_blockGroup.children.length) _blockGroup.remove(_blockGroup.children[0]);
+
+  var blockGeo = new THREE.BoxGeometry(0.92, 0.92, 0.92);
+  var edgeGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(0.92, 0.92, 0.92));
+  var edgeMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.12 });
+  var colors = [0xf97316, 0xfb923c, 0xea580c, 0xc2410c];
+
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      var h = userGrid[r][c];
+      if (h <= 0) continue;
+      for (var l = 0; l < h; l++) {
+        var mat = new THREE.MeshLambertMaterial({ color: colors[l % colors.length] });
+        var mesh = new THREE.Mesh(blockGeo, mat);
+        mesh.position.set(c - COLS / 2 + 0.5, l + 0.46, r - ROWS / 2 + 0.5);
+        mesh.castShadow = true;
+        mesh.userData = { type: 'block', row: r, col: c, layer: l };
+        var wire = new THREE.LineSegments(edgeGeo, edgeMat);
+        mesh.add(wire);
+        _blockGroup.add(mesh);
+      }
+    }
+  }
+
+  drawUserViews();
+}
+
+function getGridPos(event) {
+  var rect = _renderer.domElement.getBoundingClientRect();
+  _mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  _mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  _raycaster.setFromCamera(_mouse, _camera);
+  var targets = _blockGroup.children.concat(_gridGroup.children);
+  var intersects = _raycaster.intersectObjects(targets, false);
+  if (intersects.length === 0) return null;
+  var hit = intersects[0].object;
+  if (hit.userData.type === 'block' || hit.userData.type === 'base') {
+    return { row: hit.userData.row, col: hit.userData.col };
+  }
+  return null;
+}
+
+function onCanvasClick(event) {
+  var pos = getGridPos(event);
+  if (!pos) return;
+  var r = pos.row, c = pos.col;
+
+  if (_mode === 'add') {
+    if (userGrid[r][c] === 0) userGrid[r][c] = 1;
+  } else if (_mode === 'remove') {
+    userGrid[r][c] = 0;
+  } else if (_mode === 'height') {
+    if (userGrid[r][c] > 0) userGrid[r][c] = Math.min(userGrid[r][c] + 1, MAX_H);
+    else userGrid[r][c] = 1;
+  }
+
+  document.getElementById('result-msg').textContent = '';
+  document.getElementById('result-msg').className = 'result-msg';
+  rebuildBlocks();
+}
+
+function setMode(m) {
+  _mode = m;
+  ['add', 'remove', 'height'].forEach(function(k) {
+    document.getElementById('mb-' + k).classList.toggle('active', k === m);
+  });
+}
+
+// ===== View computation =====
+function computeFrontView(g) {
+  var result = [];
+  for (var c = 0; c < COLS; c++) {
+    var m = 0;
+    for (var r = 0; r < ROWS; r++) m = Math.max(m, g[r][c]);
+    result.push(m);
+  }
+  return result;
+}
+
+function computeSideView(g) {
+  var result = [];
+  for (var r = 0; r < ROWS; r++) {
+    var m = 0;
+    for (var c = 0; c < COLS; c++) m = Math.max(m, g[r][c]);
+    result.push(m);
+  }
+  return result;
+}
+
+function computeTopView(g) {
+  var result = [];
+  for (var r = 0; r < ROWS; r++) {
+    var row = [];
+    for (var c = 0; c < COLS; c++) row.push(g[r][c] > 0 ? 1 : 0);
+    result.push(row);
+  }
+  return result;
+}
+
+// ===== Drawing =====
+function drawTargetViews(grid) {
+  var front = computeFrontView(grid);
+  var side = computeSideView(grid);
+  var top = computeTopView(grid);
+  var maxH = 0;
+  for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) maxH = Math.max(maxH, grid[r][c]);
+
+  drawBarView('cv-target-front', '#3b82f6', '#bfdbfe', front, COLS, maxH);
+  drawBarView('cv-target-side', '#22c55e', '#bbf7d0', side, ROWS, maxH);
+  drawTopView('cv-target-top', top, true);
+}
+
+function drawUserViews() {
+  var front = computeFrontView(userGrid);
+  var side = computeSideView(userGrid);
+  var top = computeTopView(userGrid);
+  var maxH = 0;
+  var puzzle = PUZZLES[_currentPuzzle].grid;
+  for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) maxH = Math.max(maxH, puzzle[r][c]);
+
+  drawBarView('cv-user-front', '#3b82f6', '#93c5fd', front, COLS, maxH);
+  drawBarView('cv-user-side', '#22c55e', '#86efac', side, ROWS, maxH);
+  drawTopView('cv-user-top', top, false);
+
+  // Check matches
+  var tFront = computeFrontView(puzzle);
+  var tSide = computeSideView(puzzle);
+  var tTop = computeTopView(puzzle);
+
+  var fMatch = arrEq(front, tFront);
+  var sMatch = arrEq(side, tSide);
+  var tMatch = gridEq(top, tTop);
+
+  var mf = document.getElementById('match-front');
+  mf.textContent = fMatch ? '✓ 匹配' : '✗ 不同';
+  mf.className = 'view-match ' + (fMatch ? 'ok' : 'no');
+  var ms = document.getElementById('match-side');
+  ms.textContent = sMatch ? '✓ 匹配' : '✗ 不同';
+  ms.className = 'view-match ' + (sMatch ? 'ok' : 'no');
+  var mt = document.getElementById('match-top');
+  mt.textContent = tMatch ? '✓ 匹配' : '✗ 不同';
+  mt.className = 'view-match ' + (tMatch ? 'ok' : 'no');
+}
+
+function arrEq(a, b) {
+  if (a.length !== b.length) return false;
+  for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+function gridEq(a, b) {
+  for (var r = 0; r < a.length; r++) for (var c = 0; c < a[r].length; c++) if (a[r][c] !== b[r][c]) return false;
+  return true;
+}
+
+function drawBarView(id, strokeColor, fillColor, heights, count, maxH) {
+  var cv = document.getElementById(id);
+  var ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  var cw = (cv.width - 12) / count;
+  var ch = (cv.height - 8) / Math.max(maxH, 1);
+  var offX = 6, base = cv.height - 4;
+  for (var i = 0; i < count; i++) {
+    var h = heights[i];
+    if (h > 0) {
+      ctx.fillStyle = fillColor;
+      ctx.fillRect(offX + i * cw, base - h * ch, cw - 2, h * ch);
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(offX + i * cw, base - h * ch, cw - 2, h * ch);
+    }
+  }
+  ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(offX, base); ctx.lineTo(offX + count * cw, base); ctx.stroke();
+}
+
+function drawTopView(id, topGrid, isTarget) {
+  var cv = document.getElementById(id);
+  var ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  var cw = (cv.width - 12) / COLS;
+  var ch = (cv.height - 8) / ROWS;
+  var offX = 6, offY = 4;
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      var x = offX + c * cw;
+      var y = offY + r * ch;
+      if (topGrid[r][c] > 0) {
+        ctx.fillStyle = isTarget ? '#fed7aa' : '#fdba74';
+        ctx.fillRect(x, y, cw - 1, ch - 1);
+        ctx.strokeStyle = '#f97316'; ctx.lineWidth = 1;
+        ctx.strokeRect(x, y, cw - 1, ch - 1);
+      } else {
+        ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 0.5;
+        ctx.strokeRect(x, y, cw - 1, ch - 1);
+      }
+    }
+  }
+}
+
+// ===== Answer check =====
+function checkAnswer() {
+  var puzzle = PUZZLES[_currentPuzzle].grid;
+  var msg = document.getElementById('result-msg');
+
+  // Compare actual grids
+  var match = true;
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      if (userGrid[r][c] !== puzzle[r][c]) { match = false; break; }
+    }
+    if (!match) break;
+  }
+
+  if (match) {
+    msg.textContent = '🎉 完全正确！积木摆放和目标完全一致！';
+    msg.className = 'result-msg result-correct';
+    if (!_answers[_currentPuzzle]) {
+      _answers[_currentPuzzle] = true;
+      updateScore();
+    }
+  } else {
+    // Count differences
+    var userTotal = 0, puzzleTotal = 0, posMatch = 0;
+    for (var r2 = 0; r2 < ROWS; r2++) {
+      for (var c2 = 0; c2 < COLS; c2++) {
+        userTotal += userGrid[r2][c2];
+        puzzleTotal += puzzle[r2][c2];
+        if (userGrid[r2][c2] === puzzle[r2][c2] && puzzle[r2][c2] > 0) posMatch++;
+      }
+    }
+
+    // Check if views match but grid doesn't (multiple solutions)
+    var viewsMatch = arrEq(computeFrontView(userGrid), computeFrontView(puzzle)) &&
+                     arrEq(computeSideView(userGrid), computeSideView(puzzle)) &&
+                     gridEq(computeTopView(userGrid), computeTopView(puzzle));
+
+    if (viewsMatch) {
+      msg.textContent = '👍 三视图完全匹配！但积木摆放与答案不同，不过也是正确的！';
+      msg.className = 'result-msg result-correct';
+      if (!_answers[_currentPuzzle]) {
+        _answers[_currentPuzzle] = true;
+        updateScore();
+      }
+    } else if (userTotal === puzzleTotal) {
+      msg.textContent = '积木数量正确（' + userTotal + '块），但位置或高度不完全对，继续调整';
+      msg.className = 'result-msg result-wrong';
+    } else if (userTotal > puzzleTotal) {
+      msg.textContent = '积木多了（你的' + userTotal + '块 vs 目标' + puzzleTotal + '块），试着移除一些';
+      msg.className = 'result-msg result-wrong';
+    } else {
+      msg.textContent = '积木少了（你的' + userTotal + '块 vs 目标' + puzzleTotal + '块），继续添加';
+      msg.className = 'result-msg result-wrong';
+    }
+  }
+}
+
+function showHint() {
+  var puzzle = PUZZLES[_currentPuzzle].grid;
+  var total = 0;
+  for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) total += puzzle[r][c];
+
+  // Show total count and one hint about the highest point
+  var maxH = 0, maxPos = [];
+  for (var r2 = 0; r2 < ROWS; r2++) {
+    for (var c2 = 0; c2 < COLS; c2++) {
+      if (puzzle[r2][c2] > maxH) {
+        maxH = puzzle[r2][c2];
+        maxPos = [{ r: r2, c: c2 }];
+      } else if (puzzle[r2][c2] === maxH) {
+        maxPos.push({ r: r2, c: c2 });
+      }
+      }
+  }
+
+  var hint = '💡 这道题一共需要 ' + total + ' 块积木';
+  hint += '，最高点有 ' + maxH + ' 层';
+  if (maxPos.length === 1) {
+    hint += '（在第' + (maxPos[0].r + 1) + '行第' + (maxPos[0].c + 1) + '列）';
+  }
+
+  var msg = document.getElementById('result-msg');
+  msg.textContent = hint;
+  msg.className = 'result-msg';
+  msg.style.color = '#f97316';
+}
+
+function updateScore() {
+  var correct = 0, total = 0;
+  _answers.forEach(function(a) { if (a) { correct++; total++; } });
+  document.getElementById('score').textContent = correct;
+  document.getElementById('total-q').textContent = total;
+}
+
+function resetAll() {
+  _answers = [];
+  for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) userGrid[r][c] = 0;
+  _mode = 'add';
+  ['add', 'remove', 'height'].forEach(function(k) {
+    document.getElementById('mb-' + k).classList.toggle('active', k === 'add');
+  });
+  loadPuzzle(0);
+}
+
+init();
+</script>
+</body>
+</html>

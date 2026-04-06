@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>正方体展开图判断 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 300px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#faf5ff,#fdfaf4); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+
+  .net-grid { display:inline-grid; gap:2px; background:#e2e8f0; border-radius:8px; padding:3px; }
+  .net-cell {
+    width:40px; height:40px; border-radius:4px; display:flex;
+    align-items:center; justify-content:center; font-size:12px; font-weight:700;
+    cursor:default; transition:all .2s;
+  }
+  .net-cell.filled { background:#8b5cf6; color:#fff; }
+  .net-cell.empty { background:#f8fafc; }
+  .net-cell.filled.highlight { background:#a78bfa; transform:scale(1.05); }
+
+  .quiz-card {
+    background:#faf5ff; border:2px solid #e9d5ff; border-radius:12px;
+    padding:14px; text-align:center;
+  }
+  .quiz-num { font-size:13px; color:#7c3aed; font-weight:700; margin-bottom:8px; }
+  .quiz-question { font-size:15px; font-weight:700; color:#1e293b; margin-bottom:12px; }
+
+  .btn-row { display:flex; gap:8px; justify-content:center; }
+  .judge-btn {
+    padding:10px 24px; border:none; border-radius:10px; font-size:15px; font-weight:700;
+    cursor:pointer; font-family:var(--edu-font); transition:all .15s;
+  }
+  .judge-yes { background:#22c55e; color:#fff; }
+  .judge-yes:hover { background:#16a34a; }
+  .judge-no { background:#ef4444; color:#fff; }
+  .judge-no:hover { background:#dc2626; }
+  .judge-btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+  .result-msg { font-size:14px; font-weight:700; margin-top:10px; min-height:22px; }
+  .result-correct { color:#16a34a; }
+  .result-wrong { color:#ef4444; }
+
+  .nav-btn {
+    padding:8px 18px; border:none; border-radius:8px; font-size:13px; font-weight:700;
+    cursor:pointer; font-family:var(--edu-font); transition:all .15s;
+    background:#8b5cf6; color:#fff;
+  }
+  .nav-btn:hover { background:#7c3aed; }
+  .nav-btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+  .progress-dots { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
+  .dot {
+    width:24px; height:24px; border-radius:50%; font-size:10px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    background:#e2e8f0; color:#64748b; transition:all .15s;
+  }
+  .dot.active { background:#8b5cf6; color:#fff; }
+  .dot.correct { background:#22c55e; color:#fff; }
+  .dot.wrong { background:#ef4444; color:#fff; }
+
+  .info-box { background:#fff; border:1px solid #e9d5ff; border-radius:10px; padding:10px 12px; font-size:11px; line-height:1.8; color:#334155; }
+  .info-box strong { color:#7c3aed; }
+
+  .score-bar {
+    display:flex; align-items:center; gap:8px; padding:8px 12px;
+    background:#faf5ff; border-radius:8px; font-size:13px; font-weight:600; color:#7c3aed;
+  }
+
+  .fold-btn {
+    padding:6px 14px; border:1.5px solid #8b5cf6; border-radius:8px; font-size:12px;
+    font-weight:600; cursor:pointer; font-family:var(--edu-font); background:#fff;
+    color:#8b5cf6; transition:all .15s;
+  }
+  .fold-btn:hover { background:#8b5cf6; color:#fff; }
+
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="edu-toolbar-title">📐 正方体展开图判断</span>
+      <span class="edu-toolbar-subtitle">四年级下册 · 观察物体</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="fold-btn" id="btn-fold" onclick="playFold()">🎬 播放折叠动画</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="score-bar">得分：<span id="score">0</span> / <span id="total-q">0</span></div>
+          <div class="progress-dots" id="dots"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="quiz-card">
+          <div class="quiz-num" id="quiz-num">第 1 题（共 12 题）</div>
+          <div class="quiz-question">这个展开图能折成正方体吗？</div>
+          <div style="display:flex;justify-content:center;margin-bottom:12px">
+            <div class="net-grid" id="net-display" style="grid-template-columns:repeat(4,40px)"></div>
+          </div>
+          <div class="btn-row">
+            <button class="judge-btn judge-yes" id="btn-yes" onclick="judge(true)">✓ 能折成</button>
+            <button class="judge-btn judge-no" id="btn-no" onclick="judge(false)">✗ 不能</button>
+          </div>
+          <div class="result-msg" id="result-msg"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section" style="flex-direction:row;justify-content:center;gap:8px">
+          <button class="nav-btn" id="btn-prev" onclick="goQ(-1)" disabled>◀ 上一题</button>
+          <button class="nav-btn" id="btn-next" onclick="goQ(1)">下一题 ▶</button>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">展开图类型</div>
+          <div id="net-type-info" class="info-box" style="font-size:11px">判断后显示类型说明</div>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <strong>展开图知识</strong><br/>
+          ● 正方体共有 <strong>11</strong> 种标准展开图<br/>
+          ● 分为三类：141型、231型、222型、33型<br/>
+          ● 一行最多4个面，不能有7字形<br/>
+          ● 田字形、凹字形一定不能折
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var _scene, _camera, _renderer, _controls;
+var _netGroup, _foldGroup;
+
+// 11 valid + several invalid nets
+// Each net: 4x4 grid, 1=filled, 0=empty
+// 'v' = valid, 'i' = invalid
+var NETS = [
+  // === 141型 (6种) ===
+  { grid:[
+    [0,1,0,0],
+    [1,1,1,1],
+    [0,1,0,0],
+    [0,0,0,0]
+  ], valid:true, type:'141型（十字形）', desc:'最经典的十字展开图，中间一列4个，左右各1个' },
+
+  { grid:[
+    [0,1,0,0],
+    [1,1,1,1],
+    [0,0,1,0],
+    [0,0,0,0]
+  ], valid:true, type:'141型', desc:'右侧偏上的展开图' },
+
+  { grid:[
+    [0,0,1,0],
+    [1,1,1,1],
+    [0,1,0,0],
+    [0,0,0,0]
+  ], valid:true, type:'141型', desc:'对称分布的展开图' },
+
+  { grid:[
+    [1,1,0,0],
+    [0,1,1,1],
+    [0,0,0,0],
+    [0,0,0,0]
+  ], valid:true, type:'141型', desc:'上方偏移的展开图' },
+
+  { grid:[
+    [0,1,1,0],
+    [1,1,1,0],
+    [0,0,0,0],
+    [0,0,0,0]
+  ], valid:true, type:'141型', desc:'L型偏移的展开图' },
+
+  { grid:[
+    [0,0,0,0],
+    [1,1,1,0],
+    [0,1,1,0],
+    [0,0,0,0]
+  ], valid:true, type:'141型', desc:'右下偏移的展开图' },
+
+  // === 231型 (3种) ===
+  { grid:[
+    [1,1,0,0],
+    [0,1,1,0],
+    [0,1,0,0],
+    [0,0,0,0]
+  ], valid:true, type:'231型', desc:'阶梯状展开图' },
+
+  { grid:[
+    [1,1,0,0],
+    [1,1,1,0],
+    [0,0,0,0],
+    [0,0,0,0]
+  ], valid:true, type:'231型', desc:'上方双叠的展开图' },
+
+  { grid:[
+    [0,1,1,0],
+    [0,1,1,0],
+    [0,1,0,0],
+    [0,0,0,0]
+  ], valid:true, type:'231型', desc:'右侧偏下的展开图' },
+
+  // === 222型 (1种) ===
+  { grid:[
+    [1,1,0,0],
+    [0,1,1,0],
+    [0,0,1,1],
+    [0,0,0,0]
+  ], valid:true, type:'222型', desc:'三级台阶形展开图，唯一的一种222型' },
+
+  // === 33型 (1种) ===
+  { grid:[
+    [1,1,1,0],
+    [0,0,1,1],
+    [0,0,0,0],
+    [0,0,0,0]
+  ], valid:true, type:'33型', desc:'两行各三个，交错排列，唯一的一种33型' },
+
+  // === 无效展开图 ===
+  { grid:[
+    [1,1,1,1],
+    [1,1,0,0],
+    [0,0,0,0],
+    [0,0,0,0]
+  ], valid:false, type:'无效（7字形）', desc:'一行4个+另一行开头2个，形成7字形，无法折叠成正方体' },
+
+  { grid:[
+    [1,1,1,0],
+    [1,0,1,0],
+    [0,0,0,0],
+    [0,0,0,0]
+  ], valid:false, type:'无效（凹字形）', desc:'U型/凹字形结构，中间缺口导致无法合拢' },
+
+  { grid:[
+    [1,1,0,0],
+    [1,1,0,0],
+    [1,1,0,0],
+    [0,0,0,0]
+  ], valid:false, type:'无效（田字形×3）', desc:'三个田字形排列，缺少连接，无法折成正方体' },
+
+  { grid:[
+    [1,1,1,0],
+    [1,1,1,0],
+    [0,0,0,0],
+    [0,0,0,0]
+  ], valid:false, type:'无效（超过6面）', desc:'共6个格子但排列为2×3矩形，不是正方体的展开图' },
+
+  { grid:[
+    [1,0,1,0],
+    [1,1,1,0],
+    [0,0,0,0],
+    [0,0,0,0]
+  ], valid:false, type:'无效（对称缺口）', desc:'两侧各有1个但中间连接不足，无法折叠' },
+
+  { grid:[
+    [1,1,1,1],
+    [0,0,1,0],
+    [0,0,1,0],
+    [0,0,0,0]
+  ], valid:false, type:'无效（T字形）', desc:'T字形排列，有面重叠无法折成正方体' },
+];
+
+var _currentQ = 0;
+var _answers = []; // { judged: bool, correct: bool }
+var _foldAnimId = null;
+var _isFolded = false;
+
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xfaf5ff, camX: 5, camY: 4, camZ: 5 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 8, 8);
+
+  _netGroup = new THREE.Group();
+  _scene.add(_netGroup);
+  _foldGroup = new THREE.Group();
+  _scene.add(_foldGroup);
+
+  for (var i = 0; i < NETS.length; i++) _answers.push({ judged: false, correct: false });
+
+  renderDots();
+  loadQuestion(0);
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+
+function renderDots() {
+  var container = document.getElementById('dots');
+  container.innerHTML = '';
+  for (var i = 0; i < NETS.length; i++) {
+    var d = document.createElement('div');
+    d.className = 'dot' + (i === _currentQ ? ' active' : '') + (_answers[i].judged ? (_answers[i].correct ? ' correct' : ' wrong') : '');
+    d.textContent = i + 1;
+    d.style.cursor = 'pointer';
+    d.onclick = (function(idx) { return function() { loadQuestion(idx); }; })(i);
+    container.appendChild(d);
+  }
+}
+
+function loadQuestion(idx) {
+  if (_foldAnimId) { cancelAnimationFrame(_foldAnimId); _foldAnimId = null; }
+  _currentQ = idx;
+  _isFolded = false;
+  document.getElementById('result-msg').textContent = '';
+  document.getElementById('result-msg').className = 'result-msg';
+
+  var net = NETS[idx];
+  var judged = _answers[idx].judged;
+
+  // Update quiz info
+  document.getElementById('quiz-num').textContent = '第 ' + (idx + 1) + ' 题（共 ' + NETS.length + ' 题）';
+
+  // Enable/disable buttons
+  document.getElementById('btn-yes').disabled = judged;
+  document.getElementById('btn-no').disabled = judged;
+  document.getElementById('btn-fold').disabled = judged;
+
+  // Nav buttons
+  document.getElementById('btn-prev').disabled = idx === 0;
+  document.getElementById('btn-next').disabled = idx === NETS.length - 1;
+
+  // Show result if already answered
+  if (judged) {
+    var msg = document.getElementById('result-msg');
+    if (_answers[idx].correct) {
+      msg.textContent = net.valid ? '✓ 正确！这个展开图能折成正方体' : '✓ 正确！这个展开图不能折成正方体';
+      msg.className = 'result-msg result-correct';
+    } else {
+      msg.textContent = net.valid ? '✗ 错误，这个展开图能折成正方体' : '✗ 错误，这个展开图不能折成正方体';
+      msg.className = 'result-msg result-wrong';
+    }
+    document.getElementById('net-type-info').innerHTML = '<strong>' + net.type + '</strong><br/>' + net.desc;
+  } else {
+    document.getElementById('net-type-info').innerHTML = '判断后显示类型说明';
+  }
+
+  render2DNet(net.grid);
+  build3DNet(net);
+  updateScore();
+  renderDots();
+}
+
+function render2DNet(grid) {
+  var container = document.getElementById('net-display');
+  container.innerHTML = '';
+  // Find bounds
+  var minR=4, maxR=0, minC=4, maxC=0;
+  for (var r=0;r<4;r++) for (var c=0;c<4;c++) {
+    if (grid[r][c]) { minR=Math.min(minR,r); maxR=Math.max(maxR,r); minC=Math.min(minC,c); maxC=Math.max(maxC,c); }
+  }
+  var cols = maxC - minC + 1;
+  container.style.gridTemplateColumns = 'repeat(' + cols + ', 40px)';
+
+  for (var r = minR; r <= maxR; r++) {
+    for (var c = minC; c <= maxC; c++) {
+      var cell = document.createElement('div');
+      cell.className = 'net-cell ' + (grid[r][c] ? 'filled' : 'empty');
+      container.appendChild(cell);
+    }
+  }
+}
+
+function build3DNet(net) {
+  while (_netGroup.children.length) _netGroup.remove(_netGroup.children[0]);
+  while (_foldGroup.children.length) _foldGroup.remove(_foldGroup.children[0]);
+
+  var grid = net.grid;
+  var size = 0.9;
+  var gap = 0.02;
+  var faceColors = [0x8b5cf6, 0x7c3aed, 0xa78bfa, 0x6d28d9, 0xc4b5fd, 0x5b21b6];
+
+  // Find center of filled cells for positioning
+  var filled = [];
+  for (var r = 0; r < 4; r++) {
+    for (var c = 0; c < 4; c++) {
+      if (grid[r][c]) filled.push({ r: r, c: c });
+    }
+  }
+
+  var cx = 0, cz = 0;
+  filled.forEach(function(f) { cx += f.c; cz += f.r; });
+  cx /= filled.length;
+  cz /= filled.length;
+
+  var colorIdx = 0;
+  filled.forEach(function(f) {
+    var geo = new THREE.BoxGeometry(size, 0.12, size);
+    var mat = new THREE.MeshLambertMaterial({ color: faceColors[colorIdx % faceColors.length] });
+    var mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set((f.c - cx) * (size + gap), 0.06, (f.r - cz) * (size + gap));
+    mesh.castShadow = true;
+
+    var edgeGeo = new THREE.EdgesGeometry(geo);
+    var edgeMat = new THREE.LineBasicMaterial({ color: 0x4c1d95, transparent: true, opacity: 0.4 });
+    mesh.add(new THREE.LineSegments(edgeGeo, edgeMat));
+
+    mesh.userData = { origX: mesh.position.x, origZ: mesh.position.z, gridR: f.r, gridC: f.c };
+    _netGroup.add(mesh);
+    colorIdx++;
+  });
+
+  _netGroup.visible = true;
+  _foldGroup.visible = false;
+}
+
+function judge(answer) {
+  var net = NETS[_currentQ];
+  var correct = (answer === net.valid);
+  _answers[_currentQ] = { judged: true, correct: correct };
+
+  var msg = document.getElementById('result-msg');
+  if (correct) {
+    msg.textContent = net.valid ? '✓ 正确！这个展开图能折成正方体' : '✓ 正确！这个展开图不能折成正方体';
+    msg.className = 'result-msg result-correct';
+  } else {
+    msg.textContent = net.valid ? '✗ 错误，这个展开图能折成正方体' : '✗ 错误，这个展开图不能折成正方体';
+    msg.className = 'result-msg result-wrong';
+  }
+
+  document.getElementById('btn-yes').disabled = true;
+  document.getElementById('btn-no').disabled = true;
+  document.getElementById('btn-fold').disabled = false;
+
+  document.getElementById('net-type-info').innerHTML = '<strong>' + net.type + '</strong><br/>' + net.desc;
+
+  if (net.valid) {
+    document.getElementById('btn-fold').disabled = false;
+  } else {
+    document.getElementById('btn-fold').disabled = true;
+  }
+
+  updateScore();
+  renderDots();
+}
+
+function updateScore() {
+  var correct = 0, total = 0;
+  _answers.forEach(function(a) { if (a.judged) { total++; if (a.correct) correct++; } });
+  document.getElementById('score').textContent = correct;
+  document.getElementById('total-q').textContent = total;
+}
+
+function goQ(delta) {
+  var next = _currentQ + delta;
+  if (next >= 0 && next < NETS.length) loadQuestion(next);
+}
+
+// ===== 折叠动画 (only for valid nets) =====
+function playFold() {
+  var net = NETS[_currentQ];
+  if (!net.valid) return;
+  if (_foldAnimId) { cancelAnimationFrame(_foldAnimId); _foldAnimId = null; }
+
+  if (_isFolded) {
+    // Unfold
+    _netGroup.visible = true;
+    _foldGroup.visible = false;
+    _isFolded = false;
+    return;
+  }
+
+  while (_foldGroup.children.length) _foldGroup.remove(_foldGroup.children[0]);
+
+  var grid = net.grid;
+  var s = 0.9;
+  var faceColors = [0x8b5cf6, 0x7c3aed, 0xa78bfa, 0x6d28d9, 0xc4b5fd, 0x5b21b6];
+
+  // Find the "bottom" face (the one most connected) to use as base
+  var filled = [];
+  for (var r = 0; r < 4; r++) for (var c = 0; c < 4; c++) {
+    if (grid[r][c]) filled.push({ r: r, c: c });
+  }
+
+  // Pick the bottom-center cell as base (row with most neighbors)
+  var bestScore = -1, baseIdx = 0;
+  filled.forEach(function(f, idx) {
+    var score = 0;
+    filled.forEach(function(f2) {
+      if (f2 !== f) {
+        var dr = Math.abs(f2.r - f.r), dc = Math.abs(f2.c - f.c);
+        if ((dr === 1 && dc === 0) || (dr === 0 && dc === 1)) score++;
+      }
+    });
+    if (score > bestScore) { bestScore = score; baseIdx = idx; }
+  });
+
+  var base = filled[baseIdx];
+  // BFS from base to determine fold angles/directions
+  var visited = {};
+  var parentMap = {};
+  var queue = [base];
+  visited[base.r + ',' + base.c] = true;
+
+  while (queue.length > 0) {
+    var cur = queue.shift();
+    var dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+    dirs.forEach(function(d) {
+      var nr = cur.r + d[0], nc = cur.c + d[1];
+      var key = nr + ',' + nc;
+      if (nr >= 0 && nr < 4 && nc >= 0 && nc < 4 && grid[nr][nc] && !visited[key]) {
+        visited[key] = true;
+        var nf = { r: nr, c: nc };
+        parentMap[key] = { parent: cur, dir: d };
+        queue.push(nf);
+      }
+    });
+  }
+
+  // Build fold hierarchy
+  var faceMeshes = {};
+  var colorIdx = 0;
+
+  // Create base face
+  var baseGeo = new THREE.BoxGeometry(s, 0.08, s);
+  var baseMat = new THREE.MeshLambertMaterial({ color: faceColors[colorIdx++ % faceColors.length] });
+  var baseMesh = new THREE.Mesh(baseGeo, baseMat);
+  baseMesh.position.y = 0;
+  _foldGroup.add(baseMesh);
+  faceMeshes[base.r + ',' + base.c] = baseMesh;
+
+  // BFS build child faces with pivot groups
+  queue = [base];
+  var pivotGroups = {};
+  pivotGroups[base.r + ',' + base.c] = _foldGroup;
+
+  while (queue.length > 0) {
+    var cur2 = queue.shift();
+    var dirs2 = [[-1,0],[1,0],[0,-1],[0,1]];
+    dirs2.forEach(function(d2) {
+      var nr2 = cur2.r + d2[0], nc2 = cur2.c + d2[1];
+      var key2 = nr2 + ',' + nc2;
+      if (nr2 >= 0 && nr2 < 4 && nc2 >= 0 && nc2 < 4 && grid[nr2][nc2] && pivotGroups[key2] === undefined) {
+        var parentGroup = pivotGroups[cur2.r + ',' + cur2.c];
+
+        // Pivot point: edge between parent and child
+        var pivotGroup = new THREE.Group();
+        // Position pivot at the shared edge
+        var px = d2[1] * s / 2;
+        var pz = d2[0] * s / 2;
+        pivotGroup.position.set(px, 0, pz);
+        parentGroup.add(pivotGroup);
+
+        var faceGeo = new THREE.BoxGeometry(s, 0.08, s);
+        var faceMat = new THREE.MeshLambertMaterial({ color: faceColors[colorIdx++ % faceColors.length] });
+        var faceMesh = new THREE.Mesh(faceGeo, faceMat);
+
+        // Position face on the far side of pivot
+        faceMesh.position.set(d2[1] * s / 2, 0, d2[0] * s / 2);
+        pivotGroup.add(faceMesh);
+
+        pivotGroups[key2] = pivotGroup;
+        faceMeshes[key2] = faceMesh;
+        queue.push({ r: nr2, c: nc2 });
+      }
+    });
+  }
+
+  // Animate: fold each pivot 90 degrees
+  _netGroup.visible = false;
+  _foldGroup.visible = true;
+
+  var pivots = [];
+  Object.keys(pivotGroups).forEach(function(key3) {
+    if (key3 === base.r + ',' + base.c) return;
+    var pg = pivotGroups[key3];
+    // Determine fold axis direction
+    var info = parentMap[key3];
+    if (!info) return;
+    // dir = [dr, dc], fold around the edge
+    // If dir[0] != 0 (vertical neighbor), fold around X axis
+    // If dir[1] != 0 (horizontal neighbor), fold around Z axis
+    pivots.push({ group: pg, dr: info.dir[0], dc: info.dir[1] });
+  });
+
+  var t = 0;
+  var steps = 60;
+  var delayPerLevel = 15;
+  // Compute depth for staggered animation
+  function getDepth(key) {
+    var depth = 0;
+    var cur3 = key;
+    while (parentMap[cur3]) {
+      depth++;
+      cur3 = parentMap[cur3].parent.r + ',' + parentMap[cur3].parent.c;
+    }
+    return depth;
+  }
+  pivots.forEach(function(pv) {
+    var childKey = null;
+    Object.keys(pivotGroups).forEach(function(k2) {
+      if (pivotGroups[k2] === pv.group) childKey = k2;
+    });
+    pv.depth = childKey ? getDepth(childKey) : 0;
+  });
+
+  function animateFold() {
+    t++;
+    pivots.forEach(function(pv) {
+      var start = pv.depth * delayPerLevel;
+      var localT = Math.max(0, Math.min((t - start) / steps, 1));
+      var ease = localT < 0.5 ? 2 * localT * localT : 1 - Math.pow(-2 * localT + 2, 2) / 2;
+      var angle = ease * Math.PI / 2;
+      // Fold direction: positive dr means child is below, fold up (negative X rotation)
+      if (pv.dc === 0) {
+        pv.group.rotation.x = (pv.dr > 0 ? -1 : 1) * angle;
+      } else {
+        pv.group.rotation.z = (pv.dc > 0 ? 1 : -1) * angle;
+      }
+    });
+
+    var maxDelay = 0;
+    pivots.forEach(function(pv) { maxDelay = Math.max(maxDelay, pv.depth * delayPerLevel + steps); });
+
+    if (t < maxDelay) {
+      _foldAnimId = requestAnimationFrame(animateFold);
+    } else {
+      _foldAnimId = null;
+      _isFolded = true;
+    }
+  }
+  animateFold();
+}
+
+function resetAll() {
+  if (_foldAnimId) { cancelAnimationFrame(_foldAnimId); _foldAnimId = null; }
+  _answers = [];
+  for (var i = 0; i < NETS.length; i++) _answers.push({ judged: false, correct: false });
+  _isFolded = false;
+  loadQuestion(0);
+}
+
+init();
+</script>
+</body>
+</html>
