@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>长方体展开图 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 300px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#faf5ff,#fdfaf4); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+
+  .slider-row { display:flex; align-items:center; gap:8px; }
+  .slider-row label { font-size:12px; font-weight:600; color:#334155; min-width:36px; }
+  .slider-row input[type=range] { flex:1; accent-color:#8b5cf6; }
+  .slider-row .val { font-size:13px; font-weight:700; color:#7c3aed; min-width:40px; text-align:right; }
+
+  .face-legend {
+    display:grid; grid-template-columns:1fr 1fr; gap:4px;
+  }
+  .face-item {
+    display:flex; align-items:center; gap:6px; padding:4px 8px;
+    border-radius:6px; font-size:11px; font-weight:600;
+  }
+  .face-dot { width:12px; height:12px; border-radius:3px; }
+
+  .unfold-btn {
+    padding:10px; border:none; border-radius:10px; font-size:15px; font-weight:700;
+    cursor:pointer; font-family:var(--edu-font); transition:all .15s;
+    background:#8b5cf6; color:#fff;
+  }
+  .unfold-btn:hover { background:#7c3aed; }
+
+  .info-box { background:#fff; border:1px solid #e9d5ff; border-radius:10px; padding:10px 12px; font-size:11px; line-height:1.8; color:#334155; }
+  .info-box strong { color:#7c3aed; }
+
+  .calc-box {
+    background:#faf5ff; border:1.5px solid #c4b5fd; border-radius:10px;
+    padding:10px 12px; font-size:12px; line-height:2; color:#334155;
+  }
+  .calc-box .formula { font-weight:700; color:#6d28d9; }
+
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="edu-toolbar-title">📦 长方体展开图</span>
+      <span class="edu-toolbar-subtitle">五年级下册 · 第三单元</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="unfold-btn" id="btn-toggle" onclick="toggleFold()">🔽 展开长方体</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">长方体尺寸</div>
+          <div class="slider-row">
+            <label>长 a</label>
+            <input type="range" id="sl-a" min="1" max="5" step="0.5" value="3" oninput="onSlider()">
+            <span class="val" id="val-a">3</span>
+          </div>
+          <div class="slider-row">
+            <label>宽 b</label>
+            <input type="range" id="sl-b" min="1" max="5" step="0.5" value="2" oninput="onSlider()">
+            <span class="val" id="val-b">2</span>
+          </div>
+          <div class="slider-row">
+            <label>高 h</label>
+            <input type="range" id="sl-h" min="1" max="5" step="0.5" value="1.5" oninput="onSlider()">
+            <span class="val" id="val-h">1.5</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">六个面颜色说明</div>
+          <div class="face-legend" id="face-legend"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">面积计算</div>
+          <div class="calc-box" id="calc-box"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <strong>展开图知识</strong><br/>
+          ● 长方体有 <strong>6</strong> 个面，展开后是6个长方形<br/>
+          ● 相对的两个面完全相同<br/>
+          ● 上面 = 下面，前面 = 后面，左面 = 右面<br/>
+          ● 表面积 = 2(ab + ah + bh)
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var _scene, _camera, _renderer, _controls;
+var _cuboidGroup, _foldGroups;
+var _isFolded = false;
+var _animId = null;
+var _a = 3, _b = 2, _h = 1.5;
+
+var FACE_COLORS = {
+  front:  { color: 0x3b82f6, name: '前面', pair: '后面' },
+  back:   { color: 0x93c5fd, name: '后面', pair: '前面' },
+  left:   { color: 0x22c55e, name: '左面', pair: '右面' },
+  right:  { color: 0x86efac, name: '右面', pair: '左面' },
+  top:    { color: 0xf59e0b, name: '上面', pair: '下面' },
+  bottom: { color: 0xfcd34d, name: '下面', pair: '上面' },
+};
+
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xfaf5ff, camX: 6, camY: 5, camZ: 6 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 10, 10);
+
+  _cuboidGroup = new THREE.Group();
+  _scene.add(_cuboidGroup);
+
+  buildCuboid();
+  buildLegend();
+  updateCalc();
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+
+function buildCuboid() {
+  while (_cuboidGroup.children.length) _cuboidGroup.remove(_cuboidGroup.children[0]);
+  _foldGroups = {};
+  _isFolded = false;
+  document.getElementById('btn-toggle').textContent = '🔽 展开长方体';
+
+  var a = _a, b = _b, h = _h;
+  var edgeMat = new THREE.LineBasicMaterial({ color: 0x4c1d95, transparent: true, opacity: 0.4 });
+
+  // Base group (bottom face, stays in place)
+  // Bottom face (b × a)
+  var bottomGeo = new THREE.PlaneGeometry(b, a);
+  var bottomMat = new THREE.MeshLambertMaterial({ color: FACE_COLORS.bottom.color, side: THREE.DoubleSide });
+  var bottomMesh = new THREE.Mesh(bottomGeo, bottomMat);
+  bottomMesh.rotation.x = -Math.PI / 2;
+  bottomMesh.position.y = 0.01;
+  var bottomEdge = new THREE.LineSegments(new THREE.EdgesGeometry(bottomGeo), edgeMat);
+  bottomMesh.add(bottomEdge);
+  _cuboidGroup.add(bottomMesh);
+  _foldGroups.bottom = bottomMesh;
+
+  // Add face label
+  var bl = Edu3D.textSprite('下面', { color: '#92400e', scale: 0.4 });
+  bl.position.y = 0.02;
+  bottomMesh.add(bl);
+
+  // Front face (b × h) - folds up from bottom's front edge (z+)
+  var frontPivot = new THREE.Group();
+  frontPivot.position.set(0, 0, a / 2);
+  _cuboidGroup.add(frontPivot);
+  _foldGroups.frontPivot = frontPivot;
+
+  var frontGeo = new THREE.PlaneGeometry(b, h);
+  var frontMat = new THREE.MeshLambertMaterial({ color: FACE_COLORS.front.color, side: THREE.DoubleSide });
+  var frontMesh = new THREE.Mesh(frontGeo, frontMat);
+  frontMesh.position.set(0, h / 2, 0);
+  frontMesh.rotation.x = Math.PI / 2;
+  frontMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(frontGeo), edgeMat));
+  var fl = Edu3D.textSprite('前面', { color: '#1e40af', scale: 0.4 });
+  fl.position.set(0, 0.02, 0);
+  frontMesh.add(fl);
+  frontPivot.add(frontMesh);
+
+  // Back face - folds up from bottom's back edge (z-)
+  var backPivot = new THREE.Group();
+  backPivot.position.set(0, 0, -a / 2);
+  _cuboidGroup.add(backPivot);
+  _foldGroups.backPivot = backPivot;
+
+  var backGeo = new THREE.PlaneGeometry(b, h);
+  var backMat = new THREE.MeshLambertMaterial({ color: FACE_COLORS.back.color, side: THREE.DoubleSide });
+  var backMesh = new THREE.Mesh(backGeo, backMat);
+  backMesh.position.set(0, h / 2, 0);
+  backMesh.rotation.x = -Math.PI / 2;
+  backMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(backGeo), edgeMat));
+  var bkl = Edu3D.textSprite('后面', { color: '#1e40af', scale: 0.4 });
+  bkl.position.set(0, 0.02, 0);
+  backMesh.add(bkl);
+  backPivot.add(backMesh);
+
+  // Right face (a × h) - folds up from bottom's right edge (x+)
+  var rightPivot = new THREE.Group();
+  rightPivot.position.set(b / 2, 0, 0);
+  _cuboidGroup.add(rightPivot);
+  _foldGroups.rightPivot = rightPivot;
+
+  var rightGeo = new THREE.PlaneGeometry(a, h);
+  var rightMat = new THREE.MeshLambertMaterial({ color: FACE_COLORS.right.color, side: THREE.DoubleSide });
+  var rightMesh = new THREE.Mesh(rightGeo, rightMat);
+  rightMesh.position.set(0, h / 2, 0);
+  rightMesh.rotation.z = -Math.PI / 2;
+  rightMesh.rotation.x = -Math.PI / 2;
+  rightMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(rightGeo), edgeMat));
+  var rl = Edu3D.textSprite('右面', { color: '#166534', scale: 0.4 });
+  rl.position.set(0, 0.02, 0);
+  rightMesh.add(rl);
+  rightPivot.add(rightMesh);
+
+  // Left face (a × h) - folds up from bottom's left edge (x-)
+  var leftPivot = new THREE.Group();
+  leftPivot.position.set(-b / 2, 0, 0);
+  _cuboidGroup.add(leftPivot);
+  _foldGroups.leftPivot = leftPivot;
+
+  var leftGeo = new THREE.PlaneGeometry(a, h);
+  var leftMat = new THREE.MeshLambertMaterial({ color: FACE_COLORS.left.color, side: THREE.DoubleSide });
+  var leftMesh = new THREE.Mesh(leftGeo, leftMat);
+  leftMesh.position.set(0, h / 2, 0);
+  leftMesh.rotation.z = Math.PI / 2;
+  leftMesh.rotation.x = Math.PI / 2;
+  leftMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(leftGeo), edgeMat));
+  var ll = Edu3D.textSprite('左面', { color: '#166534', scale: 0.4 });
+  ll.position.set(0, 0.02, 0);
+  leftMesh.add(ll);
+  leftPivot.add(leftMesh);
+
+  // Top face (b × a) - folds from front face's top edge
+  var topPivot = new THREE.Group();
+  topPivot.position.set(0, h, 0);
+  frontPivot.add(topPivot);
+  _foldGroups.topPivot = topPivot;
+
+  var topGeo = new THREE.PlaneGeometry(b, a);
+  var topMat = new THREE.MeshLambertMaterial({ color: FACE_COLORS.top.color, side: THREE.DoubleSide });
+  var topMesh = new THREE.Mesh(topGeo, topMat);
+  topMesh.position.set(0, a / 2, 0);
+  topMesh.rotation.x = Math.PI / 2;
+  topMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(topGeo), edgeMat));
+  var tl = Edu3D.textSprite('上面', { color: '#92400e', scale: 0.4 });
+  tl.position.set(0, 0.02, 0);
+  topMesh.add(tl);
+  topPivot.add(topMesh);
+}
+
+function toggleFold() {
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+
+  _isFolded = !_isFolded;
+  var btn = document.getElementById('btn-toggle');
+  btn.textContent = _isFolded ? '🔼 折叠回长方体' : '🔽 展开长方体';
+
+  var target = _isFolded ? 1 : 0; // 1 = folded, 0 = unfolded
+  var t = 0, steps = 60;
+
+  function anim() {
+    t++;
+    var p = Math.min(t / steps, 1);
+    var ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+    var angle = ease * Math.PI / 2;
+
+    if (_isFolded) {
+      // Folding up: rotate from 0 to PI/2
+      _foldGroups.frontPivot.rotation.x = -angle;
+      _foldGroups.backPivot.rotation.x = angle;
+      _foldGroups.rightPivot.rotation.z = angle;
+      _foldGroups.leftPivot.rotation.z = -angle;
+      _foldGroups.topPivot.rotation.x = -angle;
+    } else {
+      // Unfolding: rotate from PI/2 to 0
+      _foldGroups.frontPivot.rotation.x = -(1 - ease) * Math.PI / 2;
+      _foldGroups.backPivot.rotation.x = (1 - ease) * Math.PI / 2;
+      _foldGroups.rightPivot.rotation.z = (1 - ease) * Math.PI / 2;
+      _foldGroups.leftPivot.rotation.z = -(1 - ease) * Math.PI / 2;
+      _foldGroups.topPivot.rotation.x = -(1 - ease) * Math.PI / 2;
+    }
+
+    if (p < 1) {
+      _animId = requestAnimationFrame(anim);
+    } else {
+      _animId = null;
+    }
+  }
+  anim();
+}
+
+function onSlider() {
+  _a = parseFloat(document.getElementById('sl-a').value);
+  _b = parseFloat(document.getElementById('sl-b').value);
+  _h = parseFloat(document.getElementById('sl-h').value);
+  document.getElementById('val-a').textContent = _a;
+  document.getElementById('val-b').textContent = _b;
+  document.getElementById('val-h').textContent = _h;
+
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+  buildCuboid();
+  updateCalc();
+}
+
+function buildLegend() {
+  var container = document.getElementById('face-legend');
+  container.innerHTML = '';
+  Object.keys(FACE_COLORS).forEach(function(key) {
+    var face = FACE_COLORS[key];
+    var hex = '#' + face.color.toString(16).padStart(6, '0');
+    var item = document.createElement('div');
+    item.className = 'face-item';
+    item.style.background = hex + '15';
+    item.innerHTML = '<div class="face-dot" style="background:' + hex + '"></div>' +
+      '<span style="color:' + hex + '">' + face.name + '</span>';
+    container.appendChild(item);
+  });
+}
+
+function updateCalc() {
+  var a = _a, b = _b, h = _h;
+  var ab = a * b, ah = a * h, bh = b * h;
+  var total = 2 * (ab + ah + bh);
+  var box = document.getElementById('calc-box');
+  box.innerHTML =
+    '<span class="formula">S表 = 2(ab + ah + bh)</span><br/>' +
+    '= 2 × (' + a + '×' + b + ' + ' + a + '×' + h + ' + ' + b + '×' + h + ')<br/>' +
+    '= 2 × (' + ab.toFixed(1) + ' + ' + ah.toFixed(1) + ' + ' + bh.toFixed(1) + ')<br/>' +
+    '= 2 × ' + (ab + ah + bh).toFixed(1) + '<br/>' +
+    '<span class="formula">= ' + total.toFixed(1) + '</span>';
+}
+
+function resetAll() {
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+  _a = 3; _b = 2; _h = 1.5;
+  document.getElementById('sl-a').value = _a;
+  document.getElementById('sl-b').value = _b;
+  document.getElementById('sl-h').value = _h;
+  document.getElementById('val-a').textContent = _a;
+  document.getElementById('val-b').textContent = _b;
+  document.getElementById('val-h').textContent = _h;
+  buildCuboid();
+  updateCalc();
+}
+
+init();
+</script>
+</body>
+</html>

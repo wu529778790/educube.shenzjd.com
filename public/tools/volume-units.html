@@ -278,7 +278,7 @@ function setUnit(key) {
 // ===== 堆叠动画: show 10×10×10 = 1000 =====
 function playStack() {
   if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
-  while (_animGroup.children.length) _animGroup.remove(_animGroup.children[0];
+  while (_animGroup.children.length) _animGroup.remove(_animGroup.children[0]);
   while (_unitGroup.children.length) _unitGroup.children[0].visible = false;
 
   document.getElementById('btn-stack').disabled = true;
@@ -365,7 +365,7 @@ function playStack() {
 // ===== 填充动画: water fill the cube =====
 function playFill() {
   if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
-  while (_animGroup.children.length) _animGroup.remove(_animGroup.children[0];
+  while (_animGroup.children.length) _animGroup.remove(_animGroup.children[0]);
 
   // Show original cube
   setUnit(_currentUnit);
@@ -413,7 +413,7 @@ function playFill() {
 
 function resetAll() {
   if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
-  while (_animGroup.children.length) _animGroup.remove(_animGroup.children[0];
+  while (_animGroup.children.length) _animGroup.remove(_animGroup.children[0]);
   setUnit('cm');
 }
 

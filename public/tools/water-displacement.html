@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>排水法测体积 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 300px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#eff6ff,#fdfaf4); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+
+  .obj-btn {
+    padding:10px; border-radius:10px; font-size:12px; font-weight:700;
+    cursor:pointer; border:2px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+  }
+  .obj-btn:hover { border-color:#3b82f6; }
+  .obj-btn.active { background:#dbeafe; color:#1e40af; border-color:#3b82f6; }
+  .obj-btn .obj-icon { font-size:20px; display:block; margin-bottom:2px; }
+
+  .drop-btn {
+    width:100%; padding:12px; border:none; border-radius:10px; font-size:15px; font-weight:700;
+    cursor:pointer; font-family:var(--edu-font); transition:all .15s;
+    background:#3b82f6; color:#fff;
+  }
+  .drop-btn:hover { background:#2563eb; }
+  .drop-btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+  .reset-btn {
+    width:100%; padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:600;
+    cursor:pointer; font-family:var(--edu-font); background:#fff; color:#64748b;
+    transition:all .15s;
+  }
+  .reset-btn:hover { border-color:#3b82f6; color:#3b82f6; }
+
+  .water-info {
+    background:#eff6ff; border:2px solid #93c5fd; border-radius:12px;
+    padding:14px; text-align:center;
+  }
+  .water-level-label { font-size:12px; color:#64748b; margin-bottom:4px; }
+  .water-level-val { font-size:28px; font-weight:800; color:#1d4ed8; }
+  .water-level-unit { font-size:14px; color:#3b82f6; font-weight:600; }
+
+  .result-card {
+    background:#fef3c7; border:2px solid #fbbf24; border-radius:12px;
+    padding:14px; text-align:center;
+  }
+  .result-label { font-size:12px; color:#92400e; margin-bottom:4px; }
+  .result-val { font-size:24px; font-weight:800; color:#b45309; }
+  .result-formula { font-size:13px; color:#78350f; margin-top:6px; font-weight:600; }
+
+  .ruler-scale {
+    display:flex; align-items:flex-end; gap:2px; padding:6px 0;
+  }
+  .ruler-tick {
+    width:24px; display:flex; flex-direction:column; align-items:center;
+    font-size:9px; color:#64748b; font-weight:600;
+  }
+  .ruler-tick .bar { width:2px; background:#94a3b8; }
+  .ruler-tick .bar.major { height:12px; background:#475569; }
+  .ruler-tick .bar.minor { height:6px; }
+
+  .info-box { background:#fff; border:1px solid #bfdbfe; border-radius:10px; padding:10px 12px; font-size:11px; line-height:1.8; color:#334155; }
+  .info-box strong { color:#2563eb; }
+
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="edu-toolbar-title">💧 排水法测体积</span>
+      <span class="edu-toolbar-subtitle">五年级下册 · 第三单元</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="reset-btn" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择物体</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <button class="obj-btn active" id="ob-stone" onclick="setObj('stone')"><span class="obj-icon">🪨</span>石头</button>
+            <button class="obj-btn" id="ob-apple" onclick="setObj('apple')"><span class="obj-icon">🍎</span>苹果</button>
+            <button class="obj-btn" id="ob-egg" onclick="setObj('egg')"><span class="obj-icon">🥚</span>鸡蛋</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <button class="obj-btn" id="ob-ball" onclick="setObj('ball')"><span class="obj-icon">⚽</span>弹珠</button>
+            <button class="obj-btn" id="ob-block" onclick="setObj('block')"><span class="obj-icon">🧊</span>方块</button>
+            <button class="obj-btn" id="ob-crown" onclick="setObj('crown')"><span class="obj-icon">👑</span>皇冠</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">水量刻度</div>
+          <div class="ruler-scale" id="ruler"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="water-info">
+          <div class="water-level-label">水面高度</div>
+          <div class="water-level-val" id="water-val">200</div>
+          <div class="water-level-unit">mL</div>
+        </div>
+        <div class="divider"></div>
+        <div id="result-section" style="display:none">
+          <div class="result-card">
+            <div class="result-label">物体体积</div>
+            <div class="result-val" id="result-val">—</div>
+            <div class="result-formula" id="result-formula"></div>
+          </div>
+          <div class="divider" style="margin-top:10px"></div>
+        </div>
+        <button class="drop-btn" id="btn-drop" onclick="dropObject()">🔽 放入水中</button>
+        <button class="reset-btn" onclick="takeOut()">取出物体</button>
+        <div class="divider"></div>
+        <div class="info-box">
+          <strong>排水法原理</strong><br/>
+          ● 物体浸入水中，水面上升<br/>
+          ● 上升部分水的体积 = 物体体积<br/>
+          ● V物 = V后 - V前<br/>
+          ● 适用于<strong>不规则物体</strong>
+        </div>
+        <div class="info-box" style="margin-top:4px">
+          <strong>操作步骤</strong><br/>
+          1. 量杯中倒入适量水，记录水量<br/>
+          2. 将物体完全浸入水中<br/>
+          3. 记录新的水面刻度<br/>
+          4. 两次读数之差就是物体体积
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var _scene, _camera, _renderer, _controls;
+var _tankGroup, _waterMesh, _objMesh;
+var _currentObj = 'stone';
+var _isDropped = false;
+var _animId = null;
+var _initialWater = 200; // mL
+var _currentWater = 200;
+
+// Object definitions: volume in mL, color, geometry type
+var OBJECTS = {
+  stone:  { name: '石头', volume: 85,  color: 0x78716c, geoType: 'dodecahedron', radius: 0.45 },
+  apple:  { name: '苹果', volume: 120, color: 0xef4444, geoType: 'sphere', radius: 0.42 },
+  egg:    { name: '鸡蛋', volume: 50,  color: 0xfef3c7, geoType: 'sphere', radius: 0.32 },
+  ball:   { name: '弹珠', volume: 33,  color: 0x3b82f6, geoType: 'sphere', radius: 0.28 },
+  block:  { name: '方块', volume: 64,  color: 0xa78bfa, geoType: 'box', size: 0.6 },
+  crown:  { name: '皇冠', volume: 150, color: 0xfbbf24, geoType: 'cylinder', rTop: 0.45, rBot: 0.35, height: 0.5 },
+};
+
+// Tank dimensions (3D units)
+var TANK_W = 2.0, TANK_D = 2.0, TANK_H = 3.5;
+var TANK_MAX_ML = 1000;
+var ML_PER_UNIT = TANK_H / TANK_MAX_ML; // height per mL
+
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xf0f7ff, camX: 4, camY: 3.5, camZ: 5, lookY: 1 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+
+  _tankGroup = new THREE.Group();
+  _scene.add(_tankGroup);
+
+  buildTank();
+  buildRuler();
+  setObj('stone');
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+
+function buildTank() {
+  // Glass-like tank walls
+  var wallMat = new THREE.MeshPhysicalMaterial({
+    color: 0xe0f2fe, transparent: true, opacity: 0.25,
+    side: THREE.DoubleSide, roughness: 0.1, metalness: 0
+  });
+
+  // Front/back walls
+  var wallGeo = new THREE.PlaneGeometry(TANK_W, TANK_H);
+  var front = new THREE.Mesh(wallGeo, wallMat);
+  front.position.set(0, TANK_H / 2, TANK_D / 2);
+  _tankGroup.add(front);
+
+  var back = new THREE.Mesh(wallGeo, wallMat);
+  back.position.set(0, TANK_H / 2, -TANK_D / 2);
+  back.rotation.y = Math.PI;
+  _tankGroup.add(back);
+
+  // Left/right walls
+  var sideGeo = new THREE.PlaneGeometry(TANK_D, TANK_H);
+  var left = new THREE.Mesh(sideGeo, wallMat);
+  left.position.set(-TANK_W / 2, TANK_H / 2, 0);
+  left.rotation.y = Math.PI / 2;
+  _tankGroup.add(left);
+
+  var right = new THREE.Mesh(sideGeo, wallMat);
+  right.position.set(TANK_W / 2, TANK_H / 2, 0);
+  right.rotation.y = -Math.PI / 2;
+  _tankGroup.add(right);
+
+  // Bottom
+  var bottomGeo = new THREE.PlaneGeometry(TANK_W, TANK_D);
+  var bottomMat = new THREE.MeshLambertMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.4 });
+  var bottom = new THREE.Mesh(bottomGeo, bottomMat);
+  bottom.rotation.x = -Math.PI / 2;
+  bottom.position.y = 0.01;
+  _tankGroup.add(bottom);
+
+  // Tank edges
+  var edgeMat = new THREE.LineBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.5 });
+  var pts = [
+    [-TANK_W/2, 0, -TANK_D/2], [TANK_W/2, 0, -TANK_D/2], [TANK_W/2, 0, TANK_D/2], [-TANK_W/2, 0, TANK_D/2], [-TANK_W/2, 0, -TANK_D/2],
+    [-TANK_W/2, TANK_H, -TANK_D/2], [TANK_W/2, TANK_H, -TANK_D/2], [TANK_W/2, TANK_H, TANK_D/2], [-TANK_W/2, TANK_H, TANK_D/2], [-TANK_W/2, TANK_H, -TANK_D/2],
+  ];
+  // Vertical edges
+  [[-1,-1],[ 1,-1],[ 1, 1],[-1, 1]].forEach(function(c) {
+    var g = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(c[0]*TANK_W/2, 0, c[1]*TANK_D/2),
+      new THREE.Vector3(c[0]*TANK_W/2, TANK_H, c[1]*TANK_D/2)
+    ]);
+    _tankGroup.add(new THREE.Line(g, edgeMat));
+  });
+
+  // Scale lines on front face
+  for (var ml = 100; ml <= 1000; ml += 100) {
+    var y = ml * ML_PER_UNIT;
+    var tickLen = ml % 200 === 0 ? 0.15 : 0.08;
+    var tickGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-TANK_W / 2 + 0.02, y, TANK_D / 2 + 0.01),
+      new THREE.Vector3(-TANK_W / 2 + tickLen + 0.02, y, TANK_D / 2 + 0.01)
+    ]);
+    var tickMat = new THREE.LineBasicMaterial({ color: ml % 200 === 0 ? 0x3b82f6 : 0x93c5fd, transparent: true, opacity: 0.6 });
+    _tankGroup.add(new THREE.Line(tickGeo, tickMat));
+
+    if (ml % 200 === 0) {
+      var label = Edu3D.textSprite(ml + '', { color: '#3b82f6', scale: 0.3 });
+      label.position.set(-TANK_W / 2 - 0.35, y, TANK_D / 2 + 0.01);
+      _tankGroup.add(label);
+    }
+  }
+
+  // Initial water
+  buildWater(_initialWater);
+}
+
+function buildWater(ml) {
+  if (_waterMesh) _tankGroup.remove(_waterMesh);
+  var h = Math.max(0.01, ml * ML_PER_UNIT);
+  var wGeo = new THREE.BoxGeometry(TANK_W * 0.96, h, TANK_D * 0.96);
+  var wMat = new THREE.MeshPhysicalMaterial({
+    color: 0x38bdf8, transparent: true, opacity: 0.35,
+    roughness: 0.1, metalness: 0, side: THREE.DoubleSide
+  });
+  _waterMesh = new THREE.Mesh(wGeo, wMat);
+  _waterMesh.position.y = h / 2;
+  _tankGroup.add(_waterMesh);
+}
+
+function buildRuler() {
+  var container = document.getElementById('ruler');
+  container.innerHTML = '';
+  for (var ml = 0; ml <= 500; ml += 50) {
+    var tick = document.createElement('div');
+    tick.className = 'ruler-tick';
+    var isMajor = ml % 100 === 0;
+    tick.innerHTML = '<div class="bar ' + (isMajor ? 'major' : 'minor') + '"></div>' +
+      (isMajor ? '<span>' + ml + '</span>' : '');
+    container.appendChild(tick);
+  }
+}
+
+function setObj(key) {
+  if (_isDropped) return;
+  _currentObj = key;
+  if (_objMesh) { _tankGroup.remove(_objMesh); _objMesh = null; }
+
+  var def = OBJECTS[key];
+  var geo;
+  if (def.geoType === 'sphere') geo = new THREE.SphereGeometry(def.radius, 24, 24);
+  else if (def.geoType === 'dodecahedron') geo = new THREE.DodecahedronGeometry(def.radius, 1);
+  else if (def.geoType === 'box') geo = new THREE.BoxGeometry(def.size, def.size, def.size);
+  else if (def.geoType === 'cylinder') geo = new THREE.CylinderGeometry(def.rTop, def.rBot, def.height, 24);
+
+  var mat = new THREE.MeshLambertMaterial({ color: def.color });
+  _objMesh = new THREE.Mesh(geo, mat);
+  _objMesh.castShadow = true;
+  _objMesh.position.set(0, TANK_H + 1, 0); // above tank
+  _tankGroup.add(_objMesh);
+
+  document.getElementById('btn-drop').disabled = false;
+  document.getElementById('result-section').style.display = 'none';
+
+  Object.keys(OBJECTS).forEach(function(k) {
+    var btn = document.getElementById('ob-' + k);
+    if (btn) btn.classList.toggle('active', k === key);
+  });
+}
+
+function dropObject() {
+  if (_isDropped || !_objMesh) return;
+  _isDropped = true;
+  document.getElementById('btn-drop').disabled = true;
+
+  var def = OBJECTS[_currentObj];
+  var waterH = _initialWater * ML_PER_UNIT;
+  var objRadius = def.radius || (def.size || 0) / 2;
+  var targetY = waterH + objRadius * 0.3; // partially submerged
+
+  // Animate object dropping
+  var startY = _objMesh.position.y;
+  var t = 0, steps = 40;
+
+  function animDrop() {
+    t++;
+    var p = Math.min(t / steps, 1);
+    // Ease out bounce
+    var ease = 1 - Math.pow(1 - p, 3);
+    _objMesh.position.y = startY + (targetY - startY) * ease;
+
+    if (p < 1) {
+      _animId = requestAnimationFrame(animDrop);
+    } else {
+      // Now animate water rising
+      var newWater = _initialWater + def.volume;
+      animateWaterRise(newWater);
+    }
+  }
+  animDrop();
+}
+
+function animateWaterRise(targetML) {
+  var startML = _currentWater;
+  var t = 0, steps = 50;
+
+  function animWater() {
+    t++;
+    var p = Math.min(t / steps, 1);
+    var ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+    var ml = startML + (targetML - startML) * ease;
+
+    _currentWater = ml;
+    buildWater(ml);
+    document.getElementById('water-val').textContent = Math.round(ml);
+
+    if (p < 1) {
+      _animId = requestAnimationFrame(animWater);
+    } else {
+      _currentWater = targetML;
+      _animId = null;
+      showResult();
+    }
+  }
+  animWater();
+}
+
+function showResult() {
+  var def = OBJECTS[_currentObj];
+  var newWater = _initialWater + def.volume;
+
+  document.getElementById('result-section').style.display = '';
+  document.getElementById('result-val').textContent = def.volume + ' mL = ' + def.volume + ' cm³';
+  document.getElementById('result-formula').textContent =
+    'V = ' + newWater + ' - ' + _initialWater + ' = ' + def.volume + ' (mL)';
+
+  document.getElementById('water-val').textContent = newWater;
+}
+
+function takeOut() {
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+  _isDropped = false;
+  _currentWater = _initialWater;
+  buildWater(_initialWater);
+  document.getElementById('water-val').textContent = _initialWater;
+  document.getElementById('result-section').style.display = 'none';
+  document.getElementById('btn-drop').disabled = false;
+
+  setObj(_currentObj);
+}
+
+function resetAll() {
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+  _isDropped = false;
+  _currentWater = _initialWater;
+
+  // Remove old object
+  if (_objMesh) { _tankGroup.remove(_objMesh); _objMesh = null; }
+
+  buildWater(_initialWater);
+  document.getElementById('water-val').textContent = _initialWater;
+  document.getElementById('result-section').style.display = 'none';
+  setObj('stone');
+}
+
+init();
+</script>
+</body>
+</html>
