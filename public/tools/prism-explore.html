@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>棱柱认识与展开图 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 300px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#eff6ff,#fdfaf4); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+
+  .shape-btn {
+    padding:8px 6px; border-radius:10px; font-size:11px; font-weight:700;
+    cursor:pointer; border:2px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+  }
+  .shape-btn:hover { border-color:#3b82f6; }
+  .shape-btn.active { background:#dbeafe; color:#1e40af; border-color:#3b82f6; }
+
+  .unfold-btn {
+    padding:10px; border:none; border-radius:10px; font-size:14px; font-weight:700;
+    cursor:pointer; font-family:var(--edu-font); transition:all .15s;
+    background:#3b82f6; color:#fff;
+  }
+  .unfold-btn:hover { background:#2563eb; }
+
+  .prop-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .prop-table td { padding:4px 8px; border-bottom:1px solid #e2e8f0; }
+  .prop-table td:first-child { color:#64748b; font-weight:600; }
+  .prop-table td:last-child { font-weight:700; color:#1e40af; text-align:right; }
+
+  .info-box { background:#fff; border:1px solid #bfdbfe; border-radius:10px; padding:10px 12px; font-size:11px; line-height:1.8; color:#334155; }
+  .info-box strong { color:#2563eb; }
+
+  .slider-row { display:flex; align-items:center; gap:8px; }
+  .slider-row label { font-size:11px; font-weight:600; color:#334155; min-width:30px; }
+  .slider-row input[type=range] { flex:1; accent-color:#3b82f6; }
+  .slider-row .val { font-size:12px; font-weight:700; color:#2563eb; min-width:30px; text-align:right; }
+
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="edu-toolbar-title">🔷 棱柱认识与展开图</span>
+      <span class="edu-toolbar-subtitle">七年级上册 · 第四章</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="unfold-btn" id="btn-toggle" onclick="toggleUnfold()">🔽 展开棱柱</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择棱柱类型</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px">
+            <button class="shape-btn active" id="sb-3" onclick="setSides(3)">三棱柱</button>
+            <button class="shape-btn" id="sb-4" onclick="setSides(4)">四棱柱</button>
+            <button class="shape-btn" id="sb-5" onclick="setSides(5)">五棱柱</button>
+            <button class="shape-btn" id="sb-6" onclick="setSides(6)">六棱柱</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">调整参数</div>
+          <div class="slider-row">
+            <label>高</label>
+            <input type="range" id="sl-h" min="1" max="4" step="0.5" value="2.5" oninput="onParam()">
+            <span class="val" id="val-h">2.5</span>
+          </div>
+          <div class="slider-row">
+            <label>半径</label>
+            <input type="range" id="sl-r" min="0.5" max="2" step="0.1" value="1.2" oninput="onParam()">
+            <span class="val" id="val-r">1.2</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">棱柱属性</div>
+          <table class="prop-table" id="prop-table"></table>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <strong>棱柱知识</strong><br/>
+          ● 上下底面是<strong>全等多边形</strong><br/>
+          ● 侧面都是<strong>平行四边形</strong>（直棱柱为长方形）<br/>
+          ● 棱数 = 3n，顶点数 = 2n<br/>
+          ● 面数 = n + 2<br/>
+          ● V = S底 × h
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var _scene, _camera, _renderer, _controls;
+var _group, _unfoldGroup;
+var _sides = 3, _h = 2.5, _r = 1.2;
+var _isUnfolded = false;
+var _animId = null;
+
+var COLORS = {
+  top: 0x3b82f6, bottom: 0x60a5fa, sides: [0x818cf8, 0xa78bfa, 0x6366f1, 0x7c3aed, 0x5b21b6, 0x4c1d95]
+};
+
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xf0f4ff, camX: 5, camY: 3.5, camZ: 5 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 10, 10);
+
+  _group = new THREE.Group();
+  _scene.add(_group);
+  _unfoldGroup = new THREE.Group();
+  _scene.add(_unfoldGroup);
+
+  buildPrism();
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+
+function clearGroup(g) { while (g.children.length) g.remove(g.children[0]); }
+
+function getVertices(n, radius, y) {
+  var verts = [];
+  for (var i = 0; i < n; i++) {
+    var angle = (Math.PI * 2 * i / n) - Math.PI / 2;
+    verts.push(new THREE.Vector3(Math.cos(angle) * radius, y, Math.sin(angle) * radius));
+  }
+  return verts;
+}
+
+function buildPrism() {
+  clearGroup(_group);
+  clearGroup(_unfoldGroup);
+  _isUnfolded = false;
+  document.getElementById('btn-toggle').textContent = '🔽 展开棱柱';
+
+  var n = _sides, h = _h, r = _r;
+
+  // Use CylinderGeometry for the solid
+  var prismGeo = new THREE.CylinderGeometry(r, r, h, n);
+  var prismMat = new THREE.MeshLambertMaterial({ color: COLORS.sides[0], transparent: true, opacity: 0.55 });
+  var prism = new THREE.Mesh(prismGeo, prismMat);
+  prism.position.y = h / 2;
+  prism.castShadow = true;
+
+  var edgeGeo = new THREE.EdgesGeometry(prismGeo);
+  prism.add(new THREE.LineSegments(edgeGeo, new THREE.LineBasicMaterial({ color: 0x1e40af, transparent: true, opacity: 0.5 })));
+  _group.add(prism);
+
+  // Top face highlight
+  var topGeo = new THREE.CircleGeometry(r, n);
+  var topMat = new THREE.MeshLambertMaterial({ color: COLORS.top, side: THREE.DoubleSide, transparent: true, opacity: 0.5 });
+  var topMesh = new THREE.Mesh(topGeo, topMat);
+  topMesh.rotation.x = -Math.PI / 2;
+  topMesh.position.y = h;
+  _group.add(topMesh);
+
+  // Bottom face highlight
+  var botMesh = topMesh.clone();
+  botMesh.position.y = 0;
+  botMesh.material = topMat.clone();
+  botMesh.material.color.setHex(COLORS.bottom);
+  _group.add(botMesh);
+
+  // Vertex dots
+  var topVerts = getVertices(n, r, h);
+  var botVerts = getVertices(n, r, 0);
+  var dotGeo = new THREE.SphereGeometry(0.06, 8, 8);
+  var dotMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+  topVerts.concat(botVerts).forEach(function(v) {
+    var dot = new THREE.Mesh(dotGeo, dotMat);
+    dot.position.copy(v);
+    _group.add(dot);
+  });
+
+  // Labels
+  var names = { 3: '三棱柱', 4: '四棱柱（长方体）', 5: '五棱柱', 6: '六棱柱' };
+  var nameLbl = Edu3D.textSprite(names[n] || n + '棱柱', { color: '#1e40af', scale: 0.5 });
+  nameLbl.position.set(0, h + 0.8, 0);
+  _group.add(nameLbl);
+
+  // Height label
+  var hLbl = Edu3D.textSprite('h=' + h.toFixed(1), { color: '#16a34a', scale: 0.35 });
+  hLbl.position.set(-r - 0.6, h / 2, 0);
+  _group.add(hLbl);
+
+  // Build unfolded state (hidden)
+  buildUnfolded(n, h, r);
+
+  _group.visible = true;
+  _unfoldGroup.visible = false;
+
+  updateProps(n, h, r);
+}
+
+function buildUnfolded(n, h, r) {
+  clearGroup(_unfoldGroup);
+
+  var sideLen = 2 * r * Math.sin(Math.PI / n); // approximate side length
+  // Actually compute side length properly
+  var verts = getVertices(n, r, 0);
+  var actualSideLen = verts[0].distanceTo(verts[1]);
+
+  var gap = 0.05;
+  var totalW = n * actualSideLen;
+  var startX = -totalW / 2 + actualSideLen / 2;
+
+  // Side faces
+  for (var i = 0; i < n; i++) {
+    var sideGeo = new THREE.PlaneGeometry(actualSideLen - gap, h - gap);
+    var sideMat = new THREE.MeshLambertMaterial({
+      color: COLORS.sides[i % COLORS.sides.length],
+      side: THREE.DoubleSide, transparent: true, opacity: 0.6
+    });
+    var sideMesh = new THREE.Mesh(sideGeo, sideMat);
+    sideMesh.rotation.x = -Math.PI / 2;
+    sideMesh.position.set(startX + i * actualSideLen, 0.01, 0);
+    sideMesh.add(new THREE.LineSegments(
+      new THREE.EdgesGeometry(sideGeo),
+      new THREE.LineBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.3 })
+    ));
+
+    // Label
+    var sLbl = Edu3D.textSprite('侧面' + (i + 1), { color: '#334155', scale: 0.3 });
+    sLbl.position.y = 0.02;
+    sideMesh.add(sLbl);
+
+    _unfoldGroup.add(sideMesh);
+  }
+
+  // Top face (polygon) - above the middle side face
+  var topShape = new THREE.Shape();
+  var tv = getVertices(n, r * 0.8, 0);
+  for (var j = 0; j < n; j++) {
+    if (j === 0) topShape.moveTo(tv[j].x, tv[j].z);
+    else topShape.lineTo(tv[j].x, tv[j].z);
+  }
+  topShape.closePath();
+  var topGeo = new THREE.ShapeGeometry(topShape);
+  var topMesh = new THREE.Mesh(topGeo, new THREE.MeshLambertMaterial({
+    color: COLORS.top, side: THREE.DoubleSide, transparent: true, opacity: 0.5
+  }));
+  topMesh.rotation.x = -Math.PI / 2;
+  topMesh.position.set(0, 0.02, -(h / 2 + r + 0.3));
+  _unfoldGroup.add(topMesh);
+
+  var topLbl = Edu3D.textSprite('上底面', { color: '#1e40af', scale: 0.3 });
+  topLbl.position.y = 0.04;
+  topLbl.position.z = 0;
+  topMesh.add(topLbl);
+
+  // Bottom face - below the middle side face
+  var botMesh = topMesh.clone();
+  botMesh.position.z = h / 2 + r + 0.3;
+  botMesh.material = topMesh.material.clone();
+  botMesh.material.color.setHex(COLORS.bottom);
+  _unfoldGroup.add(botMesh);
+
+  var botLbl = Edu3D.textSprite('下底面', { color: '#1e40af', scale: 0.3 });
+  botLbl.position.y = 0.04;
+  botLbl.position.z = 0;
+  botMesh.add(botLbl);
+}
+
+function toggleUnfold() {
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+  _isUnfolded = !_isUnfolded;
+  document.getElementById('btn-toggle').textContent = _isUnfolded ? '🔼 折叠回棱柱' : '🔽 展开棱柱';
+
+  _group.visible = !_isUnfolded;
+  _unfoldGroup.visible = _isUnfolded;
+
+  if (_isUnfolded) {
+    _unfoldGroup.children.forEach(function(c) {
+      if (c.material) { c.material.transparent = true; c.material.opacity = 0; }
+    });
+    var t = 0, steps = 30;
+    function fadeIn() {
+      t++;
+      var p = Math.min(t / steps, 1);
+      _unfoldGroup.children.forEach(function(c) {
+        if (c.material && c.material.opacity !== undefined) c.material.opacity = p * 0.6;
+      });
+      if (p < 1) _animId = requestAnimationFrame(fadeIn);
+      else _animId = null;
+    }
+    fadeIn();
+  }
+}
+
+function updateProps(n, h, r) {
+  // Compute actual side length
+  var verts = getVertices(n, r, 0);
+  var sideLen = verts[0].distanceTo(verts[1]);
+
+  // Apothem (inradius)
+  var apothem = r * Math.cos(Math.PI / n);
+
+  // Base area (regular polygon)
+  var baseArea = 0.5 * n * sideLen * apothem;
+  var lateralArea = n * sideLen * h;
+  var totalArea = lateralArea + 2 * baseArea;
+  var volume = baseArea * h;
+
+  var names = { 3: '三棱柱', 4: '四棱柱', 5: '五棱柱', 6: '六棱柱' };
+
+  var html = '<tr><td>类型</td><td>' + (names[n] || n + '棱柱') + '</td></tr>';
+  html += '<tr><td>底面边数</td><td>' + n + '</td></tr>';
+  html += '<tr><td>底面边长</td><td>' + sideLen.toFixed(2) + '</td></tr>';
+  html += '<tr><td>棱数</td><td>' + (3 * n) + '</td></tr>';
+  html += '<tr><td>顶点数</td><td>' + (2 * n) + '</td></tr>';
+  html += '<tr><td>面数</td><td>' + (n + 2) + '</td></tr>';
+  html += '<tr><td>底面积</td><td>' + baseArea.toFixed(2) + '</td></tr>';
+  html += '<tr><td>侧面积</td><td>' + lateralArea.toFixed(2) + '</td></tr>';
+  html += '<tr><td>表面积</td><td>' + totalArea.toFixed(2) + '</td></tr>';
+  html += '<tr><td>体积</td><td>' + volume.toFixed(2) + '</td></tr>';
+  html += '<tr><td>V-E+F</td><td>' + (2*n) + '-' + (3*n) + '+' + (n+2) + ' = ' + ((2*n) - (3*n) + (n+2)) + '</td></tr>';
+  document.getElementById('prop-table').innerHTML = html;
+}
+
+function setSides(n) {
+  _sides = n;
+  buildPrism();
+  [3, 4, 5, 6].forEach(function(k) {
+    var btn = document.getElementById('sb-' + k);
+    if (btn) btn.classList.toggle('active', k === n);
+  });
+}
+
+function onParam() {
+  _h = parseFloat(document.getElementById('sl-h').value);
+  _r = parseFloat(document.getElementById('sl-r').value);
+  document.getElementById('val-h').textContent = _h.toFixed(1);
+  document.getElementById('val-r').textContent = _r.toFixed(1);
+  buildPrism();
+}
+
+function resetAll() {
+  _sides = 3; _h = 2.5; _r = 1.2;
+  document.getElementById('sl-h').value = _h;
+  document.getElementById('sl-r').value = _r;
+  document.getElementById('val-h').textContent = _h.toFixed(1);
+  document.getElementById('val-r').textContent = _r.toFixed(1);
+  setSides(3);
+}
+
+init();
+</script>
+</body>
+</html>

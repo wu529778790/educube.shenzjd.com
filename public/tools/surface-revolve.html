@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>旋转体生成 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 300px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#ecfdf5,#fdfaf4); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+
+  .shape-btn {
+    padding:10px 6px; border-radius:10px; font-size:11px; font-weight:700;
+    cursor:pointer; border:2px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+  }
+  .shape-btn:hover { border-color:#10b981; }
+  .shape-btn.active { background:#d1fae5; color:#065f46; border-color:#10b981; }
+  .shape-btn .s-icon { font-size:18px; display:block; margin-bottom:2px; }
+
+  .play-btn {
+    width:100%; padding:12px; border:none; border-radius:10px; font-size:15px; font-weight:700;
+    cursor:pointer; font-family:var(--edu-font); transition:all .15s;
+    background:#10b981; color:#fff;
+  }
+  .play-btn:hover { background:#059669; }
+  .play-btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+  .result-card {
+    background:#ecfdf5; border:2px solid #6ee7b7; border-radius:12px;
+    padding:14px; text-align:center;
+  }
+  .result-title { font-size:16px; font-weight:800; color:#065f46; }
+  .result-desc { font-size:12px; color:#334155; margin-top:6px; line-height:1.8; }
+
+  .info-box { background:#fff; border:1px solid #a7f3d0; border-radius:10px; padding:10px 12px; font-size:11px; line-height:1.8; color:#334155; }
+  .info-box strong { color:#059669; }
+
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="edu-toolbar-title">🔄 旋转体生成</span>
+      <span class="edu-toolbar-subtitle">七年级上册 · 第四章</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择平面图形</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <button class="shape-btn active" id="sb-rect" onclick="setShape('rect')"><span class="s-icon">▬</span>长方形</button>
+            <button class="shape-btn" id="sb-rtriangle" onclick="setShape('rtriangle')"><span class="s-icon">◺</span>直角三角形</button>
+            <button class="shape-btn" id="sb-semicircle" onclick="setShape('semicircle')"><span class="s-icon">◡</span>半圆</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+            <button class="shape-btn" id="sb-trapezoid" onclick="setShape('trapezoid')"><span class="s-icon">⏢</span>梯形</button>
+            <button class="shape-btn" id="sb-circle" onclick="setShape('circle')"><span class="s-icon">○</span>圆</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <button class="play-btn" id="btn-play" onclick="playRevolve()">▶ 播放旋转动画</button>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">旋转结果</div>
+          <div class="result-card" id="result-card">
+            <div class="result-title" id="result-title">选择平面图形开始</div>
+            <div class="result-desc" id="result-desc">平面图形绕轴旋转一周，生成旋转体</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box">
+          <strong>面动成体</strong><br/>
+          ● 平面图形绕一条轴旋转一周，形成的立体叫做<strong>旋转体</strong><br/>
+          ● 长方形绕一边旋转 → <strong>圆柱</strong><br/>
+          ● 直角三角形绕直角边旋转 → <strong>圆锥</strong><br/>
+          ● 半圆绕直径旋转 → <strong>球</strong><br/>
+          ● 梯形绕直角边旋转 → <strong>圆台</strong><br/>
+          ● 圆绕直径旋转 → <strong>球</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var _scene, _camera, _renderer, _controls;
+var _group;
+var _currentShape = 'rect';
+var _animId = null;
+
+var SHAPES = {
+  rect: {
+    name: '长方形', result: '圆柱',
+    desc: '长方形绕一条边旋转一周<br/>生成<strong>圆柱体</strong><br/><br/>旋转轴所在边 = 圆柱的高 h<br/>另一条边 = 底面半径 r<br/>V = πr²h',
+    color: 0x3b82f6, resultColor: 0x60a5fa,
+  },
+  rtriangle: {
+    name: '直角三角形', result: '圆锥',
+    desc: '直角三角形绕一条直角边旋转<br/>生成<strong>圆锥体</strong><br/><br/>旋转轴所在边 = 圆锥的高 h<br/>另一条直角边 = 底面半径 r<br/>V = ⅓πr²h',
+    color: 0xf97316, resultColor: 0xfb923c,
+  },
+  semicircle: {
+    name: '半圆', result: '球',
+    desc: '半圆绕直径旋转一周<br/>生成<strong>球体</strong><br/><br/>半径 = 球的半径 r<br/>V = ⁴⁄₃πr³',
+    color: 0x22c55e, resultColor: 0x4ade80,
+  },
+  trapezoid: {
+    name: '直角梯形', result: '圆台',
+    desc: '直角梯形绕直角腰旋转<br/>生成<strong>圆台</strong><br/><br/>V = ⅓πh(R² + Rr + r²)',
+    color: 0xa855f7, resultColor: 0xc084fc,
+  },
+  circle: {
+    name: '圆', result: '球',
+    desc: '圆绕直径旋转一周<br/>生成<strong>球体</strong><br/><br/>V = ⁴⁄₃πr³',
+    color: 0x14b8a6, resultColor: 0x2dd4bf,
+  },
+};
+
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xf0fdf4, camX: 5, camY: 3, camZ: 6 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 10, 10);
+
+  _group = new THREE.Group();
+  _scene.add(_group);
+
+  setShape('rect');
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+
+function clearGroup() { while (_group.children.length) _group.remove(_group.children[0]); }
+
+function buildFlat() {
+  clearGroup();
+  var def = SHAPES[_currentShape];
+  var mat = new THREE.MeshLambertMaterial({ color: def.color, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+  var edgeMat = new THREE.LineBasicMaterial({ color: 0x1e293b, linewidth: 2 });
+
+  // Rotation axis (dashed line along Y)
+  var axisGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, -2, 0), new THREE.Vector3(0, 3, 0)
+  ]);
+  var axisMat = new THREE.LineDashedMaterial({ color: 0xef4444, dashSize: 0.15, gapSize: 0.1 });
+  var axis = new THREE.Line(axisGeo, axisMat);
+  axis.computeLineDistances();
+  _group.add(axis);
+
+  // Axis label
+  var axisLbl = Edu3D.textSprite('旋转轴', { color: '#ef4444', scale: 0.35 });
+  axisLbl.position.set(0.3, 2.8, 0);
+  _group.add(axisLbl);
+
+  var shape;
+  switch (_currentShape) {
+    case 'rect': {
+      shape = new THREE.Shape();
+      shape.moveTo(0, 0); shape.lineTo(1.2, 0); shape.lineTo(1.2, 2); shape.lineTo(0, 2); shape.closePath();
+      break;
+    }
+    case 'rtriangle': {
+      shape = new THREE.Shape();
+      shape.moveTo(0, 0); shape.lineTo(1.2, 0); shape.lineTo(0, 2); shape.closePath();
+      break;
+    }
+    case 'semicircle': {
+      var pts = [];
+      for (var i = 0; i <= 48; i++) {
+        var a = Math.PI * i / 48;
+        pts.push(new THREE.Vector2(Math.cos(a) * 1.2, Math.sin(a) * 1.2));
+      }
+      shape = new THREE.Shape(pts);
+      break;
+    }
+    case 'trapezoid': {
+      shape = new THREE.Shape();
+      shape.moveTo(0, 0); shape.lineTo(1.2, 0); shape.lineTo(0.8, 2); shape.lineTo(0, 2); shape.closePath();
+      break;
+    }
+    case 'circle': {
+      var pts2 = [];
+      for (var j = 0; j <= 64; j++) {
+        var a2 = Math.PI * 2 * j / 64;
+        pts2.push(new THREE.Vector2(0.6 + Math.cos(a2) * 0.6, Math.sin(a2) * 1.2));
+      }
+      shape = new THREE.Shape(pts2);
+      break;
+    }
+  }
+
+  var geo = new THREE.ShapeGeometry(shape);
+  var mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = 0.5;
+  mesh.rotation.y = 0; // face camera initially
+  mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), edgeMat));
+  _group.add(mesh);
+
+  // Name label
+  var lbl = Edu3D.textSprite(def.name, { color: '#334155', scale: 0.45 });
+  lbl.position.set(1.5, 1.5, 0);
+  _group.add(lbl);
+
+  // Arrow indicating rotation direction
+  var arrowGeo = new THREE.TorusGeometry(1.5, 0.03, 8, 48, Math.PI * 0.7);
+  var arrowMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
+  var arrow = new THREE.Mesh(arrowGeo, arrowMat);
+  arrow.position.set(0, 1.5, 0);
+  arrow.rotation.x = Math.PI / 2;
+  arrow.rotation.z = Math.PI * 0.3;
+  _group.add(arrow);
+}
+
+function playRevolve() {
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+  var def = SHAPES[_currentShape];
+
+  // Phase 1: fade out flat shape
+  var t = 0, phase1 = 30;
+  var flatChildren = _group.children.slice();
+
+  function animPhase1() {
+    t++;
+    var p = Math.min(t / phase1, 1);
+    flatChildren.forEach(function(c) {
+      if (c.material && c.material.opacity !== undefined) {
+        c.material.transparent = true;
+        c.material.opacity = Math.max(0, (1 - p) * (c.userData.origOpacity || c.material.opacity));
+      }
+    });
+    if (p < 1) { _animId = requestAnimationFrame(animPhase1); }
+    else {
+      clearGroup();
+      buildRevolved();
+      animPhase2();
+    }
+  }
+
+  // Store original opacities
+  flatChildren.forEach(function(c) {
+    if (c.material && c.material.opacity !== undefined) {
+      c.userData.origOpacity = c.material.opacity;
+    }
+  });
+
+  document.getElementById('btn-play').disabled = true;
+  animPhase1();
+}
+
+function buildRevolved() {
+  var def = SHAPES[_currentShape];
+  var mat = new THREE.MeshLambertMaterial({ color: def.resultColor, transparent: true, opacity: 0 });
+  var edgeMat = new THREE.LineBasicMaterial({ color: 0x1e293b, transparent: true, opacity: 0 });
+
+  var geo;
+  switch (_currentShape) {
+    case 'rect':
+      geo = new THREE.CylinderGeometry(1.2, 1.2, 2, 48);
+      break;
+    case 'rtriangle':
+      geo = new THREE.ConeGeometry(1.2, 2, 48);
+      break;
+    case 'semicircle':
+      geo = new THREE.SphereGeometry(1.2, 48, 48);
+      break;
+    case 'trapezoid':
+      geo = new THREE.CylinderGeometry(0.8, 1.2, 2, 48);
+      break;
+    case 'circle':
+      geo = new THREE.SphereGeometry(1.2, 48, 48);
+      break;
+  }
+
+  var mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = 1.5;
+  mesh.castShadow = true;
+  mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 15), edgeMat));
+  _group.add(mesh);
+
+  // Result label
+  var lbl = Edu3D.textSprite(def.result, { color: '#334155', scale: 0.5 });
+  lbl.position.set(0, 3.5, 0);
+  lbl.material.opacity = 0;
+  _group.add(lbl);
+
+  // Axis
+  var axisGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 4, 0)
+  ]);
+  var axisMat = new THREE.LineDashedMaterial({ color: 0xef4444, dashSize: 0.15, gapSize: 0.1, transparent: true, opacity: 0 });
+  var axis = new THREE.Line(axisGeo, axisMat);
+  axis.computeLineDistances();
+  _group.add(axis);
+}
+
+function animPhase2() {
+  var t = 0, steps = 50;
+  var solidMesh = null, solidEdge = null, label = null, axisLine = null;
+  _group.children.forEach(function(c) {
+    if (c.isMesh && c.geometry.type === 'CylinderGeometry' || c.isMesh && c.geometry.type === 'ConeGeometry' || c.isMesh && c.geometry.type === 'SphereGeometry') solidMesh = c;
+    if (c.isSprite) label = c;
+    if (c.isLine && c.material.isLineDashedMaterial) axisLine = c;
+  });
+  if (!solidMesh) return;
+  solidEdge = solidMesh.children[0];
+
+  function anim() {
+    t++;
+    var p = Math.min(t / steps, 1);
+    var ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+    var op = ease * 0.7;
+    if (solidMesh && solidMesh.material) { solidMesh.material.opacity = op; }
+    if (solidEdge && solidEdge.material) { solidEdge.material.opacity = ease * 0.3; }
+    if (label && label.material) { label.material.opacity = ease; }
+    if (axisLine && axisLine.material) { axisLine.material.opacity = ease * 0.5; }
+
+    // Rotate during reveal
+    _group.rotation.y = ease * Math.PI * 0.5;
+
+    if (p < 1) { _animId = requestAnimationFrame(anim); }
+    else {
+      _animId = null;
+      document.getElementById('btn-play').disabled = false;
+      _group.rotation.y = Math.PI * 0.5;
+    }
+  }
+  anim();
+}
+
+function setShape(key) {
+  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+  _group.rotation.y = 0;
+  _currentShape = key;
+  buildFlat();
+
+  var def = SHAPES[key];
+  document.getElementById('result-title').textContent = def.name + ' → ' + def.result;
+  document.getElementById('result-desc').innerHTML = def.desc;
+  document.getElementById('btn-play').disabled = false;
+
+  Object.keys(SHAPES).forEach(function(k) {
+    var btn = document.getElementById('sb-' + k);
+    if (btn) btn.classList.toggle('active', k === key);
+  });
+}
+
+function resetAll() {
+  setShape('rect');
+}
+
+init();
+</script>
+</body>
+</html>

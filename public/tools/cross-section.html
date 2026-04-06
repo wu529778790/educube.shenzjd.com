@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>几何体截面探究 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<script src="../edu-lib/three.min.js"></script>
+<script src="../edu-lib/OrbitControls.js"></script>
+<script src="../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr 300px; height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#fdf2f8,#fdfaf4); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-section { display:flex; flex-direction:column; gap:6px; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:#e2e8f0; }
+
+  .shape-btn {
+    padding:10px 6px; border-radius:10px; font-size:11px; font-weight:700;
+    cursor:pointer; border:2px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+  }
+  .shape-btn:hover { border-color:#ec4899; }
+  .shape-btn.active { background:#fdf2f8; color:#9d174d; border-color:#ec4899; }
+  .shape-btn .s-icon { font-size:20px; display:block; margin-bottom:2px; }
+
+  .cut-btn {
+    padding:10px; border:none; border-radius:10px; font-size:14px; font-weight:700;
+    cursor:pointer; font-family:var(--edu-font); transition:all .15s;
+    background:#ec4899; color:#fff;
+  }
+  .cut-btn:hover { background:#db2777; }
+  .cut-btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+  .section-result {
+    background:#fdf2f8; border:2px solid #f9a8d4; border-radius:12px;
+    padding:12px; text-align:center;
+  }
+  .section-name { font-size:18px; font-weight:800; color:#9d174d; }
+  .section-desc { font-size:12px; color:#64748b; margin-top:4px; line-height:1.6; }
+
+  .slider-row { display:flex; align-items:center; gap:8px; }
+  .slider-row label { font-size:11px; font-weight:600; color:#334155; min-width:36px; }
+  .slider-row input[type=range] { flex:1; accent-color:#ec4899; }
+  .slider-row .val { font-size:12px; font-weight:700; color:#db2777; min-width:36px; text-align:right; }
+
+  .info-box { background:#fff; border:1px solid #fbcfe8; border-radius:10px; padding:10px 12px; font-size:11px; line-height:1.8; color:#334155; }
+  .info-box strong { color:#db2777; }
+
+  .orbit-hint {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.85); padding:6px 14px; border-radius:20px;
+    font-size:11px; color:#64748b; pointer-events:none;
+  }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="edu-toolbar-title">✂️ 几何体截面探究</span>
+      <span class="edu-toolbar-subtitle">七年级上册 · 第四章</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button class="cut-btn" id="btn-cut" onclick="doCut()">✂️ 切一刀</button>
+      <div class="edu-divider"></div>
+      <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-section">
+          <div class="ctrl-label">选择几何体</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <button class="shape-btn active" id="sb-cube" onclick="setShape('cube')"><span class="s-icon">🟦</span>正方体</button>
+            <button class="shape-btn" id="sb-cylinder" onclick="setShape('cylinder')"><span class="s-icon">🥫</span>圆柱</button>
+            <button class="shape-btn" id="sb-cone" onclick="setShape('cone')"><span class="s-icon">🍦</span>圆锥</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+            <button class="shape-btn" id="sb-sphere" onclick="setShape('sphere')"><span class="s-icon">⚽</span>球体</button>
+            <button class="shape-btn" id="sb-prism" onclick="setShape('prism')"><span class="s-icon">🔺</span>三棱柱</button>
+            <button class="shape-btn" id="sb-pyramid" onclick="setShape('pyramid')"><span class="s-icon">🏜️</span>四棱锥</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">切割位置</div>
+          <div class="slider-row">
+            <label>高度</label>
+            <input type="range" id="sl-y" min="-2" max="2" step="0.05" value="0" oninput="onSlider()">
+            <span class="val" id="val-y">0.0</span>
+          </div>
+          <div class="slider-row">
+            <label>角度</label>
+            <input type="range" id="sl-angle" min="-80" max="80" step="1" value="0" oninput="onSlider()">
+            <span class="val" id="val-angle">0°</span>
+          </div>
+          <div class="slider-row">
+            <label>旋转</label>
+            <input type="range" id="sl-rot" min="0" max="360" step="1" value="0" oninput="onSlider()">
+            <span class="val" id="val-rot">0°</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl-section">
+          <div class="ctrl-label">截面形状</div>
+          <div class="section-result" id="section-result">
+            <div class="section-name" id="section-name">—</div>
+            <div class="section-desc" id="section-desc">调节切割位置，点击"切一刀"查看截面</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="info-box" id="info-box">
+          <strong>截面知识</strong><br/>
+          ● 用一个平面去截几何体，截出的面叫做<strong>截面</strong><br/>
+          ● 截面的形状由几何体的形状和切割角度决定<br/>
+          ● 正方体可截出：三角形、正方形、长方形、梯形、五边形、六边形<br/>
+          ● 圆柱可截出：圆、椭圆、长方形
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var _scene, _camera, _renderer, _controls;
+var _shapeGroup, _planeHelper, _sectionMesh;
+var _currentShape = 'cube';
+var _isCut = false;
+
+function init() {
+  var canvas = document.getElementById('c3d');
+  var r = Edu3D.createScene(canvas, { bg: 0xfdf2f8, camX: 5, camY: 3.5, camZ: 5 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 10, 10);
+
+  _shapeGroup = new THREE.Group();
+  _scene.add(_shapeGroup);
+
+  buildShape();
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+
+function clearGroup(g) { while (g.children.length) g.remove(g.children[0]); }
+
+function buildShape() {
+  clearGroup(_shapeGroup);
+  _isCut = false;
+  _sectionMesh = null;
+  _planeHelper = null;
+
+  var shapeMats = {
+    cube:    { color: 0x60a5fa, opacity: 0.55 },
+    cylinder: { color: 0xfbbf24, opacity: 0.55 },
+    cone:    { color: 0xf97316, opacity: 0.55 },
+    sphere:  { color: 0x4ade80, opacity: 0.45 },
+    prism:   { color: 0xa78bfa, opacity: 0.55 },
+    pyramid: { color: 0xfb923c, opacity: 0.55 },
+  };
+
+  var m = shapeMats[_currentShape];
+  var mat = new THREE.MeshLambertMaterial({ color: m.color, transparent: true, opacity: m.opacity });
+  var edgeColor = new THREE.Color(m.color).multiplyScalar(0.6).getHex();
+  var edgeMat = new THREE.LineBasicMaterial({ color: edgeColor, transparent: true, opacity: 0.4 });
+
+  var geo;
+  switch (_currentShape) {
+    case 'cube':
+      geo = new THREE.BoxGeometry(2.4, 2.4, 2.4);
+      break;
+    case 'cylinder':
+      geo = new THREE.CylinderGeometry(1.2, 1.2, 2.8, 48);
+      break;
+    case 'cone':
+      geo = new THREE.ConeGeometry(1.2, 2.8, 48);
+      break;
+    case 'sphere':
+      geo = new THREE.SphereGeometry(1.3, 48, 48);
+      break;
+    case 'prism':
+      geo = new THREE.CylinderGeometry(1.2, 1.2, 2.4, 3);
+      break;
+    case 'pyramid':
+      geo = new THREE.CylinderGeometry(0, 1.3, 2.4, 4);
+      break;
+  }
+
+  var mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = _currentShape === 'sphere' ? 1.3 : _currentShape === 'cone' ? 1.4 : _currentShape === 'pyramid' ? 1.2 : 1.2;
+  mesh.castShadow = true;
+  mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 15), edgeMat));
+  _shapeGroup.add(mesh);
+
+  // Build cutting plane helper
+  updatePlaneHelper();
+}
+
+function updatePlaneHelper() {
+  // Remove old plane
+  _shapeGroup.children.forEach(function(c) {
+    if (c.userData && c.userData.isHelper) _shapeGroup.remove(c);
+  });
+  if (_sectionMesh) { _shapeGroup.remove(_sectionMesh); _sectionMesh = null; }
+
+  var y = parseFloat(document.getElementById('sl-y').value);
+  var angle = parseFloat(document.getElementById('sl-angle').value) * Math.PI / 180;
+  var rot = parseFloat(document.getElementById('sl-rot').value) * Math.PI / 180;
+
+  // Semi-transparent plane
+  var planeGeo = new THREE.PlaneGeometry(4, 4);
+  var planeMat = new THREE.MeshBasicMaterial({ color: 0xec4899, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
+  var plane = new THREE.Mesh(planeGeo, planeMat);
+  plane.position.y = y + 1.2;
+  plane.rotation.x = -Math.PI / 2;
+  // Apply angle tilt
+  plane.rotation.z = angle;
+  plane.rotation.y = rot;
+  plane.userData = { isHelper: true };
+  _shapeGroup.add(plane);
+
+  // Plane edge ring
+  var ringGeo = new THREE.EdgesGeometry(planeGeo);
+  var ringMat = new THREE.LineBasicMaterial({ color: 0xec4899, transparent: true, opacity: 0.5 });
+  var ring = new THREE.LineSegments(ringGeo, ringMat);
+  ring.position.copy(plane.position);
+  ring.rotation.copy(plane.rotation);
+  ring.userData = { isHelper: true };
+  _shapeGroup.add(ring);
+
+  _planeHelper = plane;
+}
+
+function onSlider() {
+  var y = parseFloat(document.getElementById('sl-y').value);
+  var angle = parseFloat(document.getElementById('sl-angle').value);
+  var rot = parseFloat(document.getElementById('sl-rot').value);
+  document.getElementById('val-y').textContent = y.toFixed(1);
+  document.getElementById('val-angle').textContent = angle + '°';
+  document.getElementById('val-rot').textContent = rot + '°';
+  updatePlaneHelper();
+}
+
+function doCut() {
+  _isCut = true;
+  var y = parseFloat(document.getElementById('sl-y').value);
+  var angle = parseFloat(document.getElementById('sl-angle').value);
+  var info = getSectionInfo(y, angle);
+
+  document.getElementById('section-name').textContent = info.name;
+  document.getElementById('section-desc').innerHTML = info.desc;
+
+  // Draw section shape on the plane
+  if (_sectionMesh) _shapeGroup.remove(_sectionMesh);
+
+  var sectionGeo = createSectionGeo(info);
+  if (sectionGeo) {
+    var sectionMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24, side: THREE.DoubleSide, transparent: true, opacity: 0.85 });
+    _sectionMesh = new THREE.Mesh(sectionGeo, sectionMat);
+    var rot = parseFloat(document.getElementById('sl-rot').value) * Math.PI / 180;
+    _sectionMesh.position.y = y + 1.2;
+    _sectionMesh.rotation.set(0, rot, angle * Math.PI / 180);
+    _sectionMesh.rotation.x = -Math.PI / 2;
+    // Fix rotation order
+    _sectionMesh.rotation.set(-Math.PI / 2, rot, angle * Math.PI / 180);
+    _shapeGroup.add(_sectionMesh);
+
+    // Section outline
+    var outlineGeo = new THREE.EdgesGeometry(sectionGeo);
+    var outlineMat = new THREE.LineBasicMaterial({ color: 0xb45309, linewidth: 2 });
+    _sectionMesh.add(new THREE.LineSegments(outlineGeo, outlineMat));
+  }
+}
+
+function getSectionInfo(y, angleDeg) {
+  var absAngle = Math.abs(angleDeg);
+  var absY = Math.abs(y);
+
+  switch (_currentShape) {
+    case 'cube': {
+      if (absAngle < 2) {
+        if (absY < 0.05) return { name: '正方形', desc: '水平切过正方体中心，截面为正方形' };
+        return { name: '长方形', desc: '水平切过正方体，截面为长方形<br/>平行于正方体的面切割，截面形状与面相同' };
+      }
+      if (absAngle >= 35 && absAngle <= 55 && absY < 0.3) {
+        return { name: '正六边形', desc: '斜切过正方体中心，截面可得到正六边形<br/>这是正方体截面中最复杂的形状' };
+      }
+      if (absAngle > 2 && absAngle < 35) {
+        if (absY < 0.5) return { name: '菱形/平行四边形', desc: '小角度斜切，截面为菱形或平行四边形' };
+        return { name: '梯形', desc: '斜切偏离中心，截面为梯形' };
+      }
+      if (absY > 0.8) return { name: '三角形', desc: '斜切经过顶点附近，截面为三角形' };
+      if (absAngle > 55) return { name: '五边形', desc: '大角度斜切，截面为五边形' };
+      return { name: '四边形', desc: '斜切正方体，截面为四边形' };
+    }
+    case 'cylinder': {
+      if (absAngle < 2) return { name: '圆形', desc: '水平切圆柱，截面为圆形<br/>截面与底面平行' };
+      if (absAngle > 75) return { name: '长方形', desc: '竖直切圆柱，截面为长方形<br/>切面过圆柱的轴线' };
+      return { name: '椭圆', desc: '斜切圆柱，截面为椭圆形<br/>角度越大，椭圆越扁' };
+    }
+    case 'cone': {
+      if (absAngle < 2) return { name: '圆形', desc: '水平切圆锥，截面为圆形<br/>越靠近底部，圆越大' };
+      if (absAngle > 70 && absY < -0.5) return { name: '三角形', desc: '竖直切过圆锥顶点，截面为三角形' };
+      return { name: '椭圆/抛物线形', desc: '斜切圆锥，截面为椭圆形或抛物线形<br/>这是圆锥曲线的来源' };
+    }
+    case 'sphere': {
+      return { name: '圆形', desc: '无论从什么角度切球体，截面始终是圆形<br/>过球心的截面得到最大的圆（大圆）<br/>偏离球心越多，截面圆越小' };
+    }
+    case 'prism': {
+      if (absAngle < 2) return { name: '三角形', desc: '水平切三棱柱，截面为三角形<br/>与底面形状相同' };
+      if (absAngle > 70) return { name: '长方形', desc: '竖直切三棱柱，截面为长方形' };
+      return { name: '梯形/四边形', desc: '斜切三棱柱，截面为梯形或四边形' };
+    }
+    case 'pyramid': {
+      if (absAngle < 2) return { name: '正方形', desc: '水平切四棱锥，截面为正方形<br/>越靠近底部，正方形越大' };
+      if (absAngle > 70 && absY > 0.5) return { name: '三角形', desc: '竖直切过顶点，截面为三角形' };
+      return { name: '梯形/四边形', desc: '斜切四棱锥，截面为梯形或四边形' };
+    }
+    default:
+      return { name: '未知', desc: '调节参数查看截面' };
+  }
+}
+
+function createSectionGeo(info) {
+  var name = info.name;
+  if (name.indexOf('正方形') >= 0) return new THREE.PlaneGeometry(1.6, 1.6);
+  if (name.indexOf('长方形') >= 0 || name.indexOf('矩形') >= 0) return new THREE.PlaneGeometry(2, 1.2);
+  if (name.indexOf('圆') >= 0) return new THREE.CircleGeometry(0.9, 48);
+  if (name.indexOf('椭圆') >= 0) {
+    var curve = new THREE.EllipseCurve(0, 0, 1.2, 0.6, 0, Math.PI * 2, false, 0);
+    var pts = curve.getPoints(48).map(function(p) { return new THREE.Vector3(p.x, p.y, 0); });
+    var shape = new THREE.Shape(pts);
+    return new THREE.ShapeGeometry(shape);
+  }
+  if (name.indexOf('三角') >= 0) {
+    var s = new THREE.Shape();
+    s.moveTo(0, 0.8); s.lineTo(-0.7, -0.5); s.lineTo(0.7, -0.5); s.closePath();
+    return new THREE.ShapeGeometry(s);
+  }
+  if (name.indexOf('六边形') >= 0) {
+    var s2 = new THREE.Shape();
+    for (var i = 0; i < 6; i++) {
+      var a = Math.PI / 3 * i - Math.PI / 6;
+      var x = Math.cos(a) * 0.8, y2 = Math.sin(a) * 0.8;
+      if (i === 0) s2.moveTo(x, y2); else s2.lineTo(x, y2);
+    }
+    s2.closePath();
+    return new THREE.ShapeGeometry(s2);
+  }
+  if (name.indexOf('五边形') >= 0) {
+    var s3 = new THREE.Shape();
+    for (var j = 0; j < 5; j++) {
+      var a2 = Math.PI * 2 / 5 * j - Math.PI / 2;
+      var x2 = Math.cos(a2) * 0.8, y3 = Math.sin(a2) * 0.8;
+      if (j === 0) s3.moveTo(x2, y3); else s3.lineTo(x2, y3);
+    }
+    s3.closePath();
+    return new THREE.ShapeGeometry(s3);
+  }
+  if (name.indexOf('梯形') >= 0) {
+    var s4 = new THREE.Shape();
+    s4.moveTo(-0.5, 0.5); s4.lineTo(0.5, 0.5); s4.lineTo(0.8, -0.5); s4.lineTo(-0.8, -0.5); s4.closePath();
+    return new THREE.ShapeGeometry(s4);
+  }
+  if (name.indexOf('菱形') >= 0 || name.indexOf('平行四边形') >= 0) {
+    var s5 = new THREE.Shape();
+    s5.moveTo(0, 0.8); s5.lineTo(0.6, 0); s5.lineTo(0, -0.8); s5.lineTo(-0.6, 0); s5.closePath();
+    return new THREE.ShapeGeometry(s5);
+  }
+  // Default quadrilateral
+  var sd = new THREE.Shape();
+  sd.moveTo(-0.7, 0.5); sd.lineTo(0.6, 0.6); sd.lineTo(0.8, -0.4); sd.lineTo(-0.5, -0.5); sd.closePath();
+  return new THREE.ShapeGeometry(sd);
+}
+
+function setShape(key) {
+  _currentShape = key;
+  buildShape();
+  document.getElementById('section-name').textContent = '—';
+  document.getElementById('section-desc').textContent = '调节切割位置，点击"切一刀"查看截面';
+
+  Object.keys({ cube: 1, cylinder: 1, cone: 1, sphere: 1, prism: 1, pyramid: 1 }).forEach(function(k) {
+    var btn = document.getElementById('sb-' + k);
+    if (btn) btn.classList.toggle('active', k === key);
+  });
+
+  // Update info box per shape
+  var tips = {
+    cube: '正方体截面可以是：<strong>三角形、正方形、长方形、梯形、五边形、正六边形</strong>',
+    cylinder: '圆柱截面可以是：<strong>圆、椭圆、长方形</strong>（半圆不可能！）',
+    cone: '圆锥截面可以是：<strong>圆、椭圆、三角形、抛物线形</strong>',
+    sphere: '球体截面始终是<strong>圆形</strong>，过球心的最大',
+    prism: '三棱柱截面可以是：<strong>三角形、长方形、梯形</strong>',
+    pyramid: '四棱锥截面可以是：<strong>正方形、三角形、梯形</strong>',
+  };
+  var base = '<strong>截面知识</strong><br/>● 用一个平面去截几何体，截出的面叫做<strong>截面</strong><br/>● 截面形状由几何体和切割角度共同决定<br/>● ';
+  document.getElementById('info-box').innerHTML = base + (tips[key] || '');
+}
+
+function resetAll() {
+  document.getElementById('sl-y').value = 0;
+  document.getElementById('sl-angle').value = 0;
+  document.getElementById('sl-rot').value = 0;
+  document.getElementById('val-y').textContent = '0.0';
+  document.getElementById('val-angle').textContent = '0°';
+  document.getElementById('val-rot').textContent = '0°';
+  setShape('cube');
+}
+
+init();
+</script>
+</body>
+</html>
