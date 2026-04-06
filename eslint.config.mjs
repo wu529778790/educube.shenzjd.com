@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 静态资源目录：第三方库和独立 HTML 文件无需 ESLint 检查
+    "public/edu-lib/**",
+    "public/tools/**",
   ]),
 ]);
 

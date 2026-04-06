@@ -304,7 +304,7 @@ export async function POST(request: Request): Promise<Response> {
             REFINE_SYSTEM,
             buildRefineUserPrompt({ gradeLabel, subjectLabel, userIntent }),
           );
-        } catch (err) {
+        } catch {
           send("error", { error: "整理需求失败，请稍后重试" });
           cleanup();
           controller.close();
@@ -337,7 +337,7 @@ export async function POST(request: Request): Promise<Response> {
             return;
           }
           html = sanitizeHtml(raw, { preserveInlineEventHandlers: true });
-        } catch (err) {
+        } catch {
           send("error", { error: "生成失败，请稍后重试" });
           cleanup();
           controller.close();
