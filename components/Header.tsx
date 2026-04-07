@@ -1,6 +1,13 @@
+"use client";
+
 import Link from "next/link";
 
-export default function Header() {
+interface HeaderProps {
+  searchInput?: string;
+  onSearchChange?: (value: string) => void;
+}
+
+export default function Header({ searchInput, onSearchChange }: HeaderProps) {
   return (
     <header
       className="sticky top-0 z-50 backdrop-blur-xl border-b shadow-sm"
@@ -28,15 +35,56 @@ export default function Header() {
             </p>
           </div>
         </Link>
-        <Link
-          href="/generate"
-          className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-xl edu-btn-accent shrink-0 shadow-md hover:shadow-lg"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
-          </svg>
-          AI 生成
-        </Link>
+
+        <div className="flex items-center gap-2.5 shrink-0">
+          {onSearchChange && (
+            <div className="relative hidden sm:block">
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+                style={{ color: "rgba(255,255,255,0.5)" }}
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+                />
+              </svg>
+              <input
+                type="text"
+                value={searchInput ?? ""}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="搜索教具…"
+                aria-label="搜索教具"
+                className="w-48 lg:w-56 rounded-lg border bg-white/10 border-white/20 pl-9 pr-3 py-1.5 text-sm outline-none transition-all focus:bg-white/20 focus:border-white/40 placeholder-white/40"
+                style={{ color: "white" }}
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={() => onSearchChange("")}
+                  aria-label="清除搜索"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full flex items-center justify-center text-[10px] transition-colors"
+                  style={{ background: "rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.7)" }}
+                >
+                  &times;
+                </button>
+              )}
+            </div>
+          )}
+          <Link
+            href="/generate"
+            className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-xl edu-btn-accent shrink-0 shadow-md hover:shadow-lg"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+            </svg>
+            AI 生成
+          </Link>
+        </div>
       </div>
     </header>
   );
