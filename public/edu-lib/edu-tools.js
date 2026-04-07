@@ -8,21 +8,24 @@
  * @param {HTMLElement} [container] - 限制在容器内
  */
 function makeDraggable(el, container) {
-  const handle = el.querySelector(".drag-handle") || el;
-  let startX, startY, origX, origY;
+  var handle = el.querySelector(".drag-handle") || el;
+  var startX, startY, origX, origY;
 
   function getPos(e) {
-    return e.touches ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : { x: e.clientX, y: e.clientY };
+    if (e.touches && e.touches.length > 0) {
+      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    return { x: e.clientX, y: e.clientY };
   }
 
   function onStart(e) {
     // Don't drag if touching interactive elements inside the panel
-    if (e.target.closest('input, button, select, .quiz-opt')) return;
+    if (e.target.closest('input, button, select, textarea, .quiz-opt, a')) return;
     e.preventDefault();
-    const pos = getPos(e);
+    var pos = getPos(e);
     startX = pos.x;
     startY = pos.y;
-    const rect = el.getBoundingClientRect();
+    var rect = el.getBoundingClientRect();
     origX = rect.left;
     origY = rect.top;
     document.addEventListener("mousemove", onMove);
@@ -33,13 +36,13 @@ function makeDraggable(el, container) {
 
   function onMove(e) {
     e.preventDefault();
-    const pos = getPos(e);
-    let nx = origX + (pos.x - startX);
-    let ny = origY + (pos.y - startY);
+    var pos = getPos(e);
+    var nx = origX + (pos.x - startX);
+    var ny = origY + (pos.y - startY);
 
     // Keep panel within viewport
-    const ew = el.offsetWidth;
-    const eh = el.offsetHeight;
+    var ew = el.offsetWidth;
+    var eh = el.offsetHeight;
     nx = Math.max(0, Math.min(window.innerWidth - ew, nx));
     ny = Math.max(0, Math.min(window.innerHeight - eh, ny));
 
@@ -69,7 +72,7 @@ function makeDraggable(el, container) {
  */
 function bindSlider(slider, display, onChange, format) {
   function update() {
-    const val = parseFloat(slider.value);
+    var val = parseFloat(slider.value);
     if (display) display.textContent = format ? format(val) : String(val);
     if (onChange) onChange(val);
   }
@@ -83,8 +86,8 @@ function bindSlider(slider, display, onChange, format) {
  * @param {number} [decimals=0]
  * @returns {string}
  */
-function fmt(n, decimals = 0) {
-  return Number(n).toFixed(decimals);
+function fmt(n, decimals) {
+  return Number(n).toFixed(decimals || 0);
 }
 
 /**
@@ -112,10 +115,12 @@ function lerp(a, b, t) {
  * @param {number} delay ms
  */
 function debounce(fn, delay) {
-  let timer;
-  return function (...args) {
+  var timer;
+  return function () {
+    var args = arguments;
+    var ctx = this;
     clearTimeout(timer);
-    timer = setTimeout(() => fn.apply(this, args), delay);
+    timer = setTimeout(function () { fn.apply(ctx, args); }, delay);
   };
 }
 
@@ -127,17 +132,17 @@ function debounce(fn, delay) {
  * @param {number} step 格子大小
  * @param {string} [color]
  */
-function drawGrid(ctx, w, h, step, color = "#e2e8f0") {
+function drawGrid(ctx, w, h, step, color) {
   ctx.save();
-  ctx.strokeStyle = color;
+  ctx.strokeStyle = color || "#e2e8f0";
   ctx.lineWidth = 0.5;
-  for (let x = 0; x <= w; x += step) {
+  for (var x = 0; x <= w; x += step) {
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x, h);
     ctx.stroke();
   }
-  for (let y = 0; y <= h; y += step) {
+  for (var y = 0; y <= h; y += step) {
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(w, y);
@@ -152,71 +157,72 @@ function drawGrid(ctx, w, h, step, color = "#e2e8f0") {
  * @returns {{ ctx: CanvasRenderingContext2D, w: number, h: number }}
  */
 function setupCanvas(canvas) {
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
+  var dpr = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
   canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
-  const ctx = canvas.getContext("2d");
+  var ctx = canvas.getContext("2d");
   ctx.scale(dpr, dpr);
-  return { ctx, w: rect.width, h: rect.height };
+  return { ctx: ctx, w: rect.width, h: rect.height };
 }
 
 /* ═══════════════════════════════════════════════════════════════
    课堂大屏触屏模式初始化
+   所有教具默认启用：控制面板浮动、可拖拽、可折叠
    ═══════════════════════════════════════════════════════════════ */
 function initClassroomTool() {
-  // Activate classroom CSS mode
-  document.documentElement.setAttribute("data-classroom", "");
-
-  var panel = document.querySelector(".panel");
+  // Find the control panel (support both .control-panel and .panel)
+  var panel = document.querySelector(".control-panel") || document.querySelector(".panel");
   if (!panel) return;
 
-  // Add drag handle at the top of the panel
-  var handle = document.createElement("div");
-  handle.className = "drag-handle";
-  handle.innerHTML = '<span class="drag-handle-icon">⠿</span> 拖动移动';
-  panel.insertBefore(handle, panel.firstChild);
+  // Add drag handle at the top of the panel (only if not already present)
+  if (!panel.querySelector(".drag-handle")) {
+    var handle = document.createElement("div");
+    handle.className = "drag-handle";
+    handle.innerHTML = '<span class="drag-handle-icon">⠿</span> 拖动移动';
+    panel.insertBefore(handle, panel.firstChild);
+  }
 
   // Make the panel draggable
   makeDraggable(panel);
 
-  // Add collapse/expand toggle
-  var toggleBtn = document.createElement("div");
-  toggleBtn.className = "panel-toggle";
-  toggleBtn.innerHTML = "⚙";
-  toggleBtn.title = "显示控制面板";
-  document.body.appendChild(toggleBtn);
+  // Add collapse/expand toggle button (only if not already present)
+  if (!document.querySelector(".panel-toggle")) {
+    var toggleBtn = document.createElement("div");
+    toggleBtn.className = "panel-toggle";
+    toggleBtn.innerHTML = "⚙";
+    toggleBtn.title = "显示控制面板";
+    document.body.appendChild(toggleBtn);
 
-  var collapsed = false;
-  toggleBtn.addEventListener("click", function () {
-    collapsed = !collapsed;
-    panel.style.display = collapsed ? "none" : "";
-    toggleBtn.innerHTML = collapsed ? "⚙" : "✕";
-    toggleBtn.title = collapsed ? "显示控制面板" : "隐藏控制面板";
-    toggleBtn.classList.toggle("visible", collapsed);
-    // Trigger canvas resize when panel is hidden/shown
-    window.dispatchEvent(new Event("resize"));
-  });
+    var collapsed = false;
+    toggleBtn.addEventListener("click", function () {
+      collapsed = !collapsed;
+      panel.style.display = collapsed ? "none" : "";
+      toggleBtn.innerHTML = collapsed ? "⚙" : "✕";
+      toggleBtn.title = collapsed ? "显示控制面板" : "隐藏控制面板";
+      toggleBtn.classList.toggle("visible", collapsed);
+      window.dispatchEvent(new Event("resize"));
+    });
+  }
 
-  // Add a close button at the top-right of the panel
-  var closeBtn = document.createElement("button");
-  closeBtn.innerHTML = "✕";
-  closeBtn.style.cssText =
-    "position:absolute;top:8px;right:10px;width:32px;height:32px;border:none;background:#f3f4f6;" +
-    "border-radius:8px;font-size:16px;cursor:pointer;color:#6b7280;display:flex;align-items:center;" +
-    "justify-content:center;z-index:10;";
-  closeBtn.title = "隐藏面板";
-  closeBtn.addEventListener("click", function () {
-    panel.style.display = "none";
-    toggleBtn.classList.add("visible");
-    collapsed = true;
-    window.dispatchEvent(new Event("resize"));
-  });
-  panel.style.position = "fixed";
-  panel.appendChild(closeBtn);
+  // Add close button at top-right of panel (only if not already present)
+  if (!panel.querySelector(".panel-close-btn")) {
+    var closeBtn = document.createElement("button");
+    closeBtn.className = "panel-close-btn";
+    closeBtn.innerHTML = "✕";
+    closeBtn.title = "隐藏面板";
+    closeBtn.addEventListener("click", function () {
+      panel.style.display = "none";
+      var tb = document.querySelector(".panel-toggle");
+      if (tb) tb.classList.add("visible");
+      window.dispatchEvent(new Event("resize"));
+    });
+    panel.style.position = "fixed";
+    panel.appendChild(closeBtn);
+  }
 }
 
-// Auto-initialize classroom mode when edu-tools.js is loaded
+// Auto-initialize when edu-tools.js is loaded
 if (typeof window !== "undefined") {
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initClassroomTool);

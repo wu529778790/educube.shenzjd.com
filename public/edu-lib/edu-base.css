@@ -271,41 +271,62 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   课堂大屏触屏模式 — 通过 data-classroom 属性激活
-   使用 [data-classroom] 选择器提升优先级，覆盖各工具内联样式
+   课堂大屏触屏模式 — 默认激活，所有教具均为大屏优化
+   使用高特异性选择器 + !important 覆盖各工具内联 <style>
    ═══════════════════════════════════════════════════════════════ */
 
 /* ── 工具栏：加大 ── */
-[data-classroom] .toolbar {
+.edu-toolbar {
   padding: 14px 24px !important;
 }
-[data-classroom] .toolbar h1 {
+.edu-toolbar-title {
   font-size: 22px !important;
+  font-weight: 800 !important;
 }
-[data-classroom] .toolbar span {
+.edu-toolbar-subtitle {
   font-size: 14px !important;
   padding: 4px 12px !important;
 }
 
+/* ── 全局按钮：加大触控热区 ── */
+.edu-btn {
+  padding: 12px 22px !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  border-radius: 10px !important;
+  min-height: 48px !important;
+}
+
+/* ── 滑块轨道和滑块：加大 ── */
+input[type="range"] {
+  height: 12px !important;
+  border-radius: 6px !important;
+}
+input[type="range"]::-webkit-slider-thumb {
+  width: 32px !important;
+  height: 32px !important;
+}
+
 /* ── 布局：面板浮动 ── */
-[data-classroom] .main {
+.main-layout {
   display: block !important;
   position: relative !important;
-  flex: 1;
-  overflow: hidden;
+  height: 100% !important;
 }
-[data-classroom] .canvas-wrap {
+.canvas-area,
+.canvas-wrap {
   position: absolute !important;
   inset: 0 !important;
+  border-left: none !important;
 }
-[data-classroom] .panel {
+.control-panel {
   position: fixed !important;
   right: 24px !important;
   top: 70px !important;
-  width: 360px !important;
+  width: 380px !important;
   max-height: calc(100vh - 90px) !important;
-  background: #fff !important;
-  border: 2px solid #d1d5db !important;
+  background: rgba(255,255,255,.97) !important;
+  border: 2px solid #c7cad0 !important;
   border-radius: 16px !important;
   padding: 16px !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18) !important;
@@ -319,22 +340,22 @@ input[type="range"]::-webkit-slider-thumb:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 0;
-  margin-bottom: 4px;
+  gap: 8px;
+  padding: 10px 0;
+  margin-bottom: 6px;
   cursor: grab;
-  color: #9ca3af;
-  font-size: 13px;
-  font-weight: 600;
-  border-bottom: 2px solid #e5e7eb;
+  color: #6b7280;
+  font-size: 15px;
+  font-weight: 700;
+  border-bottom: 2px solid #d1d5db;
   user-select: none;
   -webkit-user-select: none;
 }
 .drag-handle:active { cursor: grabbing; }
 .drag-handle-icon {
-  font-size: 16px;
-  letter-spacing: 2px;
-  color: #d1d5db;
+  font-size: 18px;
+  letter-spacing: 3px;
+  color: #9ca3af;
 }
 
 /* ── 面板折叠按钮 ── */
@@ -343,8 +364,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
   right: 24px;
   top: 70px;
   z-index: 101;
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   border-radius: 14px;
   border: 2px solid #d1d5db;
   background: #fff;
@@ -353,114 +374,248 @@ input[type="range"]::-webkit-slider-thumb:hover {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 22px;
+  font-size: 24px;
   user-select: none;
 }
 .panel-toggle.visible { display: flex; }
 
-/* ── 标签：加大加粗 ── */
-[data-classroom] .label {
-  font-size: 14px !important;
+/* ── 区段标题标签：加大加粗 ── */
+.ctrl-label {
+  font-size: 16px !important;
   font-weight: 800 !important;
-  color: #374151 !important;
-  letter-spacing: 0.02em !important;
-  margin-bottom: 2px !important;
+  color: #1e293b !important;
+  letter-spacing: 0.03em !important;
+  margin-bottom: 4px !important;
 }
 
-/* ── 按钮：加大触控热区 ── */
-[data-classroom] .btn {
-  padding: 10px 18px !important;
+/* ── 区段间距加大 ── */
+.ctrl-section {
+  gap: 10px !important;
+}
+
+/* ── 各类按钮：加大触控热区，深色字 ── */
+.pattern-btn,
+.mode-btn,
+.preset-btn,
+.shape-btn,
+.highlight-btn,
+.path-btn,
+.unfold-btn,
+.obj-btn,
+.drop-btn,
+.reset-btn,
+.unit-btn,
+.anim-btn,
+.cut-btn,
+.mode-tab,
+.ratio-chip,
+.mini-btn,
+.shape-card,
+.view-rebuild .action-btn {
+  padding: 12px 16px !important;
   font-size: 16px !important;
   font-weight: 700 !important;
   border-radius: 10px !important;
-  min-height: 44px !important;
+  min-height: 48px !important;
+  color: #374151 !important;
 }
-[data-classroom] .row {
-  gap: 8px !important;
+.pattern-btn.active,
+.mode-btn.active,
+.preset-btn.active,
+.shape-btn.active,
+.highlight-btn.active,
+.path-btn.active,
+.obj-btn.active,
+.unit-btn.active,
+.shape-card.active,
+.mode-tab.active {
+  color: #fff !important;
 }
 
 /* ── 滑块行：加大 ── */
-[data-classroom] .slider-row {
-  gap: 10px !important;
-  min-height: 44px !important;
+.slider-row {
+  gap: 12px !important;
+  min-height: 48px !important;
 }
-[data-classroom] .slider-row label {
-  font-size: 15px !important;
-  font-weight: 700 !important;
-  min-width: 44px !important;
-}
-[data-classroom] .slider-row .val {
-  font-size: 20px !important;
-  font-weight: 800 !important;
-  min-width: 40px !important;
-}
-
-/* ── 滑块轨道和滑块：加大 ── */
-[data-classroom] input[type="range"] {
-  height: 10px !important;
-  border-radius: 5px !important;
-}
-[data-classroom] input[type="range"]::-webkit-slider-thumb {
-  width: 28px !important;
-  height: 28px !important;
-}
-
-/* ── 数值显示卡：加大 ── */
-[data-classroom] .time-box .time,
-[data-classroom] .fn-display .fn {
-  font-size: 36px !important;
-}
-[data-classroom] .time-box .sub {
-  font-size: 15px !important;
-}
-[data-classroom] .fn-display .sub {
-  font-size: 14px !important;
-}
-
-/* ── 测验：加大 ── */
-[data-classroom] .quiz-q {
-  font-size: 18px !important;
-  font-weight: 700 !important;
-}
-[data-classroom] .quiz-opt {
-  font-size: 18px !important;
-  font-weight: 700 !important;
-  padding: 14px !important;
-  min-height: 52px !important;
-  border-radius: 12px !important;
-}
-[data-classroom] .quiz-result {
+.slider-row label {
   font-size: 16px !important;
+  font-weight: 700 !important;
+  min-width: 50px !important;
+  color: #1e293b !important;
 }
-[data-classroom] .quiz-card {
-  padding: 14px !important;
-}
-[data-classroom] .quiz-opts {
-  gap: 10px !important;
+.slider-row .val {
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  min-width: 48px !important;
 }
 
-/* ── 信息卡片：加大 ── */
-[data-classroom] .info {
-  font-size: 14px !important;
+/* ── 信息卡片：加大加粗 ── */
+.info-box {
+  font-size: 16px !important;
   line-height: 2 !important;
-  padding: 12px 14px !important;
+  padding: 14px 16px !important;
+  color: #1e293b !important;
 }
-
-/* ── 分隔线 ── */
-[data-classroom] .divider {
-  height: 2px !important;
-  margin: 4px 0 !important;
+.info-box strong {
+  font-size: 17px !important;
 }
 
 /* ── 属性行：加大 ── */
-[data-classroom] .prop-row .prop-val {
-  font-size: 18px !important;
+.prop-row {
+  padding: 6px 0 !important;
 }
-[data-classroom] .prop-row .prop-label {
-  font-size: 13px !important;
+.prop-label {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #374151 !important;
+}
+.prop-value {
+  font-size: 20px !important;
+  font-weight: 800 !important;
 }
 
-/* ── section 间距加大 ── */
-[data-classroom] .section {
-  gap: 8px !important;
+/* ── 结果卡片：加大 ── */
+.result-card,
+.result-big,
+.convert-card,
+.section-result,
+.compare-box {
+  font-size: 16px !important;
+  padding: 14px 16px !important;
+  line-height: 1.8 !important;
+}
+.result-val,
+.result-big,
+.convert-equation {
+  font-size: 22px !important;
+  font-weight: 800 !important;
+}
+
+/* ── 水位显示：加大 ── */
+.water-info .water-level-val {
+  font-size: 32px !important;
+  font-weight: 800 !important;
+}
+.water-info .water-level-label,
+.water-info .water-level-unit {
+  font-size: 16px !important;
+}
+
+/* ── 倒沙计数：加大 ── */
+.pour-count {
+  font-size: 28px !important;
+  font-weight: 800 !important;
+}
+
+/* ── 进度条：加粗 ── */
+.progress-bar {
+  height: 8px !important;
+  border-radius: 4px !important;
+}
+
+/* ── 分隔线：加粗 ── */
+.divider {
+  height: 2px !important;
+  margin: 6px 0 !important;
+}
+
+/* ── 提示栏：加大 ── */
+.orbit-hint {
+  font-size: 15px !important;
+  padding: 10px 20px !important;
+  border-radius: 24px !important;
+  color: #374151 !important;
+  font-weight: 600 !important;
+}
+
+/* ── 三视图画布：加大 ── */
+.view-title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+}
+
+/* ── 大标题显示 ── */
+.name-big {
+  font-size: 28px !important;
+  font-weight: 800 !important;
+}
+
+/* ── 匹配游戏行：加大 ── */
+.match-row {
+  min-height: 52px !important;
+  font-size: 16px !important;
+}
+.score-bar {
+  font-size: 18px !important;
+  font-weight: 800 !important;
+}
+
+/* ── 做一做/统计卡片 ── */
+.stat-card,
+.do-check,
+.paint-hint,
+.explore-toggle,
+.explore-body {
+  font-size: 16px !important;
+  line-height: 1.8 !important;
+}
+
+/* ── 操作记录区 ── */
+.step-log {
+  font-size: 15px !important;
+  max-height: 140px !important;
+}
+
+/* ── 面板关闭按钮 ── */
+.panel-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: #f3f4f6;
+  border-radius: 10px;
+  font-size: 20px;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+.panel-close-btn:hover {
+  background: #e5e7eb;
+}
+
+/* ── 输入框加大 ── */
+input[type="number"],
+input[type="text"],
+input[type="tel"] {
+  font-size: 16px !important;
+  padding: 10px !important;
+  min-height: 44px !important;
+}
+select {
+  font-size: 16px !important;
+  padding: 10px !important;
+  min-height: 44px !important;
+}
+
+/* ── checkbox 加大 ── */
+input[type="checkbox"] {
+  width: 22px !important;
+  height: 22px !important;
+}
+
+/* ── 小屏适配（保留） ── */
+@media (max-width: 640px) {
+  .control-panel {
+    position: fixed !important;
+    right: 8px !important;
+    top: 60px !important;
+    width: calc(100vw - 16px) !important;
+    max-height: 50vh !important;
+  }
 }
