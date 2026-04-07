@@ -43,9 +43,6 @@ export default function FilterPanel({
       className="max-w-6xl mx-auto px-4 sm:px-6 py-3 scroll-mt-20"
     >
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[11px] font-bold mr-1" style={{ color: "var(--edu-text-muted)" }}>
-          年级
-        </span>
         <FilterButton
           active={gradeId === "all"}
           onClick={() => onGradeChange("all")}
@@ -60,7 +57,7 @@ export default function FilterPanel({
             onClick={() => onGradeChange(g.id)}
             count={countForGrade(g.id)}
           >
-            {g.name.replace("年级", "")}
+            {g.name}
           </FilterButton>
         ))}
         <span className="px-1" style={{ color: "var(--edu-border)" }} aria-hidden>|</span>
@@ -71,7 +68,7 @@ export default function FilterPanel({
             onClick={() => onGradeChange(g.id)}
             count={countForGrade(g.id)}
           >
-            {g.name.replace("年级", "")}
+            {g.name}
           </FilterButton>
         ))}
         <span className="ml-auto text-xs" style={{ color: "var(--edu-text-muted)" }}>
