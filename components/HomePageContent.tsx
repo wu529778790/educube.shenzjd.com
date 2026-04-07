@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useDeferredValue, useCallback, useEffect } from "react";
-import type { SemesterFilter, Tool } from "@/data/tools";
+import type { Tool } from "@/data/tools";
 import { filterToolsByCatalog } from "@/data/tools";
 import { defaultCatalogPath } from "@/data/curriculum";
 import Header from "./Header";
@@ -21,38 +21,21 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // 从 URL 初始化筛选状态
   const [gradeId, setGradeId] = useState<string>(
     searchParams.get("grade") ?? defaultCatalogPath.gradeId,
   );
-  const [subjectId, setSubjectId] = useState<string>(
-    searchParams.get("subject") ?? defaultCatalogPath.subjectId,
-  );
-  const semesterParam = searchParams.get("semester");
-  const [semesterFilter, setSemesterFilter] = useState<SemesterFilter>(
-    semesterParam === "上册" || semesterParam === "下册" ? semesterParam : "all",
-  );
+  const subjectId = defaultCatalogPath.subjectId;
   const [searchInput, setSearchInput] = useState(searchParams.get("q") ?? "");
   const searchQuery = useDeferredValue(searchInput);
 
-  // 同步筛选条件到 URL（仅年级/学科/册别，搜索词由单独的 useEffect 管理）
   const syncFilterParams = useCallback(
-    (overrides: { grade?: string; subject?: string; semester?: string }) => {
+    (overrides: { grade?: string }) => {
       const next = new URLSearchParams(searchParams);
       const grade = overrides.grade ?? gradeId;
-      const subject = overrides.subject ?? subjectId;
-      const semester = overrides.semester ?? (semesterFilter === "all" ? "" : semesterFilter);
 
       if (grade && grade !== defaultCatalogPath.gradeId) next.set("grade", grade);
       else next.delete("grade");
 
-      if (subject && subject !== defaultCatalogPath.subjectId) next.set("subject", subject);
-      else next.delete("subject");
-
-      if (semester) next.set("semester", semester);
-      else next.delete("semester");
-
-      // 保留当前搜索词（从 URL params 读取，避免闭包过时）
       const currentQ = searchParams.get("q") ?? "";
       if (currentQ) next.set("q", currentQ);
       else next.delete("q");
@@ -60,16 +43,14 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
       const qs = next.toString();
       router.replace(qs ? `?${qs}` : "/", { scroll: false });
     },
-    [searchParams, gradeId, subjectId, semesterFilter, router],
+    [searchParams, gradeId, router],
   );
 
-  // 搜索词延迟同步到 URL（避免每次按键都触发 router.replace）
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
     if (searchQuery) next.set("q", searchQuery);
     else next.delete("q");
 
-    // 只更新 q 参数，保留其余参数不变
     const currentQ = searchParams.get("q") ?? "";
     if (currentQ !== searchQuery) {
       const qs = next.toString();
@@ -82,16 +63,6 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
     syncFilterParams({ grade: id });
   }, [syncFilterParams]);
 
-  const handleSubjectChange = useCallback((id: string) => {
-    setSubjectId(id);
-    syncFilterParams({ subject: id });
-  }, [syncFilterParams]);
-
-  const handleSemesterChange = useCallback((s: SemesterFilter) => {
-    setSemesterFilter(s);
-    syncFilterParams({ semester: s === "all" ? "" : s });
-  }, [syncFilterParams]);
-
   const handleSearchChange = useCallback((value: string) => {
     setSearchInput(value);
   }, []);
@@ -102,10 +73,7 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
   );
 
   const displayTools = useMemo(() => {
-    let list =
-      semesterFilter === "all"
-        ? catalogTools
-        : catalogTools.filter((t) => t.semester === semesterFilter);
+    let list = catalogTools;
 
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
@@ -119,7 +87,7 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
     }
 
     return sortToolsForDisplay(list);
-  }, [catalogTools, semesterFilter, searchQuery]);
+  }, [catalogTools, searchQuery]);
 
   return (
     <div className="min-h-screen" style={{ background: "var(--edu-bg)" }}>
@@ -219,12 +187,9 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
         tools={tools}
         gradeId={gradeId}
         subjectId={subjectId}
-        semesterFilter={semesterFilter}
         catalogTools={catalogTools}
         displayCount={displayTools.length}
         onGradeChange={handleGradeChange}
-        onSubjectChange={handleSubjectChange}
-        onSemesterChange={handleSemesterChange}
       />
 
       {/* ── 教具列表 ── */}
@@ -250,10 +215,10 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
         ) : displayTools.length === 0 ? (
           <EmptyState>
             <p className="font-medium mb-1" style={{ color: "var(--edu-text)" }}>
-              当前册别下暂无教具
+              当前年级下暂无教具
             </p>
             <p className="text-sm" style={{ color: "var(--edu-text-muted)" }}>
-              请展开「筛选条件」，将册别改为「全部」或切换另一册。
+              请切换到其他年级查看。
             </p>
           </EmptyState>
         ) : (
