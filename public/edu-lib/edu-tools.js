@@ -16,6 +16,8 @@ function makeDraggable(el, container) {
   }
 
   function onStart(e) {
+    // Don't drag if touching interactive elements inside the panel
+    if (e.target.closest('input, button, select, .quiz-opt')) return;
     e.preventDefault();
     const pos = getPos(e);
     startX = pos.x;
@@ -35,17 +37,15 @@ function makeDraggable(el, container) {
     let nx = origX + (pos.x - startX);
     let ny = origY + (pos.y - startY);
 
-    if (container) {
-      const cr = container.getBoundingClientRect();
-      const er = el.getBoundingClientRect();
-      nx = Math.max(cr.left, Math.min(cr.right - er.width, nx));
-      ny = Math.max(cr.top, Math.min(cr.bottom - er.height, ny));
-    }
+    // Keep panel within viewport
+    const ew = el.offsetWidth;
+    const eh = el.offsetHeight;
+    nx = Math.max(0, Math.min(window.innerWidth - ew, nx));
+    ny = Math.max(0, Math.min(window.innerHeight - eh, ny));
 
-    el.style.position = "fixed";
     el.style.left = nx + "px";
     el.style.top = ny + "px";
-    el.style.margin = "0";
+    el.style.right = "auto";
   }
 
   function onEnd() {
@@ -159,4 +159,68 @@ function setupCanvas(canvas) {
   const ctx = canvas.getContext("2d");
   ctx.scale(dpr, dpr);
   return { ctx, w: rect.width, h: rect.height };
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   课堂大屏触屏模式初始化
+   ═══════════════════════════════════════════════════════════════ */
+function initClassroomTool() {
+  // Activate classroom CSS mode
+  document.documentElement.setAttribute("data-classroom", "");
+
+  var panel = document.querySelector(".panel");
+  if (!panel) return;
+
+  // Add drag handle at the top of the panel
+  var handle = document.createElement("div");
+  handle.className = "drag-handle";
+  handle.innerHTML = '<span class="drag-handle-icon">⠿</span> 拖动移动';
+  panel.insertBefore(handle, panel.firstChild);
+
+  // Make the panel draggable
+  makeDraggable(panel);
+
+  // Add collapse/expand toggle
+  var toggleBtn = document.createElement("div");
+  toggleBtn.className = "panel-toggle";
+  toggleBtn.innerHTML = "⚙";
+  toggleBtn.title = "显示控制面板";
+  document.body.appendChild(toggleBtn);
+
+  var collapsed = false;
+  toggleBtn.addEventListener("click", function () {
+    collapsed = !collapsed;
+    panel.style.display = collapsed ? "none" : "";
+    toggleBtn.innerHTML = collapsed ? "⚙" : "✕";
+    toggleBtn.title = collapsed ? "显示控制面板" : "隐藏控制面板";
+    toggleBtn.classList.toggle("visible", collapsed);
+    // Trigger canvas resize when panel is hidden/shown
+    window.dispatchEvent(new Event("resize"));
+  });
+
+  // Add a close button at the top-right of the panel
+  var closeBtn = document.createElement("button");
+  closeBtn.innerHTML = "✕";
+  closeBtn.style.cssText =
+    "position:absolute;top:8px;right:10px;width:32px;height:32px;border:none;background:#f3f4f6;" +
+    "border-radius:8px;font-size:16px;cursor:pointer;color:#6b7280;display:flex;align-items:center;" +
+    "justify-content:center;z-index:10;";
+  closeBtn.title = "隐藏面板";
+  closeBtn.addEventListener("click", function () {
+    panel.style.display = "none";
+    toggleBtn.classList.add("visible");
+    collapsed = true;
+    window.dispatchEvent(new Event("resize"));
+  });
+  panel.style.position = "fixed";
+  panel.appendChild(closeBtn);
+}
+
+// Auto-initialize classroom mode when edu-tools.js is loaded
+if (typeof window !== "undefined") {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initClassroomTool);
+  } else {
+    initClassroomTool();
+  }
 }

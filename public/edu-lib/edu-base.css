@@ -269,3 +269,198 @@ input[type="range"]::-webkit-slider-thumb:hover {
   background: var(--edu-border);
   flex-shrink: 0;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   课堂大屏触屏模式 — 通过 data-classroom 属性激活
+   使用 [data-classroom] 选择器提升优先级，覆盖各工具内联样式
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 工具栏：加大 ── */
+[data-classroom] .toolbar {
+  padding: 14px 24px !important;
+}
+[data-classroom] .toolbar h1 {
+  font-size: 22px !important;
+}
+[data-classroom] .toolbar span {
+  font-size: 14px !important;
+  padding: 4px 12px !important;
+}
+
+/* ── 布局：面板浮动 ── */
+[data-classroom] .main {
+  display: block !important;
+  position: relative !important;
+  flex: 1;
+  overflow: hidden;
+}
+[data-classroom] .canvas-wrap {
+  position: absolute !important;
+  inset: 0 !important;
+}
+[data-classroom] .panel {
+  position: fixed !important;
+  right: 24px !important;
+  top: 70px !important;
+  width: 360px !important;
+  max-height: calc(100vh - 90px) !important;
+  background: #fff !important;
+  border: 2px solid #d1d5db !important;
+  border-radius: 16px !important;
+  padding: 16px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18) !important;
+  z-index: 100 !important;
+  overflow: auto !important;
+  border-left: none !important;
+}
+
+/* ── 拖拽手柄 ── */
+.drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 0;
+  margin-bottom: 4px;
+  cursor: grab;
+  color: #9ca3af;
+  font-size: 13px;
+  font-weight: 600;
+  border-bottom: 2px solid #e5e7eb;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.drag-handle:active { cursor: grabbing; }
+.drag-handle-icon {
+  font-size: 16px;
+  letter-spacing: 2px;
+  color: #d1d5db;
+}
+
+/* ── 面板折叠按钮 ── */
+.panel-toggle {
+  position: fixed;
+  right: 24px;
+  top: 70px;
+  z-index: 101;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  border: 2px solid #d1d5db;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 22px;
+  user-select: none;
+}
+.panel-toggle.visible { display: flex; }
+
+/* ── 标签：加大加粗 ── */
+[data-classroom] .label {
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  color: #374151 !important;
+  letter-spacing: 0.02em !important;
+  margin-bottom: 2px !important;
+}
+
+/* ── 按钮：加大触控热区 ── */
+[data-classroom] .btn {
+  padding: 10px 18px !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  border-radius: 10px !important;
+  min-height: 44px !important;
+}
+[data-classroom] .row {
+  gap: 8px !important;
+}
+
+/* ── 滑块行：加大 ── */
+[data-classroom] .slider-row {
+  gap: 10px !important;
+  min-height: 44px !important;
+}
+[data-classroom] .slider-row label {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  min-width: 44px !important;
+}
+[data-classroom] .slider-row .val {
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  min-width: 40px !important;
+}
+
+/* ── 滑块轨道和滑块：加大 ── */
+[data-classroom] input[type="range"] {
+  height: 10px !important;
+  border-radius: 5px !important;
+}
+[data-classroom] input[type="range"]::-webkit-slider-thumb {
+  width: 28px !important;
+  height: 28px !important;
+}
+
+/* ── 数值显示卡：加大 ── */
+[data-classroom] .time-box .time,
+[data-classroom] .fn-display .fn {
+  font-size: 36px !important;
+}
+[data-classroom] .time-box .sub {
+  font-size: 15px !important;
+}
+[data-classroom] .fn-display .sub {
+  font-size: 14px !important;
+}
+
+/* ── 测验：加大 ── */
+[data-classroom] .quiz-q {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+}
+[data-classroom] .quiz-opt {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  padding: 14px !important;
+  min-height: 52px !important;
+  border-radius: 12px !important;
+}
+[data-classroom] .quiz-result {
+  font-size: 16px !important;
+}
+[data-classroom] .quiz-card {
+  padding: 14px !important;
+}
+[data-classroom] .quiz-opts {
+  gap: 10px !important;
+}
+
+/* ── 信息卡片：加大 ── */
+[data-classroom] .info {
+  font-size: 14px !important;
+  line-height: 2 !important;
+  padding: 12px 14px !important;
+}
+
+/* ── 分隔线 ── */
+[data-classroom] .divider {
+  height: 2px !important;
+  margin: 4px 0 !important;
+}
+
+/* ── 属性行：加大 ── */
+[data-classroom] .prop-row .prop-val {
+  font-size: 18px !important;
+}
+[data-classroom] .prop-row .prop-label {
+  font-size: 13px !important;
+}
+
+/* ── section 间距加大 ── */
+[data-classroom] .section {
+  gap: 8px !important;
+}
