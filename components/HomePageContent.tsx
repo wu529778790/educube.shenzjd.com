@@ -104,8 +104,8 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
       />
 
       {/* ── 搜索框 ── */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-2">
-        <div className="relative max-w-lg">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-2 flex justify-center">
+        <div className="relative w-full max-w-lg">
           <svg
             className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 pointer-events-none"
             style={{ color: "var(--edu-text-muted)" }}
