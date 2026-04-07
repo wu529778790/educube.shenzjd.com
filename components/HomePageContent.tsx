@@ -93,96 +93,7 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
     <div className="min-h-screen" style={{ background: "var(--edu-bg)" }}>
       <Header />
 
-      {/* ── Hero ── */}
-      <section className="relative overflow-hidden edu-paper-texture">
-        <div className="absolute inset-0 pointer-events-none">
-          <div
-            className="absolute -top-20 -right-20 w-96 h-96 rounded-full opacity-[0.07]"
-            style={{ background: "var(--edu-primary)" }}
-          />
-          <div
-            className="absolute -bottom-10 -left-10 w-64 h-64 rounded-full opacity-[0.08]"
-            style={{ background: "var(--edu-accent)" }}
-          />
-        </div>
-
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10 relative z-10">
-          <div className="max-w-2xl">
-            <h1
-              className="text-2xl sm:text-3xl leading-snug mb-2"
-              style={{ color: "var(--edu-text)", fontFamily: "var(--edu-font-serif)", fontWeight: 700 }}
-            >
-              课堂上的数学，
-              <br />
-              <span className="relative inline-block" style={{ color: "var(--edu-primary)" }}>
-                看得见、可操作
-                <svg
-                  className="absolute -bottom-1.5 left-0 w-full"
-                  height="5"
-                  viewBox="0 0 200 5"
-                  preserveAspectRatio="none"
-                >
-                  <path
-                    d="M0 3 Q50 0 100 3 Q150 6 200 3"
-                    style={{ stroke: "var(--edu-accent)" }}
-                    strokeWidth="3"
-                    fill="none"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </span>
-            </h1>
-
-            <p className="text-sm leading-relaxed mb-4" style={{ color: "var(--edu-text-secondary)" }}>
-              为数学老师提供即用型交互式教具，拿来就能上课。浏览器打开即用，无需安装。
-            </p>
-
-            {/* 搜索框 */}
-            <div className="relative max-w-lg">
-              <svg
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 pointer-events-none"
-                style={{ color: "var(--edu-text-muted)" }}
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-                />
-              </svg>
-              <input
-                type="text"
-                value={searchInput}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="搜索教具（如：分数、面积、时钟…）"
-                aria-label="搜索教具"
-                className="w-full rounded-xl border bg-white pl-10 pr-3 py-2.5 text-sm outline-none transition-all focus:border-[var(--edu-accent)] focus:ring-[3px] focus:ring-[rgba(232,137,12,0.15)]"
-                style={{
-                  borderColor: "var(--edu-border)",
-                  color: "var(--edu-text)",
-                  boxShadow: "0 2px 12px rgba(45, 58, 140, 0.06)",
-                }}
-              />
-              {searchInput && (
-                <button
-                  type="button"
-                  onClick={() => handleSearchChange("")}
-                  aria-label="清除搜索"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-xs transition-colors"
-                  style={{ background: "var(--edu-border)", color: "var(--edu-text-muted)" }}
-                >
-                  &times;
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 筛选面板 ── */}
+      {/* ── 筛选 + 搜索 ── */}
       <FilterPanel
         tools={tools}
         gradeId={gradeId}
@@ -191,6 +102,50 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
         displayCount={displayTools.length}
         onGradeChange={handleGradeChange}
       />
+
+      {/* ── 搜索框 ── */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-2">
+        <div className="relative max-w-lg">
+          <svg
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 pointer-events-none"
+            style={{ color: "var(--edu-text-muted)" }}
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+            />
+          </svg>
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="搜索教具（如：分数、面积、时钟…）"
+            aria-label="搜索教具"
+            className="w-full rounded-xl border bg-white pl-10 pr-3 py-2.5 text-sm outline-none transition-all focus:border-[var(--edu-accent)] focus:ring-[3px] focus:ring-[rgba(232,137,12,0.15)]"
+            style={{
+              borderColor: "var(--edu-border)",
+              color: "var(--edu-text)",
+              boxShadow: "0 2px 12px rgba(45, 58, 140, 0.06)",
+            }}
+          />
+          {searchInput && (
+            <button
+              type="button"
+              onClick={() => handleSearchChange("")}
+              aria-label="清除搜索"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-xs transition-colors"
+              style={{ background: "var(--edu-border)", color: "var(--edu-text-muted)" }}
+            >
+              &times;
+            </button>
+          )}
+        </div>
+      </section>
 
       {/* ── 教具列表 ── */}
       <section id="tools" className="max-w-6xl mx-auto px-4 sm:px-6 pb-20 scroll-mt-20">
