@@ -28,6 +28,14 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
   const [searchInput, setSearchInput] = useState(searchParams.get("q") ?? "");
   const searchQuery = useDeferredValue(searchInput);
 
+  // Sync state when URL params change (e.g. browser back/forward)
+  useEffect(() => {
+    const g = searchParams.get("grade") ?? defaultCatalogPath.gradeId;
+    if (g !== gradeId) setGradeId(g);
+    const q = searchParams.get("q") ?? "";
+    if (q !== searchInput) setSearchInput(q);
+  }, [searchParams]);
+
   const syncFilterParams = useCallback(
     (overrides: { grade?: string }) => {
       const next = new URLSearchParams(searchParams);
