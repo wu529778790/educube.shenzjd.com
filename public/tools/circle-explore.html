@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>圆的认识 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  * { box-sizing:border-box; }
+  body { font-family:var(--edu-font); margin:0; }
+  .tool { width:100vw; height:100vh; display:flex; flex-direction:column; background:var(--edu-bg); }
+  .toolbar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#fff; border-bottom:1px solid var(--edu-border); }
+  .toolbar h1 { font-size:15px; color:var(--edu-primary); margin:0; }
+  .toolbar span { font-size:11px; color:var(--edu-text-muted); background:#f1f5f9; padding:2px 8px; border-radius:12px; }
+  .main { flex:1; display:grid; grid-template-columns:1fr 290px; overflow:hidden; }
+  .canvas-wrap { position:relative; overflow:hidden; background:linear-gradient(135deg,#f0f9ff,#eff6ff); }
+  .canvas-wrap canvas { width:100%; height:100%; display:block; }
+  .panel { background:#fff; border-left:1px solid var(--edu-border); padding:12px; display:flex; flex-direction:column; gap:8px; overflow:auto; }
+  .section { display:flex; flex-direction:column; gap:4px; }
+  .label { font-size:10px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:var(--edu-border); }
+  .btn { padding:6px 12px; border:none; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:var(--edu-font); transition:all .15s; }
+  .btn.active { background:var(--edu-primary); color:#fff; }
+  .btn-default { background:#f1f5f9; color:#334155; }
+  .btn-default:hover { background:#e2e8f0; }
+  .row { display:flex; gap:4px; flex-wrap:wrap; }
+  .slider-row { display:flex; align-items:center; gap:6px; }
+  .slider-row label { font-size:11px; font-weight:700; min-width:32px; }
+  .slider-row input[type=range] { flex:1; }
+  .slider-row .val { font-size:12px; font-weight:800; min-width:28px; text-align:right; color:#1e40af; }
+
+  .stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+  .stat-card { text-align:center; padding:8px; border-radius:10px; }
+  .stat-card .val { font-size:18px; font-weight:800; }
+  .stat-card .lbl { font-size:9px; font-weight:700; margin-top:2px; }
+
+  .quiz-card { background:#eff6ff; border:2px solid #93c5fd; border-radius:12px; padding:10px; text-align:center; }
+  .quiz-q { font-size:13px; font-weight:700; color:#1e40af; }
+  .quiz-opts { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px; }
+  .quiz-opt { padding:6px; border:2px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; background:#fff; font-family:var(--edu-font); }
+  .quiz-opt:hover { border-color:#3b82f6; }
+  .quiz-opt.correct { background:#dcfce7; border-color:#22c55e; }
+  .quiz-opt.wrong { background:#fef2f2; border-color:#ef4444; }
+  .quiz-result { font-size:11px; font-weight:700; margin-top:4px; min-height:16px; }
+
+  .info { font-size:11px; line-height:1.8; color:#334155; background:#fff; border:1px solid #bfdbfe; border-radius:8px; padding:8px 10px; }
+  .info b { color:#1e40af; }
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar">
+    <h1>⭕ 圆的认识</h1>
+    <span>六年级上册 · 第五单元</span>
+  </div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="section">
+        <div class="label">调节半径</div>
+        <div class="slider-row">
+          <label>r =</label>
+          <input type="range" id="sl-r" min="1" max="10" value="5" step="0.5" oninput="setR(parseFloat(this.value))"/>
+          <div class="val" id="sl-r-val">5</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="stat-grid">
+        <div class="stat-card" style="background:#fee2e2"><div class="val" style="color:#dc2626" id="s-r">5</div><div class="lbl" style="color:#dc2626">半径 r</div></div>
+        <div class="stat-card" style="background:#fef3c7"><div class="val" style="color:#b45309" id="s-d">10</div><div class="lbl" style="color:#b45309">直径 d = 2r</div></div>
+        <div class="stat-card" style="background:#dcfce7"><div class="val" style="color:#16a34a" id="s-c">31.42</div><div class="lbl" style="color:#16a34a">周长 C = 2πr</div></div>
+        <div class="stat-card" style="background:#dbeafe"><div class="val" style="color:#2563eb" id="s-a">78.54</div><div class="lbl" style="color:#2563eb">面积 S = πr²</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">可视化模式</div>
+        <div class="row">
+          <button class="btn active" id="m-basic" onclick="setMode('basic')">⭕ 基本</button>
+          <button class="btn btn-default" id="m-pi" onclick="setMode('pi')">📐 π推导</button>
+          <button class="btn btn-default" id="m-area" onclick="setMode('area')">📊 面积</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px;font-size:11px;line-height:1.8;color:#334155" id="mode-info">
+        <b style="color:#1e40af">基本模式</b>：展示圆心O、半径r、直径d<br/>
+        拖动滑块改变半径大小
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">圆的测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>圆的小知识</b><br/>
+        ● 圆是到圆心距离等于半径的所有点的集合<br/>
+        ● <strong>d = 2r</strong>（直径 = 2倍半径）<br/>
+        ● <strong>C = 2πr = πd</strong>（周长公式）<br/>
+        ● <strong>S = πr²</strong>（面积公式）<br/>
+        ● π ≈ 3.14159…（无限不循环小数）
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx;
+var _r = 5, _mode = 'basic';
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+  updateStats();
+  nextQuiz();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function setR(val) {
+  _r = val;
+  document.getElementById('sl-r-val').textContent = val;
+  updateStats();
+  draw();
+}
+
+function setMode(m) {
+  _mode = m;
+  ['basic','pi','area'].forEach(function(id) {
+    document.getElementById('m-' + id).className = 'btn ' + (id === m ? 'active' : 'btn-default');
+  });
+  var info = {
+    basic: '<b style="color:#1e40af">基本模式</b>：展示圆心O、半径r、直径d<br/>拖动滑块改变半径大小',
+    pi: '<b style="color:#1e40af">π推导模式</b>：圆的周长 = 直径 × π<br/>将圆"展开"成直线，直观看到C = πd',
+    area: '<b style="color:#1e40af">面积模式</b>：将圆等分成扇形拼成近似矩形<br/>S = πr × r = πr²'
+  };
+  document.getElementById('mode-info').innerHTML = info[m];
+  draw();
+}
+
+function updateStats() {
+  var d = 2 * _r;
+  var c = 2 * Math.PI * _r;
+  var a = Math.PI * _r * _r;
+  document.getElementById('s-r').textContent = _r;
+  document.getElementById('s-d').textContent = d;
+  document.getElementById('s-c').textContent = c.toFixed(2);
+  document.getElementById('s-a').textContent = a.toFixed(2);
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  if (_mode === 'basic') drawBasic(w, h);
+  else if (_mode === 'pi') drawPi(w, h);
+  else drawArea(w, h);
+}
+
+function drawBasic(w, h) {
+  var cx = w / 2, cy = h / 2;
+  var r = Math.min(w, h) * 0.3;
+  r = Math.max(r, 60);
+
+  // Circle fill
+  ctx.fillStyle = 'rgba(59,130,246,0.08)';
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+
+  // Circle stroke
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+
+  // Center point
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI * 2); ctx.fill();
+
+  // Center label
+  ctx.fillStyle = '#1e293b';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('O', cx + 8, cy + 5);
+
+  // Radius line (to right)
+  ctx.strokeStyle = '#dc2626';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + r, cy); ctx.stroke();
+  // Arrow
+  ctx.fillStyle = '#dc2626';
+  ctx.beginPath();
+  ctx.moveTo(cx + r, cy);
+  ctx.lineTo(cx + r - 8, cy - 5);
+  ctx.lineTo(cx + r - 8, cy + 5);
+  ctx.closePath(); ctx.fill();
+
+  ctx.fillStyle = '#dc2626';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('r = ' + _r, cx + r / 2, cy - 10);
+
+  // Diameter line (through center, vertical)
+  ctx.strokeStyle = '#b45309';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 3]);
+  ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy + r); ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = '#b45309';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('d = ' + (2 * _r), cx + 8, cy + r / 2);
+
+  // Circumference label (arc)
+  ctx.fillStyle = '#16a34a';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('C = 2πr ≈ ' + (2 * Math.PI * _r).toFixed(2), cx, cy - r - 15);
+
+  // Area label
+  ctx.fillStyle = '#2563eb';
+  ctx.fillText('S = πr² ≈ ' + (Math.PI * _r * _r).toFixed(2), cx, cy + r + 25);
+
+  // Chord example (optional arc)
+  ctx.strokeStyle = '#8b5cf6';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx, cy, r * 0.6, -0.5, 0.8); ctx.stroke();
+  ctx.fillStyle = '#8b5cf6';
+  ctx.font = '10px sans-serif';
+  ctx.fillText('弧', cx + r * 0.6 * Math.cos(0.15) + 8, cy + r * 0.6 * Math.sin(0.15));
+}
+
+function drawPi(w, h) {
+  // Show circumference unrolled as a straight line
+  var cx = w / 2, cy = h * 0.35;
+  var visR = Math.min(w, h) * 0.22;
+  visR = Math.max(visR, 50);
+  var d = 2 * visR;
+  var lineLen = Math.PI * d;
+
+  // Circle
+  ctx.fillStyle = 'rgba(59,130,246,0.08)';
+  ctx.beginPath(); ctx.arc(cx, cy, visR, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(cx, cy, visR, 0, Math.PI * 2); ctx.stroke();
+
+  // Diameter line inside circle
+  ctx.strokeStyle = '#b45309';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx - visR, cy); ctx.lineTo(cx + visR, cy); ctx.stroke();
+  ctx.fillStyle = '#b45309';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('d = ' + (2 * _r), cx, cy + 5);
+
+  // Arrow from circle to line
+  ctx.strokeStyle = '#64748b';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath(); ctx.moveTo(cx, cy + visR + 10); ctx.lineTo(cx, h * 0.55); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Unrolled circumference line
+  var lineY = h * 0.65;
+  var scale = Math.min((w - 80) / lineLen, 1);
+  var lx0 = cx - lineLen * scale / 2;
+  var lx1 = cx + lineLen * scale / 2;
+
+  ctx.strokeStyle = '#16a34a';
+  ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(lx0, lineY); ctx.lineTo(lx1, lineY); ctx.stroke();
+
+  // End ticks
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(lx0, lineY - 8); ctx.lineTo(lx0, lineY + 8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(lx1, lineY - 8); ctx.lineTo(lx1, lineY + 8); ctx.stroke();
+
+  // Label: C = πd
+  ctx.fillStyle = '#16a34a';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('C = π × d = π × ' + (2 * _r) + ' ≈ ' + (Math.PI * 2 * _r).toFixed(2), cx, lineY - 20);
+
+  // Show π segments
+  // First mark d
+  var dLen = (lx1 - lx0) / Math.PI;
+  ctx.strokeStyle = '#b45309';
+  ctx.lineWidth = 2;
+  for (var i = 0; i <= 3; i++) {
+    var sx = lx0 + i * dLen;
+    if (sx > lx1 + 1) break;
+    ctx.setLineDash([3, 2]);
+    ctx.beginPath(); ctx.moveTo(sx, lineY + 8); ctx.lineTo(sx, lineY + 18); ctx.stroke();
+    ctx.setLineDash([]);
+    if (i < 3) {
+      ctx.fillStyle = '#b45309';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillText('d', sx + dLen / 2, lineY + 28);
+    }
+  }
+
+  // Formula box
+  ctx.fillStyle = '#1e40af';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('π ≈ 3.14159…  →  周长是直径的π倍', cx, lineY + 50);
+}
+
+function drawArea(w, h) {
+  // Cut circle into sectors and rearrange into approximate rectangle
+  var cx = w / 2, cy = h / 2;
+  var visR = Math.min(w, h) * 0.28;
+  visR = Math.max(visR, 50);
+  var sectors = 16;
+  var angleStep = Math.PI * 2 / sectors;
+
+  // Left half: circle with sectors
+  var leftCx = w * 0.25, leftCy = cy;
+
+  for (var i = 0; i < sectors; i++) {
+    var startA = i * angleStep - Math.PI / 2;
+    var endA = (i + 1) * angleStep - Math.PI / 2;
+    ctx.fillStyle = i % 2 === 0 ? 'rgba(59,130,246,0.25)' : 'rgba(239,68,68,0.25)';
+    ctx.strokeStyle = i % 2 === 0 ? '#3b82f6' : '#ef4444';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(leftCx, leftCy);
+    ctx.arc(leftCx, leftCy, visR, startA, endA);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = '#334155';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('圆 = ' + sectors + '个扇形', leftCx, leftCy + visR + 20);
+
+  // Arrow
+  ctx.fillStyle = '#64748b';
+  ctx.font = 'bold 20px sans-serif';
+  ctx.fillText('→', w * 0.42, cy);
+
+  // Right half: rearranged sectors (approx rectangle)
+  var rightCx = w * 0.68, rightCy = cy;
+  var sectorH = visR; // r
+  var halfSectorW = Math.PI * visR / sectors;
+  var totalW = sectors * halfSectorW;
+
+  for (var i = 0; i < sectors; i++) {
+    var x = rightCx - totalW / 2 + i * halfSectorW;
+    var y = i % 2 === 0 ? rightCy - sectorH : rightCy;
+    var sh = i % 2 === 0 ? sectorH : sectorH;
+    ctx.fillStyle = i % 2 === 0 ? 'rgba(59,130,246,0.25)' : 'rgba(239,68,68,0.25)';
+    ctx.strokeStyle = i % 2 === 0 ? '#3b82f6' : '#ef4444';
+    ctx.lineWidth = 1;
+    // Approximate sector as thin trapezoid
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + halfSectorW, y);
+    ctx.lineTo(x + halfSectorW, y + sh);
+    ctx.lineTo(x, y + sh);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // Labels
+  ctx.fillStyle = '#16a34a';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('≈ 矩形', rightCx, rightCy + sectorH + 20);
+
+  // Dimension labels
+  // Width = πr
+  ctx.strokeStyle = '#b45309';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(rightCx - totalW / 2, rightCy + sectorH + 30);
+  ctx.lineTo(rightCx + totalW / 2, rightCy + sectorH + 30);
+  ctx.stroke();
+  ctx.fillStyle = '#b45309';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.fillText('πr ≈ ' + (Math.PI * _r).toFixed(2), rightCx, rightCy + sectorH + 45);
+
+  // Height = r
+  ctx.strokeStyle = '#dc2626';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(rightCx + totalW / 2 + 10, rightCy - sectorH);
+  ctx.lineTo(rightCx + totalW / 2 + 10, rightCy + sectorH);
+  ctx.stroke();
+  ctx.fillStyle = '#dc2626';
+  ctx.textAlign = 'left';
+  ctx.fillText('r = ' + _r, rightCx + totalW / 2 + 15, rightCy + 5);
+
+  // Formula
+  ctx.fillStyle = '#1e40af';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('S = πr × r = πr² ≈ ' + (Math.PI * _r * _r).toFixed(2), w / 2, h - 30);
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '圆的周长公式是什么？', opts: ['C = πr', 'C = 2πr', 'C = πd²', 'C = πr²'], ans: 1 },
+  { q: '圆的面积公式是什么？', opts: ['S = 2πr', 'S = πd', 'S = πr²', 'S = 2πr²'], ans: 2 },
+  { q: '半径为3的圆，周长是多少？', opts: ['6π', '3π', '9π', '12π'], ans: 0 },
+  { q: '直径是半径的几倍？', opts: ['1倍', '2倍', '3倍', 'π倍'], ans: 1 },
+  { q: '圆的周长是直径的多少倍？', opts: ['2倍', '3倍', 'π倍', '2π倍'], ans: 2 },
+  { q: '半径为2的圆，面积是多少？', opts: ['4π', '2π', '8π', '16π'], ans: 0 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML =
+      '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) {
+    html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>';
+  });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) {
+    b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++;
+  setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

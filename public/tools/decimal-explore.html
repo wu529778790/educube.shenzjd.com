@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>小数的认识 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  * { box-sizing:border-box; }
+  body { font-family:var(--edu-font); margin:0; }
+  .tool { width:100vw; height:100vh; display:flex; flex-direction:column; background:var(--edu-bg); }
+  .toolbar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#fff; border-bottom:1px solid var(--edu-border); }
+  .toolbar h1 { font-size:15px; color:var(--edu-primary); margin:0; }
+  .toolbar span { font-size:11px; color:var(--edu-text-muted); background:#f1f5f9; padding:2px 8px; border-radius:12px; }
+  .main { flex:1; display:grid; grid-template-columns:1fr 290px; overflow:hidden; }
+  .canvas-wrap { position:relative; overflow:hidden; background:linear-gradient(135deg,#eff6ff,#f0f9ff); }
+  .canvas-wrap canvas { width:100%; height:100%; display:block; }
+  .panel { background:#fff; border-left:1px solid var(--edu-border); padding:12px; display:flex; flex-direction:column; gap:8px; overflow:auto; }
+  .section { display:flex; flex-direction:column; gap:4px; }
+  .label { font-size:10px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:var(--edu-border); }
+  .btn { padding:6px 12px; border:none; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:var(--edu-font); transition:all .15s; }
+  .btn.active { background:var(--edu-primary); color:#fff; }
+  .btn-default { background:#f1f5f9; color:#334155; }
+  .btn-default:hover { background:#e2e8f0; }
+  .row { display:flex; gap:4px; flex-wrap:wrap; }
+
+  .decimal-card { text-align:center; padding:12px; background:#eff6ff; border:2px solid #93c5fd; border-radius:12px; }
+  .decimal-card .val { font-size:36px; font-weight:800; color:#1e40af; }
+  .decimal-card .frac { font-size:14px; color:#3b82f6; margin-top:4px; }
+  .decimal-card .cn { font-size:12px; color:#64748b; margin-top:2px; }
+
+  .slider-row { display:flex; align-items:center; gap:6px; }
+  .slider-row label { font-size:11px; font-weight:700; min-width:32px; }
+  .slider-row input[type=range] { flex:1; }
+  .slider-row .val { font-size:12px; font-weight:800; min-width:36px; text-align:right; }
+
+  .compare-section { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:8px; }
+  .compare-row { display:flex; align-items:center; gap:6px; margin:3px 0; }
+  .compare-bar { height:16px; border-radius:8px; transition:width .3s; min-width:2px; }
+  .compare-label { font-size:11px; font-weight:700; min-width:40px; }
+
+  .quiz-card { background:#eff6ff; border:2px solid #93c5fd; border-radius:12px; padding:10px; text-align:center; }
+  .quiz-q { font-size:13px; font-weight:700; color:#1e40af; }
+  .quiz-opts { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px; }
+  .quiz-opt { padding:6px; border:2px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; background:#fff; font-family:var(--edu-font); }
+  .quiz-opt:hover { border-color:#3b82f6; }
+  .quiz-opt.correct { background:#dcfce7; border-color:#22c55e; }
+  .quiz-opt.wrong { background:#fef2f2; border-color:#ef4444; }
+  .quiz-result { font-size:11px; font-weight:700; margin-top:4px; min-height:16px; }
+
+  .info { font-size:11px; line-height:1.8; color:#334155; background:#fff; border:1px solid #bfdbfe; border-radius:8px; padding:8px 10px; }
+  .info b { color:#1e40af; }
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar">
+    <h1>🔢 小数的认识</h1>
+    <span>四年级下册 · 第四单元</span>
+  </div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="decimal-card">
+        <div class="val" id="dec-val">0.50</div>
+        <div class="frac" id="dec-frac">= 50/100 = 1/2</div>
+        <div class="cn" id="dec-cn">零点五零</div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">调节小数</div>
+        <div class="slider-row">
+          <label style="color:#1e40af">个位</label>
+          <input type="range" id="sl-int" min="0" max="9" value="0" oninput="onSlider()"/>
+          <div class="val" id="sl-int-v" style="color:#1e40af">0</div>
+        </div>
+        <div class="slider-row">
+          <label style="color:#dc2626">十分位</label>
+          <input type="range" id="sl-t" min="0" max="9" value="5" oninput="onSlider()"/>
+          <div class="val" id="sl-t-v" style="color:#dc2626">5</div>
+        </div>
+        <div class="slider-row">
+          <label style="color:#16a34a">百分位</label>
+          <input type="range" id="sl-h" min="0" max="9" value="0" oninput="onSlider()"/>
+          <div class="val" id="sl-h-v" style="color:#16a34a">0</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">快捷示例</div>
+        <div class="row">
+          <button class="btn btn-default" onclick="setVal(0,0,1)">0.01</button>
+          <button class="btn btn-default" onclick="setVal(0,1,0)">0.1</button>
+          <button class="btn btn-default" onclick="setVal(0,2,5)">0.25</button>
+          <button class="btn btn-default" onclick="setVal(0,5,0)">0.5</button>
+          <button class="btn btn-default" onclick="setVal(0,7,5)">0.75</button>
+          <button class="btn btn-default" onclick="setVal(1,0,0)">1.0</button>
+          <button class="btn btn-default" onclick="setVal(1,2,5)">1.25</button>
+          <button class="btn btn-default" onclick="setVal(3,1,4)">3.14</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">小数比较</div>
+        <div class="compare-section" id="compare-area"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">小数测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>小数小知识</b><br/>
+        ● 小数点左边是<strong>整数部分</strong>，右边是<strong>小数部分</strong><br/>
+        ● 小数点后第一位是<strong>十分位</strong>（0.1）<br/>
+        ● 小数点后第二位是<strong>百分位</strong>（0.01）<br/>
+        ● 比较小数先比整数部分，再比十分位、百分位<br/>
+        ● 小数末尾添0或去掉0，大小不变
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx;
+var _intPart = 0, _tenth = 5, _hundredth = 0;
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+  updateAll();
+  nextQuiz();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function onSlider() {
+  _intPart = parseInt(document.getElementById('sl-int').value);
+  _tenth = parseInt(document.getElementById('sl-t').value);
+  _hundredth = parseInt(document.getElementById('sl-h').value);
+  document.getElementById('sl-int-v').textContent = _intPart;
+  document.getElementById('sl-t-v').textContent = _tenth;
+  document.getElementById('sl-h-v').textContent = _hundredth;
+  updateAll();
+}
+
+function setVal(i, t, h) {
+  _intPart = i; _tenth = t; _hundredth = h;
+  document.getElementById('sl-int').value = i;
+  document.getElementById('sl-t').value = t;
+  document.getElementById('sl-h').value = h;
+  document.getElementById('sl-int-v').textContent = i;
+  document.getElementById('sl-t-v').textContent = t;
+  document.getElementById('sl-h-v').textContent = h;
+  updateAll();
+}
+
+function getVal() { return _intPart + _tenth * 0.1 + _hundredth * 0.01; }
+
+function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+
+function updateAll() {
+  var val = getVal();
+  var decStr = val.toFixed(2);
+
+  // Update card
+  document.getElementById('dec-val').textContent = decStr;
+
+  // Fraction
+  var num = Math.round(val * 100);
+  var g = gcd(num, 100);
+  var simpNum = num / g, simpDen = 100 / g;
+  var fracStr = num + '/100';
+  if (g > 1) fracStr += ' = ' + simpNum + '/' + simpDen;
+  document.getElementById('dec-frac').textContent = '= ' + fracStr;
+
+  // Chinese reading
+  var cn = '';
+  if (_intPart > 0) cn += _intPart;
+  cn += '点';
+  cn += _tenth;
+  cn += _hundredth;
+  document.getElementById('dec-cn').textContent = cn;
+
+  draw();
+  updateCompare();
+}
+
+function updateCompare() {
+  var val = getVal();
+  var comps = [0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, getVal()];
+  comps.sort(function(a, b) { return a - b; });
+  // Remove duplicates
+  var unique = [comps[0]];
+  for (var i = 1; i < comps.length; i++) {
+    if (Math.abs(comps[i] - comps[i-1]) > 0.001) unique.push(comps[i]);
+  }
+
+  var maxV = unique[unique.length - 1];
+  var html = '';
+  unique.forEach(function(v) {
+    var isCurrent = Math.abs(v - val) < 0.001;
+    var pct = maxV > 0 ? Math.round(v / maxV * 100) : 0;
+    html += '<div class="compare-row">' +
+      '<span class="compare-label" style="color:' + (isCurrent ? '#1e40af' : '#64748b') + ';font-weight:' + (isCurrent ? '800' : '600') + '">' + v.toFixed(2) + '</span>' +
+      '<div style="flex:1;background:#f1f5f9;border-radius:8px;height:16px;overflow:hidden">' +
+      '<div class="compare-bar" style="width:' + pct + '%;background:' + (isCurrent ? '#3b82f6' : '#94a3b8') + '"></div></div></div>';
+  });
+  document.getElementById('compare-area').innerHTML = html;
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+  var val = getVal();
+
+  // === Number line ===
+  var lineY = h * 0.35;
+  var lineX0 = 60, lineX1 = w - 60;
+  var lineW = lineX1 - lineX0;
+  var maxVal = Math.max(3, Math.ceil(val) + 1);
+  var step = lineW / maxVal;
+
+  // Background
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(lineX0 - 20, lineY - 50, lineW + 40, 100);
+
+  // Main line
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(lineX0, lineY);
+  ctx.lineTo(lineX1, lineY);
+  ctx.stroke();
+
+  // Ticks
+  for (var i = 0; i <= maxVal; i++) {
+    var x = lineX0 + i * step;
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x, lineY - 8); ctx.lineTo(x, lineY + 8); ctx.stroke();
+
+    ctx.fillStyle = '#334155';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(i, x, lineY + 24);
+
+    // Sub-ticks (0.1 marks)
+    if (i < maxVal) {
+      for (var j = 1; j <= 9; j++) {
+        var sx = x + j * step / 10;
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(sx, lineY - 4); ctx.lineTo(sx, lineY + 4); ctx.stroke();
+      }
+    }
+  }
+
+  // Current value marker
+  var markerX = lineX0 + val * step;
+  ctx.fillStyle = '#dc2626';
+  ctx.beginPath();
+  ctx.moveTo(markerX, lineY - 14);
+  ctx.lineTo(markerX - 7, lineY - 24);
+  ctx.lineTo(markerX + 7, lineY - 24);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#dc2626';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(val.toFixed(2), markerX, lineY - 30);
+
+  // === Grid visualization ===
+  var gridY = h * 0.55;
+  var gridSize = Math.min((w - 100) / 10, 50);
+  gridSize = Math.max(gridSize, 25);
+  var totalCells = 100;
+  var filledCells = Math.round(val * 100);
+  var cols = 10;
+
+  ctx.fillStyle = '#64748b';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('方格图（每格 = 0.01，共100格）', w / 2, gridY);
+
+  var gx0 = (w - cols * gridSize) / 2;
+  var gy0 = gridY + 10;
+
+  for (var i = 0; i < totalCells; i++) {
+    var c = i % cols, r = Math.floor(i / cols);
+    var x = gx0 + c * gridSize;
+    var y = gy0 + r * gridSize;
+
+    if (i < filledCells) {
+      ctx.fillStyle = 'rgba(59,130,246,0.35)';
+      ctx.fillRect(x, y, gridSize - 1, gridSize - 1);
+    }
+    ctx.strokeStyle = '#d1d5db';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(x, y, gridSize - 1, gridSize - 1);
+  }
+
+  // Grid count label
+  ctx.fillStyle = '#1e40af';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('涂色 ' + filledCells + ' 格 = ' + val.toFixed(2), w / 2, gy0 + 10 * gridSize + 20);
+
+  // === Place value breakdown ===
+  var pvY = gy0 + 10 * gridSize + 50;
+  if (pvY < h - 30) {
+    var boxW = 70, boxH = 55;
+    var bx0 = w / 2 - boxW * 1.8;
+
+    ctx.fillStyle = '#eff6ff';
+    ctx.fillRect(bx0, pvY, boxW, boxH);
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bx0, pvY, boxW, boxH);
+    ctx.fillStyle = '#1e40af';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(_intPart, bx0 + boxW/2, pvY + 30);
+    ctx.font = 'bold 9px sans-serif';
+    ctx.fillStyle = '#3b82f6';
+    ctx.fillText('个位', bx0 + boxW/2, pvY + 48);
+
+    // Dot
+    ctx.fillStyle = '#334155';
+    ctx.beginPath(); ctx.arc(bx0 + boxW + 15, pvY + boxH/2, 4, 0, Math.PI*2); ctx.fill();
+
+    // Tenths
+    ctx.fillStyle = '#fef2f2';
+    ctx.fillRect(bx0 + boxW + 30, pvY, boxW, boxH);
+    ctx.strokeStyle = '#dc2626';
+    ctx.strokeRect(bx0 + boxW + 30, pvY, boxW, boxH);
+    ctx.fillStyle = '#dc2626';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.fillText(_tenth, bx0 + boxW + 30 + boxW/2, pvY + 30);
+    ctx.font = 'bold 9px sans-serif';
+    ctx.fillText('十分位', bx0 + boxW + 30 + boxW/2, pvY + 48);
+
+    // Hundredths
+    ctx.fillStyle = '#f0fdf4';
+    ctx.fillRect(bx0 + boxW*2 + 60, pvY, boxW, boxH);
+    ctx.strokeStyle = '#16a34a';
+    ctx.strokeRect(bx0 + boxW*2 + 60, pvY, boxW, boxH);
+    ctx.fillStyle = '#16a34a';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.fillText(_hundredth, bx0 + boxW*2 + 60 + boxW/2, pvY + 30);
+    ctx.font = 'bold 9px sans-serif';
+    ctx.fillText('百分位', bx0 + boxW*2 + 60 + boxW/2, pvY + 48);
+  }
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '0.3 等于几分之几？', opts: ['3/10', '3/100', '1/3', '30/100'], ans: 0 },
+  { q: '0.25 等于几分之几？', opts: ['25/10', '1/4', '1/5', '25/100'], ans: 1 },
+  { q: '0.5 和 0.50 哪个大？', opts: ['0.5 大', '0.50 大', '一样大', '无法比较'], ans: 2 },
+  { q: '十分位上的3表示多少？', opts: ['3', '0.3', '0.03', '30'], ans: 1 },
+  { q: '1.2 和 1.19 谁大？', opts: ['1.2 大', '1.19 大', '一样大', '无法比较'], ans: 0 },
+  { q: '把 3 元 5 角写成小数是多少元？', opts: ['3.5 元', '3.05 元', '35 元', '0.35 元'], ans: 0 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML =
+      '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) {
+    html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>';
+  });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) {
+    b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++;
+  setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

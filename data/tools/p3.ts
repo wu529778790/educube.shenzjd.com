@@ -1,6 +1,6 @@
 import type { Tool } from "./types";
 
-/** 三年级教具（仅 3D） */
+/** 三年级教具 */
 export const p3Tools: Tool[] = [
   {
     id: "shape-explore",
@@ -31,5 +31,80 @@ export const p3Tools: Tool[] = [
     tags: ["积木计数", "空间推理", "三视图"],
     gradient: ["#22C55E", "#16A34A"],
     icon: "🧱",
+  },
+  {
+    id: "fraction-explore",
+    name: "分数的初步认识",
+    subtitle: "分数初步",
+    chapter: "上册 · 第八单元",
+    semester: "上册",
+    unitNum: 8,
+    gradeId: "p3",
+    subjectId: "math",
+    description:
+      "交互式分数可视化工具，支持圆饼和长条两种模式，可调节分母(2-8)和分子，实时显示分数比较条形图，包含6道分数测验题。",
+    tags: ["分数", "分母", "分子", "真分数", "平均分"],
+    gradient: ["#F97316", "#EA580C"],
+    icon: "🍕",
+  },
+  {
+    id: "area-perimeter",
+    name: "面积与周长对比",
+    subtitle: "面积",
+    chapter: "下册 · 第五单元",
+    semester: "下册",
+    unitNum: 5,
+    gradeId: "p3",
+    subjectId: "math",
+    description:
+      "在方格网上点击绘制图形，实时计算面积和周长，蓝色高亮周长边，提供6种预设形状，直观对比面积与周长的关系，含6道测验题。",
+    tags: ["面积", "周长", "方格网", "长方形", "正方形"],
+    gradient: ["#22C55E", "#3B82F6"],
+    icon: "📐",
+  },
+  {
+    id: "direction-map",
+    name: "方向与路线",
+    subtitle: "位置与方向",
+    chapter: "下册 · 第一单元",
+    semester: "下册",
+    unitNum: 1,
+    gradeId: "p3",
+    subjectId: "math",
+    description:
+      "8方向指南针控制小人在地图上移动，记录路线并显示方向描述，支持放置地标（学校/家/医院等），含6道方向测验题。",
+    tags: ["方向", "东南西北", "路线", "地图", "指南针"],
+    gradient: ["#3B82F6", "#2563EB"],
+    icon: "🧭",
+  },
+  {
+    id: "clock-face",
+    name: "时分秒互动钟表",
+    subtitle: "年月日·时分秒",
+    chapter: "下册 · 第六单元",
+    semester: "下册",
+    unitNum: 6,
+    gradeId: "p3",
+    subjectId: "math",
+    description:
+      "精美模拟钟表，通过滑块调节时分秒，时针/分针/秒针实时联动，内置计时器可测量经过时间，支持快捷时间预设，含6道时间测验题。",
+    tags: ["钟表", "时", "分", "秒", "时间", "计时"],
+    gradient: ["#8B5CF6", "#7C3AED"],
+    icon: "🕐",
+  },
+  {
+    id: "venn-set",
+    name: "集合与韦恩图",
+    subtitle: "数学广角",
+    chapter: "上册 · 数学广角",
+    semester: "上册",
+    unitNum: 9,
+    gradeId: "p3",
+    subjectId: "math",
+    description:
+      "交互式韦恩图工具，支持运动会/水果分类/动物分类三种场景，拖放元素到集合A、B或交集中，实时显示容斥公式计算，含6道集合测验题。",
+    tags: ["集合", "韦恩图", "交集", "并集", "容斥原理"],
+    gradient: ["#F59E0B", "#D97706"],
+    icon: "📊",
   },
 ];

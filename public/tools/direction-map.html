@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>方向与路线 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  * { box-sizing:border-box; }
+  body { font-family:var(--edu-font); margin:0; }
+  .tool { width:100vw; height:100vh; display:flex; flex-direction:column; background:var(--edu-bg); }
+  .toolbar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#fff; border-bottom:1px solid var(--edu-border); }
+  .toolbar h1 { font-size:15px; color:var(--edu-primary); margin:0; }
+  .toolbar span { font-size:11px; color:var(--edu-text-muted); background:#f1f5f9; padding:2px 8px; border-radius:12px; }
+  .main { flex:1; display:grid; grid-template-columns:1fr 280px; overflow:hidden; }
+  .canvas-wrap { position:relative; overflow:hidden; background:linear-gradient(135deg,#eff6ff,#f0f9ff); }
+  .canvas-wrap canvas { width:100%; height:100%; display:block; }
+  .panel { background:#fff; border-left:1px solid var(--edu-border); padding:12px; display:flex; flex-direction:column; gap:8px; overflow:auto; }
+  .section { display:flex; flex-direction:column; gap:4px; }
+  .label { font-size:10px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:var(--edu-border); }
+
+  .compass { display:grid; grid-template-columns:repeat(3,1fr); gap:3px; width:150px; margin:0 auto; }
+  .compass-btn {
+    width:48px; height:48px; border:2px solid #e2e8f0; border-radius:10px; font-size:12px; font-weight:700;
+    cursor:pointer; background:#fff; color:#334155; transition:all .15s; font-family:var(--edu-font); text-align:center; line-height:1.2;
+  }
+  .compass-btn:hover { border-color:#3b82f6; background:#eff6ff; }
+  .compass-btn.active { background:#3b82f6; color:#fff; border-color:#3b82f6; }
+  .compass-btn.center-btn { background:#f1f5f9; cursor:default; font-size:10px; color:#64748b; }
+  .compass-btn.empty { visibility:hidden; }
+
+  .dir-badge { display:inline-flex; align-items:center; gap:3px; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700; background:#dbeafe; color:#1e40af; }
+  .route-log { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:6px 8px; max-height:100px; overflow:auto; font-size:11px; line-height:1.6; color:#334155; }
+
+  .btn { padding:6px 12px; border:none; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:var(--edu-font); transition:all .15s; }
+  .btn-primary { background:#3b82f6; color:#fff; }
+  .btn-primary:hover { background:#2563eb; }
+  .btn-default { background:#f1f5f9; color:#334155; }
+  .btn-default:hover { background:#e2e8f0; }
+
+  .landmark-row { display:flex; gap:3px; flex-wrap:wrap; }
+  .lm-btn { padding:4px 8px; border:2px solid #e2e8f0; border-radius:8px; font-size:11px; cursor:pointer; background:#fff; font-family:var(--edu-font); transition:all .15s; }
+  .lm-btn:hover { border-color:#3b82f6; }
+  .lm-btn.active { background:#dbeafe; border-color:#3b82f6; }
+
+  .info { font-size:11px; line-height:1.8; color:#334155; background:#fff; border:1px solid #bfdbfe; border-radius:8px; padding:8px 10px; }
+  .info b { color:#1e40af; }
+
+  .quiz-card { background:#eff6ff; border:2px solid #93c5fd; border-radius:12px; padding:10px; text-align:center; }
+  .quiz-q { font-size:13px; font-weight:700; color:#1e40af; }
+  .quiz-opts { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px; }
+  .quiz-opt { padding:6px; border:2px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; background:#fff; font-family:var(--edu-font); }
+  .quiz-opt:hover { border-color:#3b82f6; }
+  .quiz-opt.correct { background:#dcfce7; border-color:#22c55e; }
+  .quiz-opt.wrong { background:#fef2f2; border-color:#ef4444; }
+  .quiz-result { font-size:11px; font-weight:700; margin-top:4px; min-height:16px; }
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar">
+    <h1>🧭 方向与路线</h1>
+    <span>三年级下册 · 第一单元</span>
+  </div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="section">
+        <div class="label">方向控制（点击移动小人）</div>
+        <div class="compass">
+          <div class="compass-btn empty"></div>
+          <button class="compass-btn" onclick="move('N')" title="北">⬆️<br>北</button>
+          <div class="compass-btn empty"></div>
+          <button class="compass-btn" onclick="move('W')" title="西">⬅️<br>西</button>
+          <div class="compass-btn center-btn" id="pos-label">📍</div>
+          <button class="compass-btn" onclick="move('E')" title="东">➡️<br>东</button>
+          <div class="compass-btn empty"></div>
+          <button class="compass-btn" onclick="move('S')" title="南">⬇️<br>南</button>
+          <div class="compass-btn empty"></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">路线记录</div>
+        <div class="route-log" id="route-log">点击方向按钮开始移动…</div>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-default" onclick="undoMove()">↩️ 撤销</button>
+          <button class="btn btn-default" onclick="clearRoute()">🗑️ 清空</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">放置地标</div>
+        <div class="landmark-row">
+          <button class="lm-btn active" onclick="setLandmark('🏫')" data-lm="🏫">🏫 学校</button>
+          <button class="lm-btn" onclick="setLandmark('🏠')" data-lm="🏠">🏠 家</button>
+          <button class="lm-btn" onclick="setLandmark('🏥')" data-lm="🏥">🏥 医院</button>
+          <button class="lm-btn" onclick="setLandmark('🏪')" data-lm="🏪">🏪 商店</button>
+          <button class="lm-btn" onclick="setLandmark('🌳')" data-lm="🌳">🌳 公园</button>
+        </div>
+        <div style="font-size:10px;color:#94a3b8">点击地图放置选中的地标</div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">方向测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>方向小知识</b><br/>
+        ● 地图通常按<strong>上北下南、左西右东</strong><br/>
+        ● 东南西北四个方向是<strong>基本方向</strong><br/>
+        ● 还有东北、东南、西北、西南四个方向<br/>
+        ● 太阳从<strong>东方</strong>升起，<strong>西方</strong>落下
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx;
+var COLS = 10, ROWS = 10;
+var _cellSize = 40, _ox = 0, _oy = 0;
+var _px = 5, _py = 5; // player position (col, row)
+var _route = [{x:5, y:5}];
+var _landmarks = {}; // "col,row" -> emoji
+var _currentLandmark = '🏫';
+
+var DIR_NAMES = { N:'北', S:'南', E:'东', W:'西', NE:'东北', NW:'西北', SE:'东南', SW:'西南' };
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+  nextQuiz();
+
+  cv.addEventListener('click', function(e) {
+    var rect = cv.getBoundingClientRect();
+    var mx = e.clientX - rect.left;
+    var my = e.clientY - rect.top;
+    var c = Math.floor((mx - _ox) / _cellSize);
+    var r = Math.floor((my - _oy) / _cellSize);
+    if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+      _landmarks[c + ',' + r] = _currentLandmark;
+      draw();
+    }
+  });
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  _cellSize = Math.min((r.width - 60) / COLS, (r.height - 60) / ROWS);
+  _cellSize = Math.max(_cellSize, 20);
+  _ox = (r.width - COLS * _cellSize) / 2;
+  _oy = (r.height - ROWS * _cellSize) / 2;
+  draw();
+}
+
+function move(dir) {
+  var nx = _px, ny = _py;
+  if (dir === 'N') ny--;
+  if (dir === 'S') ny++;
+  if (dir === 'E') nx++;
+  if (dir === 'W') nx--;
+  if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) return;
+  _px = nx; _py = ny;
+  _route.push({x: nx, y: ny});
+  updateRouteLog();
+  draw();
+}
+
+function undoMove() {
+  if (_route.length <= 1) return;
+  _route.pop();
+  var last = _route[_route.length - 1];
+  _px = last.x; _py = last.y;
+  updateRouteLog();
+  draw();
+}
+
+function clearRoute() {
+  _px = 5; _py = 5;
+  _route = [{x:5, y:5}];
+  updateRouteLog();
+  draw();
+}
+
+function updateRouteLog() {
+  var el = document.getElementById('route-log');
+  if (_route.length <= 1) { el.textContent = '点击方向按钮开始移动…'; return; }
+  var dirs = [];
+  for (var i = 1; i < _route.length; i++) {
+    var dx = _route[i].x - _route[i-1].x;
+    var dy = _route[i].y - _route[i-1].y;
+    var dir = '';
+    if (dy < 0) dir += '北';
+    if (dy > 0) dir += '南';
+    if (dx > 0) dir += '东';
+    if (dx < 0) dir += '西';
+    dirs.push(dir);
+  }
+  var html = '';
+  dirs.forEach(function(d, i) {
+    html += '<span class="dir-badge">' + (i+1) + '. ' + d + '</span> ';
+  });
+  html += '<br>共 ' + dirs.length + ' 步';
+  el.innerHTML = html;
+}
+
+function setLandmark(lm) {
+  _currentLandmark = lm;
+  document.querySelectorAll('.lm-btn').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-lm') === lm);
+  });
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  // Grid bg
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(_ox, _oy, COLS * _cellSize, ROWS * _cellSize);
+
+  // Grid lines
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 0.5;
+  for (var r = 0; r <= ROWS; r++) {
+    ctx.beginPath(); ctx.moveTo(_ox, _oy + r * _cellSize); ctx.lineTo(_ox + COLS * _cellSize, _oy + r * _cellSize); ctx.stroke();
+  }
+  for (var c = 0; c <= COLS; c++) {
+    ctx.beginPath(); ctx.moveTo(_ox + c * _cellSize, _oy); ctx.lineTo(_ox + c * _cellSize, _oy + ROWS * _cellSize); ctx.stroke();
+  }
+
+  // Compass rose in top-right
+  var crx = _ox + COLS * _cellSize + 10, cry = _oy + 10;
+  // (drawn outside grid if room)
+
+  // Direction labels around grid
+  ctx.font = 'bold ' + Math.max(10, _cellSize * 0.3) + 'px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#3b82f6';
+  ctx.fillText('北 ↑', _ox + COLS * _cellSize / 2, _oy - 15);
+  ctx.fillText('南 ↓', _ox + COLS * _cellSize / 2, _oy + ROWS * _cellSize + 15);
+  ctx.fillText('西 ←', _ox - 18, _oy + ROWS * _cellSize / 2);
+  ctx.fillText('东 →', _ox + COLS * _cellSize + 18, _oy + ROWS * _cellSize / 2);
+
+  // Draw route trail
+  if (_route.length > 1) {
+    ctx.strokeStyle = 'rgba(59,130,246,0.4)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(_ox + _route[0].x * _cellSize + _cellSize / 2, _oy + _route[0].y * _cellSize + _cellSize / 2);
+    for (var i = 1; i < _route.length; i++) {
+      ctx.lineTo(_ox + _route[i].x * _cellSize + _cellSize / 2, _oy + _route[i].y * _cellSize + _cellSize / 2);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Step numbers
+    ctx.fillStyle = '#3b82f6';
+    ctx.font = 'bold ' + Math.max(8, _cellSize * 0.22) + 'px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (var i = 0; i < _route.length; i++) {
+      var rx = _ox + _route[i].x * _cellSize + _cellSize / 2;
+      var ry = _oy + _route[i].y * _cellSize + _cellSize / 2;
+      if (i < _route.length - 1) {
+        ctx.fillStyle = 'rgba(59,130,246,0.15)';
+        ctx.beginPath(); ctx.arc(rx, ry, _cellSize * 0.18, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#3b82f6';
+        ctx.fillText(i + 1, rx, ry);
+      }
+    }
+  }
+
+  // Draw landmarks
+  ctx.font = Math.max(14, _cellSize * 0.5) + 'px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  Object.keys(_landmarks).forEach(function(k) {
+    var parts = k.split(',');
+    var lc = parseInt(parts[0]), lr = parseInt(parts[1]);
+    ctx.fillText(_landmarks[k], _ox + lc * _cellSize + _cellSize / 2, _oy + lr * _cellSize + _cellSize / 2);
+  });
+
+  // Draw player
+  var ppx = _ox + _px * _cellSize + _cellSize / 2;
+  var ppy = _oy + _py * _cellSize + _cellSize / 2;
+
+  // Player glow
+  ctx.fillStyle = 'rgba(239,68,68,0.15)';
+  ctx.beginPath(); ctx.arc(ppx, ppy, _cellSize * 0.42, 0, Math.PI * 2); ctx.fill();
+
+  // Player circle
+  ctx.fillStyle = '#ef4444';
+  ctx.beginPath(); ctx.arc(ppx, ppy, _cellSize * 0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold ' + Math.max(10, _cellSize * 0.28) + 'px sans-serif';
+  ctx.fillText('人', ppx, ppy);
+
+  // Position label
+  document.getElementById('pos-label').innerHTML = _px + ',' + _py;
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '地图上方通常是哪个方向？', opts: ['东', '南', '西', '北'], ans: 3 },
+  { q: '面向北方，你的右边是什么方向？', opts: ['南', '西', '东', '北'], ans: 2 },
+  { q: '太阳从哪个方向升起？', opts: ['南', '西', '东', '北'], ans: 2 },
+  { q: '面向南方，你的左边是什么方向？', opts: ['东', '西', '北', '南'], ans: 0 },
+  { q: '北方的对面是什么方向？', opts: ['东', '南', '西', '北'], ans: 1 },
+  { q: '小华从学校向东走，回家时应向哪个方向走？', opts: ['东', '南', '西', '北'], ans: 2 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML =
+      '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) {
+    html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>';
+  });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) {
+    b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++;
+  setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

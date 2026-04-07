@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>负数的认识 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  * { box-sizing:border-box; }
+  body { font-family:var(--edu-font); margin:0; }
+  .tool { width:100vw; height:100vh; display:flex; flex-direction:column; background:var(--edu-bg); }
+  .toolbar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#fff; border-bottom:1px solid var(--edu-border); }
+  .toolbar h1 { font-size:15px; color:var(--edu-primary); margin:0; }
+  .toolbar span { font-size:11px; color:var(--edu-text-muted); background:#f1f5f9; padding:2px 8px; border-radius:12px; }
+  .main { flex:1; display:grid; grid-template-columns:1fr 280px; overflow:hidden; }
+  .canvas-wrap { position:relative; overflow:hidden; background:linear-gradient(135deg,#eff6ff,#f0f9ff); }
+  .canvas-wrap canvas { width:100%; height:100%; display:block; }
+  .panel { background:#fff; border-left:1px solid var(--edu-border); padding:12px; display:flex; flex-direction:column; gap:8px; overflow:auto; }
+  .section { display:flex; flex-direction:column; gap:4px; }
+  .label { font-size:10px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:var(--edu-border); }
+  .btn { padding:6px 12px; border:none; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:var(--edu-font); transition:all .15s; }
+  .btn-default { background:#f1f5f9; color:#334155; }
+  .btn-default:hover { background:#e2e8f0; }
+  .row { display:flex; gap:4px; flex-wrap:wrap; }
+  .slider-row { display:flex; align-items:center; gap:6px; }
+  .slider-row label { font-size:11px; font-weight:700; min-width:28px; }
+  .slider-row input[type=range] { flex:1; }
+  .slider-row .val { font-size:14px; font-weight:800; min-width:36px; text-align:right; }
+
+  .temp-card { text-align:center; padding:10px; border-radius:12px; }
+  .temp-card .val { font-size:32px; font-weight:800; }
+  .temp-card .lbl { font-size:10px; font-weight:700; margin-top:2px; }
+
+  .quiz-card { background:#eff6ff; border:2px solid #93c5fd; border-radius:12px; padding:10px; text-align:center; }
+  .quiz-q { font-size:13px; font-weight:700; color:#1e40af; }
+  .quiz-opts { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px; }
+  .quiz-opt { padding:6px; border:2px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; background:#fff; font-family:var(--edu-font); }
+  .quiz-opt:hover { border-color:#3b82f6; }
+  .quiz-opt.correct { background:#dcfce7; border-color:#22c55e; }
+  .quiz-opt.wrong { background:#fef2f2; border-color:#ef4444; }
+  .quiz-result { font-size:11px; font-weight:700; margin-top:4px; min-height:16px; }
+
+  .info { font-size:11px; line-height:1.8; color:#334155; background:#fff; border:1px solid #bfdbfe; border-radius:8px; padding:8px 10px; }
+  .info b { color:#1e40af; }
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar">
+    <h1>🌡️ 负数的认识</h1>
+    <span>六年级下册 · 第一单元</span>
+  </div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="section">
+        <div class="label">调节温度（拖动滑块）</div>
+        <div class="slider-row">
+          <label style="color:#1e40af">温度</label>
+          <input type="range" id="sl-temp" min="-30" max="40" value="0" oninput="setTemp(parseInt(this.value))"/>
+          <div class="val" style="color:#1e40af" id="sl-temp-val">0°C</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+        <div class="temp-card" style="background:#fee2e2" id="card-pos">
+          <div class="val" style="color:#dc2626">0</div>
+          <div class="lbl" style="color:#dc2626">零上温度（+）</div>
+        </div>
+        <div class="temp-card" style="background:#dbeafe" id="card-neg">
+          <div class="val" style="color:#2563eb">0</div>
+          <div class="lbl" style="color:#2563eb">零下温度（-）</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">生活中的负数</div>
+        <div class="row">
+          <button class="btn btn-default" onclick="setTemp(37)">🌡️ 体温 37°C</button>
+          <button class="btn btn-default" onclick="setTemp(0)">🌡️ 冰点 0°C</button>
+          <button class="btn btn-default" onclick="setTemp(-10)">❄️ 冬天 -10°C</button>
+          <button class="btn btn-default" onclick="setTemp(-30)">🏔️ 极寒 -30°C</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">海拔示例</div>
+        <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:6px 8px;font-size:11px;line-height:1.8" id="alt-info"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">负数测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>负数小知识</b><br/>
+        ● 0既不是正数也不是<strong>负数</strong><br/>
+        ● 正数前面可以加"+"号，也可以省略<br/>
+        ● 负数前面必须加<strong>"-"</strong>号<br/>
+        ● <strong>温度</strong>：零上为正，零下为负<br/>
+        ● <strong>海拔</strong>：高于海平面为正，低于为负<br/>
+        ● 数轴上，右边 > 左边（-3 < -1 < 0 < 2）
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx;
+var _temp = 0;
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+  setTemp(0);
+  nextQuiz();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function setTemp(val) {
+  _temp = val;
+  document.getElementById('sl-temp').value = val;
+  document.getElementById('sl-temp-val').textContent = val + '°C';
+  document.getElementById('sl-temp-val').style.color = val >= 0 ? '#dc2626' : '#2563eb';
+
+  var posCard = document.getElementById('card-pos');
+  var negCard = document.getElementById('card-neg');
+  posCard.querySelector('.val').textContent = Math.max(0, val);
+  negCard.querySelector('.val').textContent = Math.min(0, val);
+
+  updateAlt();
+  draw();
+}
+
+function updateAlt() {
+  // Use temperature as a proxy to show altitude analogy
+  var alt = _temp * 100;
+  var html = '当前值 ' + _temp + ' 对应海拔：';
+  if (alt > 0) html += '<strong style="color:#16a34a">+' + alt + 'm</strong>（高于海平面，如泰山 +1545m）';
+  else if (alt === 0) html += '<strong>0m</strong>（海平面）';
+  else html += '<strong style="color:#1e40af">' + alt + 'm</strong>（低于海平面，如吐鲁番盆地 -154m）';
+  document.getElementById('alt-info').innerHTML = html;
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  // === Number line ===
+  var lineY = h * 0.18;
+  var lx0 = 60, lx1 = w - 60;
+  var lineW = lx1 - lx0;
+  var minV = -30, maxV = 40;
+  var range = maxV - minV;
+
+  ctx.fillStyle = '#1e293b';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('数轴（温度计）', w / 2, lineY - 10);
+  lineY += 10;
+
+  // Main axis
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(lx0, lineY); ctx.lineTo(lx1, lineY); ctx.stroke();
+
+  // Zero mark
+  var zeroX = lx0 + (-minV) / range * lineW;
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(zeroX, lineY - 12); ctx.lineTo(zeroX, lineY + 12); ctx.stroke();
+  ctx.fillStyle = '#334155';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('0', zeroX, lineY + 26);
+
+  // Negative region shading
+  ctx.fillStyle = 'rgba(59,130,246,0.08)';
+  ctx.fillRect(lx0, lineY - 8, zeroX - lx0, 16);
+
+  // Positive region shading
+  ctx.fillStyle = 'rgba(239,68,68,0.06)';
+  ctx.fillRect(zeroX, lineY - 8, lx1 - zeroX, 16);
+
+  // Ticks
+  for (var v = minV; v <= maxV; v += 5) {
+    var x = lx0 + (v - minV) / range * lineW;
+    var isMajor = v % 10 === 0;
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = isMajor ? 1.5 : 0.5;
+    ctx.beginPath();
+    ctx.moveTo(x, lineY - (isMajor ? 8 : 4));
+    ctx.lineTo(x, lineY + (isMajor ? 8 : 4));
+    ctx.stroke();
+
+    if (isMajor) {
+      ctx.fillStyle = v < 0 ? '#2563eb' : v > 0 ? '#dc2626' : '#334155';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillText(v, x, lineY + 22);
+    }
+  }
+
+  // Region labels
+  ctx.font = 'bold 10px sans-serif';
+  ctx.fillStyle = '#2563eb';
+  ctx.textAlign = 'center';
+  ctx.fillText('负数区 ←', (lx0 + zeroX) / 2, lineY - 16);
+  ctx.fillStyle = '#dc2626';
+  ctx.fillText('→ 正数区', (zeroX + lx1) / 2, lineY - 16);
+
+  // Current temperature marker
+  var markerX = lx0 + (_temp - minV) / range * lineW;
+  ctx.fillStyle = _temp >= 0 ? '#dc2626' : '#2563eb';
+  ctx.beginPath();
+  ctx.moveTo(markerX, lineY + 12);
+  ctx.lineTo(markerX - 7, lineY + 22);
+  ctx.lineTo(markerX + 7, lineY + 22);
+  ctx.closePath();
+  ctx.fill();
+  ctx.font = 'bold 14px sans-serif';
+  ctx.fillText(_temp + '°C', markerX, lineY + 38);
+
+  // === Thermometer ===
+  var thermX = w / 2, thermY = lineY + 70;
+  var thermH = h - thermY - 20;
+  var thermW = 30;
+  var bulbR = 20;
+
+  if (thermH < 80) { thermH = 80; }
+
+  // Thermometer body
+  var tx = thermX - thermW / 2, ty = thermY;
+  var tH = thermH - bulbR - 10;
+
+  // Background tube
+  ctx.fillStyle = '#f1f5f9';
+  ctx.beginPath();
+  ctx.roundRect(tx, ty, thermW, tH, thermW / 2);
+  ctx.fill();
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Fill level
+  var fillRatio = (_temp - minV) / range;
+  fillRatio = Math.max(0.02, Math.min(1, fillRatio));
+  var fillH = tH * fillRatio;
+  var fillColor = _temp >= 0 ? '#ef4444' : '#3b82f6';
+
+  ctx.fillStyle = fillColor;
+  ctx.beginPath();
+  ctx.roundRect(tx + 4, ty + tH - fillH, thermW - 8, fillH, (thermW - 8) / 2);
+  ctx.fill();
+
+  // Bulb
+  ctx.fillStyle = fillColor;
+  ctx.beginPath();
+  ctx.arc(thermX, ty + tH + bulbR * 0.3, bulbR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Scale marks on thermometer
+  ctx.fillStyle = '#64748b';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'left';
+  for (var v = -30; v <= 40; v += 10) {
+    var ratio = (v - minV) / range;
+    var my = ty + tH * (1 - ratio);
+    ctx.beginPath(); ctx.moveTo(tx + thermW + 2, my); ctx.lineTo(tx + thermW + 6, my); ctx.stroke();
+    ctx.fillText(v + '°', tx + thermW + 8, my + 3);
+  }
+
+  // Current temp label
+  ctx.fillStyle = fillColor;
+  ctx.font = 'bold 18px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(_temp + '°C', thermX, ty - 10);
+
+  // === Comparison on the right ===
+  var compX = w * 0.75, compY = thermY;
+  ctx.fillStyle = '#334155';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('大小比较', compX, compY);
+  compY += 20;
+
+  var nums = [-10, -5, -1, 0, _temp, 5, 15, 30];
+  nums.sort(function(a, b) { return a - b; });
+  // Remove duplicates
+  var unique = [nums[0]];
+  for (var i = 1; i < nums.length; i++) {
+    if (nums[i] !== nums[i-1]) unique.push(nums[i]);
+  }
+
+  unique.forEach(function(n) {
+    var isCurrent = n === _temp;
+    var color = n < 0 ? '#2563eb' : n === 0 ? '#334155' : '#dc2626';
+    ctx.fillStyle = isCurrent ? color : color + '88';
+    ctx.font = (isCurrent ? 'bold ' : '') + (isCurrent ? '14' : '12') + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText((n > 0 ? '+' : '') + n, compX, compY);
+    if (isCurrent) {
+      ctx.fillStyle = color + '33';
+      ctx.fillRect(compX - 25, compY - 12, 50, 18);
+    }
+    compY += 22;
+  });
+
+  // Arrow indicating order
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(compX + 30, compY - 10);
+  ctx.lineTo(compX + 30, compY - unique.length * 22 + 10);
+  ctx.stroke();
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '9px sans-serif';
+  ctx.fillText('小 → 大', compX + 30, compY - unique.length * 22);
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '下面哪个是负数？', opts: ['+3', '0', '-5', '10'], ans: 2 },
+  { q: '0是正数还是负数？', opts: ['正数', '负数', '既不是正数也不是负数', '既是正数也是负数'], ans: 2 },
+  { q: '-3和-1哪个大？', opts: ['-3大', '-1大', '一样大', '无法比较'], ans: 1 },
+  { q: '-10°C和-5°C哪个更冷？', opts: ['-10°C', '-5°C', '一样冷', '无法比较'], ans: 0 },
+  { q: '海平面以下50米记作什么？', opts: ['+50m', '-50m', '50m', '0m'], ans: 1 },
+  { q: '数轴上-2在-5的哪边？', opts: ['左边', '右边', '同一点', '无法确定'], ans: 1 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML =
+      '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) {
+    html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>';
+  });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) {
+    b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++;
+  setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

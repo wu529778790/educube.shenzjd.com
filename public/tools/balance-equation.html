@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>简易方程天平 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  * { box-sizing:border-box; }
+  body { font-family:var(--edu-font); margin:0; }
+  .tool { width:100vw; height:100vh; display:flex; flex-direction:column; background:var(--edu-bg); }
+  .toolbar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#fff; border-bottom:1px solid var(--edu-border); }
+  .toolbar h1 { font-size:15px; color:var(--edu-primary); margin:0; }
+  .toolbar span { font-size:11px; color:var(--edu-text-muted); background:#f1f5f9; padding:2px 8px; border-radius:12px; }
+  .main { flex:1; display:grid; grid-template-columns:1fr 290px; overflow:hidden; }
+  .canvas-wrap { position:relative; overflow:hidden; background:linear-gradient(135deg,#fdf2f8,#fce7f3); }
+  .canvas-wrap canvas { width:100%; height:100%; display:block; }
+  .panel { background:#fff; border-left:1px solid var(--edu-border); padding:12px; display:flex; flex-direction:column; gap:8px; overflow:auto; }
+  .section { display:flex; flex-direction:column; gap:4px; }
+  .label { font-size:10px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:var(--edu-border); }
+  .btn { padding:6px 12px; border:none; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:var(--edu-font); transition:all .15s; }
+  .btn.active { background:var(--edu-primary); color:#fff; }
+  .btn-primary { background:#ec4899; color:#fff; }
+  .btn-primary:hover { background:#db2777; }
+  .btn-default { background:#f1f5f9; color:#334155; }
+  .btn-default:hover { background:#e2e8f0; }
+  .row { display:flex; gap:4px; flex-wrap:wrap; }
+
+  .equation-box { text-align:center; padding:12px; background:#fdf2f8; border:2px solid #f9a8d4; border-radius:12px; }
+  .equation-box .eq { font-size:24px; font-weight:800; color:#be185d; font-family:monospace; }
+  .equation-box .status { font-size:12px; margin-top:4px; font-weight:700; }
+
+  .preset-btn { padding:5px 10px; border:2px solid #e2e8f0; border-radius:8px; font-size:11px; font-weight:600; cursor:pointer; background:#fff; font-family:var(--edu-font); transition:all .15s; }
+  .preset-btn:hover { border-color:#ec4899; }
+
+  .step-box { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px; font-size:11px; line-height:1.8; color:#334155; }
+  .step-box .step { margin:2px 0; }
+  .step-box .highlight { color:#be185d; font-weight:700; }
+
+  .info { font-size:11px; line-height:1.8; color:#334155; background:#fff; border:1px solid #f9a8d4; border-radius:8px; padding:8px 10px; }
+  .info b { color:#be185d; }
+
+  .quiz-card { background:#fdf2f8; border:2px solid #f9a8d4; border-radius:12px; padding:10px; text-align:center; }
+  .quiz-q { font-size:13px; font-weight:700; color:#be185d; }
+  .quiz-opts { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px; }
+  .quiz-opt { padding:6px; border:2px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; background:#fff; font-family:var(--edu-font); }
+  .quiz-opt:hover { border-color:#ec4899; }
+  .quiz-opt.correct { background:#dcfce7; border-color:#22c55e; }
+  .quiz-opt.wrong { background:#fef2f2; border-color:#ef4444; }
+  .quiz-result { font-size:11px; font-weight:700; margin-top:4px; min-height:16px; }
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar">
+    <h1>⚖️ 简易方程天平</h1>
+    <span>五年级上册 · 第五单元</span>
+  </div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="equation-box">
+        <div class="eq" id="eq-display">x + 3 = 7</div>
+        <div class="status" id="eq-status" style="color:#16a34a">天平平衡 ✓</div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">选择方程类型</div>
+        <div class="row">
+          <button class="preset-btn" onclick="setEq('x+3=7')">x + 3 = 7</button>
+          <button class="preset-btn" onclick="setEq('2x=10')">2x = 10</button>
+          <button class="preset-btn" onclick="setEq('x-5=3')">x - 5 = 3</button>
+          <button class="preset-btn" onclick="setEq('3x+2=14')">3x + 2 = 14</button>
+          <button class="preset-btn" onclick="setEq('2x-3=7')">2x - 3 = 7</button>
+          <button class="preset-btn" onclick="setEq('4x=20')">4x = 20</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">操作天平（保持平衡）</div>
+        <div class="row">
+          <button class="btn btn-default" id="op-minus" onclick="doOp('minus')">两边 - <span id="op-val-m">3</span></button>
+          <button class="btn btn-default" id="op-div" onclick="doOp('div')">两边 ÷ <span id="op-val-d">1</span></button>
+          <button class="btn btn-default" onclick="resetEq()">🔄 重置</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">解题步骤</div>
+        <div class="step-box" id="steps">选择方程开始解题</div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">方程测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>解方程小知识</b><br/>
+        ● 方程是含有<strong>未知数</strong>的等式<br/>
+        ● 解方程就是求未知数的<strong>值</strong><br/>
+        ● 天平原理：两边<strong>同时</strong>加减乘除同一个数<br/>
+        ● 等式性质1：两边±同一个数，等式仍成立<br/>
+        ● 等式性质2：两边×÷同一个不为0的数，等式仍成立
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx;
+var _eq = null;
+var _steps = [];
+var _solved = false;
+var _tilt = 0, _targetTilt = 0;
+
+var EQS = {
+  'x+3=7': { left: ['x','+3'], right: ['7'], minus: 3, div: 1, answer: 4 },
+  '2x=10': { left: ['2x'], right: ['10'], minus: 0, div: 2, answer: 5 },
+  'x-5=3': { left: ['x','-5'], right: ['3'], minus: -5, div: 1, answer: 8 },
+  '3x+2=14': { left: ['3x','+2'], right: ['14'], minus: 2, div: 3, answer: 4 },
+  '2x-3=7': { left: ['2x','-3'], right: ['7'], minus: -3, div: 2, answer: 5 },
+  '4x=20': { left: ['4x'], right: ['20'], minus: 0, div: 4, answer: 5 },
+};
+
+var _currentEq = null;
+var _currentLeft = 0, _currentRight = 0;
+var _currentCoeff = 1;
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+  setEq('x+3=7');
+  nextQuiz();
+  requestAnimationFrame(animLoop);
+}
+
+function animLoop() {
+  _tilt += (_targetTilt - _tilt) * 0.1;
+  if (Math.abs(_tilt - _targetTilt) > 0.1) {
+    draw();
+  }
+  requestAnimationFrame(animLoop);
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function setEq(key) {
+  _currentEq = key;
+  var eq = EQS[key];
+  _steps = [];
+  _solved = false;
+
+  // Parse equation
+  _currentLeft = parseLeft(eq.left);
+  _currentRight = parseRight(eq.right);
+  _currentCoeff = eq.div;
+  _targetTilt = 0;
+
+  document.getElementById('eq-display').textContent = key;
+  document.getElementById('eq-status').textContent = '天平平衡 ✓';
+  document.getElementById('eq-status').style.color = '#16a34a';
+  document.getElementById('op-val-m').textContent = eq.minus;
+  document.getElementById('op-val-d').textContent = eq.div;
+  document.getElementById('steps').innerHTML = '<div class="step">方程：<span class="highlight">' + key + '</span></div>';
+
+  if (eq.minus === 0) {
+    document.getElementById('op-minus').style.display = 'none';
+  } else {
+    document.getElementById('op-minus').style.display = '';
+    document.getElementById('op-minus').innerHTML = '两边 ' + (eq.minus > 0 ? '-' : '+') + Math.abs(eq.minus);
+  }
+  document.getElementById('op-div').innerHTML = '两边 ÷ ' + eq.div;
+
+  draw();
+}
+
+function parseLeft(parts) {
+  // Simple parser for "x+3", "2x", "3x+2", "x-5", "2x-3"
+  var val = 0, coeff = 1;
+  parts.forEach(function(p) {
+    p = p.trim();
+    if (p === 'x') coeff = 1;
+    else if (p === '+3') val += 3;
+    else if (p === '-5') val -= 5;
+    else if (p === '+2') val += 2;
+    else if (p === '-3') val -= 3;
+    else if (p === '2x') coeff = 2;
+    else if (p === '3x') coeff = 3;
+    else if (p === '4x') coeff = 4;
+  });
+  return { coeff: coeff, const: val };
+}
+
+function parseRight(parts) {
+  return parseFloat(parts[0]);
+}
+
+function doOp(op) {
+  if (_solved) return;
+  var eq = EQS[_currentEq];
+
+  if (op === 'minus' && eq.minus !== 0) {
+    var v = eq.minus;
+    var sign = v > 0 ? '-' : '+';
+    _steps.push('两边同时' + sign + Math.abs(v));
+    // After subtraction, we should have coeff*x on left, answer on right
+    var newRight = _currentRight - v;
+    var newLeftConst = _currentLeft.const - v;
+    _currentRight = newRight;
+    _currentLeft.const = newLeftConst;
+
+    var leftStr = (_currentLeft.coeff > 1 ? _currentLeft.coeff : '') + 'x';
+    if (newLeftConst !== 0) leftStr += (newLeftConst > 0 ? '+' : '') + newLeftConst;
+    document.getElementById('steps').innerHTML += '<div class="step">→ ' + leftStr + ' = ' + newRight + '</div>';
+    document.getElementById('eq-display').textContent = leftStr + ' = ' + newRight;
+  }
+
+  if (op === 'div' && eq.div > 1) {
+    _steps.push('两边同时÷' + eq.div);
+    var newRight = _currentRight / eq.div;
+    var newCoeff = _currentLeft.coeff / eq.div;
+    _currentRight = newRight;
+    _currentLeft.coeff = newCoeff;
+
+    var leftStr = 'x';
+    document.getElementById('steps').innerHTML += '<div class="step">→ x = <span class="highlight">' + newRight + '</span></div>';
+    document.getElementById('eq-display').textContent = 'x = ' + newRight;
+  }
+
+  // Check if solved
+  if (_currentLeft.coeff === 1 && _currentLeft.const === 0) {
+    _solved = true;
+    document.getElementById('eq-status').textContent = '🎉 解出 x = ' + _currentRight;
+    document.getElementById('eq-status').style.color = '#16a34a';
+    document.getElementById('steps').innerHTML += '<div class="step" style="color:#16a34a;font-weight:700">验证：代入 x=' + _currentRight + '，' + _currentEq.replace(/x/g, _currentRight) + ' = ' + eval(_currentEq.replace(/x/g, _currentRight).replace(/=/g, '==') ? '✓' : '?') + '</div>';
+
+    // Simpler verification
+    var ans = _currentRight;
+    var eq2 = _currentEq;
+    var check = eq2.replace(/x/g, '(' + ans + ')');
+    document.getElementById('steps').innerHTML += '<div class="step" style="color:#16a34a;font-weight:700">验证：' + check + ' ✓ 成立</div>';
+  }
+
+  draw();
+}
+
+function resetEq() {
+  setEq(_currentEq);
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  var cx = w / 2, cy = h * 0.4;
+  var beamW = Math.min(w * 0.7, 500);
+  var beamH = 8;
+  var pivotH = h * 0.3;
+
+  // Base
+  ctx.fillStyle = '#78716c';
+  var baseW = 120, baseH = 12;
+  ctx.fillRect(cx - baseW / 2, cy + pivotH + beamH / 2, baseW, baseH);
+
+  // Pillar
+  ctx.fillStyle = '#78716c';
+  ctx.fillRect(cx - 6, cy - pivotH / 2 + 10, 12, pivotH);
+
+  // Beam (tilted)
+  ctx.save();
+  ctx.translate(cx, cy - pivotH / 2 + 10);
+  ctx.rotate(_tilt * Math.PI / 180);
+
+  // Beam bar
+  ctx.fillStyle = '#a8a29e';
+  ctx.fillRect(-beamW / 2, -beamH / 2, beamW, beamH);
+
+  // Left pan strings
+  ctx.strokeStyle = '#78716c';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-beamW / 2 + 20, beamH / 2);
+  ctx.lineTo(-beamW / 2 + 10, beamH / 2 + 80);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-beamW / 2 + 80, beamH / 2);
+  ctx.lineTo(-beamW / 2 + 90, beamH / 2 + 80);
+  ctx.stroke();
+
+  // Left pan
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath();
+  ctx.ellipse(-beamW / 2 + 50, beamH / 2 + 82, 55, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#92400e';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Left pan label
+  ctx.fillStyle = '#92400e';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.textAlign = 'center';
+  var leftLabel = (_currentLeft.coeff > 1 ? _currentLeft.coeff : '') + 'x';
+  if (_currentLeft.const !== 0) leftLabel += (_currentLeft.const > 0 ? '+' : '') + _currentLeft.const;
+  if (_solved) leftLabel = 'x';
+  ctx.fillText(leftLabel, -beamW / 2 + 50, beamH / 2 + 86);
+
+  // Weight blocks on left pan
+  drawBlocks(-beamW / 2 + 50, beamH / 2 + 70, _currentLeft);
+
+  // Right pan strings
+  ctx.strokeStyle = '#78716c';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(beamW / 2 - 20, beamH / 2);
+  ctx.lineTo(beamW / 2 - 10, beamH / 2 + 80);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(beamW / 2 - 80, beamH / 2);
+  ctx.lineTo(beamW / 2 - 90, beamH / 2 + 80);
+  ctx.stroke();
+
+  // Right pan
+  ctx.fillStyle = '#93c5fd';
+  ctx.beginPath();
+  ctx.ellipse(beamW / 2 - 50, beamH / 2 + 82, 55, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#1e40af';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Right pan label
+  ctx.fillStyle = '#1e40af';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('' + _currentRight, beamW / 2 - 50, beamH / 2 + 86);
+
+  // Weight blocks on right pan
+  drawNumberBlocks(beamW / 2 - 50, beamH / 2 + 70, _currentRight);
+
+  ctx.restore();
+
+  // Equation display at bottom
+  ctx.fillStyle = '#334155';
+  ctx.font = 'bold 20px monospace';
+  ctx.textAlign = 'center';
+  var eqStr = document.getElementById('eq-display').textContent;
+  ctx.fillText(eqStr, cx, h - 40);
+
+  // "=" sign indicator
+  if (_solved) {
+    ctx.fillStyle = '#16a34a';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('✓ 方程已解出', cx, h - 15);
+  }
+}
+
+function drawBlocks(cx, y, left) {
+  // Draw x blocks and constant blocks
+  var bw = 20, bh = 18;
+  var startX = cx - (left.coeff + Math.abs(left.const)) * bw / 2;
+
+  for (var i = 0; i < left.coeff; i++) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(startX + i * bw, y - bh, bw - 2, bh);
+    ctx.strokeStyle = '#92400e';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(startX + i * bw, y - bh, bw - 2, bh);
+    ctx.fillStyle = '#92400e';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('x', startX + i * bw + bw / 2 - 1, y - bh / 2 + 1);
+  }
+
+  var constStart = startX + left.coeff * bw;
+  if (left.const > 0) {
+    for (var i = 0; i < left.const; i++) {
+      ctx.fillStyle = '#fb923c';
+      ctx.fillRect(constStart + i * bw, y - bh, bw - 2, bh);
+      ctx.strokeStyle = '#92400e';
+      ctx.strokeRect(constStart + i * bw, y - bh, bw - 2, bh);
+    }
+  } else if (left.const < 0) {
+    ctx.fillStyle = '#fca5a5';
+    ctx.fillRect(constStart, y - bh, Math.abs(left.const) * bw, bh);
+    ctx.strokeStyle = '#dc2626';
+    ctx.strokeRect(constStart, y - bh, Math.abs(left.const) * bw, bh);
+    ctx.fillStyle = '#dc2626';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('欠' + Math.abs(left.const), constStart + Math.abs(left.const) * bw / 2, y - bh / 2 + 1);
+  }
+}
+
+function drawNumberBlocks(cx, y, num) {
+  var bw = 20, bh = 18;
+  var n = Math.min(Math.abs(Math.round(num)), 20);
+  var startX = cx - n * bw / 2;
+
+  for (var i = 0; i < n; i++) {
+    ctx.fillStyle = '#60a5fa';
+    ctx.fillRect(startX + i * bw, y - bh, bw - 2, bh);
+    ctx.strokeStyle = '#1e40af';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(startX + i * bw, y - bh, bw - 2, bh);
+  }
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '方程 x + 5 = 12，x = ？', opts: ['5', '6', '7', '17'], ans: 2 },
+  { q: '方程 3x = 18，x = ？', opts: ['3', '6', '9', '15'], ans: 1 },
+  { q: '解方程时，两边同时减去3，等式还成立吗？', opts: ['不成立', '成立', '不一定', '看情况'], ans: 1 },
+  { q: '方程 2x + 1 = 9，第一步应该怎样？', opts: ['两边÷2', '两边-1', '两边+1', '两边×2'], ans: 1 },
+  { q: '方程 x - 4 = 8，x = ？', opts: ['2', '4', '10', '12'], ans: 3 },
+  { q: '下面哪个是方程？', opts: ['3 + 5 = 8', 'x + 3 > 7', '2x + 1 = 7', '6 × 2'], ans: 2 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML =
+      '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) {
+    html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>';
+  });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) {
+    b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++;
+  setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

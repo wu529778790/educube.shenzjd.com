@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>角的度量与分类 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  * { box-sizing:border-box; }
+  body { font-family:var(--edu-font); margin:0; }
+  .tool { width:100vw; height:100vh; display:flex; flex-direction:column; background:var(--edu-bg); }
+  .toolbar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#fff; border-bottom:1px solid var(--edu-border); }
+  .toolbar h1 { font-size:15px; color:var(--edu-primary); margin:0; }
+  .toolbar span { font-size:11px; color:var(--edu-text-muted); background:#f1f5f9; padding:2px 8px; border-radius:12px; }
+  .main { flex:1; display:grid; grid-template-columns:1fr 290px; overflow:hidden; }
+  .canvas-wrap { position:relative; overflow:hidden; background:linear-gradient(135deg,#f0fdf4,#ecfdf5); }
+  .canvas-wrap canvas { width:100%; height:100%; display:block; cursor:crosshair; }
+  .panel { background:#fff; border-left:1px solid var(--edu-border); padding:12px; display:flex; flex-direction:column; gap:8px; overflow:auto; }
+  .section { display:flex; flex-direction:column; gap:4px; }
+  .label { font-size:10px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:var(--edu-border); }
+  .btn { padding:6px 12px; border:none; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:var(--edu-font); transition:all .15s; }
+  .btn.active { background:var(--edu-primary); color:#fff; }
+  .btn-default { background:#f1f5f9; color:#334155; }
+  .btn-default:hover { background:#e2e8f0; }
+  .row { display:flex; gap:4px; flex-wrap:wrap; }
+
+  .angle-display { text-align:center; padding:12px; background:#f0fdf4; border:2px solid #86efac; border-radius:12px; }
+  .angle-display .val { font-size:36px; font-weight:800; color:#166534; }
+  .angle-display .type { font-size:13px; font-weight:700; margin-top:4px; padding:3px 10px; border-radius:8px; display:inline-block; }
+
+  .slider-row { display:flex; align-items:center; gap:6px; }
+  .slider-row label { font-size:11px; font-weight:700; min-width:32px; }
+  .slider-row input[type=range] { flex:1; }
+  .slider-row .val { font-size:12px; font-weight:800; min-width:36px; text-align:right; }
+
+  .type-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; }
+  .type-card { padding:6px; border-radius:8px; text-align:center; font-size:10px; font-weight:700; border:2px solid transparent; cursor:pointer; transition:all .15s; }
+  .type-card:hover { opacity:.85; }
+  .type-card.active { border-color:#166534; box-shadow:0 0 0 2px rgba(22,101,52,.2); }
+  .type-card .emoji { font-size:18px; }
+  .type-card .name { margin-top:2px; }
+
+  .quiz-card { background:#f0fdf4; border:2px solid #86efac; border-radius:12px; padding:10px; text-align:center; }
+  .quiz-q { font-size:13px; font-weight:700; color:#166534; }
+  .quiz-opts { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px; }
+  .quiz-opt { padding:6px; border:2px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; background:#fff; font-family:var(--edu-font); }
+  .quiz-opt:hover { border-color:#22c55e; }
+  .quiz-opt.correct { background:#dcfce7; border-color:#22c55e; }
+  .quiz-opt.wrong { background:#fef2f2; border-color:#ef4444; }
+  .quiz-result { font-size:11px; font-weight:700; margin-top:4px; min-height:16px; }
+
+  .info { font-size:11px; line-height:1.8; color:#334155; background:#fff; border:1px solid #bbf7d0; border-radius:8px; padding:8px 10px; }
+  .info b { color:#166534; }
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar">
+    <h1>📐 角的度量与分类</h1>
+    <span>四年级上册 · 第三单元</span>
+  </div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="angle-display">
+        <div class="val" id="angle-val">90°</div>
+        <div class="type" id="angle-type" style="background:#dcfce7;color:#166534">直角</div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">调节角度（拖动滑块或在画布上拖拽）</div>
+        <div class="slider-row">
+          <label style="color:#166534">角度</label>
+          <input type="range" id="sl-angle" min="0" max="360" value="90" oninput="setAngle(parseInt(this.value))"/>
+          <div class="val" id="sl-val" style="color:#166534">90°</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">快捷角度</div>
+        <div class="row">
+          <button class="btn btn-default" onclick="setAngle(0)">0°</button>
+          <button class="btn btn-default" onclick="setAngle(30)">30°</button>
+          <button class="btn btn-default" onclick="setAngle(45)">45°</button>
+          <button class="btn btn-default" onclick="setAngle(60)">60°</button>
+          <button class="btn btn-default" onclick="setAngle(90)">90°</button>
+          <button class="btn btn-default" onclick="setAngle(120)">120°</button>
+          <button class="btn btn-default" onclick="setAngle(150)">150°</button>
+          <button class="btn btn-default" onclick="setAngle(180)">180°</button>
+          <button class="btn btn-default" onclick="setAngle(270)">270°</button>
+          <button class="btn btn-default" onclick="setAngle(360)">360°</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">角的分类</div>
+        <div class="type-cards">
+          <div class="type-card" style="background:#fef9c3" onclick="setAngle(30)">
+            <div class="emoji">📐</div><div class="name">锐角<br><span style="font-size:9px">0°&lt;α&lt;90°</span></div>
+          </div>
+          <div class="type-card" style="background:#dcfce7" onclick="setAngle(90)">
+            <div class="emoji">📏</div><div class="name">直角<br><span style="font-size:9px">α=90°</span></div>
+          </div>
+          <div class="type-card" style="background:#dbeafe" onclick="setAngle(120)">
+            <div class="emoji">📐</div><div class="name">钝角<br><span style="font-size:9px">90°&lt;α&lt;180°</span></div>
+          </div>
+          <div class="type-card" style="background:#f3e8ff" onclick="setAngle(180)">
+            <div class="emoji">➡️</div><div class="name">平角<br><span style="font-size:9px">α=180°</span></div>
+          </div>
+          <div class="type-card" style="background:#ffe4e6" onclick="setAngle(270)">
+            <div class="emoji">🔄</div><div class="name">优角<br><span style="font-size:9px">180°&lt;α&lt;360°</span></div>
+          </div>
+          <div class="type-card" style="background:#f1f5f9" onclick="setAngle(360)">
+            <div class="emoji">⭕</div><div class="name">周角<br><span style="font-size:9px">α=360°</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">角的测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>角的分类小知识</b><br/>
+        ● <strong>锐角</strong>：大于0°，小于90°<br/>
+        ● <strong>直角</strong>：等于90°（用小方格标记）<br/>
+        ● <strong>钝角</strong>：大于90°，小于180°<br/>
+        ● <strong>平角</strong>：等于180°（角的两边成一条直线）<br/>
+        ● <strong>周角</strong>：等于360°（转一圈）<br/>
+        ● 1周角 = 2平角 = 4直角
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx;
+var _angle = 90;
+var _cx, _cy, _r;
+var _dragging = false;
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+  nextQuiz();
+
+  cv.addEventListener('mousedown', function(e) { _dragging = true; dragAngle(e); });
+  cv.addEventListener('mousemove', function(e) { if (_dragging) dragAngle(e); });
+  cv.addEventListener('mouseup', function() { _dragging = false; });
+  cv.addEventListener('mouseleave', function() { _dragging = false; });
+  cv.addEventListener('touchstart', function(e) { e.preventDefault(); _dragging = true; dragAngle(e.touches[0]); }, {passive:false});
+  cv.addEventListener('touchmove', function(e) { e.preventDefault(); if (_dragging) dragAngle(e.touches[0]); }, {passive:false});
+  cv.addEventListener('touchend', function() { _dragging = false; });
+}
+
+function dragAngle(e) {
+  var rect = cv.getBoundingClientRect();
+  var mx = e.clientX - rect.left;
+  var my = e.clientY - rect.top;
+  var dx = mx - _cx;
+  var dy = my - _cy;
+  var ang = Math.atan2(dy, dx);
+  var deg = Math.round(ang * 180 / Math.PI);
+  if (deg < 0) deg += 360;
+  setAngle(deg);
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  _r = Math.min(r.width, r.height) * 0.3;
+  _r = Math.max(_r, 80);
+  _cx = r.width * 0.45;
+  _cy = r.height * 0.55;
+  draw();
+}
+
+function setAngle(deg) {
+  _angle = Math.max(0, Math.min(360, deg));
+  document.getElementById('sl-angle').value = _angle;
+  document.getElementById('sl-val').textContent = _angle + '°';
+  document.getElementById('angle-val').textContent = _angle + '°';
+
+  var typeEl = document.getElementById('angle-type');
+  if (_angle === 0) { typeEl.textContent = '零角'; typeEl.style.background = '#f1f5f9'; typeEl.style.color = '#475569'; }
+  else if (_angle < 90) { typeEl.textContent = '锐角（小于90°）'; typeEl.style.background = '#fef9c3'; typeEl.style.color = '#854d0e'; }
+  else if (_angle === 90) { typeEl.textContent = '直角'; typeEl.style.background = '#dcfce7'; typeEl.style.color = '#166534'; }
+  else if (_angle < 180) { typeEl.textContent = '钝角（大于90°）'; typeEl.style.background = '#dbeafe'; typeEl.style.color = '#1e40af'; }
+  else if (_angle === 180) { typeEl.textContent = '平角'; typeEl.style.background = '#f3e8ff'; typeEl.style.color = '#6b21a8'; }
+  else if (_angle < 360) { typeEl.textContent = '优角（大于180°）'; typeEl.style.background = '#ffe4e6'; typeEl.style.color = '#9f1239'; }
+  else { typeEl.textContent = '周角'; typeEl.style.background = '#f1f5f9'; typeEl.style.color = '#334155'; }
+  draw();
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  var cx = _cx, cy = _cy, r = _r;
+  var angRad = _angle * Math.PI / 180;
+
+  // Protractor arc (background)
+  ctx.strokeStyle = '#d1d5db';
+  ctx.lineWidth = 1;
+  for (var i = 0; i <= 360; i += 10) {
+    var a = i * Math.PI / 180;
+    var inner = (i % 90 === 0) ? r * 0.82 : (i % 30 === 0) ? r * 0.88 : r * 0.93;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+    ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    ctx.stroke();
+  }
+
+  // Protractor degree labels
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = Math.max(9, r * 0.08) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (var i = 0; i < 360; i += 30) {
+    var a = i * Math.PI / 180;
+    var lr = r * 0.76;
+    ctx.fillText(i + '°', cx + Math.cos(a) * lr, cy + Math.sin(a) * lr);
+  }
+
+  // Filled angle sector
+  var fillColor = '#22c55e';
+  if (_angle >= 90 && _angle < 180) fillColor = '#3b82f6';
+  if (_angle >= 180) fillColor = '#8b5cf6';
+  if (_angle === 90) fillColor = '#16a34a';
+  if (_angle === 180) fillColor = '#7c3aed';
+
+  ctx.fillStyle = fillColor + '22';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.arc(cx, cy, r * 0.7, 0, angRad);
+  ctx.closePath();
+  ctx.fill();
+
+  // Angle arc
+  ctx.strokeStyle = fillColor;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.35, 0, angRad);
+  ctx.stroke();
+
+  // Angle arc label
+  var midA = angRad / 2;
+  var labelR = r * 0.28;
+  ctx.fillStyle = fillColor;
+  ctx.font = 'bold ' + Math.max(14, r * 0.13) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(_angle + '°', cx + Math.cos(midA) * labelR, cy + Math.sin(midA) * labelR);
+
+  // Initial side (along positive x-axis)
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + r, cy);
+  ctx.stroke();
+
+  // Terminal side
+  var tx = cx + Math.cos(angRad) * r;
+  var ty = cy + Math.sin(angRad) * r;
+  ctx.strokeStyle = '#dc2626';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(tx, ty);
+  ctx.stroke();
+
+  // Arrow on terminal side
+  var arrowSize = Math.max(8, r * 0.06);
+  var arrowAngle = angRad;
+  ctx.fillStyle = '#dc2626';
+  ctx.beginPath();
+  ctx.moveTo(tx, ty);
+  ctx.lineTo(tx - Math.cos(arrowAngle - 0.3) * arrowSize, ty - Math.sin(arrowAngle - 0.3) * arrowSize);
+  ctx.lineTo(tx - Math.cos(arrowAngle + 0.3) * arrowSize, ty - Math.sin(arrowAngle + 0.3) * arrowSize);
+  ctx.closePath();
+  ctx.fill();
+
+  // Vertex dot
+  ctx.fillStyle = '#334155';
+  ctx.beginPath();
+  ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Right angle mark
+  if (_angle === 90) {
+    var markSize = r * 0.12;
+    ctx.strokeStyle = '#16a34a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx + markSize, cy);
+    ctx.lineTo(cx + markSize, cy + markSize);
+    ctx.lineTo(cx, cy + markSize);
+    ctx.stroke();
+  }
+
+  // Vertex label
+  ctx.fillStyle = '#334155';
+  ctx.font = 'bold ' + Math.max(12, r * 0.1) + 'px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText('O', cx + 8, cy + 5);
+
+  // Side labels
+  ctx.font = Math.max(11, r * 0.08) + 'px sans-serif';
+  ctx.fillStyle = '#334155';
+  ctx.textAlign = 'center';
+  ctx.fillText('A', cx + r + 15, cy);
+
+  ctx.fillStyle = '#dc2626';
+  var lx = cx + Math.cos(angRad) * (r + 15);
+  var ly = cy + Math.sin(angRad) * (r + 15);
+  ctx.fillText('B', lx, ly);
+
+  // Reference angles visual (0°, 90°, 180°, 270° lines)
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 1;
+  [90, 180, 270].forEach(function(deg) {
+    var a = deg * Math.PI / 180;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a) * r * 0.5, cy + Math.sin(a) * r * 0.5);
+    ctx.stroke();
+  });
+  ctx.setLineDash([]);
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '直角是多少度？', opts: ['45°', '60°', '90°', '180°'], ans: 2 },
+  { q: '120°的角是什么角？', opts: ['锐角', '直角', '钝角', '平角'], ans: 2 },
+  { q: '1平角等于几个直角？', opts: ['1个', '2个', '3个', '4个'], ans: 1 },
+  { q: '1周角等于几个平角？', opts: ['1个', '2个', '3个', '4个'], ans: 1 },
+  { q: '35°的角是什么角？', opts: ['锐角', '直角', '钝角', '平角'], ans: 0 },
+  { q: '钟面上3时整，时针和分针成什么角？', opts: ['锐角', '直角', '钝角', '平角'], ans: 1 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML =
+      '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) {
+    html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>';
+  });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) {
+    b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++;
+  setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

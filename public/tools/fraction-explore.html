@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>分数的初步认识 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  :root { --c1: #ef4444; --c2: #f97316; --c3: #eab308; --c4: #22c55e; --c5: #3b82f6; --c6: #8b5cf6; }
+  * { box-sizing: border-box; }
+  body { font-family: var(--edu-font); margin:0; }
+  .tool { width:100vw; height:100vh; display:flex; flex-direction:column; background:var(--edu-bg); }
+  .toolbar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#fff; border-bottom:1px solid var(--edu-border); }
+  .toolbar h1 { font-size:15px; color:var(--edu-primary); margin:0; }
+  .toolbar span { font-size:11px; color:var(--edu-text-muted); background:#f1f5f9; padding:2px 8px; border-radius:12px; }
+  .main { flex:1; display:grid; grid-template-columns:1fr 280px; overflow:hidden; }
+  .canvas-wrap { position:relative; overflow:hidden; background:linear-gradient(135deg,#fef9c3,#fefce8); }
+  .canvas-wrap canvas { width:100%; height:100%; display:block; }
+  .panel { background:#fff; border-left:1px solid var(--edu-border); padding:12px; display:flex; flex-direction:column; gap:8px; overflow:auto; }
+  .section { display:flex; flex-direction:column; gap:4px; }
+  .label { font-size:10px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:var(--edu-border); }
+  .btn { padding:6px 12px; border:none; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:var(--edu-font); transition:all .15s; }
+  .btn.active { background:var(--edu-primary); color:#fff; }
+  .btn-default { background:#f1f5f9; color:#334155; }
+  .btn-default:hover { background:#e2e8f0; }
+  .row { display:flex; gap:4px; flex-wrap:wrap; }
+  .big-fraction { text-align:center; padding:12px; background:#fffbeb; border:2px solid #fde68a; border-radius:12px; }
+  .big-fraction .num { font-size:32px; font-weight:800; color:#b45309; }
+  .big-fraction .line { height:3px; background:#b45309; margin:4px auto; border-radius:2px; }
+  .compare-bar { height:24px; border-radius:12px; transition:width .3s; }
+  .info { font-size:11px; line-height:1.8; color:#334155; background:#fff; border:1px solid #fde68a; border-radius:8px; padding:8px 10px; }
+  .info b { color:#92400e; }
+  .quiz-card { background:#fef3c7; border:2px solid #fbbf24; border-radius:12px; padding:10px; text-align:center; }
+  .quiz-q { font-size:13px; font-weight:700; color:#92400e; }
+  .quiz-opts { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px; }
+  .quiz-opt { padding:6px; border:2px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; background:#fff; font-family:var(--edu-font); }
+  .quiz-opt:hover { border-color:#f59e0b; }
+  .quiz-opt.correct { background:#dcfce7; border-color:#22c55e; }
+  .quiz-opt.wrong { background:#fef2f2; border-color:#ef4444; }
+  .quiz-result { font-size:11px; font-weight:700; margin-top:4px; min-height:16px; }
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar">
+    <h1>🍕 分数的初步认识</h1>
+    <span>三年级上册 · 第八单元</span>
+  </div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="section">
+        <div class="label">分几份（分母）</div>
+        <div class="row" id="denom-btns"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">取几份（分子）</div>
+        <div class="row" id="numer-btns"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="big-fraction" id="frac-display">
+        <div class="num" id="frac-n">1</div>
+        <div class="line"></div>
+        <div class="num" id="frac-d">2</div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">形状类型</div>
+        <div class="row">
+          <button class="btn active" id="shape-pie" onclick="setShape('pie')">🍕 圆饼</button>
+          <button class="btn btn-default" id="shape-bar" onclick="setShape('bar')">🍫 长条</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">分数比较</div>
+        <div id="compare-area"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">分数测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>分数小知识</b><br/>
+        ● 分母 = 平均分的<strong>总份数</strong><br/>
+        ● 分子 = 取了其中的<strong>几份</strong><br/>
+        ● 分子比分母小 → <strong>真分数</strong>（小于1）<br/>
+        ● 每份一样大才叫"平均分"
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx;
+var _denom = 2, _numer = 1, _shape = 'pie';
+var COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#14b8a6'];
+var FILLED = '#f97316';
+var EMPTY = '#fed7aa';
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  buildBtns();
+  updateAll();
+  window.addEventListener('resize', resize);
+  resize();
+  nextQuiz();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function buildBtns() {
+  var dArea = document.getElementById('denom-btns');
+  dArea.innerHTML = '';
+  for (var d = 2; d <= 8; d++) {
+    var b = document.createElement('button');
+    b.className = 'btn ' + (d === _denom ? 'active' : 'btn-default');
+    b.textContent = d;
+    b.onclick = (function(v) { return function() { _denom = v; _numer = Math.min(_numer, v); buildBtns(); updateAll(); }; })(d);
+    dArea.appendChild(b);
+  }
+  var nArea = document.getElementById('numer-btns');
+  nArea.innerHTML = '';
+  for (var n = 0; n <= _denom; n++) {
+    var b2 = document.createElement('button');
+    b2.className = 'btn ' + (n === _numer ? 'active' : 'btn-default');
+    b2.textContent = n;
+    b2.onclick = (function(v) { return function() { _numer = v; buildBtns(); updateAll(); }; })(n);
+    nArea.appendChild(b2);
+  }
+}
+
+function setShape(s) {
+  _shape = s;
+  document.getElementById('shape-pie').className = 'btn ' + (s === 'pie' ? 'active' : 'btn-default');
+  document.getElementById('shape-bar').className = 'btn ' + (s === 'bar' ? 'active' : 'btn-default');
+  draw();
+}
+
+function updateAll() {
+  document.getElementById('frac-n').textContent = _numer;
+  document.getElementById('frac-d').textContent = _denom;
+  draw();
+  updateCompare();
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  if (_shape === 'pie') drawPie(w, h);
+  else drawBar(w, h);
+}
+
+function drawPie(w, h) {
+  var cx = w / 2, cy = h / 2;
+  var r = Math.min(w, h) * 0.32;
+  r = Math.max(r, 40);
+
+  var startAngle = -Math.PI / 2;
+  for (var i = 0; i < _denom; i++) {
+    var sweep = (Math.PI * 2) / _denom;
+    var endAngle = startAngle + sweep;
+    var filled = i < _numer;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = filled ? FILLED : EMPTY;
+    ctx.fill();
+    ctx.strokeStyle = '#92400e';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Label
+    var midAngle = startAngle + sweep / 2;
+    var lx = cx + Math.cos(midAngle) * r * 0.55;
+    var ly = cy + Math.sin(midAngle) * r * 0.55;
+    ctx.fillStyle = filled ? '#fff' : '#92400e';
+    ctx.font = 'bold ' + Math.max(12, r * 0.12) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(filled ? '取' + (i + 1) : '第' + (i + 1) + '份', lx, ly);
+
+    startAngle = endAngle;
+  }
+
+  // Center label
+  ctx.fillStyle = '#92400e';
+  ctx.font = 'bold ' + Math.max(14, r * 0.15) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(_numer + '/' + _denom, cx, cy);
+}
+
+function drawBar(w, h) {
+  var barW = Math.min(w * 0.7, 500);
+  var barH = Math.min(h * 0.15, 80);
+  var x0 = (w - barW) / 2, y0 = (h - barH) / 2;
+  var segW = barW / _denom;
+
+  for (var i = 0; i < _denom; i++) {
+    var filled = i < _numer;
+    ctx.fillStyle = filled ? FILLED : EMPTY;
+    ctx.fillRect(x0 + i * segW, y0, segW - 2, barH);
+    ctx.strokeStyle = '#92400e';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x0 + i * segW, y0, segW - 2, barH);
+
+    ctx.fillStyle = filled ? '#fff' : '#92400e';
+    ctx.font = 'bold ' + Math.max(11, segW * 0.14) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(filled ? '取' + (i + 1) : '第' + (i + 1) + '份', x0 + i * segW + segW / 2 - 1, y0 + barH / 2);
+  }
+
+  // Label below
+  ctx.fillStyle = '#92400e';
+  ctx.font = 'bold ' + Math.max(14, barH * 0.3) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(_numer + '/' + _denom, w / 2, y0 + barH + 30);
+}
+
+function updateCompare() {
+  var area = document.getElementById('compare-area');
+  var fractions = [];
+  for (var d = 2; d <= 6; d++) {
+    for (var n = 1; n < d; n++) {
+      fractions.push({ n: n, d: d, v: n / d });
+    }
+  }
+  fractions.sort(function(a, b) { return a.v - b.v; });
+
+  var current = _numer / _denom;
+  var html = '';
+  fractions.forEach(function(f) {
+    var pct = Math.round(f.v * 100);
+    var isCurrent = f.n === _numer && f.d === _denom;
+    html += '<div style="display:flex;align-items:center;gap:4px;margin:2px 0;font-size:11px">' +
+      '<span style="min-width:28px;font-weight:' + (isCurrent ? '800' : '600') + ';color:' + (isCurrent ? '#b45309' : '#64748b') + '">' + f.n + '/' + f.d + '</span>' +
+      '<div style="flex:1;background:#f1f5f9;border-radius:8px;height:14px;overflow:hidden">' +
+      '<div class="compare-bar" style="width:' + pct + '%;background:' + (isCurrent ? FILLED : '#94a3b8') + ';height:100%"></div></div></div>';
+  });
+  area.innerHTML = html;
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '把一个圆平均分成4份，取1份是多少？', opts: ['1/2', '1/3', '1/4', '1/5'], ans: 2 },
+  { q: '1/2 和 1/3 谁大？', opts: ['1/2 大', '1/3 大', '一样大', '无法比较'], ans: 0 },
+  { q: '3/4 里面有几个 1/4？', opts: ['1个', '2个', '3个', '4个'], ans: 2 },
+  { q: '分子是2、分母是5的分数是？', opts: ['5/2', '2/5', '2/3', '5/3'], ans: 1 },
+  { q: '1/2 + 1/2 = ?', opts: ['1', '2/2', '1/4', '2/4'], ans: 0 },
+  { q: '把一根绳子平均分成3段，每段是全长的几分之几？', opts: ['1/2', '1/3', '2/3', '3/3'], ans: 1 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML =
+      '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) {
+    html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>';
+  });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) {
+    b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++;
+  setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

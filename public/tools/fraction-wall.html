@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>分数的意义与性质 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  * { box-sizing:border-box; }
+  body { font-family:var(--edu-font); margin:0; }
+  .tool { width:100vw; height:100vh; display:flex; flex-direction:column; background:var(--edu-bg); }
+  .toolbar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#fff; border-bottom:1px solid var(--edu-border); }
+  .toolbar h1 { font-size:15px; color:var(--edu-primary); margin:0; }
+  .toolbar span { font-size:11px; color:var(--edu-text-muted); background:#f1f5f9; padding:2px 8px; border-radius:12px; }
+  .main { flex:1; display:grid; grid-template-columns:1fr 290px; overflow:hidden; }
+  .canvas-wrap { position:relative; overflow:hidden; background:linear-gradient(135deg,#fef3c7,#fffbeb); }
+  .canvas-wrap canvas { width:100%; height:100%; display:block; }
+  .panel { background:#fff; border-left:1px solid var(--edu-border); padding:12px; display:flex; flex-direction:column; gap:8px; overflow:auto; }
+  .section { display:flex; flex-direction:column; gap:4px; }
+  .label { font-size:10px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:var(--edu-border); }
+  .btn { padding:6px 12px; border:none; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:var(--edu-font); transition:all .15s; }
+  .btn.active { background:var(--edu-primary); color:#fff; }
+  .btn-default { background:#f1f5f9; color:#334155; }
+  .btn-default:hover { background:#e2e8f0; }
+  .row { display:flex; gap:4px; flex-wrap:wrap; }
+
+  .frac-card { text-align:center; padding:10px; background:#fffbeb; border:2px solid #fde68a; border-radius:12px; }
+  .frac-card .val { font-size:28px; font-weight:800; color:#b45309; }
+  .frac-card .eq { font-size:13px; color:#92400e; margin-top:4px; }
+
+  .info { font-size:11px; line-height:1.8; color:#334155; background:#fff; border:1px solid #fde68a; border-radius:8px; padding:8px 10px; }
+  .info b { color:#92400e; }
+
+  .quiz-card { background:#fef3c7; border:2px solid #fbbf24; border-radius:12px; padding:10px; text-align:center; }
+  .quiz-q { font-size:13px; font-weight:700; color:#92400e; }
+  .quiz-opts { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px; }
+  .quiz-opt { padding:6px; border:2px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; background:#fff; font-family:var(--edu-font); }
+  .quiz-opt:hover { border-color:#f59e0b; }
+  .quiz-opt.correct { background:#dcfce7; border-color:#22c55e; }
+  .quiz-opt.wrong { background:#fef2f2; border-color:#ef4444; }
+  .quiz-result { font-size:11px; font-weight:700; margin-top:4px; min-height:16px; }
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar">
+    <h1>🧱 分数的意义与性质</h1>
+    <span>五年级下册 · 第四单元</span>
+  </div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="frac-card">
+        <div class="val" id="frac-display">1/2</div>
+        <div class="eq" id="frac-eq">= 0.5</div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">选择分数</div>
+        <div class="row" id="frac-btns"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">可视化模式</div>
+        <div class="row">
+          <button class="btn active" id="mode-wall" onclick="setMode('wall')">🧱 分数墙</button>
+          <button class="btn btn-default" id="mode-pie" onclick="setMode('pie')">🍕 圆饼</button>
+          <button class="btn btn-default" id="mode-line" onclick="setMode('line')">📏 数轴</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">分数性质</div>
+        <div style="background:#fefce8;padding:8px;border-radius:8px;font-size:11px;line-height:1.8" id="props-info"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">分数测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>分数性质小知识</b><br/>
+        ● <strong>分数基本性质</strong>：分子分母同乘/除以一个不为0的数，大小不变<br/>
+        ● <strong>约分</strong>：分子分母除以公因数 → 最简分数<br/>
+        ● <strong>通分</strong>：化为同分母，便于比较和运算<br/>
+        ● 分母相同的分数，分子越大值越大<br/>
+        ● 分子相同的分数，分母越大值越小
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx;
+var _num = 1, _den = 2, _mode = 'wall';
+
+var COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#14b8a6'];
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  buildFracBtns();
+  resize();
+  nextQuiz();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function buildFracBtns() {
+  var area = document.getElementById('frac-btns');
+  var html = '<div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:2px">分母</div><div class="row">';
+  for (var d = 2; d <= 8; d++) {
+    html += '<button class="btn ' + (d === _den ? 'active' : 'btn-default') + '" onclick="setDenom(' + d + ')">' + d + '</button>';
+  }
+  html += '</div><div style="font-size:10px;font-weight:700;color:#64748b;margin:4px 0 2px">分子</div><div class="row">';
+  for (var n = 1; n <= _den; n++) {
+    html += '<button class="btn ' + (n === _num ? 'active' : 'btn-default') + '" onclick="setNumer(' + n + ')">' + n + '</button>';
+  }
+  html += '</div>';
+  area.innerHTML = html;
+}
+
+function setDenom(d) { _den = d; _num = Math.min(_num, d); buildFracBtns(); updateAll(); }
+function setNumer(n) { _num = n; buildFracBtns(); updateAll(); }
+
+function setMode(m) {
+  _mode = m;
+  ['wall','pie','line'].forEach(function(id) {
+    document.getElementById('mode-' + id).className = 'btn ' + (id === m ? 'active' : 'btn-default');
+  });
+  draw();
+}
+
+function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+
+function updateAll() {
+  document.getElementById('frac-display').textContent = _num + '/' + _den;
+  document.getElementById('frac-eq').textContent = '= ' + (_num / _den).toFixed(4);
+  updateProps();
+  draw();
+}
+
+function updateProps() {
+  var g = gcd(_num, _den);
+  var simpN = _num / g, simpD = _den / g;
+  var html = '分数：' + _num + '/' + _den;
+  if (g > 1) {
+    html += '<br>约分：' + simpN + '/' + simpD + '（分子分母同除以' + g + '）';
+  } else {
+    html += '<br>已经是最简分数';
+  }
+  html += '<br>小数：' + (_num / _den).toFixed(4);
+  if (_num === _den) html += '<br><strong>= 1（假分数，分子=分母）</strong>';
+  else if (_num > _den) html += '<br><strong>> 1（假分数）</strong>';
+  else html += '<br><strong>< 1（真分数）</strong>';
+
+  // Find equivalent fractions
+  html += '<br>等价分数：';
+  var count = 0;
+  for (var m = 2; m <= 6 && count < 4; m++) {
+    if (m === 1 || (_num * m > 48 || _den * m > 48)) continue;
+    html += ' ' + (_num * m) + '/' + (_den * m);
+    count++;
+  }
+
+  document.getElementById('props-info').innerHTML = html;
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  if (_mode === 'wall') drawWall(w, h);
+  else if (_mode === 'pie') drawPie(w, h);
+  else drawLine(w, h);
+}
+
+function drawWall(w, h) {
+  // Fraction wall: rows for denominators 2-8, highlight current
+  var barW = w * 0.8;
+  var barH = Math.min(45, (h - 80) / 9);
+  barH = Math.max(barH, 25);
+  var x0 = (w - barW) / 2;
+  var y = 20;
+
+  ctx.fillStyle = '#92400e';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('分数墙 — 每行长度相同，分成不同的份数', w / 2, y);
+  y += 24;
+
+  for (var d = 2; d <= 8; d++) {
+    var isCurrent = d === _den;
+    var segW = barW / d;
+
+    // Label
+    ctx.fillStyle = isCurrent ? '#b45309' : '#64748b';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('1/' + d, x0 - 8, y + barH / 2);
+
+    for (var i = 0; i < d; i++) {
+      var filled = isCurrent && i < _num;
+      ctx.fillStyle = filled ? COLORS[d - 2] : '#f3f4f6';
+      ctx.fillRect(x0 + i * segW + 1, y, segW - 2, barH - 2);
+      ctx.strokeStyle = isCurrent ? '#92400e' : '#d1d5db';
+      ctx.lineWidth = isCurrent ? 1.5 : 0.5;
+      ctx.strokeRect(x0 + i * segW + 1, y, segW - 2, barH - 2);
+    }
+
+    // Highlight row border if current
+    if (isCurrent) {
+      ctx.strokeStyle = '#b45309';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x0, y, barW, barH);
+    }
+
+    y += barH + 4;
+  }
+
+  // Vertical line showing current fraction position
+  var lineX = x0 + (_num / _den) * barW;
+  ctx.strokeStyle = '#dc2626';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 3]);
+  ctx.beginPath();
+  ctx.moveTo(lineX, 44);
+  ctx.lineTo(lineX, y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = '#dc2626';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(_num + '/' + _den, lineX, y + 14);
+}
+
+function drawPie(w, h) {
+  var cx = w / 2, cy = h / 2;
+  var r = Math.min(w, h) * 0.32;
+  r = Math.max(r, 60);
+
+  var startAngle = -Math.PI / 2;
+  for (var i = 0; i < _den; i++) {
+    var sweep = Math.PI * 2 / _den;
+    var endAngle = startAngle + sweep;
+    var filled = i < _num;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = filled ? COLORS[_den - 2] : '#f3f4f6';
+    ctx.fill();
+    ctx.strokeStyle = '#92400e';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Segment label
+    var mid = startAngle + sweep / 2;
+    var lx = cx + Math.cos(mid) * r * 0.55;
+    var ly = cy + Math.sin(mid) * r * 0.55;
+    ctx.fillStyle = filled ? '#fff' : '#92400e';
+    ctx.font = 'bold ' + Math.max(11, r * 0.1) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('1/' + _den, lx, ly);
+
+    startAngle = endAngle;
+  }
+
+  ctx.fillStyle = '#92400e';
+  ctx.font = 'bold ' + Math.max(16, r * 0.15) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(_num + '/' + _den, cx, cy);
+}
+
+function drawLine(w, h) {
+  // Number line from 0 to 1
+  var lineY = h / 2;
+  var lx0 = 80, lx1 = w - 80;
+  var lineW = lx1 - lx0;
+
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(lx0, lineY); ctx.lineTo(lx1, lineY); ctx.stroke();
+
+  // Ticks
+  for (var d = 2; d <= 8; d++) {
+    var isCurrent = d === _den;
+    ctx.strokeStyle = isCurrent ? '#b45309' : '#d1d5db';
+    ctx.lineWidth = isCurrent ? 2 : 0.5;
+    for (var i = 0; i <= d; i++) {
+      var x = lx0 + (i / d) * lineW;
+      ctx.beginPath();
+      ctx.moveTo(x, lineY - (isCurrent ? 10 : 5));
+      ctx.lineTo(x, lineY + (isCurrent ? 10 : 5));
+      ctx.stroke();
+    }
+  }
+
+  // Labels at ends
+  ctx.fillStyle = '#334155';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('0', lx0, lineY + 28);
+  ctx.fillText('1', lx1, lineY + 28);
+
+  // Current fraction marker
+  var markerX = lx0 + (_num / _den) * lineW;
+  ctx.fillStyle = '#dc2626';
+  ctx.beginPath();
+  ctx.moveTo(markerX, lineY - 15);
+  ctx.lineTo(markerX - 7, lineY - 25);
+  ctx.lineTo(markerX + 7, lineY - 25);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.font = 'bold 16px sans-serif';
+  ctx.fillText(_num + '/' + _den, markerX, lineY - 35);
+
+  // Show equivalent fractions on same line
+  var equivalents = [];
+  for (var m = 1; m <= 4; m++) {
+    var en = _num * m, ed = _den * m;
+    if (en <= 32 && ed <= 32) equivalents.push({ n: en, d: ed });
+  }
+
+  ctx.font = '11px sans-serif';
+  equivalents.forEach(function(f, i) {
+    var x = lx0 + (f.n / f.d) * lineW;
+    if (Math.abs(x - markerX) > 30 || i === 0) {
+      ctx.fillStyle = '#64748b';
+      ctx.beginPath(); ctx.arc(x, lineY + 20, 3, 0, Math.PI * 2); ctx.fill();
+    }
+  });
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '把 2/3 的分子分母同时乘以3，结果是多少？', opts: ['3/6', '6/9', '2/9', '6/3'], ans: 1 },
+  { q: '4/8 约分后等于多少？', opts: ['2/4', '1/4', '1/2', '2/8'], ans: 2 },
+  { q: '1/4 和 2/8 哪个大？', opts: ['1/4 大', '2/8 大', '一样大', '无法比较'], ans: 2 },
+  { q: '3/5 和 2/3 谁大？', opts: ['3/5 大', '2/3 大', '一样大', '无法比较'], ans: 1 },
+  { q: '分母相同的分数，怎样比较大小？', opts: ['分母大的大', '分子大的大', '分母小的大', '分子小的大'], ans: 1 },
+  { q: '分子相同的分数，怎样比较大小？', opts: ['分母大的大', '分子大的大', '分母小的大', '分子小的大'], ans: 2 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML =
+      '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) {
+    html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>';
+  });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) {
+    b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++;
+  setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

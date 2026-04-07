@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>三角形探究 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  * { box-sizing:border-box; }
+  body { font-family:var(--edu-font); margin:0; }
+  .tool { width:100vw; height:100vh; display:flex; flex-direction:column; background:var(--edu-bg); }
+  .toolbar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#fff; border-bottom:1px solid var(--edu-border); }
+  .toolbar h1 { font-size:15px; color:var(--edu-primary); margin:0; }
+  .toolbar span { font-size:11px; color:var(--edu-text-muted); background:#f1f5f9; padding:2px 8px; border-radius:12px; }
+  .main { flex:1; display:grid; grid-template-columns:1fr 290px; overflow:hidden; }
+  .canvas-wrap { position:relative; overflow:hidden; background:linear-gradient(135deg,#fdf4ff,#faf5ff); }
+  .canvas-wrap canvas { width:100%; height:100%; display:block; cursor:grab; }
+  .canvas-wrap canvas:active { cursor:grabbing; }
+  .canvas-wrap .hint { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,.85); padding:4px 12px; border-radius:8px; font-size:11px; color:#64748b; pointer-events:none; }
+  .panel { background:#fff; border-left:1px solid var(--edu-border); padding:12px; display:flex; flex-direction:column; gap:8px; overflow:auto; }
+  .section { display:flex; flex-direction:column; gap:4px; }
+  .label { font-size:10px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:var(--edu-border); }
+  .btn { padding:6px 12px; border:none; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:var(--edu-font); transition:all .15s; }
+  .btn.active { background:var(--edu-primary); color:#fff; }
+  .btn-default { background:#f1f5f9; color:#334155; }
+  .btn-default:hover { background:#e2e8f0; }
+  .row { display:flex; gap:4px; flex-wrap:wrap; }
+
+  .prop-card { background:#faf5ff; border:2px solid #d8b4fe; border-radius:10px; padding:8px 10px; }
+  .prop-row { display:flex; justify-content:space-between; font-size:12px; padding:2px 0; }
+  .prop-row .key { color:#64748b; font-weight:600; }
+  .prop-row .val { color:#6d28d9; font-weight:800; }
+
+  .type-badge { display:inline-block; padding:3px 10px; border-radius:8px; font-size:11px; font-weight:700; }
+
+  .quiz-card { background:#faf5ff; border:2px solid #c084fc; border-radius:12px; padding:10px; text-align:center; }
+  .quiz-q { font-size:13px; font-weight:700; color:#6d28d9; }
+  .quiz-opts { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px; }
+  .quiz-opt { padding:6px; border:2px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; background:#fff; font-family:var(--edu-font); }
+  .quiz-opt:hover { border-color:#8b5cf6; }
+  .quiz-opt.correct { background:#dcfce7; border-color:#22c55e; }
+  .quiz-opt.wrong { background:#fef2f2; border-color:#ef4444; }
+  .quiz-result { font-size:11px; font-weight:700; margin-top:4px; min-height:16px; }
+
+  .info { font-size:11px; line-height:1.8; color:#334155; background:#fff; border:1px solid #d8b4fe; border-radius:8px; padding:8px 10px; }
+  .info b { color:#6d28d9; }
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar">
+    <h1>🔺 三角形探究</h1>
+    <span>四年级下册 · 第五单元</span>
+  </div>
+  <div class="main">
+    <div class="canvas-wrap">
+      <canvas id="cv"></canvas>
+      <div class="hint">拖拽三个顶点自由调整三角形</div>
+    </div>
+    <div class="panel">
+      <div class="section">
+        <div class="label">预设三角形</div>
+        <div class="row">
+          <button class="btn btn-default" onclick="preset('equilateral')">等边三角形</button>
+          <button class="btn btn-default" onclick="preset('isosceles')">等腰三角形</button>
+          <button class="btn btn-default" onclick="preset('right')">直角三角形</button>
+          <button class="btn btn-default" onclick="preset('obtuse')">钝角三角形</button>
+          <button class="btn btn-default" onclick="preset('scalene')">不等边三角形</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">三角形属性</div>
+        <div class="prop-card">
+          <div class="prop-row"><span class="key">三边长</span><span class="val" id="p-sides">—</span></div>
+          <div class="prop-row"><span class="key">三个角</span><span class="val" id="p-angles">—</span></div>
+          <div class="prop-row"><span class="key">周长</span><span class="val" id="p-perim">—</span></div>
+          <div class="prop-row"><span class="key">面积</span><span class="val" id="p-area">—</span></div>
+          <div class="prop-row"><span class="key">按边分类</span><span class="val" id="p-bySide">—</span></div>
+          <div class="prop-row"><span class="key">按角分类</span><span class="val" id="p-byAngle">—</span></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">内角和验证</div>
+        <div style="text-align:center;padding:8px;background:#f5f3ff;border-radius:10px">
+          <div style="font-size:12px;color:#64748b">∠A + ∠B + ∠C =</div>
+          <div style="font-size:24px;font-weight:800;color:#7c3aed" id="p-sum">180°</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">三角形测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>三角形小知识</b><br/>
+        ● 三角形的<strong>内角和 = 180°</strong><br/>
+        ● <strong>按边分</strong>：等边、等腰、不等边<br/>
+        ● <strong>按角分</strong>：锐角、直角、钝角三角形<br/>
+        ● 任意两边之和 <strong>大于</strong> 第三边<br/>
+        ● 三角形具有<strong>稳定性</strong>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx;
+var _pts = []; // 3 vertices {x, y}
+var _dragIdx = -1;
+var _ox = 0, _oy = 0, _scale = 1;
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+  preset('right');
+  nextQuiz();
+
+  cv.addEventListener('mousedown', function(e) { startDrag(e); });
+  cv.addEventListener('mousemove', function(e) { doDrag(e); });
+  cv.addEventListener('mouseup', function() { _dragIdx = -1; });
+  cv.addEventListener('mouseleave', function() { _dragIdx = -1; });
+  cv.addEventListener('touchstart', function(e) { e.preventDefault(); startDrag(e.touches[0]); }, {passive:false});
+  cv.addEventListener('touchmove', function(e) { e.preventDefault(); doDrag(e.touches[0]); }, {passive:false});
+  cv.addEventListener('touchend', function() { _dragIdx = -1; });
+}
+
+function startDrag(e) {
+  var rect = cv.getBoundingClientRect();
+  var mx = (e.clientX - rect.left - _ox) / _scale;
+  var my = (e.clientY - rect.top - _oy) / _scale;
+  var minD = Infinity;
+  _dragIdx = -1;
+  _pts.forEach(function(p, i) {
+    var d = Math.hypot(p.x - mx, p.y - my);
+    if (d < minD && d < 30) { minD = d; _dragIdx = i; }
+  });
+}
+
+function doDrag(e) {
+  if (_dragIdx < 0) return;
+  var rect = cv.getBoundingClientRect();
+  var mx = (e.clientX - rect.left - _ox) / _scale;
+  var my = (e.clientY - rect.top - _oy) / _scale;
+  _pts[_dragIdx] = { x: mx, y: my };
+  updateProps();
+  draw();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  _scale = Math.min(r.width, r.height) / 500;
+  _ox = r.width * 0.1;
+  _oy = r.height * 0.15;
+  if (_pts.length === 3) draw();
+}
+
+function preset(type) {
+  var shapes = {
+    equilateral: [{x:150,y:50},{x:50,y:223},{x:250,y:223}],
+    isosceles: [{x:150,y:40},{x:60,y:230},{x:240,y:230}],
+    right: [{x:60,y:60},{x:60,y:230},{x:240,y:230}],
+    obtuse: [{x:40,y:180},{x:260,y:200},{x:180,y:60}],
+    scalene: [{x:80,y:50},{x:40,y:240},{x:270,y:200}],
+  };
+  _pts = shapes[type].map(function(p) { return {x:p.x, y:p.y}; });
+  updateProps();
+  draw();
+}
+
+function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+
+function angleBetween(a, b, c) {
+  var ba = {x: a.x - b.x, y: a.y - b.y};
+  var bc = {x: c.x - b.x, y: c.y - b.y};
+  var dot = ba.x * bc.x + ba.y * bc.y;
+  var cross = ba.x * bc.y - ba.y * bc.x;
+  var ang = Math.atan2(Math.abs(cross), dot);
+  return ang * 180 / Math.PI;
+}
+
+function triangleArea(a, b, c) {
+  return Math.abs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y)) / 2;
+}
+
+function updateProps() {
+  if (_pts.length < 3) return;
+  var A = _pts[0], B = _pts[1], C = _pts[2];
+
+  var a = dist(B, C), b = dist(A, C), c = dist(A, B);
+  var angA = angleBetween(B, A, C);
+  var angB = angleBetween(A, B, C);
+  var angC = angleBetween(A, C, B);
+  var sum = angA + angB + angC;
+  var perim = a + b + c;
+  var area = triangleArea(A, B, C);
+
+  document.getElementById('p-sides').textContent =
+    c.toFixed(1) + ', ' + b.toFixed(1) + ', ' + a.toFixed(1);
+  document.getElementById('p-angles').textContent =
+    angA.toFixed(1) + '°, ' + angB.toFixed(1) + '°, ' + angC.toFixed(1) + '°';
+  document.getElementById('p-perim').textContent = perim.toFixed(1);
+  document.getElementById('p-area').textContent = area.toFixed(1);
+  document.getElementById('p-sum').textContent = sum.toFixed(1) + '°';
+
+  // By sides
+  var eps = 2;
+  var eq = (Math.abs(a-b) < eps && Math.abs(b-c) < eps);
+  var iso = (!eq && (Math.abs(a-b) < eps || Math.abs(b-c) < eps || Math.abs(a-c) < eps));
+  var sideType = eq ? '等边三角形' : iso ? '等腰三角形' : '不等边三角形';
+  document.getElementById('p-bySide').innerHTML = '<span class="type-badge" style="background:#dbeafe;color:#1e40af">' + sideType + '</span>';
+
+  // By angles
+  var maxAng = Math.max(angA, angB, angC);
+  var angType = maxAng > 90.5 ? '钝角三角形' : Math.abs(maxAng - 90) < 0.5 ? '直角三角形' : '锐角三角形';
+  document.getElementById('p-byAngle').innerHTML = '<span class="type-badge" style="background:#faf5ff;color:#6d28d9">' + angType + '</span>';
+}
+
+function draw() {
+  if (_pts.length < 3) return;
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  ctx.save();
+  ctx.translate(_ox, _oy);
+  ctx.scale(_scale, _scale);
+
+  var A = _pts[0], B = _pts[1], C = _pts[2];
+
+  // Triangle fill
+  ctx.fillStyle = 'rgba(139,92,246,0.12)';
+  ctx.beginPath();
+  ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.lineTo(C.x, C.y);
+  ctx.closePath();
+  ctx.fill();
+
+  // Triangle stroke
+  ctx.strokeStyle = '#7c3aed';
+  ctx.lineWidth = 2.5 / _scale;
+  ctx.beginPath();
+  ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.lineTo(C.x, C.y);
+  ctx.closePath();
+  ctx.stroke();
+
+  // Angle arcs
+  drawAngleArc(A, B, C, '#ef4444', 'A');
+  drawAngleArc(B, A, C, '#3b82f6', 'B');
+  drawAngleArc(C, A, B, '#22c55e', 'C');
+
+  // Side labels
+  drawSideLabel(A, B, dist(A, C), '#ef4444');
+  drawSideLabel(B, C, dist(B, A), '#3b82f6');
+  drawSideLabel(A, C, dist(A, B), '#22c55e');
+
+  // Vertex dots and labels
+  var labels = ['A', 'B', 'C'];
+  var colors = ['#ef4444', '#3b82f6', '#22c55e'];
+  _pts.forEach(function(p, i) {
+    ctx.fillStyle = colors[i];
+    ctx.beginPath(); ctx.arc(p.x, p.y, 6 / _scale, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2 / _scale, 0, Math.PI * 2); ctx.fill();
+
+    // Label
+    var cx = (_pts[0].x + _pts[1].x + _pts[2].x) / 3;
+    var cy = (_pts[0].y + _pts[1].y + _pts[2].y) / 3;
+    var dx = p.x - cx, dy = p.y - cy;
+    var len = Math.hypot(dx, dy) || 1;
+    var lx = p.x + dx / len * 20;
+    var ly = p.y + dy / len * 20;
+
+    ctx.fillStyle = colors[i];
+    ctx.font = 'bold ' + (16 / _scale) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(labels[i], lx, ly);
+  });
+
+  // Height line from A to BC
+  ctx.setLineDash([4 / _scale, 3 / _scale]);
+  ctx.strokeStyle = '#f59e0b';
+  ctx.lineWidth = 1.5 / _scale;
+  // Projection of A onto BC
+  var bcx = C.x - B.x, bcy = C.y - B.y;
+  var t = ((A.x - B.x) * bcx + (A.y - B.y) * bcy) / (bcx * bcx + bcy * bcy);
+  t = Math.max(0, Math.min(1, t));
+  var hx = B.x + t * bcx, hy = B.y + t * bcy;
+  ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(hx, hy); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Right angle mark at height foot
+  var hLen = Math.hypot(A.x - hx, A.y - hy);
+  if (hLen > 10) {
+    var markSize = 8 / _scale;
+    var nx = -(A.y - hy) / hLen * markSize;
+    var ny = (A.x - hx) / hLen * markSize;
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 1.5 / _scale;
+    ctx.beginPath();
+    ctx.moveTo(hx + nx, hy + ny);
+    ctx.lineTo(hx + nx - (A.x - hx) / hLen * markSize, hy + ny - (A.y - hy) / hLen * markSize);
+    ctx.lineTo(hx - (A.x - hx) / hLen * markSize, hy - (A.y - hy) / hLen * markSize);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawAngleArc(vertex, p1, p2, color, label) {
+  var a1 = Math.atan2(p1.y - vertex.y, p1.x - vertex.x);
+  var a2 = Math.atan2(p2.y - vertex.y, p2.x - vertex.x);
+
+  // Ensure we draw the smaller arc
+  var diff = a2 - a1;
+  while (diff < -Math.PI) diff += Math.PI * 2;
+  while (diff > Math.PI) diff -= Math.PI * 2;
+
+  var r = 20 / _scale;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5 / _scale;
+  ctx.beginPath();
+  if (diff > 0) ctx.arc(vertex.x, vertex.y, r, a1, a2);
+  else ctx.arc(vertex.x, vertex.y, r, a1, a2, true);
+  ctx.stroke();
+
+  // Angle value
+  var midA = a1 + diff / 2;
+  var angDeg = Math.abs(angleBetween(p1, vertex, p2));
+  var lr = r + 14 / _scale;
+  ctx.fillStyle = color;
+  ctx.font = 'bold ' + (10 / _scale) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(angDeg.toFixed(1) + '°', vertex.x + Math.cos(midA) * lr, vertex.y + Math.sin(midA) * lr);
+}
+
+function drawSideLabel(p1, p2, len, color) {
+  var mx = (p1.x + p2.x) / 2;
+  var my = (p1.y + p2.y) / 2;
+  var cx = (_pts[0].x + _pts[1].x + _pts[2].x) / 3;
+  var cy = (_pts[0].y + _pts[1].y + _pts[2].y) / 3;
+  var dx = mx - cx, dy = my - cy;
+  var l = Math.hypot(dx, dy) || 1;
+  var ox = dx / l * 14 / _scale;
+  var oy = dy / l * 14 / _scale;
+
+  ctx.fillStyle = color;
+  ctx.font = 'bold ' + (11 / _scale) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(len.toFixed(1), mx + ox, my + oy);
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '三角形的内角和是多少度？', opts: ['90°', '180°', '270°', '360°'], ans: 1 },
+  { q: '有一个角是90°的三角形叫什么？', opts: ['锐角三角形', '钝角三角形', '直角三角形', '等腰三角形'], ans: 2 },
+  { q: '三条边都相等的三角形叫什么？', opts: ['等腰三角形', '等边三角形', '直角三角形', '不等边三角形'], ans: 1 },
+  { q: '三角形任意两边之和与第三边的关系？', opts: ['等于第三边', '小于第三边', '大于第三边', '不确定'], ans: 2 },
+  { q: '一个三角形最多有几个直角？', opts: ['0个', '1个', '2个', '3个'], ans: 1 },
+  { q: '三角形具有什么特性？', opts: ['不稳定性', '稳定性', '伸缩性', '弯曲性'], ans: 1 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML =
+      '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) {
+    html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>';
+  });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) {
+    b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++;
+  setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

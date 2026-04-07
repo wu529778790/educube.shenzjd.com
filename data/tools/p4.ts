@@ -1,6 +1,6 @@
 import type { Tool } from "./types";
 
-/** 四年级教具（仅 3D） */
+/** 四年级教具 */
 export const p4Tools: Tool[] = [
   {
     id: "three-views",
@@ -91,5 +91,80 @@ export const p4Tools: Tool[] = [
     tags: ["三视图", "逆向推理", "积木还原", "观察物体"],
     gradient: ["#F97316", "#EA580C"],
     icon: "🏗️",
+  },
+  {
+    id: "angle-measure",
+    name: "角的度量与分类",
+    subtitle: "角的度量",
+    chapter: "上册 · 第三单元",
+    semester: "上册",
+    unitNum: 3,
+    gradeId: "p4",
+    subjectId: "math",
+    description:
+      "交互式量角器工具，拖动画布或滑块调节角度0°-360°，自动识别锐角/直角/钝角/平角/优角/周角，含量角器刻度和直角标记。",
+    tags: ["角", "量角器", "锐角", "直角", "钝角", "平角", "周角"],
+    gradient: ["#22C55E", "#16A34A"],
+    icon: "📐",
+  },
+  {
+    id: "decimal-explore",
+    name: "小数的认识",
+    subtitle: "小数的意义和性质",
+    chapter: "下册 · 第四单元",
+    semester: "下册",
+    unitNum: 4,
+    gradeId: "p4",
+    subjectId: "math",
+    description:
+      "可视化小数工具，包含数轴定位、100格涂色图、数位分解，滑块调节个位/十分位/百分位，自动显示分数转换和小数比较。",
+    tags: ["小数", "十分位", "百分位", "数轴", "分数"],
+    gradient: ["#3B82F6", "#2563EB"],
+    icon: "🔢",
+  },
+  {
+    id: "triangle-explore",
+    name: "三角形探究",
+    subtitle: "三角形",
+    chapter: "下册 · 第五单元",
+    semester: "下册",
+    unitNum: 5,
+    gradeId: "p4",
+    subjectId: "math",
+    description:
+      "拖拽三角形三个顶点自由变形，实时计算三边长、三个角、周长、面积，自动按边/按角分类，标注高线和内角和验证。",
+    tags: ["三角形", "内角和", "等边", "等腰", "直角三角形"],
+    gradient: ["#8B5CF6", "#7C3AED"],
+    icon: "🔺",
+  },
+  {
+    id: "chicken-rabbit",
+    name: "鸡兔同笼",
+    subtitle: "数学广角",
+    chapter: "下册 · 数学广角",
+    semester: "下册",
+    unitNum: 9,
+    gradeId: "p4",
+    subjectId: "math",
+    description:
+      "经典鸡兔同笼问题可视化，滑块调节头数和脚数，Canvas绘制鸡兔图标，详细展示假设法解题过程，含5道经典题目预设。",
+    tags: ["鸡兔同笼", "假设法", "数学广角", "经典问题"],
+    gradient: ["#F59E0B", "#D97706"],
+    icon: "🐔",
+  },
+  {
+    id: "operation-laws",
+    name: "运算定律可视化",
+    subtitle: "运算定律",
+    chapter: "下册 · 第三单元",
+    semester: "下册",
+    unitNum: 3,
+    gradeId: "p4",
+    subjectId: "math",
+    description:
+      "五大运算定律可视化演示：加法交换律/结合律、乘法交换律/结合律/分配律，输入数值后Canvas实时绘制色块对比图，自动验证等式。",
+    tags: ["运算定律", "交换律", "结合律", "分配律", "简便计算"],
+    gradient: ["#22C55E", "#10B981"],
+    icon: "🧮",
   },
 ];

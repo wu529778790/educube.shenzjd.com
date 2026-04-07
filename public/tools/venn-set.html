@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>集合与韦恩图 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  * { box-sizing:border-box; }
+  body { font-family:var(--edu-font); margin:0; }
+  .tool { width:100vw; height:100vh; display:flex; flex-direction:column; background:var(--edu-bg); }
+  .toolbar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#fff; border-bottom:1px solid var(--edu-border); }
+  .toolbar h1 { font-size:15px; color:var(--edu-primary); margin:0; }
+  .toolbar span { font-size:11px; color:var(--edu-text-muted); background:#f1f5f9; padding:2px 8px; border-radius:12px; }
+  .main { flex:1; display:grid; grid-template-columns:1fr 280px; overflow:hidden; }
+  .canvas-wrap { position:relative; overflow:hidden; background:linear-gradient(135deg,#fff7ed,#fffbeb); }
+  .canvas-wrap canvas { width:100%; height:100%; display:block; }
+  .panel { background:#fff; border-left:1px solid var(--edu-border); padding:12px; display:flex; flex-direction:column; gap:8px; overflow:auto; }
+  .section { display:flex; flex-direction:column; gap:4px; }
+  .label { font-size:10px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:var(--edu-border); }
+
+  .btn { padding:6px 12px; border:none; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:var(--edu-font); transition:all .15s; }
+  .btn.active { background:var(--edu-primary); color:#fff; }
+  .btn-default { background:#f1f5f9; color:#334155; }
+  .btn-default:hover { background:#e2e8f0; }
+  .row { display:flex; gap:4px; flex-wrap:wrap; }
+
+  .item-pool { display:flex; flex-wrap:wrap; gap:4px; padding:8px; background:#fffbeb; border:2px dashed #fbbf24; border-radius:10px; min-height:50px; }
+  .item-tag {
+    padding:4px 10px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;
+    border:2px solid #e2e8f0; background:#fff; transition:all .15s; user-select:none;
+  }
+  .item-tag:hover { border-color:#f59e0b; }
+  .item-tag.in-a { background:#fee2e2; border-color:#ef4444; color:#991b1b; }
+  .item-tag.in-b { background:#dbeafe; border-color:#3b82f6; color:#1e40af; }
+  .item-tag.in-ab { background:#faf5ff; border-color:#8b5cf6; color:#6d28d9; }
+
+  .set-label { display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:8px; }
+  .set-a { background:#fee2e2; }
+  .set-b { background:#dbeafe; }
+  .set-ab { background:#faf5ff; }
+  .set-count { font-size:18px; font-weight:800; }
+
+  .preset-btn { padding:5px 10px; border:2px solid #e2e8f0; border-radius:8px; font-size:11px; font-weight:600; cursor:pointer; background:#fff; font-family:var(--edu-font); transition:all .15s; }
+  .preset-btn:hover { border-color:#f59e0b; }
+  .preset-btn.active { background:#fef3c7; border-color:#f59e0b; }
+
+  .info { font-size:11px; line-height:1.8; color:#334155; background:#fff; border:1px solid #fde68a; border-radius:8px; padding:8px 10px; }
+  .info b { color:#92400e; }
+
+  .quiz-card { background:#fffbeb; border:2px solid #fbbf24; border-radius:12px; padding:10px; text-align:center; }
+  .quiz-q { font-size:13px; font-weight:700; color:#92400e; }
+  .quiz-opts { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px; }
+  .quiz-opt { padding:6px; border:2px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; background:#fff; font-family:var(--edu-font); }
+  .quiz-opt:hover { border-color:#f59e0b; }
+  .quiz-opt.correct { background:#dcfce7; border-color:#22c55e; }
+  .quiz-opt.wrong { background:#fef2f2; border-color:#ef4444; }
+  .quiz-result { font-size:11px; font-weight:700; margin-top:4px; min-height:16px; }
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar">
+    <h1>📊 集合与韦恩图</h1>
+    <span>三年级上册 · 数学广角</span>
+  </div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="section">
+        <div class="label">选择场景</div>
+        <div class="row">
+          <button class="preset-btn active" id="ps-sport" onclick="setPreset('sport')">🏃 运动会</button>
+          <button class="preset-btn" id="ps-food" onclick="setPreset('food')">🍎 水果分类</button>
+          <button class="preset-btn" id="ps-animal" onclick="setPreset('animal')">🐾 动物分类</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">元素池（点击将元素放入集合）</div>
+        <div class="item-pool" id="item-pool"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">操作模式</div>
+        <div class="row">
+          <button class="btn active" id="mode-a" onclick="setMode('A')">放入集合A</button>
+          <button class="btn btn-default" id="mode-b" onclick="setMode('B')">放入集合B</button>
+          <button class="btn btn-default" id="mode-ab" onclick="setMode('AB')">放入交集</button>
+          <button class="btn btn-default" id="mode-out" onclick="setMode('out')">移出</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+        <div class="set-label set-a"><div><div style="font-size:9px;color:#991b1b;font-weight:700">集合A</div><div class="set-count" id="cnt-a" style="color:#ef4444">0</div></div></div>
+        <div class="set-label set-ab"><div><div style="font-size:9px;color:#6d28d9;font-weight:700">交集</div><div class="set-count" id="cnt-ab" style="color:#8b5cf6">0</div></div></div>
+        <div class="set-label set-b"><div><div style="font-size:9px;color:#1e40af;font-weight:700">集合B</div><div class="set-count" id="cnt-b" style="color:#3b82f6">0</div></div></div>
+      </div>
+      <div style="text-align:center;font-size:11px;font-weight:700;color:#92400e;background:#fef3c7;padding:4px;border-radius:8px" id="formula">
+        A∪B = |A| + |B| - |A∩B| = 0 + 0 - 0 = 0
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">集合测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>集合小知识</b><br/>
+        ● <strong>集合A</strong>：具有某种特征的所有元素<br/>
+        ● <strong>交集 A∩B</strong>：同时属于A和B的元素<br/>
+        ● <strong>并集 A∪B</strong>：属于A或B的所有元素<br/>
+        ● 容斥原理：|A∪B| = |A| + |B| - |A∩B|
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx;
+var _mode = 'A';
+var _preset = 'sport';
+var _items = []; // {label, state: 'pool'|'A'|'B'|'AB'}
+
+var PRESETS = {
+  sport: {
+    nameA: '跑步', nameB: '跳绳',
+    items: ['小明','小红','小刚','小丽','小华','小芳','小军','小美','小龙','小云'],
+    defaults: { A: [0,1,2], B: [2,3,4], AB: [] }
+  },
+  food: {
+    nameA: '红色的', nameB: '甜的',
+    items: ['苹果','香蕉','草莓','柠檬','西瓜','葡萄','番茄','橙子'],
+    defaults: { A: [0,2,6], B: [0,1,4], AB: [] }
+  },
+  animal: {
+    nameA: '会飞的', nameB: '会游泳的',
+    items: ['燕子','金鱼','鸭子','兔子','海豚','蝴蝶','企鹅','老鹰'],
+    defaults: { A: [0,5,7], B: [1,2,4,6], AB: [] }
+  }
+};
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+  setPreset('sport');
+  nextQuiz();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function setPreset(key) {
+  _preset = key;
+  var p = PRESETS[key];
+  _items = p.items.map(function(label, i) {
+    var state = 'pool';
+    if (p.defaults.A.indexOf(i) >= 0) state = 'A';
+    if (p.defaults.B.indexOf(i) >= 0) state = 'B';
+    return { label: label, state: state };
+  });
+  // Fix items in both A and B defaults -> AB
+  p.defaults.A.forEach(function(i) {
+    if (p.defaults.B.indexOf(i) >= 0) _items[i].state = 'AB';
+  });
+
+  Object.keys(PRESETS).forEach(function(k) {
+    var btn = document.getElementById('ps-' + k);
+    if (btn) btn.classList.toggle('active', k === key);
+  });
+
+  buildPool();
+  updateStats();
+  draw();
+}
+
+function buildPool() {
+  var pool = document.getElementById('item-pool');
+  pool.innerHTML = '';
+  _items.forEach(function(item, i) {
+    var tag = document.createElement('span');
+    tag.className = 'item-tag' + (item.state !== 'pool' ? ' in-' + item.state.toLowerCase() : '');
+    tag.textContent = item.label;
+    tag.onclick = (function(idx) {
+      return function() {
+        var it = _items[idx];
+        if (_mode === 'out') { it.state = 'pool'; }
+        else { it.state = _mode; }
+        buildPool();
+        updateStats();
+        draw();
+      };
+    })(i);
+    pool.appendChild(tag);
+  });
+}
+
+function setMode(m) {
+  _mode = m;
+  var modeMap = { A:'mode-a', B:'mode-b', AB:'mode-ab', out:'mode-out' };
+  ['mode-a','mode-b','mode-ab','mode-out'].forEach(function(id) {
+    document.getElementById(id).className = 'btn ' + (id === modeMap[m] ? 'active' : 'btn-default');
+  });
+}
+
+function updateStats() {
+  var cntA = 0, cntB = 0, cntAB = 0;
+  _items.forEach(function(it) {
+    if (it.state === 'A') cntA++;
+    if (it.state === 'B') cntB++;
+    if (it.state === 'AB') cntAB++;
+  });
+  var onlyA = cntA, onlyB = cntB, both = cntAB;
+  var totalA = onlyA + both, totalB = onlyB + both;
+  var union = totalA + totalB - both;
+  document.getElementById('cnt-a').textContent = totalA;
+  document.getElementById('cnt-b').textContent = totalB;
+  document.getElementById('cnt-ab').textContent = both;
+  document.getElementById('formula').textContent =
+    'A∪B = |A| + |B| - |A∩B| = ' + totalA + ' + ' + totalB + ' - ' + both + ' = ' + union;
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  var p = PRESETS[_preset];
+  var cx = w / 2, cy = h / 2;
+  var r = Math.min(w, h) * 0.28;
+  r = Math.max(r, 80);
+  var sep = r * 0.55;
+
+  // Circle A (red)
+  ctx.fillStyle = 'rgba(239,68,68,0.12)';
+  ctx.beginPath(); ctx.arc(cx - sep, cy, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(cx - sep, cy, r, 0, Math.PI * 2); ctx.stroke();
+
+  // Circle B (blue)
+  ctx.fillStyle = 'rgba(59,130,246,0.12)';
+  ctx.beginPath(); ctx.arc(cx + sep, cy, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(cx + sep, cy, r, 0, Math.PI * 2); ctx.stroke();
+
+  // Intersection highlight
+  ctx.fillStyle = 'rgba(139,92,246,0.1)';
+  ctx.beginPath();
+  ctx.arc(cx - sep, cy, r, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.beginPath();
+  ctx.arc(cx + sep, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+  // Reset clip by restoring
+  ctx.save(); ctx.restore();
+  // Actually let's just redraw without clip
+  // Redraw everything properly
+  ctx.clearRect(0, 0, w, h);
+
+  // Background rect
+  ctx.fillStyle = 'rgba(255,251,235,0)';
+
+  // Collect items by state
+  var inA = [], inB = [], inAB = [];
+  _items.forEach(function(it) {
+    if (it.state === 'A') inA.push(it.label);
+    if (it.state === 'B') inB.push(it.label);
+    if (it.state === 'AB') inAB.push(it.label);
+  });
+
+  // Draw Venn circles with intersection fill
+  // Use composite approach: draw A fill, B fill, then intersection
+  ctx.save();
+
+  // Circle A fill
+  ctx.fillStyle = 'rgba(239,68,68,0.12)';
+  ctx.beginPath(); ctx.arc(cx - sep, cy, r, 0, Math.PI * 2); ctx.fill();
+
+  // Circle B fill
+  ctx.fillStyle = 'rgba(59,130,246,0.12)';
+  ctx.beginPath(); ctx.arc(cx + sep, cy, r, 0, Math.PI * 2); ctx.fill();
+
+  // Intersection fill via even-odd
+  ctx.fillStyle = 'rgba(139,92,246,0.2)';
+  ctx.beginPath();
+  ctx.arc(cx - sep, cy, r, 0, Math.PI * 2);
+  ctx.arc(cx + sep, cy, r, 0, Math.PI * 2);
+  ctx.fill('evenodd');
+
+  // Circle A stroke
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(cx - sep, cy, r, 0, Math.PI * 2); ctx.stroke();
+
+  // Circle B stroke
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(cx + sep, cy, r, 0, Math.PI * 2); ctx.stroke();
+
+  // Labels
+  ctx.font = 'bold ' + Math.max(13, r * 0.12) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Set A name
+  ctx.fillStyle = '#dc2626';
+  ctx.fillText(p.nameA, cx - sep, cy - r - 15);
+
+  // Set B name
+  ctx.fillStyle = '#2563eb';
+  ctx.fillText(p.nameB, cx + sep, cy - r - 15);
+
+  // Draw items in A only (left side)
+  ctx.font = 'bold ' + Math.max(11, r * 0.09) + 'px sans-serif';
+  var startY;
+  var spacing = Math.max(16, r * 0.14);
+  var itemsPerCol = Math.max(4, Math.floor(r * 1.4 / spacing));
+
+  // Items in A only
+  startY = cy - (inA.length - 1) * spacing / 2;
+  ctx.fillStyle = '#991b1b';
+  inA.forEach(function(label, i) {
+    ctx.fillText(label, cx - sep * 1.5, startY + i * spacing);
+  });
+
+  // Items in B only
+  startY = cy - (inB.length - 1) * spacing / 2;
+  ctx.fillStyle = '#1e40af';
+  inB.forEach(function(label, i) {
+    ctx.fillText(label, cx + sep * 1.5, startY + i * spacing);
+  });
+
+  // Items in both (center)
+  startY = cy - (inAB.length - 1) * spacing / 2;
+  ctx.fillStyle = '#6d28d9';
+  inAB.forEach(function(label, i) {
+    ctx.fillText(label, cx, startY + i * spacing);
+  });
+
+  // Count labels
+  ctx.font = 'bold ' + Math.max(10, r * 0.08) + 'px sans-serif';
+  ctx.fillStyle = '#ef4444';
+  ctx.fillText('|A|=' + (inA.length + inAB.length), cx - sep, cy + r + 20);
+  ctx.fillStyle = '#3b82f6';
+  ctx.fillText('|B|=' + (inB.length + inAB.length), cx + sep, cy + r + 20);
+  ctx.fillStyle = '#8b5cf6';
+  ctx.fillText('|A∩B|=' + inAB.length, cx, cy + r + 35);
+
+  ctx.restore();
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '三(1)班参加跑步的有8人，参加跳绳的有6人，两项都参加的有3人，一共有几人参加？', opts: ['14人', '11人', '17人', '8人'], ans: 1 },
+  { q: '集合A={1,2,3,4}，集合B={3,4,5,6}，A∩B是？', opts: ['{1,2}', '{5,6}', '{3,4}', '{1,2,3,4,5,6}'], ans: 2 },
+  { q: 'A∪B 的意思是？', opts: ['只在A的元素', '只在B的元素', 'A和B的交集', 'A和B的所有元素'], ans: 3 },
+  { q: '水果摊有5种红色水果，4种甜的水果，其中红色又甜的有2种，共有几种水果？', opts: ['9种', '7种', '11种', '6种'], ans: 1 },
+  { q: '韦恩图中，两个圆重叠的部分表示？', opts: ['只在A的元素', '只在B的元素', 'A和B共有的元素', '不属于A也不属于B'], ans: 2 },
+  { q: '|A|=10, |B|=8, |A∩B|=3, 则|A∪B|=？', opts: ['18', '15', '21', '13'], ans: 1 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML =
+      '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) {
+    html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>';
+  });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) {
+    b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++;
+  setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>时分秒互动钟表 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  * { box-sizing:border-box; }
+  body { font-family:var(--edu-font); margin:0; }
+  .tool { width:100vw; height:100vh; display:flex; flex-direction:column; background:var(--edu-bg); }
+  .toolbar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#fff; border-bottom:1px solid var(--edu-border); }
+  .toolbar h1 { font-size:15px; color:var(--edu-primary); margin:0; }
+  .toolbar span { font-size:11px; color:var(--edu-text-muted); background:#f1f5f9; padding:2px 8px; border-radius:12px; }
+  .main { flex:1; display:grid; grid-template-columns:1fr 280px; overflow:hidden; }
+  .canvas-wrap { position:relative; overflow:hidden; background:linear-gradient(135deg,#fdf4ff,#faf5ff); }
+  .canvas-wrap canvas { width:100%; height:100%; display:block; }
+  .panel { background:#fff; border-left:1px solid var(--edu-border); padding:12px; display:flex; flex-direction:column; gap:8px; overflow:auto; }
+  .section { display:flex; flex-direction:column; gap:4px; }
+  .label { font-size:10px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:var(--edu-border); }
+
+  .time-display { text-align:center; padding:10px; background:#faf5ff; border:2px solid #d8b4fe; border-radius:12px; }
+  .time-display .big { font-size:32px; font-weight:800; color:#7c3aed; font-variant-numeric:tabular-nums; }
+  .time-display .sub { font-size:12px; color:#a855f7; margin-top:2px; }
+
+  .slider-row { display:flex; align-items:center; gap:6px; }
+  .slider-row label { font-size:11px; font-weight:700; min-width:30px; }
+  .slider-row input[type=range] { flex:1; }
+  .slider-row .val { font-size:12px; font-weight:800; min-width:24px; text-align:right; }
+
+  .btn { padding:6px 12px; border:none; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:var(--edu-font); transition:all .15s; }
+  .btn-primary { background:#7c3aed; color:#fff; }
+  .btn-primary:hover { background:#6d28d9; }
+  .btn-default { background:#f1f5f9; color:#334155; }
+  .btn-default:hover { background:#e2e8f0; }
+  .row { display:flex; gap:4px; flex-wrap:wrap; }
+
+  .elapsed-box { background:#f5f3ff; border:1px solid #c4b5fd; border-radius:10px; padding:8px; text-align:center; }
+  .elapsed-box .val { font-size:20px; font-weight:800; color:#6d28d9; }
+  .elapsed-box .lbl { font-size:10px; color:#8b5cf6; }
+
+  .quiz-card { background:#faf5ff; border:2px solid #c084fc; border-radius:12px; padding:10px; text-align:center; }
+  .quiz-q { font-size:13px; font-weight:700; color:#6d28d9; }
+  .quiz-opts { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px; }
+  .quiz-opt { padding:6px; border:2px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; background:#fff; font-family:var(--edu-font); }
+  .quiz-opt:hover { border-color:#8b5cf6; }
+  .quiz-opt.correct { background:#dcfce7; border-color:#22c55e; }
+  .quiz-opt.wrong { background:#fef2f2; border-color:#ef4444; }
+  .quiz-result { font-size:11px; font-weight:700; margin-top:4px; min-height:16px; }
+
+  .info { font-size:11px; line-height:1.8; color:#334155; background:#fff; border:1px solid #d8b4fe; border-radius:8px; padding:8px 10px; }
+  .info b { color:#6d28d9; }
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar">
+    <h1>🕐 时分秒互动钟表</h1>
+    <span>三年级下册 · 第六单元</span>
+  </div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="time-display">
+        <div class="big" id="time-str">12:00:00</div>
+        <div class="sub" id="time-cn">12时0分0秒</div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">调节时间（拖动滑块）</div>
+        <div class="slider-row">
+          <label style="color:#1e40af">时</label>
+          <input type="range" id="sl-h" min="0" max="12" value="12" oninput="onSlider()"/>
+          <div class="val" id="sl-h-val" style="color:#1e40af">12</div>
+        </div>
+        <div class="slider-row">
+          <label style="color:#16a34a">分</label>
+          <input type="range" id="sl-m" min="0" max="59" value="0" oninput="onSlider()"/>
+          <div class="val" id="sl-m-val" style="color:#16a34a">0</div>
+        </div>
+        <div class="slider-row">
+          <label style="color:#dc2626">秒</label>
+          <input type="range" id="sl-s" min="0" max="59" value="0" oninput="onSlider()"/>
+          <div class="val" id="sl-s-val" style="color:#dc2626">0</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">快捷操作</div>
+        <div class="row">
+          <button class="btn btn-default" onclick="setNow()">🕐 现在</button>
+          <button class="btn btn-default" onclick="setTime(3,0,0)">3:00</button>
+          <button class="btn btn-default" onclick="setTime(6,30,0)">6:30</button>
+          <button class="btn btn-default" onclick="setTime(9,15,0)">9:15</button>
+          <button class="btn btn-default" onclick="setTime(12,0,0)">12:00</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">计时器（经过时间）</div>
+        <div class="row">
+          <button class="btn btn-primary" id="timer-btn" onclick="toggleTimer()">▶ 开始计时</button>
+          <button class="btn btn-default" onclick="resetTimer()">🔄 重置</button>
+        </div>
+        <div class="elapsed-box">
+          <div class="val" id="elapsed">0秒</div>
+          <div class="lbl">经过时间</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">时间测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>时间小知识</b><br/>
+        ● 钟面上有 <strong>12</strong> 个大格，<strong>60</strong> 个小格<br/>
+        ● 时针走1大格 = <strong>1小时</strong><br/>
+        ● 分针走1小格 = <strong>1分钟</strong>，走1圈 = 1小时<br/>
+        ● 秒针走1小格 = <strong>1秒</strong>，走1圈 = 1分钟<br/>
+        ● 1时 = 60分，1分 = 60秒
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx;
+var _h = 12, _m = 0, _s = 0;
+var _timerStart = null, _timerRunning = false, _elapsedS = 0;
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+  nextQuiz();
+  requestAnimationFrame(tick);
+}
+
+function tick() {
+  if (_timerRunning) {
+    _elapsedS = Math.floor((Date.now() - _timerStart) / 1000);
+    updateElapsed();
+  }
+  draw();
+  requestAnimationFrame(tick);
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function onSlider() {
+  _h = parseInt(document.getElementById('sl-h').value);
+  _m = parseInt(document.getElementById('sl-m').value);
+  _s = parseInt(document.getElementById('sl-s').value);
+  document.getElementById('sl-h-val').textContent = _h;
+  document.getElementById('sl-m-val').textContent = _m;
+  document.getElementById('sl-s-val').textContent = _s;
+  updateTimeStr();
+}
+
+function setNow() {
+  var d = new Date();
+  setTime(d.getHours() % 12 || 12, d.getMinutes(), d.getSeconds());
+}
+
+function setTime(h, m, s) {
+  _h = h; _m = m; _s = s;
+  document.getElementById('sl-h').value = h;
+  document.getElementById('sl-m').value = m;
+  document.getElementById('sl-s').value = s;
+  document.getElementById('sl-h-val').textContent = h;
+  document.getElementById('sl-m-val').textContent = m;
+  document.getElementById('sl-s-val').textContent = s;
+  updateTimeStr();
+}
+
+function updateTimeStr() {
+  var str = pad(_h) + ':' + pad(_m) + ':' + pad(_s);
+  document.getElementById('time-str').textContent = str;
+  document.getElementById('time-cn').textContent = _h + '时' + _m + '分' + _s + '秒';
+}
+
+function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+function toggleTimer() {
+  if (_timerRunning) {
+    _timerRunning = false;
+    document.getElementById('timer-btn').textContent = '▶ 继续';
+  } else {
+    if (_elapsedS === 0) _timerStart = Date.now();
+    else _timerStart = Date.now() - _elapsedS * 1000;
+    _timerRunning = true;
+    document.getElementById('timer-btn').textContent = '⏸ 暂停';
+  }
+}
+
+function resetTimer() {
+  _timerRunning = false;
+  _elapsedS = 0;
+  document.getElementById('timer-btn').textContent = '▶ 开始计时';
+  updateElapsed();
+}
+
+function updateElapsed() {
+  var s = _elapsedS;
+  var h = Math.floor(s / 3600);
+  var m = Math.floor((s % 3600) / 60);
+  var sec = s % 60;
+  var txt = '';
+  if (h > 0) txt += h + '时';
+  if (m > 0 || h > 0) txt += m + '分';
+  txt += sec + '秒';
+  document.getElementById('elapsed').textContent = txt;
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  var cx = w / 2, cy = h / 2;
+  var radius = Math.min(w, h) * 0.38;
+  radius = Math.max(radius, 60);
+
+  // Clock face shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.05)';
+  ctx.beginPath(); ctx.arc(cx + 3, cy + 3, radius + 5, 0, Math.PI * 2); ctx.fill();
+
+  // Clock face
+  var grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+  grad.addColorStop(0, '#fefce8');
+  grad.addColorStop(1, '#fff7ed');
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill();
+
+  // Outer ring
+  ctx.strokeStyle = '#92400e';
+  ctx.lineWidth = Math.max(3, radius * 0.04);
+  ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.stroke();
+
+  // Inner ring
+  ctx.strokeStyle = '#d4a574';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(cx, cy, radius * 0.92, 0, Math.PI * 2); ctx.stroke();
+
+  // Hour marks and numbers
+  for (var i = 0; i < 60; i++) {
+    var angle = (i / 60) * Math.PI * 2 - Math.PI / 2;
+    var isHour = (i % 5 === 0);
+    var innerR = radius * (isHour ? 0.82 : 0.88);
+    var outerR = radius * 0.92;
+
+    ctx.strokeStyle = isHour ? '#92400e' : '#d4a574';
+    ctx.lineWidth = isHour ? Math.max(2, radius * 0.02) : 0.5;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle) * innerR, cy + Math.sin(angle) * innerR);
+    ctx.lineTo(cx + Math.cos(angle) * outerR, cy + Math.sin(angle) * outerR);
+    ctx.stroke();
+
+    if (isHour) {
+      var numR = radius * 0.72;
+      var num = i / 5 || 12;
+      ctx.fillStyle = '#92400e';
+      ctx.font = 'bold ' + Math.max(12, radius * 0.14) + 'px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(num, cx + Math.cos(angle) * numR, cy + Math.sin(angle) * numR);
+    }
+  }
+
+  // Calculate angles
+  var secAngle = (_s / 60) * Math.PI * 2 - Math.PI / 2;
+  var minAngle = (_m / 60 + _s / 3600) * Math.PI * 2 - Math.PI / 2;
+  var hourAngle = ((_h % 12) / 12 + _m / 720 + _s / 43200) * Math.PI * 2 - Math.PI / 2;
+
+  // Hour hand
+  drawHand(cx, cy, hourAngle, radius * 0.5, Math.max(4, radius * 0.045), '#1e40af');
+  // Minute hand
+  drawHand(cx, cy, minAngle, radius * 0.68, Math.max(3, radius * 0.03), '#16a34a');
+  // Second hand
+  drawHand(cx, cy, secAngle, radius * 0.78, Math.max(1.5, radius * 0.012), '#dc2626');
+  // Second hand tail
+  drawHand(cx, cy, secAngle + Math.PI, radius * 0.15, Math.max(1.5, radius * 0.012), '#dc2626');
+
+  // Center dot
+  ctx.fillStyle = '#dc2626';
+  ctx.beginPath(); ctx.arc(cx, cy, Math.max(4, radius * 0.04), 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(cx, cy, Math.max(2, radius * 0.015), 0, Math.PI * 2); ctx.fill();
+
+  // Digital time at bottom
+  ctx.fillStyle = '#64748b';
+  ctx.font = 'bold ' + Math.max(12, radius * 0.1) + 'px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(pad(_h) + ':' + pad(_m) + ':' + pad(_s), cx, cy + radius + 30);
+}
+
+function drawHand(cx, cy, angle, length, width, color) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(angle) * length, cy + Math.sin(angle) * length);
+  ctx.stroke();
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '分针指向12，时针指向3，是几时？', opts: ['2时', '3时', '12时', '6时'], ans: 1 },
+  { q: '1小时等于多少分钟？', opts: ['30分', '60分', '100分', '24分'], ans: 1 },
+  { q: '分针走一圈是多少时间？', opts: ['1秒', '1分', '1时', '12时'], ans: 2 },
+  { q: '秒针从3走到6，经过了多少秒？', opts: ['3秒', '10秒', '15秒', '20秒'], ans: 2 },
+  { q: '8:30到9:00，经过了多少时间？', opts: ['15分', '30分', '1时', '20分'], ans: 1 },
+  { q: '时针在8和9之间，分针指向6，是几时几分？', opts: ['8:06', '8:30', '9:30', '6:08'], ans: 1 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML =
+      '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) {
+    html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>';
+  });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) {
+    b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++;
+  setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

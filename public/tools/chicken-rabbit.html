@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>鸡兔同笼 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  * { box-sizing:border-box; }
+  body { font-family:var(--edu-font); margin:0; }
+  .tool { width:100vw; height:100vh; display:flex; flex-direction:column; background:var(--edu-bg); }
+  .toolbar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#fff; border-bottom:1px solid var(--edu-border); }
+  .toolbar h1 { font-size:15px; color:var(--edu-primary); margin:0; }
+  .toolbar span { font-size:11px; color:var(--edu-text-muted); background:#f1f5f9; padding:2px 8px; border-radius:12px; }
+  .main { flex:1; display:grid; grid-template-columns:1fr 300px; overflow:hidden; }
+  .canvas-wrap { position:relative; overflow:hidden; background:linear-gradient(135deg,#fef9c3,#fefce8); }
+  .canvas-wrap canvas { width:100%; height:100%; display:block; }
+  .panel { background:#fff; border-left:1px solid var(--edu-border); padding:12px; display:flex; flex-direction:column; gap:8px; overflow:auto; }
+  .section { display:flex; flex-direction:column; gap:4px; }
+  .label { font-size:10px; font-weight:700; color:#64748b; letter-spacing:.05em; }
+  .divider { height:1px; background:var(--edu-border); }
+  .btn { padding:6px 12px; border:none; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:var(--edu-font); transition:all .15s; }
+  .btn-primary { background:#f59e0b; color:#fff; }
+  .btn-primary:hover { background:#d97706; }
+  .btn-default { background:#f1f5f9; color:#334155; }
+  .btn-default:hover { background:#e2e8f0; }
+  .row { display:flex; gap:4px; flex-wrap:wrap; }
+
+  .slider-row { display:flex; align-items:center; gap:6px; }
+  .slider-row label { font-size:11px; font-weight:700; min-width:40px; }
+  .slider-row input[type=range] { flex:1; }
+  .slider-row .val { font-size:13px; font-weight:800; min-width:28px; text-align:right; color:#b45309; }
+
+  .result-box { text-align:center; padding:12px; background:#fffbeb; border:2px solid #fde68a; border-radius:12px; }
+  .result-box .animals { font-size:28px; letter-spacing:4px; margin:6px 0; }
+  .result-box .detail { font-size:13px; font-weight:700; color:#92400e; line-height:1.8; }
+
+  .strategy-box { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:8px 10px; font-size:11px; line-height:1.8; color:#334155; }
+  .strategy-box .step { margin:3px 0; }
+  .strategy-box .highlight { color:#b45309; font-weight:700; }
+
+  .preset-btn { padding:5px 10px; border:2px solid #e2e8f0; border-radius:8px; font-size:11px; font-weight:600; cursor:pointer; background:#fff; font-family:var(--edu-font); transition:all .15s; }
+  .preset-btn:hover { border-color:#f59e0b; }
+
+  .quiz-card { background:#fef3c7; border:2px solid #fbbf24; border-radius:12px; padding:10px; text-align:center; }
+  .quiz-q { font-size:13px; font-weight:700; color:#92400e; }
+  .quiz-opts { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px; }
+  .quiz-opt { padding:6px; border:2px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; background:#fff; font-family:var(--edu-font); }
+  .quiz-opt:hover { border-color:#f59e0b; }
+  .quiz-opt.correct { background:#dcfce7; border-color:#22c55e; }
+  .quiz-opt.wrong { background:#fef2f2; border-color:#ef4444; }
+  .quiz-result { font-size:11px; font-weight:700; margin-top:4px; min-height:16px; }
+
+  .info { font-size:11px; line-height:1.8; color:#334155; background:#fff; border:1px solid #fde68a; border-radius:8px; padding:8px 10px; }
+  .info b { color:#92400e; }
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar">
+    <h1>🐔 鸡兔同笼</h1>
+    <span>四年级下册 · 数学广角</span>
+  </div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="section">
+        <div class="label">设定条件</div>
+        <div class="slider-row">
+          <label>总头数</label>
+          <input type="range" id="sl-heads" min="2" max="20" value="8" oninput="onSlider()"/>
+          <div class="val" id="v-heads">8</div>
+        </div>
+        <div class="slider-row">
+          <label>总脚数</label>
+          <input type="range" id="sl-legs" min="4" max="80" value="26" oninput="onSlider()"/>
+          <div class="val" id="v-legs">26</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">经典题目</div>
+        <div class="row">
+          <button class="preset-btn" onclick="setPreset(8,26)">鸡兔同笼(8头26脚)</button>
+          <button class="preset-btn" onclick="setPreset(10,28)">10头28脚</button>
+          <button class="preset-btn" onclick="setPreset(12,40)">12头40脚</button>
+          <button class="preset-btn" onclick="setPreset(15,40)">15头40脚</button>
+          <button class="preset-btn" onclick="setPreset(20,56)">龟鹤算(20头56脚)</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="result-box">
+        <div class="detail" id="result-text">正在计算…</div>
+        <div class="animals" id="result-icons"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">解题过程（假设法）</div>
+        <div class="strategy-box" id="strategy">—</div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">鸡兔同笼测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>鸡兔同笼小知识</b><br/>
+        ● 经典问题出自《<strong>孙子算经</strong>》<br/>
+        ● <strong>假设法</strong>：假设全是鸡，多出的脚 ÷ 2 = 兔子数<br/>
+        ● <strong>抬脚法</strong>：所有动物抬起两只脚，剩下的都是兔子的脚<br/>
+        ● 兔子数 = (总脚数 - 2×总头数) ÷ 2<br/>
+        ● 鸡的数 = 总头数 - 兔子数
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx;
+var _heads = 8, _legs = 26;
+var _chickens = 0, _rabbits = 0;
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+  solve();
+  nextQuiz();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function onSlider() {
+  _heads = parseInt(document.getElementById('sl-heads').value);
+  _legs = parseInt(document.getElementById('sl-legs').value);
+  document.getElementById('v-heads').textContent = _heads;
+  document.getElementById('v-legs').textContent = _legs;
+  solve();
+}
+
+function setPreset(h, l) {
+  _heads = h; _legs = l;
+  document.getElementById('sl-heads').value = h;
+  document.getElementById('sl-legs').value = l;
+  document.getElementById('v-heads').textContent = h;
+  document.getElementById('v-legs').textContent = l;
+  solve();
+}
+
+function solve() {
+  // rabbits = (legs - 2*heads) / 2
+  var r = (_legs - 2 * _heads) / 2;
+  var c = _heads - r;
+
+  if (r >= 0 && c >= 0 && r === Math.floor(r) && c === Math.floor(c)) {
+    _chickens = c; _rabbits = r;
+    document.getElementById('result-text').innerHTML =
+      '🐔 鸡 <strong>' + c + '</strong> 只 &nbsp;&nbsp; 🐰 兔 <strong>' + r + '</strong> 只';
+    var icons = '';
+    for (var i = 0; i < Math.min(c, 12); i++) icons += '🐔';
+    if (c > 12) icons += '…';
+    icons += ' ';
+    for (var i = 0; i < Math.min(r, 12); i++) icons += '🐰';
+    if (r > 12) icons += '…';
+    document.getElementById('result-icons').textContent = icons;
+
+    // Strategy
+    var allChickenLegs = _heads * 2;
+    var diff = _legs - allChickenLegs;
+    document.getElementById('strategy').innerHTML =
+      '<div class="step">① 假设全是鸡：</div>' +
+      '<div class="step">&nbsp;&nbsp;应有脚数 = <span class="highlight">' + _heads + ' × 2 = ' + allChickenLegs + ' 只脚</span></div>' +
+      '<div class="step">&nbsp;&nbsp;实际脚数 = <span class="highlight">' + _legs + ' 只脚</span></div>' +
+      '<div class="step">② 计算差值：</div>' +
+      '<div class="step">&nbsp;&nbsp;多出 = ' + _legs + ' - ' + allChickenLegs + ' = <span class="highlight">' + diff + ' 只脚</span></div>' +
+      '<div class="step">③ 每把一只鸡换成兔，多2只脚：</div>' +
+      '<div class="step">&nbsp;&nbsp;兔子数 = ' + diff + ' ÷ 2 = <span class="highlight">' + r + ' 只</span></div>' +
+      '<div class="step">④ 鸡的数 = ' + _heads + ' - ' + r + ' = <span class="highlight">' + c + ' 只</span></div>';
+  } else {
+    _chickens = 0; _rabbits = 0;
+    document.getElementById('result-text').innerHTML = '<span style="color:#ef4444">⚠️ 无解！请检查头数和脚数是否合理</span>';
+    document.getElementById('result-icons').textContent = '❓';
+    document.getElementById('strategy').innerHTML =
+      '<div class="step" style="color:#ef4444">当前条件下没有整数解</div>' +
+      '<div class="step">提示：总脚数必须是偶数，且满足 2×头数 ≤ 脚数 ≤ 4×头数</div>';
+  }
+  draw();
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  var c = _chickens, r = _rabbits;
+  var total = c + r;
+  if (total === 0) {
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('调整头数和脚数开始探索', w / 2, h / 2);
+    return;
+  }
+
+  // Calculate grid layout
+  var cols = Math.ceil(Math.sqrt(total));
+  var rows = Math.ceil(total / cols);
+  var cellSize = Math.min((w - 80) / cols, (h - 100) / rows, 70);
+  cellSize = Math.max(cellSize, 30);
+  var gx0 = (w - cols * cellSize) / 2;
+  var gy0 = (h - rows * cellSize) / 2;
+
+  // Title
+  ctx.fillStyle = '#92400e';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('鸡兔同笼：共 ' + _heads + ' 个头，' + _legs + ' 只脚', w / 2, gy0 - 25);
+
+  var idx = 0;
+  // Draw chickens
+  for (var i = 0; i < c; i++) {
+    var col = idx % cols, row = Math.floor(idx / cols);
+    var x = gx0 + col * cellSize + cellSize / 2;
+    var y = gy0 + row * cellSize + cellSize / 2;
+    drawChicken(x, y, cellSize * 0.35);
+    idx++;
+  }
+  // Draw rabbits
+  for (var i = 0; i < r; i++) {
+    var col = idx % cols, row = Math.floor(idx / cols);
+    var x = gx0 + col * cellSize + cellSize / 2;
+    var y = gy0 + row * cellSize + cellSize / 2;
+    drawRabbit(x, y, cellSize * 0.35);
+    idx++;
+  }
+
+  // Summary at bottom
+  ctx.fillStyle = '#92400e';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('🐔 × ' + c + '  =  ' + (c * 2) + ' 只脚     🐰 × ' + r + '  =  ' + (r * 4) + ' 只脚     合计 ' + (c * 2 + r * 4) + ' 只脚', w / 2, gy0 + rows * cellSize + 30);
+}
+
+function drawChicken(x, y, size) {
+  size = Math.max(size, 10);
+  // Body
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath(); ctx.arc(x, y + size * 0.1, size * 0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#92400e';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  // Head
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath(); ctx.arc(x, y - size * 0.45, size * 0.25, 0, Math.PI * 2); ctx.fill();
+  ctx.stroke();
+  // Beak
+  ctx.fillStyle = '#ef4444';
+  ctx.beginPath();
+  ctx.moveTo(x + size * 0.2, y - size * 0.45);
+  ctx.lineTo(x + size * 0.4, y - size * 0.4);
+  ctx.lineTo(x + size * 0.2, y - size * 0.35);
+  ctx.closePath();
+  ctx.fill();
+  // Eye
+  ctx.fillStyle = '#334155';
+  ctx.beginPath(); ctx.arc(x + size * 0.05, y - size * 0.5, size * 0.05, 0, Math.PI * 2); ctx.fill();
+  // Legs (2)
+  ctx.strokeStyle = '#d97706';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x - size * 0.15, y + size * 0.5); ctx.lineTo(x - size * 0.2, y + size * 0.85); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + size * 0.15, y + size * 0.5); ctx.lineTo(x + size * 0.2, y + size * 0.85); ctx.stroke();
+  // "2" label
+  ctx.fillStyle = '#b45309';
+  ctx.font = 'bold ' + Math.max(8, size * 0.3) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('2脚', x, y + size * 1.1);
+}
+
+function drawRabbit(x, y, size) {
+  size = Math.max(size, 10);
+  // Body
+  ctx.fillStyle = '#e2e8f0';
+  ctx.beginPath(); ctx.arc(x, y + size * 0.1, size * 0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#475569';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  // Head
+  ctx.fillStyle = '#e2e8f0';
+  ctx.beginPath(); ctx.arc(x, y - size * 0.4, size * 0.25, 0, Math.PI * 2); ctx.fill();
+  ctx.stroke();
+  // Ears
+  ctx.fillStyle = '#fecdd3';
+  ctx.beginPath();
+  ctx.ellipse(x - size * 0.12, y - size * 0.75, size * 0.08, size * 0.2, -0.1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#475569';
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(x + size * 0.12, y - size * 0.75, size * 0.08, size * 0.2, 0.1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // Eye
+  ctx.fillStyle = '#ef4444';
+  ctx.beginPath(); ctx.arc(x + size * 0.06, y - size * 0.45, size * 0.04, 0, Math.PI * 2); ctx.fill();
+  // Legs (4)
+  ctx.strokeStyle = '#64748b';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x - size * 0.3, y + size * 0.35); ctx.lineTo(x - size * 0.35, y + size * 0.85); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - size * 0.1, y + size * 0.45); ctx.lineTo(x - size * 0.15, y + size * 0.85); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + size * 0.1, y + size * 0.45); ctx.lineTo(x + size * 0.15, y + size * 0.85); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + size * 0.3, y + size * 0.35); ctx.lineTo(x + size * 0.35, y + size * 0.85); ctx.stroke();
+  // "4" label
+  ctx.fillStyle = '#475569';
+  ctx.font = 'bold ' + Math.max(8, size * 0.3) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('4脚', x, y + size * 1.1);
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '鸡兔同笼，8个头26只脚，鸡有几只？', opts: ['3只', '4只', '5只', '6只'], ans: 2 },
+  { q: '鸡兔同笼，10个头28只脚，兔有几只？', opts: ['2只', '3只', '4只', '5只'], ans: 2 },
+  { q: '鸡兔同笼，假设全是鸡，脚数比实际少10只，兔子有几只？', opts: ['5只', '10只', '3只', '2只'], ans: 0 },
+  { q: '龟鹤算，20个头56只脚，乌龟有几只？', opts: ['6只', '8只', '10只', '12只'], ans: 1 },
+  { q: '鸡兔同笼，共35个头94只脚，鸡和兔各多少？', opts: ['鸡23兔12', '鸡20兔15', '鸡25兔10', '鸡15兔20'], ans: 0 },
+  { q: '鸡兔同笼，全是鸡时脚少了16只，说明有几只兔？', opts: ['4只', '8只', '16只', '2只'], ans: 1 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML =
+      '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) {
+    html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>';
+  });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) {
+    b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++;
+  setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>
