@@ -3,6 +3,21 @@ import type { Tool } from "./types";
 /** 六年级教具 */
 export const p6Tools: Tool[] = [
   {
+    id: "grid-scale",
+    name: "图形的放大与缩小",
+    subtitle: "比例 · 方格纸",
+    chapter: "下册 · 第四单元 · 比例",
+    semester: "下册",
+    unitNum: 4,
+    gradeId: "p6",
+    subjectId: "math",
+    description:
+      "方格纸比例：滑块连续变比、拖角点、对应点连线、播放 1→k 变形动画；可自绘长方形为原图；探究面积猜猜看。含课本例题与做一做。",
+    tags: ["比例", "相似", "放大缩小", "公开课"],
+    gradient: ["#6366F1", "#4F46E5"],
+    icon: "📏",
+  },
+  {
     id: "cylinder-explore",
     name: "圆柱的认识",
     subtitle: "圆柱与圆锥",

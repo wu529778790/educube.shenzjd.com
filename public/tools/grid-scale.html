@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>图形的放大与缩小 — 教立方</title>
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr minmax(300px, 360px);
+      height: 100%;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      background: linear-gradient(165deg, #f1f5f9 0%, #e8eef5 45%, #f8fafc 100%);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+    }
+
+    #cvs {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      cursor: crosshair;
+      touch-action: none;
+      object-fit: contain;
+    }
+
+    #cvs.drag-k {
+      cursor: grab;
+    }
+
+    #cvs.drag-k:active {
+      cursor: grabbing;
+    }
+
+    .ctrl-section {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .canvas-hint {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      color: #64748b;
+      pointer-events: none;
+      background: rgba(255, 255, 255, .92);
+      padding: 5px 14px;
+      border-radius: 999px;
+      border: 1px solid #e2e8f0;
+      max-width: 92%;
+      text-align: center;
+    }
+
+    .control-panel {
+      background: #fff;
+      border-left: 1px solid var(--edu-border);
+      padding: 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow: auto;
+    }
+
+    .ctrl-label {
+      font-size: 10px;
+      font-weight: 800;
+      color: #64748b;
+      letter-spacing: .06em;
+    }
+
+    .mode-tabs {
+      display: flex;
+      gap: 4px;
+    }
+
+    .mode-tab {
+      flex: 1;
+      padding: 7px 4px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      border: 2px solid #e2e8f0;
+      background: #f8fafc;
+      color: #64748b;
+      cursor: pointer;
+      font-family: var(--edu-font);
+      transition: all .15s;
+    }
+
+    .mode-tab.active {
+      background: #eef2ff;
+      border-color: #6366f1;
+      color: #3730a3;
+    }
+
+    .shape-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 5px;
+    }
+
+    .shape-btn {
+      padding: 7px 3px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      border: 2px solid #e2e8f0;
+      background: #fff;
+      color: #475569;
+      cursor: pointer;
+      font-family: var(--edu-font);
+      transition: all .15s;
+      text-align: center;
+    }
+
+    .shape-btn:hover {
+      border-color: #6366f1;
+    }
+
+    .shape-btn.active {
+      background: #eef2ff;
+      border-color: #6366f1;
+      color: #4338ca;
+    }
+
+    .shape-btn:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .mini-btn {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      color: #475569;
+      cursor: pointer;
+      font-family: var(--edu-font);
+      text-align: left;
+    }
+
+    .mini-btn:hover {
+      background: #e0e7ff;
+      border-color: #a5b4fc;
+    }
+
+    .slider-wrap {
+      padding: 4px 0;
+    }
+
+    .slider-wrap input[type=range] {
+      width: 100%;
+      height: 6px;
+      accent-color: #4f46e5;
+      cursor: pointer;
+    }
+
+    .slider-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 700;
+      color: #4338ca;
+      margin-top: 2px;
+    }
+
+    .ratio-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .ratio-row input {
+      width: 40px;
+      padding: 5px 2px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .ratio-chip {
+      padding: 4px 7px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      border: 1px solid #c7d2fe;
+      background: #eef2ff;
+      color: #4338ca;
+      cursor: pointer;
+      font-family: var(--edu-font);
+    }
+
+    .ratio-chip:hover {
+      background: #e0e7ff;
+    }
+
+    .stat-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 7px 9px;
+      font-size: 10px;
+      line-height: 1.55;
+      color: #334155;
+    }
+
+    .stat-card strong {
+      color: #1e293b;
+    }
+
+    .stat-k {
+      color: #6366f1;
+      font-weight: 800;
+    }
+
+    .step-log {
+      max-height: 100px;
+      overflow-y: auto;
+      font-size: 10px;
+      line-height: 1.45;
+      color: #64748b;
+      background: #fff;
+      border: 1px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 5px 7px;
+    }
+
+    .step-log div {
+      border-bottom: 1px solid #f1f5f9;
+      padding: 2px 0;
+    }
+
+    .step-log div:last-child {
+      border-bottom: none;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      color: #475569;
+      flex-wrap: wrap;
+    }
+
+    .check-row input[type=checkbox] {
+      width: 14px;
+      height: 14px;
+    }
+
+    .quiz-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .quiz-row input {
+      width: 52px;
+      padding: 5px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .info-box {
+      background: #fff;
+      border: 1px solid #c7d2fe;
+      border-radius: 10px;
+      padding: 7px 9px;
+      font-size: 10px;
+      line-height: 1.7;
+      color: #475569;
+    }
+
+    .info-box strong {
+      color: #4338ca;
+    }
+
+    .divider {
+      height: 1px;
+      background: #e2e8f0;
+    }
+
+    .tool-row {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .paint-hint {
+      font-size: 10px;
+      color: #b45309;
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 8px;
+      padding: 6px 8px;
+    }
+
+    .toolbar-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, .85);
+      margin-right: 8px;
+    }
+
+    .toolbar-check input {
+      width: 15px;
+      height: 15px;
+      accent-color: #fff;
+    }
+
+    .stat-big {
+      font-size: 15px;
+      font-weight: 800;
+      color: #312e81;
+      line-height: 1.4;
+      padding: 8px 10px;
+      background: #eef2ff;
+      border-radius: 10px;
+      border: 1px solid #c7d2fe;
+      text-align: center;
+    }
+
+    .do-check {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 11px;
+      line-height: 1.55;
+      color: #78350f;
+      display: none;
+    }
+
+    .do-check.visible {
+      display: block;
+    }
+
+    .do-check .ok {
+      color: #15803d;
+      font-weight: 800;
+    }
+
+    .do-check .wait {
+      color: #a16207;
+    }
+
+    .explore-toggle {
+      width: 100%;
+      text-align: left;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      font-size: 12px;
+      font-weight: 700;
+      color: #475569;
+      cursor: pointer;
+      font-family: var(--edu-font);
+    }
+
+    .explore-body {
+      margin-top: 6px;
+      padding: 8px 10px;
+      background: #f1f5f9;
+      border-radius: 8px;
+      font-size: 11px;
+      line-height: 1.65;
+      color: #334155;
+      display: none;
+    }
+
+    .explore-body.open {
+      display: block;
+    }
+
+    body.present-side .control-panel {
+      font-size: 12px;
+    }
+
+    body.present-side .ctrl-label {
+      font-size: 11px;
+    }
+
+    body.present-side .stat-card,
+    body.present-side .info-box,
+    body.present-side .mini-btn,
+    body.present-side .shape-btn {
+      font-size: 12px;
+    }
+
+    body.present-side .step-log {
+      max-height: 120px;
+      font-size: 11px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="edu-tool">
+    <div class="edu-toolbar">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="edu-toolbar-title">📏 图形的放大与缩小</span>
+        <span class="edu-toolbar-subtitle">六年级下册 · 第四单元 · 比例</span>
+      </div>
+      <div class="edu-toolbar-actions" style="flex-wrap:wrap;gap:6px">
+        <label class="toolbar-check" title="投影加大侧栏字号与记录区">
+          <input type="checkbox" id="present-mode" onchange="togglePresentSide()" />
+          演示字号
+        </label>
+        <button type="button" class="edu-btn edu-btn-outline" onclick="undoK()">↩ 撤销一步</button>
+        <button type="button" class="edu-btn edu-btn-outline" onclick="playMorph()">▶ 播放变形</button>
+        <button type="button" class="edu-btn edu-btn-outline" onclick="resetToOriginal()">还原原图</button>
+        <button type="button" class="edu-btn edu-btn-primary" onclick="resetAll()">重置</button>
+      </div>
+    </div>
+    <div class="edu-content">
+      <div class="main-layout">
+        <div class="canvas-wrap">
+          <canvas id="cvs" width="640" height="480"></canvas>
+          <div class="canvas-hint" id="canvas-hint">拖紫色圆点 · 或拖滑块连续变比 · 悬停看格点</div>
+        </div>
+        <div class="control-panel">
+          <div class="mode-tabs">
+            <button type="button" class="mode-tab active" id="tab-scale" onclick="setWorkMode('scale')">比例操作</button>
+            <button type="button" class="mode-tab" id="tab-paint" onclick="setWorkMode('paint')">绘制长方形</button>
+          </div>
+          <div id="panel-scale">
+            <div class="ctrl-section">
+              <div class="ctrl-label">课本例题 / 做一做</div>
+              <div class="shape-row">
+                <button type="button" class="shape-btn active" id="sb-sq" onclick="loadPreset('sq')">正方形 3×3</button>
+                <button type="button" class="shape-btn" id="sb-rc" onclick="loadPreset('rc')">长方形 4×2</button>
+                <button type="button" class="shape-btn" id="sb-tr" onclick="loadPreset('tr')">直角△ 3×3</button>
+              </div>
+              <button type="button" class="mini-btn" onclick="loadPreset('do')">⭐ 做一做：直角△ 底2×高1</button>
+            </div>
+            <div class="do-check" id="do-check">
+              <strong>做一做进度</strong>（课本：先 4:1 放大，再 1:2 缩小）<br />
+              <span id="do-s1" class="wait">① 4:1 后应为 底8、高4</span><br />
+              <span id="do-s2" class="wait">② 再 1:2 后应为 底4、高2</span>
+            </div>
+            <div class="divider"></div>
+            <div class="ctrl-section">
+              <div class="ctrl-label">连续缩放（相对课本原图，相似）</div>
+              <div class="slider-wrap">
+                <input type="range" id="scale-slider" min="25" max="400" value="100" step="5"
+                  oninput="onSliderInput(this.value)" onchange="onSliderCommit()" />
+                <div class="slider-meta">
+                  <span>25%</span>
+                  <span id="slider-label">k = 1.00（100%）</span>
+                  <span>400%</span>
+                </div>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div class="ctrl-section">
+              <div class="ctrl-label">按比一步变化（新边长 : 旧边长）</div>
+              <div class="ratio-row">
+                <span class="ratio-chip" onclick="applyRatioStep(2,1)">×2</span>
+                <span class="ratio-chip" onclick="applyRatioStep(4,1)">×4</span>
+                <span class="ratio-chip" onclick="applyRatioStep(1,2)">×½</span>
+                <span class="ratio-chip" onclick="applyRatioStep(1,3)">×⅓</span>
+                <span class="ratio-chip" onclick="applyRatioStep(1,4)">×¼</span>
+              </div>
+              <div class="ratio-row">
+                <input type="number" id="in-n" min="1" max="99" value="2" />
+                <span style="font-weight:800;color:#64748b">:</span>
+                <input type="number" id="in-d" min="1" max="99" value="1" />
+                <button type="button" class="edu-btn edu-btn-accent" style="padding:5px 10px;font-size:11px"
+                  onclick="applyCustomStep()">应用</button>
+              </div>
+            </div>
+          </div>
+          <div id="panel-paint" style="display:none">
+            <div class="paint-hint" id="paint-hint">依次在左侧方格纸上点击 <strong>两个格点</strong> 作为长方形对角，确定后得到新「课本原图」（仅长方形）。</div>
+            <button type="button" class="mini-btn" onclick="cancelPaint()">取消绘制</button>
+          </div>
+          <div class="divider"></div>
+          <div class="check-row">
+            <label><input type="checkbox" id="show-ghost" checked /> 原图轮廓</label>
+            <label><input type="checkbox" id="show-corr" /> 对应点连线</label>
+            <label><input type="checkbox" id="show-labels" checked /> 边长标注</label>
+          </div>
+          <div class="ctrl-section">
+            <button type="button" class="explore-toggle" id="explore-btn" onclick="toggleExplore()">▼
+              探究：放大缩小后什么变了？什么不变？</button>
+            <div class="explore-body" id="explore-body">
+              <strong>一般会变</strong>：每条边的长度、周长、图形所占面积（面积比 = 边长比的平方）。<br />
+              <strong>一般不变</strong>：角的度数、图形的形状种类（相似）。<br />
+              <strong>直角三角形</strong>：两直角边都 ×k，斜边也 ×k（对应边成比例）。
+            </div>
+          </div>
+          <div class="stat-big" id="stat-big"></div>
+          <div class="ctrl-section">
+            <div class="ctrl-label">探究：面积是原来的几倍？</div>
+            <div class="quiz-row">
+              <input type="text" id="quiz-ans" placeholder="填数字" inputmode="decimal" />
+              <button type="button" class="edu-btn edu-btn-outline" style="padding:5px 10px;font-size:11px"
+                onclick="checkQuiz()">揭晓</button>
+            </div>
+            <div id="quiz-feedback" class="stat-card" style="margin-top:4px;display:none"></div>
+          </div>
+          <div class="stat-card" id="stats-panel"></div>
+          <div class="ctrl-label">操作记录</div>
+          <div class="step-log" id="step-log"></div>
+          <div class="info-box">
+            <strong>要点</strong> 相似图形对应角相等；周长比 = k；<strong>面积比 = k²</strong>。拖角点与滑块都会保持形状相似。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var cvs = document.getElementById('cvs');
+      var ctx = cvs.getContext('2d');
+
+      var GRID_W = 26;
+      var GRID_H = 18;
+      var CELL = 24;
+      var OFFX = 48;
+      var OFFY = 44;
+      var OX = 4, OY = 4;
+
+      var shapeKind = 'square';
+      var initW = 3, initH = 3;
+      var scaleK = 1;
+      var dispK = 1;
+      var animT = null;
+      var steps = [];
+      var workMode = 'scale';
+      var paintClicks = [];
+      var activePreset = 'sq';
+      var kHistory = [1];
+
+      var dragCorner = false;
+      var hoverGx = null, hoverGy = null;
+
+      function isPresent() {
+        var el = document.getElementById('present-mode');
+        return el && el.checked;
+      }
+
+      window.togglePresentSide = function () {
+        document.body.classList.toggle('present-side', isPresent());
+        relayout();
+      };
+
+      window.toggleExplore = function () {
+        var b = document.getElementById('explore-body');
+        var btn = document.getElementById('explore-btn');
+        var open = !b.classList.contains('open');
+        b.classList.toggle('open', open);
+        btn.textContent = (open ? '▲ ' : '▼ ') + '探究：放大缩小后什么变了？什么不变？';
+      };
+
+      function relayout() {
+        var wrap = cvs.parentElement;
+        if (!wrap || wrap.clientWidth < 40) return;
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        var marginX = 24;
+        var marginY = 20;
+        var maxW = wrap.clientWidth - marginX;
+        var maxH = wrap.clientHeight - marginY;
+        var bonus = isPresent() ? 1.14 : 1;
+        var cellW = Math.floor(((maxW - 80) / GRID_W) * bonus);
+        var cellH = Math.floor(((maxH - 72) / GRID_H) * bonus);
+        CELL = Math.max(24, Math.min(40, Math.min(cellW, cellH)));
+        OFFX = Math.max(40, Math.floor((maxW - GRID_W * CELL) / 2));
+        OFFY = Math.max(36, Math.floor((maxH - GRID_H * CELL) / 2));
+        var logicalW = GRID_W * CELL + 2 * OFFX;
+        var logicalH = GRID_H * CELL + 2 * OFFY;
+        cvs.style.width = logicalW + 'px';
+        cvs.style.height = logicalH + 'px';
+        cvs.width = Math.max(1, Math.floor(logicalW * dpr));
+        cvs.height = Math.max(1, Math.floor(logicalH * dpr));
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        draw();
+      }
+
+      function recordKIfChanged() {
+        var last = kHistory[kHistory.length - 1];
+        if (Math.abs(last - scaleK) > 0.004) {
+          kHistory.push(scaleK);
+          if (kHistory.length > 20) kHistory.shift();
+        }
+      }
+
+      window.undoK = function () {
+        if (animT) {
+          cancelAnimationFrame(animT);
+          animT = null;
+        }
+        if (kHistory.length <= 1) {
+          pushStep('没有可撤销的步骤');
+          return;
+        }
+        kHistory.pop();
+        scaleK = dispK = kHistory[kHistory.length - 1];
+        pushStep('撤销 → k=' + fmt(scaleK));
+        syncSlider();
+        draw();
+      };
+
+      function resetKHistory() {
+        kHistory = [scaleK];
+      }
+
+      function updateDoChecklist() {
+        var box = document.getElementById('do-check');
+        if (!box) return;
+        var show = activePreset === 'do' && shapeKind === 'rtri' && initW === 2 && initH === 1;
+        box.classList.toggle('visible', show);
+        if (!show) return;
+        var cw = initW * dispK, ch = initH * dispK;
+        var s1 = Math.abs(cw - 8) < 0.2 && Math.abs(ch - 4) < 0.2;
+        var s2 = Math.abs(cw - 4) < 0.2 && Math.abs(ch - 2) < 0.2;
+        var e1 = document.getElementById('do-s1');
+        var e2 = document.getElementById('do-s2');
+        e1.className = s1 ? 'ok' : 'wait';
+        e1.textContent = (s1 ? '✓ ' : '① ') + '4:1 后应为 底8、高4' + (s1 ? '（已达）' : '（当前 底' + fmt(cw) + ' 高' + fmt(ch) + '）');
+        e2.className = s2 ? 'ok' : 'wait';
+        e2.textContent = (s2 ? '✓ ' : '② ') + '再 1:2 后应为 底4、高2' + (s2 ? '（已达）' : '');
+      }
+
+      function gridToPx(ix, iy) {
+        return { x: OFFX + ix * CELL, y: OFFY + (GRID_H - iy) * CELL };
+      }
+
+      function pxToGrid(px, py) {
+        var gx = (px - OFFX) / CELL;
+        var gy = GRID_H - (py - OFFY) / CELL;
+        return { x: gx, y: gy };
+      }
+
+      function curDims() {
+        return { w: initW * scaleK, h: initH * scaleK };
+      }
+      function dispDims() {
+        return { w: initW * dispK, h: initH * dispK };
+      }
+
+      function brPixel() {
+        var d = dispDims();
+        var p = gridToPx(OX + d.w, OY);
+        return { x: p.x, y: p.y };
+      }
+
+      function hitHandle(px, py) {
+        var h = brPixel();
+        var r = Math.max(14, CELL * 0.52);
+        return (px - h.x) * (px - h.x) + (py - h.y) * (py - h.y) <= r * r;
+      }
+
+      function drawGrid() {
+        ctx.clearRect(0, 0, cvs.width, cvs.height);
+        if (hoverGx !== null && workMode === 'scale') {
+          var hp = gridToPx(Math.floor(hoverGx) + 0.5, Math.floor(hoverGy) + 0.5);
+          ctx.fillStyle = 'rgba(99,102,241,0.08)';
+          ctx.fillRect(OFFX, OFFY, GRID_W * CELL, GRID_H * CELL);
+          ctx.strokeStyle = 'rgba(99,102,241,0.35)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(hp.x - CELL / 2, hp.y - CELL / 2, CELL, CELL);
+        }
+
+        ctx.strokeStyle = isPresent() ? '#cbd5e1' : '#e2e8f0';
+        ctx.lineWidth = isPresent() ? 1.35 : 1;
+        for (var gx = 0; gx <= GRID_W; gx++) {
+          var p0 = gridToPx(gx, 0), p1 = gridToPx(gx, GRID_H);
+          ctx.beginPath();
+          ctx.moveTo(p0.x, p0.y);
+          ctx.lineTo(p1.x, p1.y);
+          ctx.stroke();
+        }
+        for (var gy = 0; gy <= GRID_H; gy++) {
+          var a = gridToPx(0, gy), b = gridToPx(GRID_W, gy);
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
+
+        if (workMode === 'paint' && paintClicks.length === 1) {
+          var c = paintClicks[0];
+          var pp = gridToPx(c.gx + 0.5, c.gy + 0.5);
+          ctx.fillStyle = 'rgba(245,158,11,0.35)';
+          ctx.beginPath();
+          ctx.arc(pp.x, pp.y, 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function verts(w, h) {
+        var pBL = gridToPx(OX, OY);
+        var pBR = gridToPx(OX + w, OY);
+        var pTL = gridToPx(OX, OY + h);
+        var pTR = gridToPx(OX + w, OY + h);
+        return { pBL: pBL, pBR: pBR, pTL: pTL, pTR: pTR };
+      }
+
+      function drawShapePoly(w, h, fill, stroke, dash, lw) {
+        var v = verts(w, h);
+        ctx.save();
+        ctx.lineWidth = lw || 2;
+        ctx.strokeStyle = stroke;
+        ctx.fillStyle = fill;
+        ctx.setLineDash(dash || []);
+        ctx.beginPath();
+        if (shapeKind === 'square' || shapeKind === 'rect') {
+          ctx.moveTo(v.pBL.x, v.pBL.y);
+          ctx.lineTo(v.pBR.x, v.pBR.y);
+          ctx.lineTo(v.pTR.x, v.pTR.y);
+          ctx.lineTo(v.pTL.x, v.pTL.y);
+        } else {
+          ctx.moveTo(v.pBL.x, v.pBL.y);
+          ctx.lineTo(v.pBR.x, v.pBR.y);
+          ctx.lineTo(v.pTL.x, v.pTL.y);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawCorrLines(w0, h0, w1, h1) {
+        var a = verts(w0, h0), b = verts(w1, h1);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(14,165,233,0.55)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        var pairs = [['pBL', 'pBL'], ['pBR', 'pBR'], ['pTL', 'pTL']];
+        if (shapeKind === 'square' || shapeKind === 'rect') pairs.push(['pTR', 'pTR']);
+        pairs.forEach(function (pr) {
+          var pa = a[pr[0]], pb = b[pr[1]];
+          ctx.beginPath();
+          ctx.moveTo(pa.x, pa.y);
+          ctx.lineTo(pb.x, pb.y);
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
+
+      function drawEdgeLabels(w, h, color) {
+        if (!document.getElementById('show-labels').checked) return;
+        var v = verts(w, h);
+        ctx.save();
+        var fs = Math.max(12, Math.min(22, Math.round(CELL * 0.48)));
+        ctx.font = '700 ' + fs + 'px ' + (getComputedStyle(document.body).getPropertyValue('--edu-font') || 'sans-serif');
+        ctx.fillStyle = color;
+        var mx = (v.pBL.x + v.pBR.x) / 2, my = (v.pBL.y + v.pBR.y) / 2 + Math.round(fs * 1.05);
+        ctx.textAlign = 'center';
+        ctx.fillText(fmt(w) + ' 格', mx, my);
+        var lx = v.pBL.x - 8, ly = (v.pBL.y + v.pTL.y) / 2;
+        ctx.save();
+        ctx.translate(lx, ly);
+        ctx.rotate(-Math.PI / 2);
+        ctx.textAlign = 'center';
+        ctx.fillText(fmt(h) + ' 格', 0, 0);
+        ctx.restore();
+        if (shapeKind === 'rtri') {
+          var cx = (v.pBR.x + v.pTL.x) / 2 + 10, cy = (v.pBR.y + v.pTL.y) / 2 - 8;
+          var c0 = hypot(w, h);
+          ctx.fillStyle = color;
+          ctx.textAlign = 'left';
+          ctx.fillText('斜边 ' + fmt(c0), cx, cy);
+        }
+        ctx.restore();
+      }
+
+      function drawHandle() {
+        var d = dispDims();
+        var br = brPixel();
+        var hr = Math.max(11, Math.round(CELL * 0.42));
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(br.x, br.y, hr, 0, Math.PI * 2);
+        ctx.fillStyle = dragCorner ? '#312e81' : '#6366f1';
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+        drawEdgeLabels(d.w, d.h, '#312e81');
+      }
+
+      function fmt(n) {
+        var x = Math.round(n * 1000) / 1000;
+        return (Math.abs(x - Math.round(x)) < 1e-6) ? String(Math.round(x)) : String(x);
+      }
+      function hypot(a, b) { return Math.sqrt(a * a + b * b); }
+
+      function draw() {
+        drawGrid();
+        var ghost = document.getElementById('show-ghost').checked;
+        var corr = document.getElementById('show-corr').checked;
+        var di = dispDims();
+
+        if (ghost) {
+          drawShapePoly(initW, initH, 'rgba(148,163,184,0.12)', '#94a3b8', [5, 4], 2);
+          drawEdgeLabels(initW, initH, '#64748b');
+        }
+        if (ghost && corr && (Math.abs(di.w - initW) > 0.01 || Math.abs(di.h - initH) > 0.01)) {
+          drawCorrLines(initW, initH, di.w, di.h);
+        }
+        drawShapePoly(di.w, di.h, 'rgba(99,102,241,0.28)', '#4338ca', [], isPresent() ? 3.2 : 2.5);
+
+        if (workMode === 'scale') drawHandle();
+
+        updateStats();
+        syncSlider();
+      }
+
+      window.draw = draw;
+
+      document.getElementById('show-ghost').addEventListener('change', draw);
+      document.getElementById('show-corr').addEventListener('change', draw);
+      document.getElementById('show-labels').addEventListener('change', draw);
+
+      function syncSlider() {
+        var el = document.getElementById('scale-slider');
+        var k = animT ? dispK : scaleK;
+        var pct = Math.round(k * 100);
+        pct = Math.max(25, Math.min(400, pct));
+        el.value = String(Math.round(pct / 5) * 5);
+        document.getElementById('slider-label').textContent = 'k = ' + fmt(k) + '（' + pct + '%）';
+      }
+
+      function statsFor(w, h) {
+        if (shapeKind === 'square') {
+          var s = w;
+          return { label: '边长 ' + fmt(s), P: 4 * s, A: s * s, extra: '四角 90°' };
+        }
+        if (shapeKind === 'rect') {
+          return { label: '长 ' + fmt(w) + ' 宽 ' + fmt(h), P: 2 * (w + h), A: w * h, extra: '四角 90°' };
+        }
+        var c = hypot(w, h);
+        return {
+          label: '直角边 ' + fmt(w) + '、' + fmt(h) + '，斜边 ' + fmt(c),
+          P: w + h + c,
+          A: w * h / 2,
+          extra: '∠ ' + fmt(Math.atan(h / w) / Math.PI * 180) + '° 与 ' + fmt(Math.atan(w / h) / Math.PI * 180) + '°'
+        };
+      }
+
+      function updateStatBig() {
+        var el = document.getElementById('stat-big');
+        if (!el) return;
+        var k = dispK;
+        var si = statsFor(initW, initH);
+        var sc = statsFor(initW * k, initH * k);
+        el.textContent = 'k = ' + fmt(k) + '　｜　周长比 ' + fmt(sc.P / si.P) + '　｜　面积比 k² = ' + fmt(sc.A / si.A);
+      }
+
+      function updateStats() {
+        var si = statsFor(initW, initH);
+        var cw = initW * dispK, ch = initH * dispK;
+        var sc = statsFor(cw, ch);
+        var k = dispK;
+
+        var html = '<strong>课本原图</strong> ' + si.label + '<br/>周长 ' + fmt(si.P) + '　面积 ' + fmt(si.A);
+        html += '<br/><br/><strong>当前（k=' + fmt(k) + '）</strong> ' + sc.label + '<br/>周长 ' + fmt(sc.P) + '　面积 ' + fmt(sc.A);
+        html += '<br/><br/><span class="stat-k">周长比</span> ' + fmt(sc.P / si.P) + '　<span class="stat-k">面积比</span> ' + fmt(sc.A / si.A);
+        if (shapeKind === 'square' || shapeKind === 'rect') {
+          html += '<br/><span class="stat-k">数格验积</span> 每格面积计 1，原图占 <strong>' + fmt(initW * initH) + '</strong> 格，当前占 <strong>' + fmt(cw * ch) + '</strong> 格（=' + fmt(initW * initH) + '×k²）';
+        } else {
+          html += '<br/><span class="stat-k">数格验积</span> 直角△ 面积 = ½×底×高 = ½×' + fmt(cw) + '×' + fmt(ch) + ' = ' + fmt(sc.A);
+        }
+        document.getElementById('stats-panel').innerHTML = html;
+        updateStatBig();
+        updateDoChecklist();
+      }
+
+      function pushStep(t) {
+        steps.push(t);
+        var el = document.getElementById('step-log');
+        el.innerHTML = steps.map(function (s) { return '<div>' + s + '</div>'; }).join('');
+        el.scrollTop = el.scrollHeight;
+      }
+
+      function animateK(targetK, dur, done) {
+        var s0 = dispK;
+        var t0 = performance.now();
+        if (animT) cancelAnimationFrame(animT);
+        function frame(now) {
+          var u = Math.min(1, (now - t0) / dur);
+          u = 1 - (1 - u) * (1 - u);
+          dispK = s0 + (targetK - s0) * u;
+          draw();
+          if (u < 1) animT = requestAnimationFrame(frame);
+          else {
+            animT = null;
+            dispK = targetK;
+            draw();
+            if (done) done();
+          }
+        }
+        animT = requestAnimationFrame(frame);
+      }
+
+      window.onSliderInput = function (val) {
+        var pct = parseInt(val, 10) / 100;
+        pct = Math.max(0.25, Math.min(4, pct));
+        scaleK = pct;
+        dispK = scaleK;
+        if (animT) { cancelAnimationFrame(animT); animT = null; }
+        document.getElementById('slider-label').textContent = 'k = ' + fmt(scaleK) + '（' + Math.round(scaleK * 100) + '%）';
+        draw();
+      };
+      window.onSliderCommit = function () {
+        recordKIfChanged();
+        pushStep('滑块设为 k=' + fmt(scaleK));
+      };
+
+      window.applyRatioStep = function (n, d) {
+        if (!n || !d) return;
+        if (animT) {
+          cancelAnimationFrame(animT);
+          animT = null;
+          dispK = scaleK;
+        }
+        var from = dispK;
+        scaleK = scaleK * n / d;
+        scaleK = Math.max(0.25, Math.min(4, scaleK));
+        dispK = from;
+        pushStep('一步 ×' + fmt(n / d) + '（' + n + ':' + d + '）→ k=' + fmt(scaleK));
+        animateK(scaleK, 320, function () { recordKIfChanged(); });
+      };
+
+      window.applyCustomStep = function () {
+        var n = parseInt(document.getElementById('in-n').value, 10);
+        var d = parseInt(document.getElementById('in-d').value, 10);
+        if (!n || !d) { alert('请输入正整数'); return; }
+        applyRatioStep(n, d);
+      };
+
+      window.resetToOriginal = function () {
+        if (animT) {
+          cancelAnimationFrame(animT);
+          animT = null;
+        }
+        var from = dispK;
+        scaleK = 1;
+        dispK = from;
+        pushStep('还原 k=1');
+        animateK(1, 400, function () { recordKIfChanged(); });
+      };
+
+      window.playMorph = function () {
+        var target = scaleK;
+        if (Math.abs(target - 1) < 0.03) {
+          pushStep('当前 k≈1，可先放大再点「播放变形」');
+          return;
+        }
+        scaleK = target;
+        dispK = 1;
+        draw();
+        pushStep('▶ 播放：1 → ' + fmt(target));
+        animateK(target, 1800, function () {
+          scaleK = target;
+          dispK = target;
+          syncSlider();
+          draw();
+        });
+      };
+
+      window.resetAll = function () {
+        steps = [];
+        document.getElementById('step-log').innerHTML = '';
+        document.getElementById('quiz-feedback').style.display = 'none';
+        setWorkMode('scale');
+        loadPreset('sq');
+        pushStep('重置：正方形 3×3');
+      };
+
+      function setShapeButtons(id) {
+        ['sb-sq', 'sb-rc', 'sb-tr'].forEach(function (x) {
+          document.getElementById(x).classList.toggle('active', x === id);
+        });
+      }
+
+      window.loadPreset = function (key) {
+        if (animT) { cancelAnimationFrame(animT); animT = null; }
+        paintClicks = [];
+        activePreset = key;
+        scaleK = 1;
+        dispK = 1;
+        resetKHistory();
+        if (key === 'sq') {
+          shapeKind = 'square';
+          initW = initH = 3;
+          setShapeButtons('sb-sq');
+        } else if (key === 'rc') {
+          shapeKind = 'rect';
+          initW = 4;
+          initH = 2;
+          setShapeButtons('sb-rc');
+        } else if (key === 'tr') {
+          shapeKind = 'rtri';
+          initW = 3;
+          initH = 3;
+          setShapeButtons('sb-tr');
+        } else if (key === 'do') {
+          shapeKind = 'rtri';
+          initW = 2;
+          initH = 1;
+          setShapeButtons('sb-tr');
+          pushStep('载入做一做：可先 ×4 再 ×½');
+        }
+        syncSlider();
+        draw();
+      };
+
+      window.setWorkMode = function (m) {
+        workMode = m;
+        document.getElementById('tab-scale').classList.toggle('active', m === 'scale');
+        document.getElementById('tab-paint').classList.toggle('active', m === 'paint');
+        document.getElementById('panel-scale').style.display = m === 'scale' ? '' : 'none';
+        document.getElementById('panel-paint').style.display = m === 'paint' ? '' : 'none';
+        document.getElementById('canvas-hint').textContent = m === 'paint'
+          ? '绘制模式：在格点上点击两次确定长方形'
+          : '拖紫色圆点 · 或拖滑块 · 悬停看格点';
+        paintClicks = [];
+        cvs.classList.toggle('drag-k', false);
+        draw();
+      };
+
+      window.cancelPaint = function () {
+        paintClicks = [];
+        draw();
+      };
+
+      window.checkQuiz = function () {
+        var raw = document.getElementById('quiz-ans').value.trim();
+        var guess = parseFloat(raw);
+        var actual = dispK * dispK;
+        var fb = document.getElementById('quiz-feedback');
+        fb.style.display = 'block';
+        if (isNaN(guess)) {
+          fb.innerHTML = '请输入一个数（面积比 = k² = <strong>' + fmt(actual) + '</strong>）';
+          return;
+        }
+        if (Math.abs(guess - actual) < 0.01 * Math.max(1, actual)) {
+          fb.innerHTML = '<span class="stat-k">猜对了！</span> 当前 k² = ' + fmt(actual);
+        } else {
+          fb.innerHTML = '再想想：当前 k=' + fmt(dispK) + '，面积比应为 k² = <strong>' + fmt(actual) + '</strong>';
+        }
+      };
+
+      function localXY(e) {
+        var r = cvs.getBoundingClientRect();
+        var cx = e.clientX != null ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+        var cy = e.clientY != null ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+        return {
+          sx: (cx - r.left) * (cvs.width / r.width),
+          sy: (cy - r.top) * (cvs.height / r.height)
+        };
+      }
+
+      cvs.addEventListener('mousemove', function (e) {
+        var p = localXY(e);
+        var sx = p.sx, sy = p.sy;
+        var g = pxToGrid(sx, sy);
+        if (sx >= OFFX && sx <= OFFX + GRID_W * CELL && sy >= OFFY && sy <= OFFY + GRID_H * CELL) {
+          hoverGx = g.x;
+          hoverGy = g.y;
+        } else {
+          hoverGx = hoverGy = null;
+        }
+        if (workMode === 'scale' && hitHandle(sx, sy)) cvs.classList.add('drag-k');
+        else if (!dragCorner) cvs.classList.remove('drag-k');
+
+        if (dragCorner) {
+          var kk = (g.x - OX) / initW;
+          scaleK = Math.max(0.25, Math.min(4, kk));
+          dispK = scaleK;
+          syncSlider();
+        }
+        draw();
+      });
+
+      function startDragIfHit(e) {
+        if (workMode !== 'scale') return;
+        var p = localXY(e);
+        if (hitHandle(p.sx, p.sy)) {
+          dragCorner = true;
+          e.preventDefault();
+        }
+      }
+      cvs.addEventListener('mousedown', startDragIfHit);
+      cvs.addEventListener('touchstart', function (e) { startDragIfHit(e); }, { passive: false });
+
+      function endDrag() {
+        if (dragCorner) {
+          dragCorner = false;
+          recordKIfChanged();
+          pushStep('拖角点 → k=' + fmt(scaleK));
+        }
+      }
+      window.addEventListener('mouseup', endDrag);
+      window.addEventListener('touchend', endDrag);
+      cvs.addEventListener('touchmove', function (e) {
+        if (!dragCorner) return;
+        e.preventDefault();
+        var p = localXY(e);
+        var g = pxToGrid(p.sx, p.sy);
+        var kk = (g.x - OX) / initW;
+        scaleK = Math.max(0.25, Math.min(4, kk));
+        dispK = scaleK;
+        syncSlider();
+        draw();
+      }, { passive: false });
+
+      cvs.addEventListener('mouseleave', function () {
+        hoverGx = hoverGy = null;
+        draw();
+      });
+
+      cvs.addEventListener('click', function (e) {
+        if (workMode !== 'paint') return;
+        var p = localXY(e);
+        var sx = p.sx, sy = p.sy;
+        var g = pxToGrid(sx, sy);
+        var gx = Math.round(g.x - 0.5) + 0.5;
+        var gy = Math.round(g.y - 0.5) + 0.5;
+        if (gx < 0 || gy < 0 || gx > GRID_W || gy > GRID_H) return;
+        paintClicks.push({ gx: Math.floor(gx), gy: Math.floor(gy) });
+        if (paintClicks.length === 2) {
+          var a = paintClicks[0], b = paintClicks[1];
+          var minx = Math.min(a.gx, b.gx), maxx = Math.max(a.gx, b.gx);
+          var miny = Math.min(a.gy, b.gy), maxy = Math.max(a.gy, b.gy);
+          var bw = maxx - minx;
+          var bh = maxy - miny;
+          if (bw < 1 || bh < 1) {
+            alert('长方形至少占 1×1 格，请重新点两点');
+            paintClicks = [];
+            draw();
+            return;
+          }
+          OX = minx;
+          OY = miny;
+          shapeKind = 'rect';
+          initW = bw;
+          initH = bh;
+          scaleK = 1;
+          dispK = 1;
+          setShapeButtons('sb-rc');
+          setWorkMode('scale');
+          activePreset = 'custom';
+          resetKHistory();
+          pushStep('自定义原图：' + bw + '×' + bh + ' 格');
+          syncSlider();
+          draw();
+        } else draw();
+      });
+
+      dispK = scaleK;
+      loadPreset('sq');
+      pushStep('提示：拖右下角紫点可连续改变 k；勾选「演示字号」格更大、线更粗');
+
+      window.addEventListener('resize', function () { relayout(); });
+      if (typeof ResizeObserver !== 'undefined' && cvs.parentElement) {
+        new ResizeObserver(function () { relayout(); }).observe(cvs.parentElement);
+      }
+      requestAnimationFrame(function () { relayout(); });
+    })();
+  </script>
+</body>
+
+</html>
