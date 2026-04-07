@@ -61,6 +61,13 @@
   .quiz-opt.correct { background:#dcfce7; border-color:#22c55e; }
   .quiz-opt.wrong { background:#fef2f2; border-color:#ef4444; }
   .quiz-result { font-size:12px; font-weight:700; margin-top:6px; min-height:18px; }
+  .quiz-next-btn {
+    display:none; margin-top:8px; width:100%; padding:8px; border:none;
+    border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;
+    font-family:var(--edu-font); background:#3b82f6; color:#fff;
+    transition:all .15s;
+  }
+  .quiz-next-btn:hover { background:#2563eb; }
 
   .score-bar {
     display:flex; align-items:center; gap:8px; padding:6px 10px;
@@ -131,6 +138,7 @@
             <div class="quiz-q" id="quiz-q">点击开始测验</div>
             <div class="quiz-opts" id="quiz-opts"></div>
             <div class="quiz-result" id="quiz-result"></div>
+            <button class="quiz-next-btn" id="quiz-next" onclick="nextQuizQ()">下一题</button>
           </div>
         </div>
         <div class="divider"></div>
@@ -515,7 +523,12 @@ function answerQ(idx, val, answer, btn) {
     document.getElementById('quiz-result').style.color = '#ef4444';
   }
 
-  setTimeout(function() { showQuizQ(idx + 1); }, 1200);
+  document.getElementById('quiz-next').style.display = 'block';
+}
+
+function nextQuizQ() {
+  document.getElementById('quiz-next').style.display = 'none';
+  showQuizQ(_quizIdx + 1);
 }
 
 function resetAll() {

@@ -34,20 +34,31 @@
   .shape-info .si-prop { display:flex; align-items:center; gap:6px; margin:2px 0; }
   .shape-info .si-dot { width:8px; height:8px; border-radius:50%; }
 
-  .match-area { display:flex; flex-direction:column; gap:6px; }
+  .match-area { display:flex; flex-direction:column; gap:8px; }
   .match-row {
     display:flex; align-items:center; gap:8px; padding:8px 10px;
-    border-radius:10px; cursor:pointer; border:2px solid #e2e8f0;
+    border-radius:10px; border:2px solid #e2e8f0;
     background:#fff; transition:all .15s; font-size:13px; font-weight:600;
   }
-  .match-row:hover { border-color:#f59e0b; }
   .match-row .mr-icon { font-size:22px; }
+  .match-row .mr-label { min-width:50px; }
   .match-row .mr-arrow { color:#d97706; font-weight:800; }
-  .match-row .mr-target {
-    flex:1; text-align:right; font-size:12px; color:#64748b;
+  .match-row .mr-opts {
+    flex:1; display:grid; grid-template-columns:1fr 1fr; gap:3px;
   }
+  .mr-opt-btn {
+    padding:4px 6px; border-radius:6px; font-size:11px; font-weight:600;
+    cursor:pointer; border:2px solid #e2e8f0; background:#fff; color:#64748b;
+    transition:all .15s; font-family:var(--edu-font); text-align:center;
+    line-height:1.2;
+  }
+  .mr-opt-btn:hover:not(.disabled) { border-color:#f59e0b; }
+  .mr-opt-btn.correct { background:#dcfce7; border-color:#22c55e; color:#166534; cursor:default; }
+  .mr-opt-btn.wrong { background:#fef2f2; border-color:#ef4444; color:#991b1b; }
+  .mr-opt-btn.disabled { opacity:0.5; cursor:default; pointer-events:none; }
   .match-row.matched { background:#dcfce7; border-color:#22c55e; color:#166534; }
-  .match-row.wrong { background:#fef2f2; border-color:#ef4444; }
+  .match-row.matched .mr-opt-btn { pointer-events:none; }
+  .match-row.matched .mr-opt-btn:not(.correct) { opacity:0.3; }
 
   .score-bar {
     display:flex; align-items:center; gap:8px; padding:8px 12px;
@@ -66,7 +77,7 @@
   <div class="edu-toolbar">
     <div style="display:flex;align-items:center;gap:10px">
       <span class="edu-toolbar-title">🧊 立体图形认识与分类</span>
-      <span class="edu-toolbar-subtitle">一年级上册 · 认识图形</span>
+      <span class="edu-toolbar-subtitle">低年级 · 认识立体图形</span>
     </div>
     <div class="edu-toolbar-actions">
       <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
@@ -264,6 +275,9 @@ function selectShape(key) {
   });
 }
 
+var ANSWER_ORDER = ['cube', 'cuboid', 'cylinder', 'sphere'];
+var ANSWER_NAMES = { cube: '正方体', cuboid: '长方体', cylinder: '圆柱', sphere: '球' };
+
 function buildQuiz() {
   _score = 0;
   _matched = {};
@@ -280,39 +294,57 @@ function buildQuiz() {
     row.id = 'mr-' + idx;
     row.innerHTML =
       '<span class="mr-icon">' + item.icon + '</span>' +
-      '<span>' + item.name + '</span>' +
+      '<span class="mr-label">' + item.name + '</span>' +
       '<span class="mr-arrow">→</span>' +
-      '<span class="mr-target">点击选择形状</span>';
-    row.onclick = (function(i, it) { return function() { cycleAnswer(i, it); }; })(idx, item);
+      '<div class="mr-opts" id="mr-opts-' + idx + '"></div>';
+
+    // Create 4 option buttons (shuffled order)
+    var optContainer = row.querySelector('.mr-opts');
+    var shuffledOptions = ANSWER_ORDER.slice().sort(function() { return Math.random() - 0.5; });
+    shuffledOptions.forEach(function(shapeKey) {
+      var btn = document.createElement('button');
+      btn.className = 'mr-opt-btn';
+      btn.textContent = ANSWER_NAMES[shapeKey];
+      btn.dataset.shape = shapeKey;
+      btn.onclick = (function(i, it, sk, b) {
+        return function(e) {
+          e.stopPropagation();
+          pickAnswer(i, it, sk, b);
+        };
+      })(idx, item, shapeKey, btn);
+      optContainer.appendChild(btn);
+    });
+
     area.appendChild(row);
   });
 }
 
-var ANSWER_ORDER = ['cube', 'cuboid', 'cylinder', 'sphere'];
-var ANSWER_NAMES = { cube: '正方体', cuboid: '长方体', cylinder: '圆柱', sphere: '球' };
-
-function cycleAnswer(idx, item) {
+function pickAnswer(idx, item, shapeKey, btn) {
   if (_matched[idx]) return;
   var row = document.getElementById('mr-' + idx);
-  var current = row.dataset.answer || '';
-  var currentIdx = ANSWER_ORDER.indexOf(current);
-  var nextIdx = (currentIdx + 1) % ANSWER_ORDER.length;
-  var next = ANSWER_ORDER[nextIdx];
+  if (row.dataset.locked === '1') return; // locked during wrong feedback
 
-  row.dataset.answer = next;
-  row.querySelector('.mr-target').textContent = ANSWER_NAMES[next];
-
-  row.classList.remove('matched', 'wrong');
-
-  // Check if answer is correct
-  if (next === item.answer) {
+  if (shapeKey === item.answer) {
+    // Correct
+    btn.classList.add('correct');
     row.classList.add('matched');
     _matched[idx] = true;
     _score++;
     document.getElementById('score').textContent = _score;
+    // Highlight correct answer, dim others
+    var allBtns = row.querySelectorAll('.mr-opt-btn');
+    allBtns.forEach(function(b) { if (b !== btn) b.classList.add('disabled'); });
     if (_score >= QUIZ_ITEMS.length) {
-      setTimeout(function() { alert('🎉 全部答对！你真棒！'); }, 200);
+      setTimeout(function() { alert('全部答对！你真棒！'); }, 200);
     }
+  } else {
+    // Wrong - show red feedback, lock for 1 second
+    btn.classList.add('wrong');
+    row.dataset.locked = '1';
+    setTimeout(function() {
+      btn.classList.remove('wrong');
+      row.dataset.locked = '';
+    }, 1000);
   }
 }
 

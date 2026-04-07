@@ -94,7 +94,7 @@
     <div class="main-layout">
       <div class="canvas-area">
         <canvas id="c3d"></canvas>
-        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+        <div class="orbit-hint">拖拽旋转 · 双指缩放</div>
       </div>
       <div class="control-panel">
         <div class="ctrl-section">
@@ -123,7 +123,16 @@
         </div>
         <div class="divider"></div>
         <div id="result-section" style="display:none">
-          <div class="result-card">
+          <!-- Guess phase: ask student to think first -->
+          <div class="result-card" id="guess-card">
+            <div class="result-label">水面上升了多少？</div>
+            <div style="font-size:18px;font-weight:700;color:#b45309;margin-top:8px">
+              水位上升了 ___ mL
+            </div>
+            <button class="drop-btn" id="btn-reveal" onclick="revealAnswer()" style="margin-top:10px;background:#f59e0b">揭示答案</button>
+          </div>
+          <!-- Reveal phase: show actual volume and formula -->
+          <div class="result-card" id="reveal-card" style="display:none">
             <div class="result-label">物体体积</div>
             <div class="result-val" id="result-val">—</div>
             <div class="result-formula" id="result-formula"></div>
@@ -380,11 +389,23 @@ function showResult() {
   var newWater = _initialWater + def.volume;
 
   document.getElementById('result-section').style.display = '';
+  // Show guess phase, hide reveal phase
+  document.getElementById('guess-card').style.display = '';
+  document.getElementById('reveal-card').style.display = 'none';
+
+  document.getElementById('water-val').textContent = newWater;
+}
+
+function revealAnswer() {
+  var def = OBJECTS[_currentObj];
+  var newWater = _initialWater + def.volume;
+
+  // Hide guess card, show reveal card
+  document.getElementById('guess-card').style.display = 'none';
+  document.getElementById('reveal-card').style.display = '';
   document.getElementById('result-val').textContent = def.volume + ' mL = ' + def.volume + ' cm³';
   document.getElementById('result-formula').textContent =
     'V = ' + newWater + ' - ' + _initialWater + ' = ' + def.volume + ' (mL)';
-
-  document.getElementById('water-val').textContent = newWater;
 }
 
 function takeOut() {

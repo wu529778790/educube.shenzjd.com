@@ -51,6 +51,9 @@
       <span class="edu-toolbar-subtitle">下册 · 观察物体</span>
     </div>
     <div class="edu-toolbar-actions">
+      <button class="mode-btn" id="mode-observe" onclick="setInteractionMode('observe')">👁 观察</button>
+      <button class="mode-btn active" id="mode-build" onclick="setInteractionMode('build')">🏗️ 搭建</button>
+      <div class="edu-divider"></div>
       <span style="font-size:12px;color:#64748b;">操作：</span>
       <button class="mode-btn active" id="mode-add" onclick="setMode('add')">➕ 添加</button>
       <button class="mode-btn" id="mode-remove" onclick="setMode('remove')">➖ 移除</button>
@@ -64,7 +67,7 @@
     <div class="main-layout">
       <div class="canvas-area">
         <canvas id="c3d"></canvas>
-        <div class="orbit-hint">拖拽旋转 · 滚轮缩放 · 点击积木操作</div>
+        <div class="orbit-hint" id="orbit-hint">搭建模式：点击放置积木</div>
       </div>
       <div class="control-panel">
         <div class="ctrl-section">
@@ -118,6 +121,7 @@ var COLS = 5, ROWS = 5, MAX_H = 5;
 var grid = [];
 for (var i = 0; i < ROWS; i++) { grid[i] = []; for (var j = 0; j < COLS; j++) grid[i][j] = 0; }
 var mode = 'add';
+var _interactionMode = 'build'; // 'observe' or 'build'
 var history = [];
 
 var _scene, _camera, _renderer, _controls;
@@ -139,6 +143,7 @@ function init() {
 
   buildBaseGrid();
   rebuildBlocks();
+  _controls.enabled = false;
 
   canvas.addEventListener('click', onCanvasClick);
 
@@ -207,6 +212,7 @@ function rebuildBlocks() {
 }
 
 function onCanvasClick(event) {
+  if (_interactionMode !== 'build') return;
   var rect = _renderer.domElement.getBoundingClientRect();
   _mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
   _mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -246,6 +252,19 @@ function setMode(m) {
   });
   var hints = { add: '点击空格添加积木', remove: '点击积木移除', height: '点击积木叠高一层' };
   document.getElementById('mode-hint').textContent = hints[m];
+}
+
+function setInteractionMode(m) {
+  _interactionMode = m;
+  document.getElementById('mode-observe').classList.toggle('active', m === 'observe');
+  document.getElementById('mode-build').classList.toggle('active', m === 'build');
+  if (m === 'observe') {
+    _controls.enabled = true;
+    document.getElementById('orbit-hint').textContent = '观察模式：拖拽旋转 · 双指缩放';
+  } else {
+    _controls.enabled = false;
+    document.getElementById('orbit-hint').textContent = '搭建模式：点击放置积木';
+  }
 }
 
 // ===== 三视图绘制 =====

@@ -81,7 +81,7 @@
     <div class="main-layout">
       <div class="canvas-area">
         <canvas id="c3d"></canvas>
-        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+        <div class="orbit-hint">拖拽旋转 · 双指缩放</div>
       </div>
       <div class="control-panel">
         <div class="ctrl-section">
@@ -104,7 +104,7 @@
         </div>
         <div class="divider"></div>
         <div class="ctrl-section">
-          <div class="ctrl-label">选择路径（A→B的不同走法）</div>
+          <div class="ctrl-label">选择路径（A→B 的不同走法）</div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px" id="path-btns"></div>
         </div>
         <div class="divider"></div>
@@ -125,7 +125,7 @@
           ● 将长方体<strong>展开</strong>成平面<br/>
           ● 在展开图上用<strong>勾股定理</strong>求直线距离<br/>
           ● 比较所有展开方式的距离，取最短<br/>
-          ● d = √[(a+b)² + c²] 等3种展开
+          ● 共有 3 种不同的展开方式
         </div>
       </div>
     </div>
@@ -139,103 +139,78 @@ var _currentPath = -1;
 var _isUnfolded = false;
 var _animId = null;
 
-// Path definitions: each path is a way to unfold and connect A to B
-// A = (0,0,0) bottom-front-left, B = (a,b,c) top-back-right
-// In 3D: A at origin, B at (a, c, b) [x=right, y=up, z=forward]
+// Correct path definitions for surface shortest path on a box
+// Box dimensions: a (x), b (z), c (y). A=(0,0,0), B=(a,c,b)
+// 6 paths from 6 adjacent face pairs (one containing A, one containing B)
 function getPaths(a, b, c) {
   return [
     {
       name: '路径1',
-      flat: '(a+b) × c',
-      desc: '展开前+右面',
-      d: Math.sqrt(Math.pow(a + b, 2) + c * c),
+      desc: '前面+右面',
+      d: Math.sqrt((a + b) * (a + b) + c * c),
       formula: 'd = √[(a+b)² + c²]',
-      // On 3D box: go from A along bottom-front edge to (a+b, 0), then up to B
-      // Actually: cross front face (width a, height c) and right face (width b, height c)
-      // Unfolded: rectangle of width (a+b) and height c
-      sides: ['front', 'right'],
+      flatLabel: '(a+b) 与 c',
+      dim1: a + b, dim2: c,
       color: 0xef4444,
-      points3D: [
-        [0, 0, 0],       // A
-        [a, 0, 0],        // corner on front-right edge
-        [a, c, 0],        // going up
-        [a, c, b]         // B (approximate)
-      ]
+      // 3D surface polyline: A -> fold point on shared edge -> B
+      foldPoint: function() { return [a, c * a / (a + b), 0]; },
+      // Unfolded path endpoints (relative to center)
+      unfoldA: null, unfoldB: null
     },
     {
       name: '路径2',
-      flat: '(a+c) × b',
-      desc: '展开前+上面',
-      d: Math.sqrt(Math.pow(a + c, 2) + b * b),
-      formula: 'd = √[(a+c)² + b²]',
-      sides: ['front', 'top'],
+      desc: '前面+上面',
+      d: Math.sqrt((b + c) * (b + c) + a * a),
+      formula: 'd = √[(b+c)² + a²]',
+      flatLabel: '(b+c) 与 a',
+      dim1: b + c, dim2: a,
       color: 0x3b82f6,
-      points3D: [
-        [0, 0, 0],       // A
-        [a, 0, 0],        // going right
-        [a, c, 0],        // going up
-        [a, c, b]         // B
-      ]
+      foldPoint: function() { return [a * c / (c + b), c, 0]; },
+      unfoldA: null, unfoldB: null
     },
     {
       name: '路径3',
-      flat: '(b+c) × a',
-      desc: '展开右+上面',
-      d: Math.sqrt(Math.pow(b + c, 2) + a * a),
-      formula: 'd = √[(b+c)² + a²]',
-      sides: ['right', 'top'],
+      desc: '左面+后面',
+      d: Math.sqrt((a + b) * (a + b) + c * c),
+      formula: 'd = √[(a+b)² + c²]',
+      flatLabel: '(a+b) 与 c',
+      dim1: a + b, dim2: c,
       color: 0x8b5cf6,
-      points3D: [
-        [0, 0, 0],       // A
-        [0, 0, b],        // going forward
-        [0, c, b],        // going up
-        [a, c, b]         // B
-      ]
+      foldPoint: function() { return [0, c * b / (a + b), b]; },
+      unfoldA: null, unfoldB: null
     },
     {
       name: '路径4',
-      flat: '(a+b) × c 反向',
-      desc: '展开底+后面',
-      d: Math.sqrt(Math.pow(a + b, 2) + c * c),
-      formula: 'd = √[(a+b)² + c²]',
-      sides: ['bottom', 'back'],
+      desc: '左面+上面',
+      d: Math.sqrt((a + c) * (a + c) + b * b),
+      formula: 'd = √[(a+c)² + b²]',
+      flatLabel: '(a+c) 与 b',
+      dim1: a + c, dim2: b,
       color: 0xf97316,
-      points3D: [
-        [0, 0, 0],
-        [0, 0, -b],
-        [a, 0, -b],
-        [a, c, 0]
-      ]
+      foldPoint: function() { return [0, c, b * c / (a + c)]; },
+      unfoldA: null, unfoldB: null
     },
     {
       name: '路径5',
-      flat: '(a+c) × b 反向',
-      desc: '展开底+右面',
-      d: Math.sqrt(Math.pow(a + c, 2) + b * b),
+      desc: '底面+右面',
+      d: Math.sqrt((a + c) * (a + c) + b * b),
       formula: 'd = √[(a+c)² + b²]',
-      sides: ['bottom', 'right'],
+      flatLabel: '(a+c) 与 b',
+      dim1: a + c, dim2: b,
       color: 0x06b6d4,
-      points3D: [
-        [0, 0, 0],
-        [a, 0, 0],
-        [a, 0, b],
-        [a, c, b]
-      ]
+      foldPoint: function() { return [a, 0, b * a / (a + c)]; },
+      unfoldA: null, unfoldB: null
     },
     {
       name: '路径6',
-      flat: '(b+c) × a 反向',
-      desc: '展开左+上面',
-      d: Math.sqrt(Math.pow(b + c, 2) + a * a),
+      desc: '底面+后面',
+      d: Math.sqrt((b + c) * (b + c) + a * a),
       formula: 'd = √[(b+c)² + a²]',
-      sides: ['left', 'top'],
+      flatLabel: '(b+c) 与 a',
+      dim1: b + c, dim2: a,
       color: 0xf43f5e,
-      points3D: [
-        [0, 0, 0],
-        [-a, 0, 0],
-        [-a, c, 0],
-        [0, c, 0]
-      ]
+      foldPoint: function() { return [a * b / (b + c), 0, b]; },
+      unfoldA: null, unfoldB: null
     },
   ];
 }
@@ -284,41 +259,31 @@ function buildAll() {
   ));
   _boxGroup.add(box);
 
-  // Labels for A and B
-  var aLbl = Edu3D.textSprite('A', { color: '#dc2626', scale: 0.5 });
-  aLbl.position.set(-0.3, -0.3, -0.3);
-  _boxGroup.add(aLbl);
-
-  var bLbl = Edu3D.textSprite('B', { color: '#dc2626', scale: 0.5 });
-  bLbl.position.set(a + 0.3, c + 0.3, b + 0.3);
-  _boxGroup.add(bLbl);
-
-  // Dimension labels
-  var laLbl = Edu3D.textSprite('a=' + a, { color: '#166534', scale: 0.35 });
-  laLbl.position.set(a / 2, -0.4, b + 0.5);
-  _boxGroup.add(laLbl);
-
-  var lbLbl = Edu3D.textSprite('b=' + b, { color: '#166534', scale: 0.35 });
-  lbLbl.position.set(a + 0.5, -0.4, b / 2);
-  _boxGroup.add(lbLbl);
-
-  var lcLbl = Edu3D.textSprite('c=' + c, { color: '#166534', scale: 0.35 });
-  lcLbl.position.set(-0.5, c / 2, b + 0.5);
-  _boxGroup.add(lcLbl);
+  // Labels
+  _boxGroup.add(makeLabel('A', -0.3, -0.3, -0.3, '#dc2626', 0.5));
+  _boxGroup.add(makeLabel('B', a + 0.3, c + 0.3, b + 0.3, '#dc2626', 0.5));
+  _boxGroup.add(makeLabel('a=' + a, a / 2, -0.4, b + 0.5, '#166534', 0.35));
+  _boxGroup.add(makeLabel('b=' + b, a + 0.5, -0.4, b / 2, '#166534', 0.35));
+  _boxGroup.add(makeLabel('c=' + c, -0.5, c / 2, b + 0.5, '#166534', 0.35));
 
   // Dots at A and B
-  var dotGeo = new THREE.SphereGeometry(0.1, 12, 12);
-  var dotMat = new THREE.MeshBasicMaterial({ color: 0xdc2626 });
-  var dotA = new THREE.Mesh(dotGeo, dotMat);
+  var dotGeo = new THREE.SphereGeometry(0.12, 12, 12);
+  var dotMatA = new THREE.MeshBasicMaterial({ color: 0xdc2626 });
+  var dotA = new THREE.Mesh(dotGeo, dotMatA);
   dotA.position.set(0, 0, 0);
   _boxGroup.add(dotA);
-  var dotB = new THREE.Mesh(dotGeo.clone(), dotMat.clone());
+  var dotB = new THREE.Mesh(dotGeo.clone(), dotMatA.clone());
   dotB.position.set(a, c, b);
   _boxGroup.add(dotB);
 
-  // Build path buttons
   buildPathBtns();
   updateMinDist();
+}
+
+function makeLabel(text, x, y, z, color, scale) {
+  var lbl = Edu3D.textSprite(text, { color: color, scale: scale });
+  lbl.position.set(x, y, z);
+  return lbl;
 }
 
 function buildPathBtns() {
@@ -329,7 +294,7 @@ function buildPathBtns() {
     var btn = document.createElement('button');
     btn.className = 'path-btn' + (idx === _currentPath ? ' active' : '');
     btn.id = 'pb-' + idx;
-    btn.innerHTML = p.name + '<div class="p-dist">d≈' + p.d.toFixed(2) + '</div>';
+    btn.innerHTML = p.name + '<div class="p-dist">' + p.desc + '<br/>d≈' + p.d.toFixed(2) + '</div>';
     btn.onclick = (function(i) { return function() { selectPath(i); }; })(idx);
     container.appendChild(btn);
   });
@@ -349,35 +314,34 @@ function selectPath(idx) {
     if (btn) btn.classList.toggle('active', i === idx);
   });
 
-  // Draw path line on the 3D box (straight line through unfolded surface)
-  // We show a simplified straight line from A to B in 3D
+  // Draw surface path as 2-segment polyline on the box surface
+  var fp = p.foldPoint();
   var lineMat = new THREE.LineBasicMaterial({ color: p.color, linewidth: 3 });
-  var lineGeo = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(0, 0, 0),
-    new THREE.Vector3(a, c, b)
-  ]);
+  var pts = [
+    new THREE.Vector3(0, 0, 0),       // A
+    new THREE.Vector3(fp[0], fp[1], fp[2]), // fold point on shared edge
+    new THREE.Vector3(a, c, b)          // B
+  ];
+  var lineGeo = new THREE.BufferGeometry().setFromPoints(pts);
   var line = new THREE.Line(lineGeo, lineMat);
   _pathGroup.add(line);
 
+  // Draw spheres at fold point for visibility
+  var foldDot = new THREE.Mesh(
+    new THREE.SphereGeometry(0.08, 12, 12),
+    new THREE.MeshBasicMaterial({ color: p.color })
+  );
+  foldDot.position.set(fp[0], fp[1], fp[2]);
+  _pathGroup.add(foldDot);
+
   // Update calculation
   var box = document.getElementById('calc-box');
+  var d1sq = p.dim1 * p.dim1, d2sq = p.dim2 * p.dim2;
   box.innerHTML =
     '<span class="formula">' + p.formula + '</span><br/>' +
-    '= √[(' + p.flat.split('×')[0].trim() + ')² + ' + p.flat.split('×')[1].trim() + '²]<br/>';
-
-  // Parse which dimensions are involved
-  var parts = p.flat.replace(/[()反正向]/g, '').split('×');
-  var dim1Expr = parts[0].trim();
-  var dim2 = parseFloat(parts[1].trim());
-  var dim1 = 0;
-  if (dim1Expr.indexOf('a+b') >= 0) dim1 = a + b;
-  else if (dim1Expr.indexOf('a+c') >= 0) dim1 = a + c;
-  else if (dim1Expr.indexOf('b+c') >= 0) dim1 = b + c;
-
-  box.innerHTML +=
-    '= √[' + dim1 + '² + ' + dim2 + '²]<br/>' +
-    '= √[' + (dim1 * dim1) + ' + ' + (dim2 * dim2) + ']<br/>' +
-    '= √' + (dim1 * dim1 + dim2 * dim2) + '<br/>' +
+    '= √[' + p.dim1 + '² + ' + p.dim2 + '²]<br/>' +
+    '= √[' + d1sq + ' + ' + d2sq + ']<br/>' +
+    '= √' + (d1sq + d2sq) + '<br/>' +
     '<span class="highlight">≈ ' + p.d.toFixed(2) + '</span>';
 }
 
@@ -413,22 +377,16 @@ function toggleUnfold() {
 function buildUnfolded() {
   clearGroup(_unfoldGroup);
   var a = _a, b = _b, c = _c;
-  var paths = getPaths(a, b, c);
   var gap = 0.08;
 
-  // Layout: center cross pattern
-  //   [top]
-  // [left][front][right][back]
-  //   [bottom]
-
-  var faceW, faceH, faceX, faceZ;
+  // Cross layout: [top] [left][front][right][back] [bottom]
   var faces = [
-    { name: '前', w: a, h: c, x: 0, z: 0, color: 0x86efac },        // front (center)
-    { name: '右', w: b, h: c, x: a + gap, z: 0, color: 0x6ee7b7 },   // right
-    { name: '后', w: a, h: c, x: a + b + gap * 2, z: 0, color: 0x86efac }, // back
-    { name: '左', w: b, h: c, x: -b - gap, z: 0, color: 0x6ee7b7 },  // left
-    { name: '上', w: a, h: b, x: 0, z: -(b + gap), color: 0xfbbf24 }, // top (above front)
-    { name: '下', w: a, h: b, x: 0, z: c + gap, color: 0xfde68a },   // bottom (below front)
+    { name: '前', w: a, h: c, x: 0, z: 0, color: 0x86efac },
+    { name: '右', w: b, h: c, x: a + gap, z: 0, color: 0x6ee7b7 },
+    { name: '后', w: a, h: c, x: a + b + gap * 2, z: 0, color: 0x86efac },
+    { name: '左', w: b, h: c, x: -b - gap, z: 0, color: 0x6ee7b7 },
+    { name: '上', w: a, h: b, x: 0, z: -(b + gap), color: 0xfbbf24 },
+    { name: '下', w: a, h: b, x: 0, z: c + gap, color: 0xfde68a },
   ];
 
   var totalW = (b + gap) + a + (b + gap) + a;
@@ -446,79 +404,92 @@ function buildUnfolded() {
       new THREE.EdgesGeometry(geo),
       new THREE.LineBasicMaterial({ color: 0x166534, transparent: true, opacity: 0.4 })
     ));
-
     var lbl = Edu3D.textSprite(f.name, { color: '#166534', scale: 0.35 });
     lbl.position.y = 0.05;
     mesh.add(lbl);
-
     _unfoldGroup.add(mesh);
   });
 
-  // Mark A and B on the unfolded layout
-  // A is at bottom-left-front corner → on front face, bottom-left
+  // A and B positions on unfolded layout
+  // A = (0,0,0) = bottom-left-front = on front face bottom-left corner
   var aPos = new THREE.Vector3(offsetX + 0, 0.05, offsetZ + c);
-  var bPos = new THREE.Vector3(offsetX + a, 0.05, offsetZ + 0); // top-right of front
+  // B = (a,c,b) = on front face top-right corner (in this unfolding)
+  var bPos = new THREE.Vector3(offsetX + a, 0.05, offsetZ + 0);
 
-  var dotGeo = new THREE.SphereGeometry(0.12, 12, 12);
-  var dotMatA = new THREE.MeshBasicMaterial({ color: 0xdc2626 });
-  var dotMatB = new THREE.MeshBasicMaterial({ color: 0x2563eb });
+  addDot(aPos, 0xdc2626, 'A');
+  addDot(bPos, 0x2563eb, 'B');
 
-  var dotA = new THREE.Mesh(dotGeo, dotMatA);
-  dotA.position.copy(aPos);
-  _unfoldGroup.add(dotA);
-
-  var dotB = new THREE.Mesh(dotGeo.clone(), dotMatB);
-  dotB.position.copy(bPos);
-  _unfoldGroup.add(dotB);
-
-  // A/B labels
-  var al = Edu3D.textSprite('A', { color: '#dc2626', scale: 0.4 });
-  al.position.copy(aPos); al.position.y = 0.3;
-  _unfoldGroup.add(al);
-
-  var bl = Edu3D.textSprite('B', { color: '#2563eb', scale: 0.4 });
-  bl.position.copy(bPos); bl.position.y = 0.3;
-  _unfoldGroup.add(bl);
-
-  // Draw all paths on unfolded surface
+  // Draw the selected path as a straight line on the unfolded faces
   if (_currentPath >= 0) {
+    var paths = getPaths(a, b, c);
     var p = paths[_currentPath];
-    // For the selected path, draw the straight line on the unfolded faces
-    // Path 0 (front+right): A at front-bottom-left → B at right-top-right
-    var linePoints = [];
-    switch (_currentPath) {
-      case 0: // front + right
-        linePoints = [aPos, new THREE.Vector3(offsetX + a + b, 0.05, offsetZ + 0)];
-        break;
-      case 1: // front + top
-        linePoints = [aPos, new THREE.Vector3(offsetX + a, 0.05, offsetZ - b)];
-        break;
-      case 2: // right + top
-        linePoints = [new THREE.Vector3(offsetX + a + b, 0.05, offsetZ + c), new THREE.Vector3(offsetX + a + b, 0.05, offsetZ - b)];
-        break;
-      case 3: // bottom + back
-        linePoints = [aPos.clone(), aPos.clone()];
-        linePoints[1].z += b; linePoints[1].x += a + b;
-        break;
-      case 4: // bottom + right
-        linePoints = [aPos.clone(), aPos.clone()];
-        linePoints[1].z += b; linePoints[1].x += a + c;
-        break;
-      case 5: // left + top
-        linePoints = [new THREE.Vector3(offsetX - b, 0.05, offsetZ + c), new THREE.Vector3(offsetX - b, 0.05, offsetZ - b + a)];
-        break;
-    }
-
-    if (linePoints.length >= 2) {
-      var lineGeo = new THREE.BufferGeometry().setFromPoints(linePoints);
+    var linePts = getUnfoldedLinePoints(_currentPath, a, b, c, offsetX, offsetZ);
+    if (linePts.length >= 2) {
+      var lineGeo = new THREE.BufferGeometry().setFromPoints(linePts);
       var lineMat = new THREE.LineBasicMaterial({ color: p.color, linewidth: 3 });
-      var line = new THREE.Line(lineGeo, lineMat);
-      _unfoldGroup.add(line);
+      _unfoldGroup.add(new THREE.Line(lineGeo, lineMat));
+
+      // Draw dashed guide lines showing the right triangle
+      var guideMat = new THREE.LineDashedMaterial({ color: 0x94a3b8, dashSize: 0.15, gapSize: 0.1, linewidth: 1 });
+      var hGuide = new THREE.BufferGeometry().setFromPoints([linePts[0], new THREE.Vector3(linePts[1].x, 0.05, linePts[0].z)]);
+      var hLine = new THREE.Line(hGuide, guideMat);
+      hLine.computeLineDistances();
+      _unfoldGroup.add(hLine);
+      var vGuide = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(linePts[1].x, 0.05, linePts[0].z), linePts[1]]);
+      var vLine = new THREE.Line(vGuide, guideMat);
+      vLine.computeLineDistances();
+      _unfoldGroup.add(vLine);
     }
   }
 
-  // Offset everything up a bit
   _unfoldGroup.position.y = 1;
+}
+
+function getUnfoldedLinePoints(pathIdx, a, b, c, ox, oz) {
+  // For each path, compute the unfolded straight line from A to B
+  // The unfolding is always centered around the "front" face in our cross layout
+  var A, B;
+  switch (pathIdx) {
+    case 0: // front + right: A at front-bottom-left, B at right-top-right
+      A = new THREE.Vector3(ox, 0.05, oz + c);
+      B = new THREE.Vector3(ox + a + b, 0.05, oz);
+      break;
+    case 1: // front + top: A at front-bottom-left, B at top face
+      A = new THREE.Vector3(ox, 0.05, oz + c);
+      B = new THREE.Vector3(ox + a, 0.05, oz - b);
+      break;
+    case 2: // left + back: A at left-bottom, B at back-top
+      A = new THREE.Vector3(ox, 0.05, oz + c);  // A on left face bottom-left
+      B = new THREE.Vector3(ox + a + b + gap + a, 0.05, oz);  // B on back face
+      break;
+    case 3: // left + top: A on left face, B on top face
+      A = new THREE.Vector3(ox, 0.05, oz + c);  // A on left face bottom
+      B = new THREE.Vector3(ox + a, 0.05, oz - b);  // B on top face top-right
+      break;
+    case 4: // bottom + right: A on bottom face, B on right face
+      A = new THREE.Vector3(ox, 0.05, oz + c + gap + b);  // A on bottom face
+      B = new THREE.Vector3(ox + a + b, 0.05, oz + c);  // B on right face top
+      break;
+    case 5: // bottom + back: A on bottom face, B on back face
+      A = new THREE.Vector3(ox, 0.05, oz + c + gap + b);  // A on bottom face
+      B = new THREE.Vector3(ox + a, 0.05, oz);  // B on back face
+      break;
+    default:
+      return [];
+  }
+  return [A, B];
+}
+
+function addDot(pos, color, label) {
+  var dotGeo = new THREE.SphereGeometry(0.12, 12, 12);
+  var dot = new THREE.Mesh(dotGeo, new THREE.MeshBasicMaterial({ color: color }));
+  dot.position.copy(pos);
+  _unfoldGroup.add(dot);
+
+  var lbl = Edu3D.textSprite(label, { color: '#' + color.toString(16).padStart(6, '0'), scale: 0.4 });
+  lbl.position.copy(pos);
+  lbl.position.y = 0.3;
+  _unfoldGroup.add(lbl);
 }
 
 function onParam() {

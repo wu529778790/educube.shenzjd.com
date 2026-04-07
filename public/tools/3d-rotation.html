@@ -67,7 +67,7 @@
     <div class="main-layout">
       <div class="canvas-area">
         <canvas id="c3d"></canvas>
-        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+        <div class="orbit-hint">拖拽旋转 · 双指缩放</div>
       </div>
       <div class="control-panel">
         <div class="ctrl-section">
@@ -100,7 +100,7 @@
           <span id="size-detail">长=2.4, 宽=1.6, 高=1.4</span>
         </div>
         <div class="divider"></div>
-        <div class="info-box" style="font-size:11px;line-height:1.7;border-color:#fed7aa;background:#fffbeb">
+        <div class="info-box" style="font-size:11px;line-height:1.7;border-color:#fed7aa;background:#fffbeb" id="euler-box">
           <strong>欧拉公式验证</strong><br/>
           <span id="euler-check">V - E + F = 8 - 12 + 6 = 2 ✓</span>
         </div>
@@ -147,7 +147,7 @@ var SHAPES = {
     }
   },
   cylinder: {
-    name: '圆柱', faces: 3, edges: 2, vertices: 0, faceShape: '2个圆形 + 1个曲面',
+    name: '圆柱', faces: 3, edges: 0, vertices: 0, faceShape: '2个圆形 + 1个曲面',
     sliders: [
       { id: 'p1', label: '半径', min: 0.5, max: 3, val: 0.9, step: 0.1 },
       { id: 'p2', label: '高', min: 1, max: 5, val: 2, step: 0.2 }
@@ -158,7 +158,7 @@ var SHAPES = {
     vertices3d: function () { return []; }
   },
   cone: {
-    name: '圆锥', faces: 2, edges: 1, vertices: 1, faceShape: '1个圆形 + 1个曲面',
+    name: '圆锥', faces: 2, edges: 0, vertices: 1, faceShape: '1个圆形 + 1个曲面',
     sliders: [
       { id: 'p1', label: '半径', min: 0.5, max: 3, val: 1, step: 0.1 },
       { id: 'p2', label: '高', min: 1, max: 5, val: 2.2, step: 0.2 }
@@ -315,11 +315,20 @@ function updateInfo() {
   document.getElementById('val-vertices').textContent = def.vertices;
   document.getElementById('val-face-shape').textContent = def.faceShape;
   document.getElementById('size-detail').textContent = def.sizeText(_params);
-  // 欧拉公式验证
+  // 欧拉公式验证（仅适用于多面体）
   var V = def.vertices, E = def.edges, F = def.faces;
   var euler = V - E + F;
-  document.getElementById('euler-check').textContent =
-    V + ' - ' + E + ' + ' + F + ' = ' + euler + (euler === 2 ? ' ✓' : '');
+  var eulerBox = document.getElementById('euler-box');
+  if (_currentShape === 'cylinder' || _currentShape === 'cone') {
+    eulerBox.style.display = 'block';
+    document.getElementById('euler-check').innerHTML =
+      '欧拉公式 V - E + F = 2 仅适用于<strong>多面体</strong>（由平面围成的立体）<br/>' +
+      def.name + '含有曲面，不属于多面体，欧拉公式不适用';
+  } else {
+    eulerBox.style.display = 'block';
+    document.getElementById('euler-check').textContent =
+      V + ' - ' + E + ' + ' + F + ' = ' + euler + (euler === 2 ? ' ✓' : '');
+  }
 }
 
 function setHighlight(h) {

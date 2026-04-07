@@ -82,6 +82,9 @@
       <span class="edu-toolbar-subtitle">四年级下册 · 观察物体</span>
     </div>
     <div class="edu-toolbar-actions">
+      <button class="mode-btn" id="mb-observe" onclick="setInteractionMode('observe')">👁 观察</button>
+      <button class="mode-btn active" id="mb-build" onclick="setInteractionMode('build')">🏗️ 搭建</button>
+      <div class="edu-divider"></div>
       <button class="hint-btn" onclick="showHint()">💡 提示</button>
       <div class="edu-divider"></div>
       <button class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
@@ -91,7 +94,7 @@
     <div class="main-layout">
       <div class="canvas-area">
         <canvas id="c3d"></canvas>
-        <div class="orbit-hint">拖拽旋转 · 滚轮缩放 · 点击网格操作积木</div>
+        <div class="orbit-hint" id="orbit-hint">搭建模式：点击放置积木</div>
       </div>
       <div class="control-panel">
         <div class="ctrl-section">
@@ -170,6 +173,7 @@ var COLS = 4, ROWS = 4, MAX_H = 4;
 var userGrid = [];
 for (var i = 0; i < ROWS; i++) { userGrid[i] = []; for (var j = 0; j < COLS; j++) userGrid[i][j] = 0; }
 var _mode = 'add';
+var _interactionMode = 'build'; // 'observe' or 'build'
 var _currentPuzzle = 0;
 var _answers = [];
 
@@ -227,6 +231,7 @@ function init() {
   buildBaseGrid();
   buildPuzzleBtns();
   loadPuzzle(0);
+  _controls.enabled = false;
 
   canvas.addEventListener('click', onCanvasClick);
   Edu3D.startLoop(_scene, _camera, _renderer, _controls);
@@ -326,6 +331,7 @@ function getGridPos(event) {
 }
 
 function onCanvasClick(event) {
+  if (_interactionMode !== 'build') return;
   var pos = getGridPos(event);
   if (!pos) return;
   var r = pos.row, c = pos.col;
@@ -349,6 +355,19 @@ function setMode(m) {
   ['add', 'remove', 'height'].forEach(function(k) {
     document.getElementById('mb-' + k).classList.toggle('active', k === m);
   });
+}
+
+function setInteractionMode(m) {
+  _interactionMode = m;
+  document.getElementById('mb-observe').classList.toggle('active', m === 'observe');
+  document.getElementById('mb-build').classList.toggle('active', m === 'build');
+  if (m === 'observe') {
+    _controls.enabled = true;
+    document.getElementById('orbit-hint').textContent = '观察模式：拖拽旋转 · 双指缩放';
+  } else {
+    _controls.enabled = false;
+    document.getElementById('orbit-hint').textContent = '搭建模式：点击放置积木';
+  }
 }
 
 // ===== View computation =====
@@ -581,6 +600,7 @@ function resetAll() {
   _answers = [];
   for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) userGrid[r][c] = 0;
   _mode = 'add';
+  setInteractionMode('build');
   ['add', 'remove', 'height'].forEach(function(k) {
     document.getElementById('mb-' + k).classList.toggle('active', k === 'add');
   });
