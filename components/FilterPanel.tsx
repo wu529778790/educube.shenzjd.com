@@ -8,7 +8,6 @@ interface FilterPanelProps {
   tools: Tool[];
   gradeId: string;
   subjectId: string;
-  catalogTools: Tool[];
   displayCount: number;
   onGradeChange: (gradeId: string) => void;
 }
@@ -17,7 +16,6 @@ export default function FilterPanel({
   tools,
   gradeId,
   subjectId,
-  catalogTools,
   displayCount,
   onGradeChange,
 }: FilterPanelProps) {

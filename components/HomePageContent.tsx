@@ -21,55 +21,42 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [gradeId, setGradeId] = useState<string>(
-    searchParams.get("grade") ?? defaultCatalogPath.gradeId,
-  );
+  const gradeId = searchParams.get("grade") ?? defaultCatalogPath.gradeId;
   const subjectId = defaultCatalogPath.subjectId;
   const [searchInput, setSearchInput] = useState(searchParams.get("q") ?? "");
   const searchQuery = useDeferredValue(searchInput);
 
-  // Sync state when URL params change (e.g. browser back/forward)
-  useEffect(() => {
-    const g = searchParams.get("grade") ?? defaultCatalogPath.gradeId;
-    if (g !== gradeId) setGradeId(g);
-    const q = searchParams.get("q") ?? "";
-    if (q !== searchInput) setSearchInput(q);
-  }, [searchParams]);
-
-  const syncFilterParams = useCallback(
-    (overrides: { grade?: string }) => {
+  const updateURL = useCallback(
+    (overrides: { grade?: string; q?: string }) => {
       const next = new URLSearchParams(searchParams);
       const grade = overrides.grade ?? gradeId;
+      const q = overrides.q ?? searchQuery;
 
       if (grade && grade !== defaultCatalogPath.gradeId) next.set("grade", grade);
       else next.delete("grade");
 
-      const currentQ = searchParams.get("q") ?? "";
-      if (currentQ) next.set("q", currentQ);
+      if (q) next.set("q", q);
       else next.delete("q");
 
       const qs = next.toString();
       router.replace(qs ? `?${qs}` : "/", { scroll: false });
     },
-    [searchParams, gradeId, router],
+    [searchParams, gradeId, searchQuery, router],
   );
 
   useEffect(() => {
-    const next = new URLSearchParams(searchParams);
-    if (searchQuery) next.set("q", searchQuery);
-    else next.delete("q");
-
     const currentQ = searchParams.get("q") ?? "";
     if (currentQ !== searchQuery) {
-      const qs = next.toString();
-      router.replace(qs ? `?${qs}` : "/", { scroll: false });
+      updateURL({ q: searchQuery });
     }
-  }, [searchQuery, searchParams, router]);
+  }, [searchQuery, searchParams, updateURL]);
 
-  const handleGradeChange = useCallback((id: string) => {
-    setGradeId(id);
-    syncFilterParams({ grade: id });
-  }, [syncFilterParams]);
+  const handleGradeChange = useCallback(
+    (id: string) => {
+      updateURL({ grade: id });
+    },
+    [updateURL],
+  );
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchInput(value);
@@ -106,7 +93,6 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
         tools={tools}
         gradeId={gradeId}
         subjectId={subjectId}
-        catalogTools={catalogTools}
         displayCount={displayTools.length}
         onGradeChange={handleGradeChange}
       />
