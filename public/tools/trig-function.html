@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>锐角三角函数 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+*{box-sizing:border-box}body{font-family:var(--edu-font);margin:0}
+.tool{width:100vw;height:100vh;display:flex;flex-direction:column;background:var(--edu-bg)}
+.toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#fff;border-bottom:1px solid var(--edu-border)}
+.toolbar h1{font-size:15px;color:var(--edu-primary);margin:0}
+.toolbar span{font-size:11px;color:var(--edu-text-muted);background:#f1f5f9;padding:2px 8px;border-radius:12px}
+.main{flex:1;display:grid;grid-template-columns:1fr 290px;overflow:hidden}
+.canvas-wrap{position:relative;overflow:hidden;background:linear-gradient(135deg,#fff7ed,#fffbeb)}
+.canvas-wrap canvas{width:100%;height:100%;display:block}
+.panel{background:#fff;border-left:1px solid var(--edu-border);padding:12px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+.section{display:flex;flex-direction:column;gap:4px}
+.label{font-size:10px;font-weight:700;color:#64748b;letter-spacing:.05em}
+.divider{height:1px;background:var(--edu-border)}
+.btn{padding:6px 12px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--edu-font);transition:all .15s}
+.btn.active{background:var(--edu-primary);color:#fff}
+.btn-default{background:#f1f5f9;color:#334155}
+.btn-default:hover{background:#e2e8f0}
+.row{display:flex;gap:4px;flex-wrap:wrap}
+.slider-row{display:flex;align-items:center;gap:6px}
+.slider-row label{font-size:11px;font-weight:700;min-width:52px}
+.slider-row input[type=range]{flex:1}
+.slider-row .val{font-size:12px;font-weight:800;min-width:40px;text-align:right;color:#c2410c}
+
+.tri-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
+.tri-card{text-align:center;padding:6px;border-radius:8px}
+.tri-card .val{font-size:16px;font-weight:800}
+.tri-card .lbl{font-size:9px;font-weight:700;margin-top:1px}
+
+.angle-card{padding:6px;border:2px solid #e2e8f0;border-radius:8px;cursor:pointer;transition:all .15s;text-align:center;font-size:11px;font-weight:700}
+.angle-card:hover{border-color:#f97316}
+.angle-card.active{border-color:#f97316;background:#fff7ed;color:#c2410c}
+
+.quiz-card{background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:10px;text-align:center}
+.quiz-q{font-size:13px;font-weight:700;color:#9a3412}
+.quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px}
+.quiz-opt{padding:6px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;font-family:var(--edu-font)}
+.quiz-opt:hover{border-color:#f97316}
+.quiz-opt.correct{background:#dcfce7;border-color:#22c55e}
+.quiz-opt.wrong{background:#fef2f2;border-color:#ef4444}
+.quiz-result{font-size:11px;font-weight:700;margin-top:4px;min-height:16px}
+
+.info{font-size:11px;line-height:1.8;color:#334155;background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:8px 10px}
+.info b{color:#9a3412}
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar"><h1>📐 锐角三角函数</h1><span>九年级下册 · 第二十八章</span></div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="tri-grid">
+        <div class="tri-card" style="background:#fee2e2"><div class="val" style="color:#dc2626" id="tv-sin">0.500</div><div class="lbl" style="color:#dc2626">sin θ</div></div>
+        <div class="tri-card" style="background:#dbeafe"><div class="val" style="color:#2563eb" id="tv-cos">0.866</div><div class="lbl" style="color:#2563eb">cos θ</div></div>
+        <div class="tri-card" style="background:#dcfce7"><div class="val" style="color:#16a34a" id="tv-tan">0.577</div><div class="lbl" style="color:#16a34a">tan θ</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">调节角度 θ</div>
+        <div class="slider-row"><label>θ =</label><input type="range" id="sl-angle" min="1" max="89" value="30" oninput="onSlider()"/><div class="val" id="vang">30°</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">特殊角度</div>
+        <div class="row">
+          <div class="angle-card" onclick="setAngle(30)">30°</div>
+          <div class="angle-card active" onclick="setAngle(45)">45°</div>
+          <div class="angle-card" onclick="setAngle(60)">60°</div>
+          <div class="angle-card" onclick="setAngle(37)">37°</div>
+          <div class="angle-card" onclick="setAngle(53)">53°</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="tri-grid">
+        <div class="tri-card" style="background:#fef3c7"><div class="val" style="color:#92400e" id="tv-cot">1.732</div><div class="lbl" style="color:#92400e">cot θ</div></div>
+        <div class="tri-card" style="background:#f3e8ff"><div class="val" style="color:#7c3aed" id="tv-sec">1.155</div><div class="lbl" style="color:#7c3aed">sec θ</div></div>
+        <div class="tri-card" style="background:#fce7f3"><div class="val" style="color:#be185d" id="tv-csc">2.000</div><div class="lbl" style="color:#be185d">csc θ</div></div>
+      </div>
+      <div class="divider"></div>
+      <div style="background:#fffbeb;border:1px solid #fed7aa;border-radius:8px;padding:8px;font-size:11px;line-height:2" id="relation"></div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">锐角三角函数测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>锐角三角函数</b><br/>
+        ● <strong>sin θ</strong> = 对边 / 斜边<br/>
+        ● <strong>cos θ</strong> = 邻边 / 斜边<br/>
+        ● <strong>tan θ</strong> = 对边 / 邻边<br/>
+        ● <strong>特殊值</strong>：sin30°=½, cos30°=√3/2, tan45°=1
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx, _angle = 30;
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+  updateAll();
+  nextQuiz();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function onSlider() {
+  _angle = parseInt(document.getElementById('sl-angle').value);
+  document.getElementById('vang').textContent = _angle + '°';
+  updateAll();
+}
+
+function setAngle(a) {
+  _angle = a;
+  document.getElementById('sl-angle').value = a;
+  document.getElementById('vang').textContent = a + '°';
+  updateAll();
+}
+
+function updateAll() {
+  var rad = _angle * Math.PI / 180;
+  var sinV = Math.sin(rad), cosV = Math.cos(rad), tanV = Math.tan(rad);
+
+  document.getElementById('tv-sin').textContent = sinV.toFixed(3);
+  document.getElementById('tv-cos').textContent = cosV.toFixed(3);
+  document.getElementById('tv-tan').textContent = tanV.toFixed(3);
+  document.getElementById('tv-cot').textContent = (1 / tanV).toFixed(3);
+  document.getElementById('tv-sec').textContent = (1 / cosV).toFixed(3);
+  document.getElementById('tv-csc').textContent = (1 / sinV).toFixed(3);
+
+  // Relation box
+  var el = document.getElementById('relation');
+  el.innerHTML =
+    '<div><b>θ = ' + _angle + '°</b></div>' +
+    '<div>sin θ = 对边/斜边 = ' + sinV.toFixed(3) + '</div>' +
+    '<div>cos θ = 邻边/斜边 = ' + cosV.toFixed(3) + '</div>' +
+    '<div>tan θ = 对边/邻边 = ' + tanV.toFixed(3) + '</div>' +
+    '<div>sin²θ + cos²θ = ' + (sinV * sinV + cosV * cosV).toFixed(3) + ' = 1 ✓</div>' +
+    '<div>tan θ = sin θ / cos θ = ' + (sinV / cosV).toFixed(3) + ' ✓</div>';
+
+  // Update active angle card
+  document.querySelectorAll('.angle-card').forEach(function(el) {
+    var a = parseInt(el.textContent);
+    el.className = 'angle-card' + (a === _angle ? ' active' : '');
+  });
+
+  draw();
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  var rad = _angle * Math.PI / 180;
+  var sinV = Math.sin(rad), cosV = Math.cos(rad), tanV = Math.tan(rad);
+
+  // === Left: Right triangle ===
+  var triSize = Math.min(w * 0.35, h * 0.45);
+  var ox = w * 0.22, oy = h * 0.6;
+  var hyp = triSize;
+  var adj = hyp * cosV, opp = hyp * sinV;
+
+  // Triangle vertices: C at right angle, B at angle θ, A at (90°-θ)
+  var Cx = ox, Cy = oy;
+  var Bx = ox + adj, By = oy;
+  var Ax = ox, Ay = oy - opp;
+
+  // Fill
+  ctx.fillStyle = '#fff7ed';
+  ctx.beginPath(); ctx.moveTo(Ax, Ay); ctx.lineTo(Bx, By); ctx.lineTo(Cx, Cy); ctx.closePath(); ctx.fill();
+
+  // Stroke
+  ctx.strokeStyle = '#c2410c'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(Ax, Ay); ctx.lineTo(Bx, By); ctx.lineTo(Cx, Cy); ctx.closePath(); ctx.stroke();
+
+  // Right angle mark at C
+  ctx.strokeStyle = '#c2410c'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(Cx + 12, Cy); ctx.lineTo(Cx + 12, Cy - 12); ctx.lineTo(Cx, Cy - 12); ctx.stroke();
+
+  // Angle arc at B (θ)
+  ctx.strokeStyle = '#f97316'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(Bx, By, 22, Math.PI, Math.PI + rad); ctx.stroke();
+  ctx.fillStyle = '#c2410c'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('θ=' + _angle + '°', Bx - 20, By - 28);
+
+  // Side labels
+  ctx.font = 'bold 13px sans-serif';
+  // Opposite (AC) - sin
+  ctx.fillStyle = '#dc2626'; ctx.textAlign = 'right';
+  ctx.fillText('对边=' + sinV.toFixed(2), Ax - 8, (Ay + Cy) / 2);
+
+  // Adjacent (BC) - cos
+  ctx.fillStyle = '#2563eb'; ctx.textAlign = 'center';
+  ctx.fillText('邻边=' + cosV.toFixed(2), (Cx + Bx) / 2, Cy + 20);
+
+  // Hypotenuse (AB) - 1
+  ctx.fillStyle = '#16a34a'; ctx.textAlign = 'center';
+  var mx = (Ax + Bx) / 2 + 20, my = (Ay + By) / 2;
+  ctx.fillText('斜边=1', mx, my);
+
+  // Vertex labels
+  ctx.fillStyle = '#1e293b'; ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('A', Ax - 12, Ay);
+  ctx.fillText('B', Bx + 12, By + 5);
+  ctx.fillText('C', Cx - 12, Cy + 5);
+
+  // Vertex dots
+  [[Ax,Ay],[Bx,By],[Cx,Cy]].forEach(function(p) {
+    ctx.fillStyle = '#c2410c';
+    ctx.beginPath(); ctx.arc(p[0], p[1], 4, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // === Right: Unit circle ===
+  var ucx = w * 0.68, ucy = h * 0.5;
+  var uR = Math.min(w * 0.25, h * 0.32);
+
+  // Axes
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(ucx - uR - 20, ucy); ctx.lineTo(ucx + uR + 20, ucy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ucx, ucy - uR - 20); ctx.lineTo(ucx, ucy + uR + 20); ctx.stroke();
+
+  // Unit circle
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(ucx, ucy, uR, 0, Math.PI * 2); ctx.stroke();
+
+  // Point on circle
+  var px = ucx + uR * cosV, py = ucy - uR * sinV;
+
+  // cos projection (horizontal line)
+  ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(ucx, ucy); ctx.lineTo(px, ucy); ctx.stroke();
+  ctx.fillStyle = '#2563eb88';
+  ctx.fillRect(ucx, ucy - 3, px - ucx, 6);
+
+  // sin projection (vertical line)
+  ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(px, ucy); ctx.lineTo(px, py); ctx.stroke();
+  ctx.fillStyle = '#dc262688';
+  ctx.fillRect(px - 3, py, 6, ucy - py);
+
+  // Radius line
+  ctx.strokeStyle = '#16a34a'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(ucx, ucy); ctx.lineTo(px, py); ctx.stroke();
+
+  // Angle arc
+  ctx.strokeStyle = '#f97316'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(ucx, ucy, 25, 0, -rad, true); ctx.stroke();
+  ctx.fillStyle = '#c2410c'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('θ=' + _angle + '°', ucx + 38, ucy - 8);
+
+  // Point
+  ctx.fillStyle = '#7c3aed';
+  ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.fill();
+
+  // Labels on unit circle
+  ctx.font = 'bold 11px sans-serif';
+  ctx.fillStyle = '#2563eb'; ctx.textAlign = 'center';
+  ctx.fillText('cos=' + cosV.toFixed(2), (ucx + px) / 2, ucy + 16);
+  ctx.fillStyle = '#dc2626';
+  ctx.fillText('sin=' + sinV.toFixed(2), px + 28, (ucy + py) / 2);
+  ctx.fillStyle = '#7c3aed'; ctx.textAlign = 'left';
+  ctx.fillText('(' + cosV.toFixed(2) + ', ' + sinV.toFixed(2) + ')', px + 10, py - 10);
+
+  // Center
+  ctx.fillStyle = '#334155'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('O', ucx - 10, ucy + 14);
+
+  // Title
+  ctx.fillStyle = '#9a3412'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('单位圆', ucx, ucy - uR - 28);
+  ctx.fillText('直角三角形', ox + adj / 2, oy - opp - 40);
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: 'sin 30° = ?', opts: ['½', '√3/2', '√2/2', '1'], ans: 0 },
+  { q: 'cos 60° = ?', opts: ['½', '√3/2', '√2/2', '0'], ans: 0 },
+  { q: 'tan 45° = ?', opts: ['0', '½', '1', '√3'], ans: 2 },
+  { q: 'sin θ = ?', opts: ['邻边/斜边', '对边/斜边', '对边/邻边', '斜边/对边'], ans: 1 },
+  { q: 'sin²θ + cos²θ = ?', opts: ['0', '1', '2', 'θ'], ans: 1 },
+  { q: 'sin 30° + cos 60° = ?', opts: ['0.5', '1', '1.5', '2'], ans: 1 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML = '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) { html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>'; });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) { b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++; setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

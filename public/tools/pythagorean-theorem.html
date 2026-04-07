@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>勾股定理 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+*{box-sizing:border-box}body{font-family:var(--edu-font);margin:0}
+.tool{width:100vw;height:100vh;display:flex;flex-direction:column;background:var(--edu-bg)}
+.toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#fff;border-bottom:1px solid var(--edu-border)}
+.toolbar h1{font-size:15px;color:var(--edu-primary);margin:0}
+.toolbar span{font-size:11px;color:var(--edu-text-muted);background:#f1f5f9;padding:2px 8px;border-radius:12px}
+.main{flex:1;display:grid;grid-template-columns:1fr 290px;overflow:hidden}
+.canvas-wrap{position:relative;overflow:hidden;background:linear-gradient(135deg,#fefce8,#fffbeb)}
+.canvas-wrap canvas{width:100%;height:100%;display:block}
+.panel{background:#fff;border-left:1px solid var(--edu-border);padding:12px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+.section{display:flex;flex-direction:column;gap:4px}
+.label{font-size:10px;font-weight:700;color:#64748b;letter-spacing:.05em}
+.divider{height:1px;background:var(--edu-border)}
+.btn{padding:6px 12px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--edu-font);transition:all .15s}
+.btn.active{background:var(--edu-primary);color:#fff}
+.btn-default{background:#f1f5f9;color:#334155}
+.btn-default:hover{background:#e2e8f0}
+.row{display:flex;gap:4px;flex-wrap:wrap}
+.slider-row{display:flex;align-items:center;gap:6px}
+.slider-row label{font-size:11px;font-weight:700;min-width:32px}
+.slider-row input[type=range]{flex:1}
+.slider-row .val{font-size:12px;font-weight:800;min-width:36px;text-align:right;color:#b45309}
+
+.formula-card{text-align:center;padding:10px;background:#fefce8;border:2px solid #fde68a;border-radius:12px}
+.formula-card .formula{font-size:22px;font-weight:800;color:#92400e;font-family:monospace}
+.formula-card .sub{font-size:11px;color:#b45309;margin-top:4px}
+
+.proof-card{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px;font-size:11px;line-height:1.8;color:#334155}
+.proof-card b{color:#92400e}
+
+.quiz-card{background:#fefce8;border:2px solid #fde68a;border-radius:12px;padding:10px;text-align:center}
+.quiz-q{font-size:13px;font-weight:700;color:#92400e}
+.quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px}
+.quiz-opt{padding:6px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;font-family:var(--edu-font)}
+.quiz-opt:hover{border-color:#f59e0b}
+.quiz-opt.correct{background:#dcfce7;border-color:#22c55e}
+.quiz-opt.wrong{background:#fef2f2;border-color:#ef4444}
+.quiz-result{font-size:11px;font-weight:700;margin-top:4px;min-height:16px}
+
+.info{font-size:11px;line-height:1.8;color:#334155;background:#fff;border:1px solid #fde68a;border-radius:8px;padding:8px 10px}
+.info b{color:#92400e}
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar"><h1>📐 勾股定理</h1><span>八年级下册 · 第十七章</span></div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="formula-card">
+        <div class="formula">a² + b² = c²</div>
+        <div class="sub" id="formula-sub">3² + 4² = 5²</div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">调节直角边</div>
+        <div class="slider-row"><label>a=</label><input type="range" id="sl-a" min="1" max="10" step="0.5" value="3" oninput="onSlider()"/><div class="val" id="va">3</div></div>
+        <div class="slider-row"><label>b=</label><input type="range" id="sl-b" min="1" max="10" step="0.5" value="4" oninput="onSlider()"/><div class="val" id="vb">4</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">预设勾股数</div>
+        <div class="row">
+          <button class="btn btn-default" onclick="loadPreset(3,4)">3,4,5</button>
+          <button class="btn btn-default" onclick="loadPreset(5,12)">5,12,13</button>
+          <button class="btn btn-default" onclick="loadPreset(8,15)">8,15,17</button>
+          <button class="btn btn-default" onclick="loadPreset(6,8)">6,8,10</button>
+          <button class="btn btn-default" onclick="loadPreset(7,24)">7,24,25</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">证明方法</div>
+        <div class="row">
+          <button class="btn active" id="proof-area" onclick="setProof('area')">面积法</button>
+          <button class="btn btn-default" id="proof-square" onclick="setProof('square')">弦图法</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="proof-card" id="proof-text"></div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">勾股定理测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>勾股定理</b><br/>
+        ● 直角三角形中，两直角边的平方和等于斜边的平方<br/>
+        ● <strong>a² + b² = c²</strong>（c为斜边）<br/>
+        ● 逆定理：若 a² + b² = c²，则三角形为直角三角形<br/>
+        ● 常见勾股数：(3,4,5) (5,12,13) (8,15,17)
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx, _a = 3, _b = 4, _proof = 'area';
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+  updateProofText();
+  nextQuiz();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function onSlider() {
+  _a = parseFloat(document.getElementById('sl-a').value);
+  _b = parseFloat(document.getElementById('sl-b').value);
+  document.getElementById('va').textContent = _a;
+  document.getElementById('vb').textContent = _b;
+  updateFormula();
+  updateProofText();
+  draw();
+}
+
+function loadPreset(a, b) {
+  _a = a; _b = b;
+  document.getElementById('sl-a').value = a;
+  document.getElementById('sl-b').value = b;
+  document.getElementById('va').textContent = a;
+  document.getElementById('vb').textContent = b;
+  updateFormula();
+  updateProofText();
+  draw();
+}
+
+function setProof(p) {
+  _proof = p;
+  document.getElementById('proof-area').className = 'btn' + (p === 'area' ? ' active' : ' btn-default');
+  document.getElementById('proof-square').className = 'btn' + (p === 'square' ? ' active' : ' btn-default');
+  updateProofText();
+  draw();
+}
+
+function getC() { return Math.sqrt(_a * _a + _b * _b); }
+
+function updateFormula() {
+  var c = getC();
+  var a2 = _a * _a, b2 = _b * _b, c2 = a2 + b2;
+  document.getElementById('formula-sub').textContent =
+    _a + '² + ' + _b + '² = ' + a2 + ' + ' + b2 + ' = ' + c2.toFixed(1) + '  →  c = ' + c.toFixed(2);
+}
+
+function updateProofText() {
+  var el = document.getElementById('proof-text');
+  if (_proof === 'area') {
+    el.innerHTML = '<b>面积证明法（赵爽弦图）</b><br/>' +
+      '大正方形面积 = (a+b)² = ' + (_a + _b) + '² = ' + ((_a + _b) * (_a + _b)).toFixed(1) + '<br/>' +
+      '4个三角形面积 = 4 × (½×' + _a + '×' + _b + ') = ' + (2 * _a * _b).toFixed(1) + '<br/>' +
+      '中间小正方形面积 = c²<br/>' +
+      '(a+b)² = 4×(½ab) + c²<br/>' +
+      'a²+2ab+b² = 2ab + c²<br/>' +
+      '<strong style="color:#92400e">∴ a² + b² = c²</strong>';
+  } else {
+    el.innerHTML = '<b>弦图法（赵爽）</b><br/>' +
+      '以直角三角形的三边为边长分别向外作正方形：<br/>' +
+      '正方形A面积 = a² = ' + (_a * _a).toFixed(1) + '<br/>' +
+      '正方形B面积 = b² = ' + (_b * _b).toFixed(1) + '<br/>' +
+      '正方形C面积 = c² = ' + (getC() * getC()).toFixed(1) + '<br/>' +
+      '<strong style="color:#92400e">验证：a² + b² = ' + (_a * _a + _b * _b).toFixed(1) + ' = c²</strong>';
+  }
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+  var c = getC();
+
+  if (_proof === 'area') drawAreaProof(w, h, c);
+  else drawSquareProof(w, h, c);
+}
+
+function drawAreaProof(w, h, c) {
+  // Draw the Zhao Shuang diagram: large square with 4 triangles
+  var size = Math.min(w * 0.45, h * 0.55);
+  var scale = size / (_a + _b);
+  var sa = _a * scale, sb = _b * scale;
+  var total = sa + sb;
+  var ox = (w - total) / 2, oy = (h - total) / 2 - 10;
+
+  // Large square
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 2;
+  ctx.strokeRect(ox, oy, total, total);
+
+  // 4 triangles - each colored differently
+  var triangles = [
+    { pts: [[ox, oy], [ox + sb, oy], [ox, oy + sa]], color: '#3b82f6', label: 'a' },
+    { pts: [[ox + sb, oy], [ox + total, oy], [ox + total, oy + sb]], color: '#22c55e', label: 'b' },
+    { pts: [[ox + total, oy + sb], [ox + total, oy + total], [ox + sa, oy + total]], color: '#f59e0b', label: 'a' },
+    { pts: [[ox, oy + sa], [ox + sa, oy + total], [ox, oy + total]], color: '#ef4444', label: 'b' },
+  ];
+
+  triangles.forEach(function(t) {
+    ctx.fillStyle = t.color + '33';
+    ctx.beginPath();
+    ctx.moveTo(t.pts[0][0], t.pts[0][1]);
+    ctx.lineTo(t.pts[1][0], t.pts[1][1]);
+    ctx.lineTo(t.pts[2][0], t.pts[2][1]);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = t.color; ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
+
+  // Inner square (c²) - highlight
+  ctx.fillStyle = '#92400e11';
+  ctx.beginPath();
+  ctx.moveTo(ox + sb, oy);
+  ctx.lineTo(ox + total, oy + sb);
+  ctx.lineTo(ox + sa, oy + total);
+  ctx.lineTo(ox, oy + sa);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#92400e'; ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // Label c² in center
+  var cx = (ox + sb + ox + total + ox + sa + ox) / 4;
+  var cy = (oy + oy + sb + oy + total + oy + sa) / 4;
+  ctx.fillStyle = '#92400e'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('c²=' + (c * c).toFixed(1), cx, cy + 5);
+
+  // Side labels
+  ctx.fillStyle = '#3b82f6'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('a=' + _a, ox + sb / 2, oy - 8);
+  ctx.fillStyle = '#22c55e';
+  ctx.fillText('b=' + _b, ox + sb + sa / 2, oy - 8);
+  ctx.fillStyle = '#334155'; ctx.font = 'bold 13px sans-serif';
+  ctx.fillText('a+b=' + (_a + _b), ox + total / 2, oy + total + 20);
+
+  // Right angle marks in each triangle
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+  var markSize = 8;
+  // Triangle 0 right angle at (ox, oy)
+  ctx.beginPath(); ctx.moveTo(ox + markSize, oy); ctx.lineTo(ox + markSize, oy + markSize); ctx.lineTo(ox, oy + markSize); ctx.stroke();
+  // Triangle 1 right angle at (ox+sb, oy)
+  ctx.beginPath(); ctx.moveTo(ox + sb + markSize, oy); ctx.lineTo(ox + sb + markSize, oy + markSize); ctx.lineTo(ox + sb, oy + markSize); ctx.stroke();
+  // Triangle 2 right angle at (ox+total, oy+sb)
+  ctx.beginPath(); ctx.moveTo(ox + total - markSize, oy + sb); ctx.lineTo(ox + total - markSize, oy + sb + markSize); ctx.lineTo(ox + total, oy + sb + markSize); ctx.stroke();
+  // Triangle 3 right angle at (ox, oy+sa)
+  ctx.beginPath(); ctx.moveTo(ox, oy + sa + markSize); ctx.lineTo(ox + markSize, oy + sa + markSize); ctx.lineTo(ox + markSize, oy + sa); ctx.stroke();
+
+  // Verification text
+  ctx.fillStyle = '#92400e'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('a² + b² = ' + (_a * _a).toFixed(1) + ' + ' + (_b * _b).toFixed(1) + ' = ' + (_a * _a + _b * _b).toFixed(1) + ' = c²', w / 2, oy + total + 50);
+  ctx.fillText('c = ' + c.toFixed(2), w / 2, oy + total + 72);
+}
+
+function drawSquareProof(w, h, c) {
+  // Draw right triangle with squares on each side
+  var maxSide = Math.max(_a, _b, c);
+  var scale = Math.min(w * 0.12, h * 0.12) / maxSide;
+
+  // Triangle position
+  var tx = w * 0.35, ty = h * 0.45;
+  var sa = _a * scale, sb = _b * scale, sc = c * scale;
+
+  // Right angle at origin: C at right angle, B along x (side a=BC), A along y (side b=AC)
+  var Cx = tx, Cy = ty;
+  var Bx = tx + sa, By = ty;
+  var Ax = tx, Ay = ty - sb;
+
+  // Draw triangle
+  ctx.fillStyle = '#fefce866';
+  ctx.beginPath(); ctx.moveTo(Ax, Ay); ctx.lineTo(Bx, By); ctx.lineTo(Cx, Cy); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(Ax, Ay); ctx.lineTo(Bx, By); ctx.lineTo(Cx, Cy); ctx.closePath(); ctx.stroke();
+
+  // Right angle mark
+  ctx.strokeStyle = '#92400e'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(Cx + 10, Cy); ctx.lineTo(Cx + 10, Cy - 10); ctx.lineTo(Cx, Cy - 10); ctx.stroke();
+
+  // Square on side a (BC) - downward
+  ctx.fillStyle = '#3b82f622'; ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(Cx, Cy); ctx.lineTo(Bx, By); ctx.lineTo(Bx, By + sa); ctx.lineTo(Cx, Cy + sa); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#2563eb'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('a²=' + (_a * _a).toFixed(1), (Cx + Bx) / 2, Cy + sa / 2 + 5);
+
+  // Square on side b (AC) - leftward
+  ctx.fillStyle = '#22c55e22'; ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(Cx, Cy); ctx.lineTo(Ax, Ay); ctx.lineTo(Ax - sb, Ay); ctx.lineTo(Cx - sb, Cy); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#16a34a'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('b²=' + (_b * _b).toFixed(1), Cx - sb / 2, (Ay + Cy) / 2 + 5);
+
+  // Square on side c (AB) - rotated outward
+  var dx = Bx - Ax, dy = By - Ay;
+  var len = Math.sqrt(dx * dx + dy * dy);
+  var nx = -dy / len * sc, ny = dx / len * sc;
+  ctx.fillStyle = '#f59e0b22'; ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(Ax, Ay); ctx.lineTo(Bx, By); ctx.lineTo(Bx + nx, By + ny); ctx.lineTo(Ax + nx, Ay + ny); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#b45309'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('c²=' + (c * c).toFixed(1), (Ax + Bx) / 2 + nx / 2, (Ay + By) / 2 + ny / 2 + 5);
+
+  // Vertex labels
+  ctx.fillStyle = '#1e293b'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('A', Ax - 10, Ay - 8);
+  ctx.fillText('B', Bx + 12, By + 16);
+  ctx.fillText('C', Cx - 10, Cy + 16);
+
+  // Side labels on triangle
+  ctx.fillStyle = '#334155'; ctx.font = 'bold 12px sans-serif';
+  ctx.fillText('a=' + _a, (Cx + Bx) / 2, Cy - 8);
+  ctx.fillText('b=' + _b, Cx + 14, (Cy + Ay) / 2);
+  ctx.fillText('c=' + c.toFixed(2), (Ax + Bx) / 2 + nx * 0.15, (Ay + By) / 2 + ny * 0.15);
+
+  // Verification text at bottom
+  ctx.fillStyle = '#92400e'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('a² + b² = ' + (_a * _a).toFixed(1) + ' + ' + (_b * _b).toFixed(1) + ' = ' + (_a * _a + _b * _b).toFixed(1), w / 2, h - 40);
+  ctx.fillText('c² = ' + (c * c).toFixed(1) + '  ✓', w / 2, h - 20);
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '直角三角形两直角边为3和4，斜边为？', opts: ['5', '6', '7', '8'], ans: 0 },
+  { q: '勾股定理的表达式是？', opts: ['a+b=c', 'a²+b²=c²', 'a×b=c', 'a²+b²=c'], ans: 1 },
+  { q: '斜边为13，一条直角边为5，另一条直角边为？', opts: ['8', '10', '12', '18'], ans: 2 },
+  { q: '勾股定理适用于什么三角形？', opts: ['任意三角形', '锐角三角形', '钝角三角形', '直角三角形'], ans: 3 },
+  { q: '三边为5,12,13的三角形是？', opts: ['锐角三角形', '直角三角形', '钝角三角形', '不能构成三角形'], ans: 1 },
+  { q: '已知 a=6, c=10，则 b=？', opts: ['4', '6', '8', '16'], ans: 2 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML = '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) { html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>'; });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) { b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++; setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

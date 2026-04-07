@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>长度单位 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+*{box-sizing:border-box}body{font-family:var(--edu-font);margin:0}
+.tool{width:100vw;height:100vh;display:flex;flex-direction:column;background:var(--edu-bg)}
+.toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#fff;border-bottom:1px solid var(--edu-border)}
+.toolbar h1{font-size:15px;color:var(--edu-primary);margin:0}
+.toolbar span{font-size:11px;color:var(--edu-text-muted);background:#f1f5f9;padding:2px 8px;border-radius:12px}
+.main{flex:1;display:grid;grid-template-columns:1fr 280px;overflow:hidden}
+.canvas-wrap{position:relative;overflow:hidden;background:linear-gradient(135deg,#ecfeff,#f0fdfa)}
+.canvas-wrap canvas{width:100%;height:100%;display:block}
+.panel{background:#fff;border-left:1px solid var(--edu-border);padding:12px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+.section{display:flex;flex-direction:column;gap:4px}
+.label{font-size:10px;font-weight:700;color:#64748b;letter-spacing:.05em}
+.divider{height:1px;background:var(--edu-border)}
+.btn{padding:6px 12px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--edu-font);transition:all .15s}
+.btn.active{background:var(--edu-primary);color:#fff}
+.btn-default{background:#f1f5f9;color:#334155}
+.btn-default:hover{background:#e2e8f0}
+.row{display:flex;gap:4px;flex-wrap:wrap}
+.slider-row{display:flex;align-items:center;gap:6px}
+.slider-row label{font-size:11px;font-weight:700;min-width:40px}
+.slider-row input[type=range]{flex:1}
+.slider-row .val{font-size:13px;font-weight:800;min-width:60px;text-align:right;color:#0e7490}
+
+.unit-box{text-align:center;padding:8px;background:#ecfeff;border:2px solid #67e8f9;border-radius:12px}
+.unit-box .val{font-size:20px;font-weight:800;color:#0e7490}
+.unit-box .sub{font-size:10px;color:#0891b2;margin-top:2px}
+
+.quiz-card{background:#ecfeff;border:2px solid #67e8f9;border-radius:12px;padding:10px;text-align:center}
+.quiz-q{font-size:14px;font-weight:700;color:#0e7490}
+.quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.quiz-opt{padding:8px;border:2px solid #e2e8f0;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;background:#fff;font-family:var(--edu-font)}
+.quiz-opt:hover{border-color:#06b6d4}
+.quiz-opt.correct{background:#dcfce7;border-color:#22c55e}
+.quiz-opt.wrong{background:#fef2f2;border-color:#ef4444}
+.quiz-result{font-size:12px;font-weight:700;margin-top:4px;min-height:18px}
+
+.info{font-size:11px;line-height:1.8;color:#334155;background:#fff;border:1px solid #a5f3fc;border-radius:8px;padding:8px 10px}
+.info b{color:#0e7490}
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar"><h1>📏 长度单位</h1><span>二年级上册 · 第一单元</span></div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="unit-box">
+        <div class="val" id="unit-val">10 毫米 = 1 厘米</div>
+        <div class="sub" id="unit-sub">1米 = 100厘米 = 1000毫米</div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">选择单位</div>
+        <div class="row">
+          <button class="btn active" id="u-mm" onclick="setUnit('mm')">毫米 mm</button>
+          <button class="btn btn-default" id="u-cm" onclick="setUnit('cm')">厘米 cm</button>
+          <button class="btn btn-default" id="u-dm" onclick="setUnit('dm')">分米 dm</button>
+          <button class="btn btn-default" id="u-m" onclick="setUnit('m')">米 m</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">调节长度</div>
+        <div class="slider-row"><label>长度=</label><input type="range" id="sl-len" min="1" max="100" value="10" oninput="onSlider()"/><div class="val" id="vlen">10 mm</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">物体参考</div>
+        <div class="row">
+          <button class="btn btn-default" onclick="setRef('pencil')">铅笔 ~18cm</button>
+          <button class="btn btn-default" onclick="setRef('desk')">课桌 ~60cm</button>
+          <button class="btn btn-default" onclick="setRef('door')">门 ~2m</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">长度单位测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>长度单位换算</b><br/>
+        ● <strong>1米 = 10分米 = 100厘米</strong><br/>
+        ● <strong>1分米 = 10厘米</strong><br/>
+        ● <strong>1厘米 = 10毫米</strong><br/>
+        ● 大拇指甲宽约1厘米<br/>
+        ● 一步长约50厘米
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx, _unit = 'mm', _len = 10;
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+  updateUnitDisplay();
+  nextQuiz();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function setUnit(u) {
+  _unit = u;
+  ['mm','cm','dm','m'].forEach(function(k) {
+    document.getElementById('u-' + k).className = 'btn' + (k === u ? ' active' : ' btn-default');
+  });
+  var maxVals = { mm: 100, cm: 50, dm: 20, m: 10 };
+  document.getElementById('sl-len').max = maxVals[u];
+  if (_len > maxVals[u]) _len = maxVals[u];
+  document.getElementById('sl-len').value = _len;
+  updateUnitDisplay();
+  draw();
+}
+
+function onSlider() {
+  _len = parseInt(document.getElementById('sl-len').value);
+  updateUnitDisplay();
+  draw();
+}
+
+function setRef(ref) {
+  var vals = { pencil: { len: 18, unit: 'cm' }, desk: { len: 60, unit: 'cm' }, door: { len: 2, unit: 'm' } };
+  var v = vals[ref];
+  setUnit(v.unit);
+  _len = v.len;
+  document.getElementById('sl-len').value = _len;
+  updateUnitDisplay();
+  draw();
+}
+
+function toMM() {
+  var factors = { mm: 1, cm: 10, dm: 100, m: 1000 };
+  return _len * factors[_unit];
+}
+
+function updateUnitDisplay() {
+  var mm = toMM();
+  var cm = mm / 10, dm = mm / 100, m = mm / 1000;
+
+  document.getElementById('vlen').textContent = _len + ' ' + _unit;
+  document.getElementById('unit-val').textContent = mm + 'mm = ' + cm + 'cm = ' + dm + 'dm = ' + m + 'm';
+  document.getElementById('unit-sub').textContent = _len + _unit + ' = ' + cm + '厘米';
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  var mm = toMM();
+
+  // === Top: Ruler visualization ===
+  var rulerY = 50;
+  var rulerW = w - 60;
+  var maxMM = 100; // show 100mm = 10cm ruler
+  var pxPerMM = rulerW / maxMM;
+  var ox = 30;
+
+  // Title
+  ctx.fillStyle = '#0e7490';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('尺子视图（显示10厘米）', w / 2, 28);
+
+  // Ruler body
+  ctx.fillStyle = '#fefce8';
+  ctx.fillRect(ox, rulerY, rulerW, 50);
+  ctx.strokeStyle = '#92400e'; ctx.lineWidth = 2;
+  ctx.strokeRect(ox, rulerY, rulerW, 50);
+
+  // Ruler ticks
+  for (var i = 0; i <= maxMM; i++) {
+    var x = ox + i * pxPerMM;
+    var tickH = 0;
+    if (i % 10 === 0) tickH = 20; // cm mark
+    else if (i % 5 === 0) tickH = 14;
+    else tickH = 8;
+
+    ctx.strokeStyle = '#92400e'; ctx.lineWidth = i % 10 === 0 ? 1.5 : 0.5;
+    ctx.beginPath(); ctx.moveTo(x, rulerY); ctx.lineTo(x, rulerY + tickH); ctx.stroke();
+
+    // Numbers at cm marks
+    if (i % 10 === 0) {
+      ctx.fillStyle = '#92400e';
+      ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(i / 10, x, rulerY + 35);
+    }
+  }
+
+  // Highlight the selected length
+  var hlW = Math.min(mm * pxPerMM, rulerW);
+  ctx.fillStyle = '#06b6d433';
+  ctx.fillRect(ox, rulerY, hlW, 50);
+  ctx.strokeStyle = '#06b6d4'; ctx.lineWidth = 2;
+  ctx.strokeRect(ox, rulerY, hlW, 50);
+
+  // Length label
+  ctx.fillStyle = '#0e7490'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(_len + _unit, ox + hlW / 2, rulerY + 46);
+
+  // === Middle: Visual comparison ===
+  var compY = rulerY + 80;
+  ctx.fillStyle = '#0e7490'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('长度对比', w / 2, compY);
+
+  compY += 20;
+  // Draw 1cm reference
+  var cm1Px = 10 * pxPerMM;
+  ctx.fillStyle = '#94a3b8'; ctx.font = '10px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('1厘米', ox, compY + 4);
+  ctx.fillStyle = '#94a3b844';
+  ctx.fillRect(ox + 40, compY - 6, cm1Px, 12);
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1;
+  ctx.strokeRect(ox + 40, compY - 6, cm1Px, 12);
+
+  // Draw 10cm reference
+  compY += 22;
+  ctx.fillStyle = '#94a3b8'; ctx.textAlign = 'left';
+  ctx.fillText('10厘米', ox, compY + 4);
+  ctx.fillStyle = '#94a3b822';
+  ctx.fillRect(ox + 40, compY - 6, cm1Px * 10, 12);
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1;
+  ctx.strokeRect(ox + 40, compY - 6, cm1Px * 10, 12);
+
+  // Draw selected length
+  compY += 22;
+  ctx.fillStyle = '#0e7490'; ctx.textAlign = 'left';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.fillText(_len + _unit, ox, compY + 4);
+  ctx.fillStyle = '#06b6d444';
+  ctx.fillRect(ox + 40, compY - 6, hlW, 12);
+  ctx.strokeStyle = '#06b6d4'; ctx.lineWidth = 2;
+  ctx.strokeRect(ox + 40, compY - 6, hlW, 12);
+
+  // === Bottom: Unit conversion cards ===
+  var cardY = compY + 40;
+  var cardW = (w - 40) / 4;
+  var cards = [
+    { label: '毫米', val: mm, color: '#ef4444' },
+    { label: '厘米', val: (mm / 10).toFixed(1), color: '#f97316' },
+    { label: '分米', val: (mm / 100).toFixed(2), color: '#22c55e' },
+    { label: '米', val: (mm / 1000).toFixed(3), color: '#3b82f6' },
+  ];
+
+  cards.forEach(function(c, i) {
+    var x = 10 + i * (cardW + 7);
+    ctx.fillStyle = c.color + '11';
+    ctx.beginPath(); ctx.roundRect(x, cardY, cardW, 50, 8); ctx.fill();
+    ctx.strokeStyle = c.color + '44'; ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.fillStyle = c.color; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(c.val, x + cardW / 2, cardY + 22);
+    ctx.font = 'bold 10px sans-serif';
+    ctx.fillText(c.label, x + cardW / 2, cardY + 40);
+  });
+
+  // Everyday reference
+  var refY = cardY + 65;
+  ctx.fillStyle = '#64748b'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('生活中的参考：指甲宽≈1cm　手掌宽≈8cm　一步≈50cm　门高≈2m', w / 2, refY);
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '1米等于多少厘米？', opts: ['10', '100', '1000', '50'], ans: 1 },
+  { q: '1厘米等于多少毫米？', opts: ['1', '10', '100', '5'], ans: 1 },
+  { q: '铅笔大约长多少？', opts: ['18毫米', '18厘米', '18米', '18分米'], ans: 1 },
+  { q: '课桌高约多少？', opts: ['7厘米', '7分米', '7米', '7毫米'], ans: 1 },
+  { q: '3米 = ？厘米', opts: ['30', '300', '3000', '3'], ans: 1 },
+  { q: '50厘米 = ？分米', opts: ['5', '50', '500', '0.5'], ans: 0 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML = '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) { html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>'; });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) { b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++; setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

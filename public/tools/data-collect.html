@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>数据收集整理 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+*{box-sizing:border-box}body{font-family:var(--edu-font);margin:0}
+.tool{width:100vw;height:100vh;display:flex;flex-direction:column;background:var(--edu-bg)}
+.toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#fff;border-bottom:1px solid var(--edu-border)}
+.toolbar h1{font-size:15px;color:var(--edu-primary);margin:0}
+.toolbar span{font-size:11px;color:var(--edu-text-muted);background:#f1f5f9;padding:2px 8px;border-radius:12px}
+.main{flex:1;display:grid;grid-template-columns:1fr 280px;overflow:hidden}
+.canvas-wrap{position:relative;overflow:hidden;background:linear-gradient(135deg,#f0fdf4,#ecfdf5)}
+.canvas-wrap canvas{width:100%;height:100%;display:block}
+.panel{background:#fff;border-left:1px solid var(--edu-border);padding:12px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+.section{display:flex;flex-direction:column;gap:4px}
+.label{font-size:10px;font-weight:700;color:#64748b;letter-spacing:.05em}
+.divider{height:1px;background:var(--edu-border)}
+.btn{padding:6px 12px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--edu-font);transition:all .15s}
+.btn.active{background:var(--edu-primary);color:#fff}
+.btn-default{background:#f1f5f9;color:#334155}
+.btn-default:hover{background:#e2e8f0}
+.row{display:flex;gap:4px;flex-wrap:wrap}
+
+.vote-btn{padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:20px;cursor:pointer;background:#fff;font-family:var(--edu-font);transition:all .15s;text-align:center;min-width:60px}
+.vote-btn:hover{border-color:#22c55e;background:#f0fdf4}
+.vote-btn .cnt{font-size:14px;font-weight:800;color:#15803d;margin-top:2px}
+
+.quiz-card{background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:10px;text-align:center}
+.quiz-q{font-size:14px;font-weight:700;color:#166534}
+.quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.quiz-opt{padding:8px;border:2px solid #e2e8f0;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;background:#fff;font-family:var(--edu-font)}
+.quiz-opt:hover{border-color:#22c55e}
+.quiz-opt.correct{background:#dcfce7;border-color:#22c55e}
+.quiz-opt.wrong{background:#fef2f2;border-color:#ef4444}
+.quiz-result{font-size:12px;font-weight:700;margin-top:4px;min-height:18px}
+
+.info{font-size:11px;line-height:1.8;color:#334155;background:#fff;border:1px solid #bbf7d0;border-radius:8px;padding:8px 10px}
+.info b{color:#166534}
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar"><h1>📊 数据收集整理</h1><span>二年级下册 · 第一单元</span></div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="section">
+        <div class="label">选择调查主题</div>
+        <div class="row">
+          <button class="btn active" id="tp-fruit" onclick="setTopic('fruit')">最爱吃的水果</button>
+          <button class="btn btn-default" id="tp-sport" onclick="setTopic('sport')">最喜欢的运动</button>
+          <button class="btn btn-default" id="tp-color" onclick="setTopic('color')">最喜欢的颜色</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">投票！点击喜欢的选项</div>
+        <div class="row" id="vote-btns"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">统计结果</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px" id="stat-grid"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="row">
+          <button class="btn btn-default" onclick="resetVotes()">🔄 重新投票</button>
+          <button class="btn btn-default" onclick="randomVotes()">🎲 随机投票</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">数据测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>数据收集整理</b><br/>
+        ● 用<strong>举手</strong>、<strong>投票</strong>等方法收集数据<br/>
+        ● 用<strong>画"正"字</strong>的方法整理数据<br/>
+        ● 用<strong>条形统计图</strong>表示数据<br/>
+        ● 一个"正"字代表<strong>5票</strong>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx, _topic = 'fruit';
+var _topics = {
+  fruit: { items: ['🍎苹果','🍊橘子','🍇葡萄','🍓草莓','🍌香蕉'], colors: ['#ef4444','#f97316','#8b5cf6','#ec4899','#eab308'] },
+  sport: { items: ['⚽足球','🏀篮球','🏸羽毛球','🏓乒乓球','🏊游泳'], colors: ['#22c55e','#f97316','#3b82f6','#ef4444','#06b6d4'] },
+  color: { items: ['🔴红色','🔵蓝色','🟢绿色','🟡黄色','🟣紫色'], colors: ['#ef4444','#3b82f6','#22c55e','#eab308','#8b5cf6'] },
+};
+var _votes = {};
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+  resetVotes();
+  nextQuiz();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function setTopic(t) {
+  _topic = t;
+  ['fruit','sport','color'].forEach(function(k) {
+    document.getElementById('tp-' + k).className = 'btn' + (k === t ? ' active' : ' btn-default');
+  });
+  resetVotes();
+}
+
+function resetVotes() {
+  var items = _topics[_topic].items;
+  _votes = {};
+  items.forEach(function(it) { _votes[it] = 0; });
+  buildVoteButtons();
+  updateStats();
+  draw();
+}
+
+function randomVotes() {
+  var items = _topics[_topic].items;
+  items.forEach(function(it) { _votes[it] = 0; });
+  for (var i = 0; i < 20; i++) {
+    var it = items[Math.floor(Math.random() * items.length)];
+    _votes[it]++;
+  }
+  buildVoteButtons();
+  updateStats();
+  draw();
+}
+
+function vote(item) {
+  _votes[item]++;
+  buildVoteButtons();
+  updateStats();
+  draw();
+}
+
+function buildVoteButtons() {
+  var items = _topics[_topic].items;
+  var html = '';
+  items.forEach(function(it) {
+    html += '<button class="vote-btn" onclick="vote(\'' + it + '\')">';
+    html += it + '<div class="cnt">' + _votes[it] + '票</div></button>';
+  });
+  document.getElementById('vote-btns').innerHTML = html;
+}
+
+function updateStats() {
+  var items = _topics[_topic].items;
+  var total = 0, maxItem = items[0];
+  items.forEach(function(it) {
+    total += _votes[it];
+    if (_votes[it] > _votes[maxItem]) maxItem = it;
+  });
+  var html = '<div style="text-align:center;padding:4px;background:#f0fdf4;border-radius:6px;font-size:11px;font-weight:700;color:#15803d">总计 ' + total + ' 票</div>';
+  html += '<div style="text-align:center;padding:4px;background:#dcfce7;border-radius:6px;font-size:11px;font-weight:700;color:#166534">最多：' + maxItem.split(/[\s🍎🍊🍇🍓🍌⚽🏀🏸🏓🏊🔴🔵🟢🟡🟣]/).pop() + '</div>';
+  html += '<div style="text-align:center;padding:4px;background:#fef3c7;border-radius:6px;font-size:11px;font-weight:700;color:#92400e">最少：' + getMinItem().split(/[\s🍎🍊🍇🍓🍌⚽🏀🏸🏓🏊🔴🔵🟢🟡🟣]/).pop() + '</div>';
+  document.getElementById('stat-grid').innerHTML = html;
+}
+
+function getMinItem() {
+  var items = _topics[_topic].items;
+  var min = items[0];
+  items.forEach(function(it) { if (_votes[it] < _votes[min]) min = it; });
+  return min;
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  var items = _topics[_topic].items;
+  var colors = _topics[_topic].colors;
+  var maxVal = 0;
+  items.forEach(function(it) { if (_votes[it] > maxVal) maxVal = _votes[it]; });
+  if (maxVal === 0) maxVal = 1;
+
+  // === Left: 正字统计 ===
+  var leftW = w * 0.4;
+  ctx.fillStyle = '#166534'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('画"正"字统计', leftW / 2, 24);
+
+  var rowH = Math.min(50, (h - 40) / items.length);
+  items.forEach(function(it, i) {
+    var y = 40 + i * rowH;
+
+    // Item label
+    ctx.fillStyle = '#334155'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(it, 10, y + 14);
+
+    // 正字 strokes
+    var count = _votes[it];
+    var fullZheng = Math.floor(count / 5);
+    var remainder = count % 5;
+
+    ctx.fillStyle = colors[i]; ctx.font = 'bold 16px sans-serif';
+    var zx = 90;
+    for (var j = 0; j < fullZheng; j++) {
+      ctx.fillText('正', zx + j * 22, y + 16);
+    }
+    // Partial 正
+    var strokes = ['一','̄','三','⁞','正'];
+    if (remainder > 0) {
+      ctx.fillStyle = colors[i] + '88';
+      ctx.fillText(strokes[remainder - 1], zx + fullZheng * 22, y + 16);
+    }
+
+    // Count
+    ctx.fillStyle = colors[i]; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(count + '票', leftW - 10, y + 16);
+  });
+
+  // === Right: Bar chart ===
+  var chartX = leftW + 20, chartW = w - leftW - 30;
+  ctx.fillStyle = '#166534'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('条形统计图', chartX + chartW / 2, 24);
+
+  var barW = Math.min(40, (chartW - 20) / items.length - 8);
+  var chartH = h - 100;
+  var chartBottom = h - 30;
+
+  // Y axis
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(chartX, 35); ctx.lineTo(chartX, chartBottom); ctx.lineTo(chartX + chartW, chartBottom); ctx.stroke();
+
+  // Y ticks
+  ctx.fillStyle = '#64748b'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+  for (var i = 0; i <= maxVal; i++) {
+    var y = chartBottom - (i / maxVal) * chartH;
+    ctx.fillText(i, chartX - 4, y + 3);
+    ctx.strokeStyle = '#e2e8f044'; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(chartX + 1, y); ctx.lineTo(chartX + chartW, y); ctx.stroke();
+  }
+
+  // Bars
+  var gap = (chartW - items.length * barW) / (items.length + 1);
+  items.forEach(function(it, i) {
+    var x = chartX + gap + i * (barW + gap);
+    var bh = (_votes[it] / maxVal) * chartH;
+    var y = chartBottom - bh;
+
+    // Bar
+    ctx.fillStyle = colors[i] + 'cc';
+    ctx.beginPath(); ctx.roundRect(x, y, barW, bh, [4, 4, 0, 0]); ctx.fill();
+
+    // Value on top
+    ctx.fillStyle = colors[i]; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+    if (_votes[it] > 0) ctx.fillText(_votes[it], x + barW / 2, y - 4);
+
+    // Label
+    ctx.fillStyle = '#334155'; ctx.font = '10px sans-serif';
+    var shortName = it.replace(/[🍎🍊🍇🍓🍌⚽🏀🏸🏓🏊🔴🔵🟢🟡🟣]/g, '');
+    ctx.fillText(shortName, x + barW / 2, chartBottom + 14);
+  });
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '一个"正"字代表几票？', opts: ['3票', '4票', '5票', '6票'], ans: 2 },
+  { q: '收集数据的方法不包括？', opts: ['举手', '投票', '猜测', '画正字'], ans: 2 },
+  { q: '条形统计图中，最高的柱子表示？', opts: ['最少', '最多', '平均', '总数'], ans: 1 },
+  { q: '5个苹果，3个橘子，一共收集了几个数据？', opts: ['3个', '5个', '8个', '2个'], ans: 2 },
+  { q: '"正"字的第五笔是什么？', opts: ['一', '丨', '横', '竖'], ans: 0 },
+  { q: '统计图中用什么表示数量？', opts: ['文字', '数字', '柱子高度', '颜色'], ans: 2 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML = '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) { html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>'; });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) { b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++; setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

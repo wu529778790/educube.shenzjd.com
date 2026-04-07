@@ -1,6 +1,6 @@
 import type { Tool } from "./types";
 
-/** 八年级教具（仅 3D） */
+/** 八年级教具 */
 export const j8Tools: Tool[] = [
   {
     id: "shortest-path",
@@ -16,5 +16,80 @@ export const j8Tools: Tool[] = [
     tags: ["最短路径", "勾股定理", "展开图", "长方体"],
     gradient: ["#16A34A", "#15803D"],
     icon: "🐛",
+  },
+  {
+    id: "congruent-triangles",
+    name: "全等三角形",
+    subtitle: "全等三角形",
+    chapter: "上册 · 第十二章",
+    semester: "上册",
+    unitNum: 12,
+    gradeId: "j8",
+    subjectId: "math",
+    description:
+      "交互式全等三角形判定工具，支持SSS/SAS/ASA/AAS四种判定条件切换，滑块调节三角形边长和角度，实时显示两个全等三角形及对应关系，含6道测验。",
+    tags: ["全等三角形", "SSS", "SAS", "ASA", "AAS", "判定条件"],
+    gradient: ["#3B82F6", "#1D4ED8"],
+    icon: "🔺",
+  },
+  {
+    id: "pythagorean-theorem",
+    name: "勾股定理",
+    subtitle: "勾股定理",
+    chapter: "下册 · 第十七章",
+    semester: "下册",
+    unitNum: 17,
+    gradeId: "j8",
+    subjectId: "math",
+    description:
+      "交互式勾股定理探究，滑块调节直角边a和b，实时计算斜边c，面积证明法（赵爽弦图）和弦图法两种可视化证明，预设常见勾股数，含6道测验。",
+    tags: ["勾股定理", "直角三角形", "勾股数", "赵爽弦图", "证明"],
+    gradient: ["#F59E0B", "#D97706"],
+    icon: "📐",
+  },
+  {
+    id: "linear-function",
+    name: "一次函数",
+    subtitle: "一次函数",
+    chapter: "下册 · 第十九章",
+    semester: "下册",
+    unitNum: 19,
+    gradeId: "j8",
+    subjectId: "math",
+    description:
+      "一次函数 y=kx+b 交互式图象，滑块调节k和b实时绘制函数图象，鼠标悬停显示坐标，标注y轴截距和x轴截距，显示增减性，预设5种典型函数，含6道测验。",
+    tags: ["一次函数", "y=kx+b", "斜率", "截距", "图象"],
+    gradient: ["#8B5CF6", "#6D28D9"],
+    icon: "📈",
+  },
+  {
+    id: "factorization",
+    name: "因式分解",
+    subtitle: "因式分解",
+    chapter: "上册 · 第十五章",
+    semester: "上册",
+    unitNum: 15,
+    gradeId: "j8",
+    subjectId: "math",
+    description:
+      "四种因式分解方法（提公因式法、公式法、十字相乘法、分组分解法），每种配有多个例题和详细步骤，可视化十字相乘图解，含6道测验。",
+    tags: ["因式分解", "提公因式", "平方差", "完全平方", "十字相乘"],
+    gradient: ["#22C55E", "#15803D"],
+    icon: "🧩",
+  },
+  {
+    id: "parallelogram",
+    name: "平行四边形",
+    subtitle: "平行四边形",
+    chapter: "下册 · 第十八章",
+    semester: "下册",
+    unitNum: 18,
+    gradeId: "j8",
+    subjectId: "math",
+    description:
+      "6种四边形（平行四边形、矩形、菱形、正方形、梯形、等腰梯形）切换展示，滑块调节底高和倾斜度，可显示对角线/角度/面积/边长，标注平行和相等关系，含6道测验。",
+    tags: ["平行四边形", "矩形", "菱形", "正方形", "梯形", "四边形"],
+    gradient: ["#F97316", "#C2410C"],
+    icon: "▱",
   },
 ];

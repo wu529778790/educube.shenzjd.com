@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>数据与统计 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  *{box-sizing:border-box}body{font-family:var(--edu-font);margin:0}
+  .tool{width:100vw;height:100vh;display:flex;flex-direction:column;background:var(--edu-bg)}
+  .toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#fff;border-bottom:1px solid var(--edu-border)}
+  .toolbar h1{font-size:15px;color:var(--edu-primary);margin:0}
+  .toolbar span{font-size:11px;color:var(--edu-text-muted);background:#f1f5f9;padding:2px 8px;border-radius:12px}
+  .main{flex:1;display:grid;grid-template-columns:1fr 290px;overflow:hidden}
+  .canvas-wrap{position:relative;overflow:hidden;background:linear-gradient(135deg,#eff6ff,#f0f9ff)}
+  .canvas-wrap canvas{width:100%;height:100%;display:block}
+  .panel{background:#fff;border-left:1px solid var(--edu-border);padding:12px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+  .section{display:flex;flex-direction:column;gap:4px}
+  .label{font-size:10px;font-weight:700;color:#64748b;letter-spacing:.05em}
+  .divider{height:1px;background:var(--edu-border)}
+  .btn{padding:6px 12px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--edu-font);transition:all .15s}
+  .btn.active{background:var(--edu-primary);color:#fff}
+  .btn-default{background:#f1f5f9;color:#334155}
+  .btn-default:hover{background:#e2e8f0}
+  .row{display:flex;gap:4px;flex-wrap:wrap}
+
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
+  .stat-card{text-align:center;padding:6px;border-radius:8px}
+  .stat-card .val{font-size:18px;font-weight:800}
+  .stat-card .lbl{font-size:9px;font-weight:700;margin-top:1px}
+
+  .quiz-card{background:#eff6ff;border:2px solid #93c5fd;border-radius:12px;padding:10px;text-align:center}
+  .quiz-q{font-size:13px;font-weight:700;color:#1e40af}
+  .quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px}
+  .quiz-opt{padding:6px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;font-family:var(--edu-font)}
+  .quiz-opt:hover{border-color:#3b82f6}
+  .quiz-opt.correct{background:#dcfce7;border-color:#22c55e}
+  .quiz-opt.wrong{background:#fef2f2;border-color:#ef4444}
+  .quiz-result{font-size:11px;font-weight:700;margin-top:4px;min-height:16px}
+
+  .info{font-size:11px;line-height:1.8;color:#334155;background:#fff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px}
+  .info b{color:#1e40af}
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar">
+    <h1>📊 数据与统计</h1>
+    <span>七年级下册 · 数据的收集与整理</span>
+  </div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="section">
+        <div class="label">选择数据集</div>
+        <div class="row">
+          <button class="btn active" id="ds-score" onclick="setDS('score')">📝 考试成绩</button>
+          <button class="btn btn-default" id="ds-age" onclick="setDS('age')">👤 年龄分布</button>
+          <button class="btn btn-default" id="ds-weather" onclick="setDS('weather')">🌡️ 温度统计</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="stat-grid">
+        <div class="stat-card" style="background:#dbeafe"><div class="val" style="color:#2563eb" id="st-mean">—</div><div class="lbl" style="color:#2563eb">平均数</div></div>
+        <div class="stat-card" style="background:#dcfce7"><div class="val" style="color:#16a34a" id="st-median">—</div><div class="lbl" style="color:#16a34a">中位数</div></div>
+        <div class="stat-card" style="background:#fef3c7"><div class="val" style="color:#b45309" id="st-mode">—</div><div class="lbl" style="color:#b45309">众数</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="stat-grid">
+        <div class="stat-card" style="background:#fee2e2"><div class="val" style="color:#dc2626" id="st-max">—</div><div class="lbl" style="color:#dc2626">最大值</div></div>
+        <div class="stat-card" style="background:#f3e8ff"><div class="val" style="color:#7c3aed" id="st-min">—</div><div class="lbl" style="color:#7c3aed">最小值</div></div>
+        <div class="stat-card" style="background:#e0f2fe"><div class="val" style="color:#0284c7" id="st-range">—</div><div class="lbl" style="color:#0284c7">极差</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">图表类型</div>
+        <div class="row">
+          <button class="btn active" id="ct-bar" onclick="setChart('bar')">📊 条形图</button>
+          <button class="btn btn-default" id="ct-hist" onclick="setChart('hist')">📈 直方图</button>
+          <button class="btn btn-default" id="ct-freq" onclick="setChart('freq')">📋 频率表</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">数据测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>数据统计小知识</b><br/>
+        ● <strong>平均数</strong> = 所有数据之和 ÷ 个数<br/>
+        ● <strong>中位数</strong>：数据从小到大排列，最中间的值<br/>
+        ● <strong>众数</strong>：出现次数最多的数<br/>
+        ● <strong>极差</strong> = 最大值 - 最小值<br/>
+        ● <strong>频率</strong> = 频次 ÷ 总数
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx, _ds = 'score', _chart = 'bar';
+
+var _datasets = {
+  score: {
+    title: '某班数学考试成绩',
+    data: [78, 85, 92, 67, 73, 88, 95, 72, 81, 90, 83, 76, 91, 68, 85, 79, 87, 93, 74, 82, 86, 89, 77, 71, 94, 80, 84, 75, 96, 70],
+    unit: '分'
+  },
+  age: {
+    title: '社区居民年龄调查',
+    data: [12, 25, 34, 45, 8, 67, 23, 56, 41, 19, 33, 52, 28, 61, 15, 38, 47, 22, 70, 11, 29, 43, 55, 36, 18, 64, 31, 48, 26, 59],
+    unit: '岁'
+  },
+  weather: {
+    title: '某月每日最高气温（°C）',
+    data: [18, 20, 22, 25, 23, 19, 21, 24, 26, 28, 27, 25, 22, 20, 19, 23, 26, 29, 31, 30, 28, 25, 22, 20, 18, 21, 24, 27, 29, 26],
+    unit: '°C'
+  }
+};
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+  updateStats();
+  nextQuiz();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function setDS(key) {
+  _ds = key;
+  ['score','age','weather'].forEach(function(k) {
+    document.getElementById('ds-' + k).className = 'btn ' + (k === key ? 'active' : 'btn-default');
+  });
+  updateStats();
+  draw();
+}
+
+function setChart(c) {
+  _chart = c;
+  ['bar','hist','freq'].forEach(function(k) {
+    document.getElementById('ct-' + k).className = 'btn ' + (k === c ? 'active' : 'btn-default');
+  });
+  draw();
+}
+
+function calcStats(data) {
+  var sorted = data.slice().sort(function(a, b) { return a - b; });
+  var n = sorted.length;
+  var sum = sorted.reduce(function(a, b) { return a + b; }, 0);
+  var mean = sum / n;
+  var median = n % 2 === 0 ? (sorted[n/2-1] + sorted[n/2]) / 2 : sorted[Math.floor(n/2)];
+  // Mode
+  var freq = {};
+  sorted.forEach(function(v) { freq[v] = (freq[v] || 0) + 1; });
+  var maxFreq = 0; var mode = sorted[0];
+  Object.keys(freq).forEach(function(k) {
+    if (freq[k] > maxFreq) { maxFreq = freq[k]; mode = parseInt(k); }
+  });
+  return {
+    mean: mean.toFixed(1), median: Number.isInteger(median) ? median : median.toFixed(1),
+    mode: mode, max: sorted[n-1], min: sorted[0], range: sorted[n-1] - sorted[0],
+    sorted: sorted, freq: freq
+  };
+}
+
+function updateStats() {
+  var s = calcStats(_datasets[_ds].data);
+  document.getElementById('st-mean').textContent = s.mean;
+  document.getElementById('st-median').textContent = s.median;
+  document.getElementById('st-mode').textContent = s.mode;
+  document.getElementById('st-max').textContent = s.max;
+  document.getElementById('st-min').textContent = s.min;
+  document.getElementById('st-range').textContent = s.range;
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+  var ds = _datasets[_ds];
+  var stats = calcStats(ds.data);
+
+  ctx.fillStyle = '#1e293b';
+  ctx.font = 'bold 15px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(ds.title + '（共' + ds.data.length + '个数据，单位：' + ds.unit + '）', w / 2, 24);
+
+  if (_chart === 'bar') drawBar(w, h, ds, stats);
+  else if (_chart === 'hist') drawHist(w, h, ds, stats);
+  else drawFreq(w, h, ds, stats);
+}
+
+function drawBar(w, h, ds, stats) {
+  var margin = { top: 45, right: 30, bottom: 50, left: 50 };
+  var cw = w - margin.left - margin.right;
+  var ch = h * 0.4;
+  var ox = margin.left, oy = h * 0.12;
+  var data = stats.sorted;
+  var n = data.length;
+  var barW = Math.max(4, (cw / n) - 2);
+  var maxV = stats.max;
+
+  // Y axis
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox, oy + ch); ctx.lineTo(ox + cw, oy + ch); ctx.stroke();
+
+  // Y ticks
+  ctx.fillStyle = '#64748b'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+  for (var i = 0; i <= 5; i++) {
+    var v = Math.round(maxV * i / 5);
+    var y = oy + ch - (ch * i / 5);
+    ctx.fillText(v, ox - 6, y + 3);
+    ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(ox + 1, y); ctx.lineTo(ox + cw, y); ctx.stroke();
+  }
+
+  // Bars
+  var COLORS = ['#3b82f6'];
+  data.forEach(function(v, i) {
+    var bh = (v / maxV) * ch;
+    var x = ox + (cw / n) * i + 1;
+    var y = oy + ch - bh;
+    ctx.fillStyle = v === stats.max ? '#ef4444' : v === stats.min ? '#f59e0b' : '#3b82f6';
+    ctx.fillRect(x, y, barW, bh);
+  });
+
+  // Mean line
+  var meanY = oy + ch - (parseFloat(stats.mean) / maxV) * ch;
+  ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 3]);
+  ctx.beginPath(); ctx.moveTo(ox, meanY); ctx.lineTo(ox + cw, meanY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#dc2626'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('平均数=' + stats.mean, ox + cw - 80, meanY - 4);
+
+  // Median line
+  var medY = oy + ch - (parseFloat(stats.median) / maxV) * ch;
+  ctx.strokeStyle = '#16a34a'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(ox, medY); ctx.lineTo(ox + cw, medY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#16a34a'; ctx.textAlign = 'left';
+  ctx.fillText('中位数=' + stats.median, ox + cw - 80, medY + 12);
+
+  // Legend
+  var ly = oy + ch + 30;
+  ctx.fillStyle = '#3b82f6'; ctx.fillRect(ox, ly, 10, 10);
+  ctx.fillStyle = '#334155'; ctx.font = '10px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('数据值', ox + 14, ly + 9);
+  ctx.fillStyle = '#ef4444'; ctx.fillRect(ox + 60, ly, 10, 10);
+  ctx.fillText('最大值', ox + 74, ly + 9);
+  ctx.fillStyle = '#f59e0b'; ctx.fillRect(ox + 120, ly, 10, 10);
+  ctx.fillText('最小值', ox + 134, ly + 9);
+
+  // Summary text
+  ctx.fillStyle = '#334155'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('平均数：' + stats.mean + '　中位数：' + stats.median + '　众数：' + stats.mode + '　极差：' + stats.range, w / 2, ly + 35);
+}
+
+function drawHist(w, h, ds, stats) {
+  var data = stats.sorted;
+  var minV = stats.min, maxV = stats.max;
+  var binCount = 6;
+  var binSize = Math.ceil((maxV - minV + 1) / binCount);
+  var bins = [];
+  for (var i = 0; i < binCount; i++) {
+    var lo = minV + i * binSize;
+    var hi = lo + binSize - 1;
+    var count = data.filter(function(v) { return v >= lo && v <= hi; }).length;
+    bins.push({ lo: lo, hi: hi, count: count });
+  }
+  var maxCount = Math.max.apply(null, bins.map(function(b) { return b.count; }));
+
+  var margin = { top: 50, right: 30, bottom: 60, left: 60 };
+  var cw = w - margin.left - margin.right;
+  var ch = h * 0.4;
+  var ox = margin.left, oy = h * 0.12;
+  var barW = cw / binCount - 4;
+
+  // Axes
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox, oy + ch); ctx.lineTo(ox + cw, oy + ch); ctx.stroke();
+
+  // Y ticks
+  ctx.fillStyle = '#64748b'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+  for (var i = 0; i <= maxCount; i++) {
+    var y = oy + ch - (ch * i / maxCount);
+    ctx.fillText(i, ox - 8, y + 3);
+    if (i > 0) { ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(ox + 1, y); ctx.lineTo(ox + cw, y); ctx.stroke(); }
+  }
+
+  // Y label
+  ctx.save(); ctx.translate(ox - 40, oy + ch / 2); ctx.rotate(-Math.PI / 2);
+  ctx.fillStyle = '#64748b'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('频次', 0, 0); ctx.restore();
+
+  // Bars
+  bins.forEach(function(bin, i) {
+    var bh = (bin.count / maxCount) * ch;
+    var x = ox + (cw / binCount) * i + 2;
+    var y = oy + ch - bh;
+    ctx.fillStyle = '#3b82f6cc';
+    ctx.fillRect(x, y, barW, bh);
+    ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, barW, bh);
+
+    // Count label
+    ctx.fillStyle = '#1e40af'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(bin.count, x + barW / 2, y - 5);
+
+    // Range label
+    ctx.fillStyle = '#334155'; ctx.font = '10px sans-serif';
+    ctx.fillText(bin.lo + '-' + bin.hi, x + barW / 2, oy + ch + 16);
+  });
+
+  ctx.fillStyle = '#334155'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(ds.unit, ox + cw / 2, oy + ch + 36);
+}
+
+function drawFreq(w, h, ds, stats) {
+  var data = stats.sorted;
+  var minV = stats.min, maxV = stats.max;
+  var binCount = 6;
+  var binSize = Math.ceil((maxV - minV + 1) / binCount);
+  var total = data.length;
+
+  var ty = 50;
+  ctx.fillStyle = '#1e293b';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('频率分布表', w / 2, ty);
+  ty += 20;
+
+  // Table header
+  var cols = ['区间', '频次', '频率', '累积频率'];
+  var colW = (w - 80) / 4;
+  var tx = 40;
+  var rowH = 28;
+
+  ctx.fillStyle = '#f1f5f9';
+  ctx.fillRect(tx, ty, colW * 4, rowH);
+  ctx.strokeStyle = '#d1d5db'; ctx.lineWidth = 1;
+  ctx.strokeRect(tx, ty, colW * 4, rowH);
+
+  ctx.fillStyle = '#475569'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+  cols.forEach(function(c, i) { ctx.fillText(c, tx + colW * i + colW / 2, ty + 18); });
+  ty += rowH;
+
+  var cumFreq = 0;
+  for (var i = 0; i < binCount; i++) {
+    var lo = minV + i * binSize;
+    var hi = lo + binSize - 1;
+    var count = data.filter(function(v) { return v >= lo && v <= hi; }).length;
+    var freq = (count / total).toFixed(3);
+    cumFreq += count / total;
+
+    ctx.fillStyle = i % 2 === 0 ? '#fff' : '#f8fafc';
+    ctx.fillRect(tx, ty, colW * 4, rowH);
+    ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 0.5;
+    ctx.strokeRect(tx, ty, colW * 4, rowH);
+
+    ctx.fillStyle = '#334155'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
+    var vals = [lo + '-' + hi, count, freq, cumFreq.toFixed(3)];
+    vals.forEach(function(v, j) { ctx.fillText(v, tx + colW * j + colW / 2, ty + 18); });
+    ty += rowH;
+  }
+
+  // Total row
+  ctx.fillStyle = '#f1f5f9';
+  ctx.fillRect(tx, ty, colW * 4, rowH);
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1;
+  ctx.strokeRect(tx, ty, colW * 4, rowH);
+  ctx.fillStyle = '#475569'; ctx.font = 'bold 12px sans-serif';
+  ['合计', total, '1.000', '1.000'].forEach(function(v, j) { ctx.fillText(v, tx + colW * j + colW / 2, ty + 18); });
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '数据 2,3,5,7,8 的平均数是？', opts: ['3', '4', '5', '6'], ans: 2 },
+  { q: '数据 1,3,3,5,7 的众数是？', opts: ['1', '3', '5', '7'], ans: 1 },
+  { q: '数据 2,4,6,8,10 的中位数是？', opts: ['4', '5', '6', '8'], ans: 2 },
+  { q: '极差 = ？', opts: ['最大值-最小值', '最大值+最小值', '平均数×2', '众数-中位数'], ans: 0 },
+  { q: '一组数据中，频率=频次÷？', opts: ['平均数', '最大值', '总数', '中位数'], ans: 2 },
+  { q: '数据 3,5,3,8,5,3 的众数是？', opts: ['3', '5', '8', '3和5'], ans: 0 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML = '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) { html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>'; });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) {
+    b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++;
+  setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

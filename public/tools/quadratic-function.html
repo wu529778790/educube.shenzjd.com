@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>二次函数 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+*{box-sizing:border-box}body{font-family:var(--edu-font);margin:0}
+.tool{width:100vw;height:100vh;display:flex;flex-direction:column;background:var(--edu-bg)}
+.toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#fff;border-bottom:1px solid var(--edu-border)}
+.toolbar h1{font-size:15px;color:var(--edu-primary);margin:0}
+.toolbar span{font-size:11px;color:var(--edu-text-muted);background:#f1f5f9;padding:2px 8px;border-radius:12px}
+.main{flex:1;display:grid;grid-template-columns:1fr 290px;overflow:hidden}
+.canvas-wrap{position:relative;overflow:hidden;background:linear-gradient(135deg,#eff6ff,#dbeafe)}
+.canvas-wrap canvas{width:100%;height:100%;display:block}
+.panel{background:#fff;border-left:1px solid var(--edu-border);padding:12px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+.section{display:flex;flex-direction:column;gap:4px}
+.label{font-size:10px;font-weight:700;color:#64748b;letter-spacing:.05em}
+.divider{height:1px;background:var(--edu-border)}
+.btn{padding:6px 12px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--edu-font);transition:all .15s}
+.btn.active{background:var(--edu-primary);color:#fff}
+.btn-default{background:#f1f5f9;color:#334155}
+.btn-default:hover{background:#e2e8f0}
+.row{display:flex;gap:4px;flex-wrap:wrap}
+.slider-row{display:flex;align-items:center;gap:6px}
+.slider-row label{font-size:11px;font-weight:700;min-width:28px}
+.slider-row input[type=range]{flex:1}
+.slider-row .val{font-size:12px;font-weight:800;min-width:36px;text-align:right;color:#1d4ed8}
+
+.fn-box{text-align:center;padding:8px;background:#eff6ff;border:2px solid #93c5fd;border-radius:12px}
+.fn-box .fn{font-size:16px;font-weight:800;color:#1e40af;font-family:monospace}
+.fn-box .sub{font-size:10px;color:#3b82f6;margin-top:3px}
+
+.prop-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.prop-card{text-align:center;padding:5px;border-radius:8px}
+.prop-card .val{font-size:13px;font-weight:800}
+.prop-card .lbl{font-size:9px;font-weight:700;margin-top:1px}
+
+.quiz-card{background:#eff6ff;border:2px solid #93c5fd;border-radius:12px;padding:10px;text-align:center}
+.quiz-q{font-size:13px;font-weight:700;color:#1e40af}
+.quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px}
+.quiz-opt{padding:6px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;font-family:var(--edu-font)}
+.quiz-opt:hover{border-color:#3b82f6}
+.quiz-opt.correct{background:#dcfce7;border-color:#22c55e}
+.quiz-opt.wrong{background:#fef2f2;border-color:#ef4444}
+.quiz-result{font-size:11px;font-weight:700;margin-top:4px;min-height:16px}
+
+.info{font-size:11px;line-height:1.8;color:#334155;background:#fff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px}
+.info b{color:#1e40af}
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar"><h1>📊 二次函数</h1><span>九年级上册 · 第二十二章</span></div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="fn-box">
+        <div class="fn" id="fn-display">y = x²</div>
+        <div class="sub" id="fn-vertex">顶点：(0, 0)　对称轴：x = 0</div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">调节参数 y = a(x-h)² + k</div>
+        <div class="slider-row"><label>a=</label><input type="range" id="sl-a" min="-3" max="3" step="0.5" value="1" oninput="onSlider()"/><div class="val" id="va">1</div></div>
+        <div class="slider-row"><label>h=</label><input type="range" id="sl-h" min="-5" max="5" step="0.5" value="0" oninput="onSlider()"/><div class="val" id="vh">0</div></div>
+        <div class="slider-row"><label>k=</label><input type="range" id="sl-k" min="-5" max="5" step="0.5" value="0" oninput="onSlider()"/><div class="val" id="vk">0</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="prop-grid">
+        <div class="prop-card" style="background:#dbeafe"><div class="val" style="color:#1d4ed8" id="p-vertex">(0, 0)</div><div class="lbl" style="color:#1d4ed8">顶点坐标</div></div>
+        <div class="prop-card" style="background:#fce7f3"><div class="val" style="color:#be185d" id="p-axis">x = 0</div><div class="lbl" style="color:#be185d">对称轴</div></div>
+        <div class="prop-card" style="background:#dcfce7"><div class="val" style="color:#15803d" id="p-open">开口向上</div><div class="lbl" style="color:#15803d">开口方向</div></div>
+        <div class="prop-card" style="background:#fef3c7"><div class="val" style="color:#92400e" id="p-extremum">最小值=0</div><div class="lbl" style="color:#92400e">最值</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">预设函数</div>
+        <div class="row">
+          <button class="btn btn-default" onclick="loadPreset(1,0,0)">y=x²</button>
+          <button class="btn btn-default" onclick="loadPreset(-1,0,0)">y=-x²</button>
+          <button class="btn btn-default" onclick="loadPreset(1,2,-1)">y=(x-2)²-1</button>
+          <button class="btn btn-default" onclick="loadPreset(2,-1,3)">y=2(x+1)²+3</button>
+          <button class="btn btn-default" onclick="loadPreset(-0.5,0,2)">y=-½x²+2</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">二次函数测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>二次函数 y = a(x-h)² + k</b><br/>
+        ● <strong>a > 0</strong>：开口向上，有最小值 k<br/>
+        ● <strong>a < 0</strong>：开口向下，有最大值 k<br/>
+        ● <strong>|a|</strong> 越大，抛物线越窄<br/>
+        ● <strong>顶点</strong>：(h, k)<br/>
+        ● <strong>对称轴</strong>：x = h
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx, _a = 1, _h = 0, _k = 0;
+var _hoverX = null;
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  cv.addEventListener('mousemove', function(e) {
+    var rect = cv.getBoundingClientRect();
+    _hoverX = e.clientX - rect.left;
+    draw();
+  });
+  cv.addEventListener('mouseleave', function() { _hoverX = null; draw(); });
+  resize();
+  updateProps();
+  nextQuiz();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function onSlider() {
+  _a = parseFloat(document.getElementById('sl-a').value);
+  _h = parseFloat(document.getElementById('sl-h').value);
+  _k = parseFloat(document.getElementById('sl-k').value);
+  document.getElementById('va').textContent = _a;
+  document.getElementById('vh').textContent = _h;
+  document.getElementById('vk').textContent = _k;
+  updateProps();
+  draw();
+}
+
+function loadPreset(a, h, k) {
+  _a = a; _h = h; _k = k;
+  document.getElementById('sl-a').value = a;
+  document.getElementById('sl-h').value = h;
+  document.getElementById('sl-k').value = k;
+  document.getElementById('va').textContent = a;
+  document.getElementById('vh').textContent = h;
+  document.getElementById('vk').textContent = k;
+  updateProps();
+  draw();
+}
+
+function evalY(x) { return _a * (x - _h) * (x - _h) + _k; }
+
+function updateProps() {
+  var aStr = _a === 1 ? '' : _a === -1 ? '-' : _a + '';
+  var hSign = _h >= 0 ? '-' : '+';
+  var hAbs = Math.abs(_h);
+  var kSign = _k >= 0 ? ' + ' : ' - ';
+  var kAbs = Math.abs(_k);
+
+  var fnStr;
+  if (_a === 0) {
+    fnStr = 'y = ' + _k;
+  } else if (_h === 0 && _k === 0) {
+    fnStr = 'y = ' + aStr + 'x²';
+  } else if (_h === 0) {
+    fnStr = 'y = ' + aStr + 'x²' + kSign + kAbs;
+  } else {
+    fnStr = 'y = ' + aStr + '(x' + hSign + hAbs + ')²' + kSign + kAbs;
+  }
+  document.getElementById('fn-display').textContent = fnStr;
+
+  document.getElementById('p-vertex').textContent = '(' + _h + ', ' + _k + ')';
+  document.getElementById('p-axis').textContent = 'x = ' + _h;
+
+  if (_a > 0) {
+    document.getElementById('p-open').textContent = '开口向上';
+    document.getElementById('p-extremum').textContent = '最小值=' + _k;
+  } else if (_a < 0) {
+    document.getElementById('p-open').textContent = '开口向下';
+    document.getElementById('p-extremum').textContent = '最大值=' + _k;
+  } else {
+    document.getElementById('p-open').textContent = '不是二次函数';
+    document.getElementById('p-extremum').textContent = '—';
+  }
+
+  document.getElementById('fn-vertex').textContent = '顶点：(' + _h + ', ' + _k + ')　对称轴：x = ' + _h;
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  if (_a === 0) {
+    ctx.fillStyle = '#64748b'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('a = 0 时不构成二次函数', w / 2, h / 2);
+    return;
+  }
+
+  var range = 7;
+  var cx = w / 2, cy = h * 0.55;
+  var unit = Math.min(w, h * 0.7) / (range * 2 + 2);
+
+  // Grid
+  ctx.strokeStyle = '#93c5fd22';
+  ctx.lineWidth = 0.5;
+  for (var i = -range; i <= range; i++) {
+    ctx.beginPath(); ctx.moveTo(cx + i * unit, 30); ctx.lineTo(cx + i * unit, h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, cy + i * unit); ctx.lineTo(w, cy + i * unit); ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(w, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, 30); ctx.lineTo(cx, h); ctx.stroke();
+
+  // Ticks
+  ctx.fillStyle = '#64748b'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+  for (var i = -range; i <= range; i++) {
+    if (i === 0) continue;
+    ctx.fillText(i, cx + i * unit, cy + 14);
+    ctx.textAlign = 'right';
+    ctx.fillText(i, cx - 6, cy - i * unit + 4);
+    ctx.textAlign = 'center';
+  }
+
+  // Symmetry axis (dashed)
+  var axisPx = cx + _h * unit;
+  ctx.strokeStyle = '#be185d66'; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
+  ctx.beginPath(); ctx.moveTo(axisPx, 30); ctx.lineTo(axisPx, h); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#be185d'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('x=' + _h, axisPx, 26);
+
+  // Draw parabola
+  ctx.strokeStyle = '#1d4ed8'; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  var started = false;
+  for (var px = 0; px <= w; px += 1) {
+    var x = (px - cx) / unit;
+    var y = evalY(x);
+    var py = cy - y * unit;
+    if (py < 10 || py > h + 50) { started = false; continue; }
+    if (!started) { ctx.moveTo(px, py); started = true; }
+    else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+
+  // Fill area between parabola and x-axis (optional visual)
+  // Vertex point
+  var vPx = cx + _h * unit, vPy = cy - _k * unit;
+  if (vPy > 25 && vPy < h) {
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath(); ctx.arc(vPx, vPy, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#92400e'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('(' + _h + ', ' + _k + ')', vPx, vPy + (_k > 0 ? -12 : 18));
+  }
+
+  // Roots (intersection with x-axis)
+  var delta = -4 * _a * (_a * _h * _h + _k);
+  // Actually: y=0 => a(x-h)² + k = 0 => (x-h)² = -k/a
+  if (_k / _a <= 0) {
+    var sqrtVal = Math.sqrt(-_k / _a);
+    var r1 = _h - sqrtVal, r2 = _h + sqrtVal;
+    [r1, r2].forEach(function(rx) {
+      var rpx = cx + rx * unit;
+      if (rpx > 10 && rpx < w - 10) {
+        ctx.fillStyle = '#16a34a';
+        ctx.beginPath(); ctx.arc(rpx, cy, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(rpx, cy, 2.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#16a34a'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(rx.toFixed(1), rpx, cy + 16);
+      }
+    });
+  }
+
+  // Hover point
+  if (_hoverX !== null) {
+    var hx = (_hoverX - cx) / unit;
+    var hy = evalY(hx);
+    var hpy = cy - hy * unit;
+
+    ctx.strokeStyle = '#1d4ed888'; ctx.lineWidth = 0.5; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(_hoverX, 30); ctx.lineTo(_hoverX, h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, hpy); ctx.lineTo(w, hpy); ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#1d4ed8';
+    ctx.beginPath(); ctx.arc(_hoverX, hpy, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(_hoverX, hpy, 3, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = '#1e40af'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'left';
+    var hxR = Math.round(hx * 10) / 10, hyR = Math.round(hy * 10) / 10;
+    ctx.fillText('(' + hxR + ', ' + hyR + ')', _hoverX + 10, hpy - 10);
+  }
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: 'y=x²+1 的顶点是？', opts: ['(1,0)', '(0,1)', '(1,1)', '(0,0)'], ans: 1 },
+  { q: 'y=-(x-2)²+3 的对称轴是？', opts: ['x=0', 'x=2', 'x=3', 'x=-2'], ans: 1 },
+  { q: 'a>0 时抛物线开口方向？', opts: ['向上', '向下', '向左', '向右'], ans: 0 },
+  { q: 'y=2(x-1)² 的顶点是？', opts: ['(1,0)', '(0,1)', '(1,2)', '(2,1)'], ans: 0 },
+  { q: '|a|越大，抛物线？', opts: ['越宽', '越窄', '不变', '旋转'], ans: 1 },
+  { q: 'y=-x²+4 的最大值是？', opts: ['-4', '4', '0', '2'], ans: 1 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML = '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) { html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>'; });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) { b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++; setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

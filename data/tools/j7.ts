@@ -1,6 +1,6 @@
 import type { Tool } from "./types";
 
-/** 七年级教具（仅 3D） */
+/** 七年级教具 */
 export const j7Tools: Tool[] = [
   {
     id: "cross-section",
@@ -46,5 +46,80 @@ export const j7Tools: Tool[] = [
     tags: ["棱柱", "展开图", "欧拉公式", "顶点棱面"],
     gradient: ["#3B82F6", "#2563EB"],
     icon: "🔷",
+  },
+  {
+    id: "parallel-lines",
+    name: "相交线与平行线",
+    subtitle: "相交线与平行线",
+    chapter: "下册 · 第一单元",
+    semester: "下册",
+    unitNum: 1,
+    gradeId: "j7",
+    subjectId: "math",
+    description:
+      "交互式相交线/平行线切换，滑块调节角度，实时标注对顶角/邻补角/同位角/内错角/同旁内角，含角度快捷按钮和6道测验。",
+    tags: ["相交线", "平行线", "对顶角", "同位角", "内错角"],
+    gradient: ["#22C55E", "#16A34A"],
+    icon: "📐",
+  },
+  {
+    id: "coordinate-plane",
+    name: "平面直角坐标系",
+    subtitle: "平面直角坐标系",
+    chapter: "下册 · 第三单元",
+    semester: "下册",
+    unitNum: 3,
+    gradeId: "j7",
+    subjectId: "math",
+    description:
+      "完整四象限坐标系（±8范围），鼠标悬停实时显示坐标和象限，点击放置标记点，预设三角形/矩形/直线，四象限着色。",
+    tags: ["坐标系", "象限", "坐标", "平面直角坐标系"],
+    gradient: ["#F97316", "#EA580C"],
+    icon: "🗺️",
+  },
+  {
+    id: "linear-equation",
+    name: "一元一次方程",
+    subtitle: "一元一次方程",
+    chapter: "上册 · 第三章",
+    semester: "上册",
+    unitNum: 3,
+    gradeId: "j7",
+    subjectId: "math",
+    description:
+      "6种预设一元一次方程，详细展示移项、合并同类项、系数化1的每一步骤，含括号展开和含分母方程，附带测验。",
+    tags: ["一元一次方程", "移项", "合并同类项", "解方程"],
+    gradient: ["#E11D48", "#BE123C"],
+    icon: "📝",
+  },
+  {
+    id: "inequality",
+    name: "不等式与不等式组",
+    subtitle: "不等式",
+    chapter: "下册 · 第八单元",
+    semester: "下册",
+    unitNum: 8,
+    gradeId: "j7",
+    subjectId: "math",
+    description:
+      "数轴可视化不等式解集（空心/实心圆+阴影），6种预设含负系数方程，自定义不等式，三条性质对比演示，含测验。",
+    tags: ["不等式", "数轴", "解集", "不等式性质", "变号"],
+    gradient: ["#22C55E", "#15803D"],
+    icon: "📏",
+  },
+  {
+    id: "data-statistics",
+    name: "数据与统计",
+    subtitle: "数据的收集与整理",
+    chapter: "下册 · 数据的收集与整理",
+    semester: "下册",
+    unitNum: 10,
+    gradeId: "j7",
+    subjectId: "math",
+    description:
+      "三种数据集（成绩/年龄/温度），三种图表（条形图/直方图/频率表），实时计算平均数/中位数/众数/极差，含6道测验。",
+    tags: ["统计", "平均数", "中位数", "众数", "频率", "直方图"],
+    gradient: ["#3B82F6", "#2563EB"],
+    icon: "📊",
   },
 ];

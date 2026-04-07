@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>100以内加减法 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+*{box-sizing:border-box}body{font-family:var(--edu-font);margin:0}
+.tool{width:100vw;height:100vh;display:flex;flex-direction:column;background:var(--edu-bg)}
+.toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#fff;border-bottom:1px solid var(--edu-border)}
+.toolbar h1{font-size:15px;color:var(--edu-primary);margin:0}
+.toolbar span{font-size:11px;color:var(--edu-text-muted);background:#f1f5f9;padding:2px 8px;border-radius:12px}
+.main{flex:1;display:grid;grid-template-columns:1fr 280px;overflow:hidden}
+.canvas-wrap{position:relative;overflow:hidden;background:linear-gradient(135deg,#fff7ed,#fffbeb)}
+.canvas-wrap canvas{width:100%;height:100%;display:block}
+.panel{background:#fff;border-left:1px solid var(--edu-border);padding:12px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+.section{display:flex;flex-direction:column;gap:4px}
+.label{font-size:10px;font-weight:700;color:#64748b;letter-spacing:.05em}
+.divider{height:1px;background:var(--edu-border)}
+.btn{padding:6px 12px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--edu-font);transition:all .15s}
+.btn.active{background:var(--edu-primary);color:#fff}
+.btn-default{background:#f1f5f9;color:#334155}
+.btn-default:hover{background:#e2e8f0}
+.row{display:flex;gap:4px;flex-wrap:wrap}
+
+.step-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px;font-size:12px;line-height:2.2;min-height:100px}
+.step-box .highlight{color:#c2410c;font-weight:700}
+.step-box .step{color:#334155}
+
+.quiz-card{background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:10px;text-align:center}
+.quiz-q{font-size:18px;font-weight:700;color:#9a3412}
+.quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.quiz-opt{padding:10px;border:2px solid #e2e8f0;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;background:#fff;font-family:var(--edu-font)}
+.quiz-opt:hover{border-color:#f97316}
+.quiz-opt.correct{background:#dcfce7;border-color:#22c55e}
+.quiz-opt.wrong{background:#fef2f2;border-color:#ef4444}
+.quiz-result{font-size:12px;font-weight:700;margin-top:4px;min-height:18px}
+
+.info{font-size:11px;line-height:1.8;color:#334155;background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:8px 10px}
+.info b{color:#9a3412}
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar"><h1>🔢 100以内加减法</h1><span>二年级下册 · 数学</span></div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="section">
+        <div class="label">选择题目</div>
+        <div class="row">
+          <button class="btn active" id="tp-no" onclick="setType('no')">不进位加法</button>
+          <button class="btn btn-default" id="tp-carry" onclick="setType('carry')">进位加法</button>
+          <button class="btn btn-default" id="tp-noborr" onclick="setType('noborr')">不退位减法</button>
+          <button class="btn btn-default" id="tp-borr" onclick="setType('borr')">退位减法</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">计算过程</div>
+        <div class="step-box" id="steps">点击"换一题"开始练习</div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="row">
+          <button class="btn active" onclick="genProblem()">🔄 换一题</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">速算挑战</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>100以内加减法技巧</b><br/>
+        ● <strong>进位加法</strong>：个位满十向十位进1<br/>
+        ● <strong>退位减法</strong>：个位不够减向十位借1<br/>
+        ● 列竖式计算：相同数位对齐<br/>
+        ● 从个位算起
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx, _type = 'no', _a = 0, _b = 0, _op = '+';
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+  genProblem();
+  nextQuiz();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function setType(t) {
+  _type = t;
+  ['no','carry','noborr','borr'].forEach(function(k) {
+    document.getElementById('tp-' + k).className = 'btn' + (k === t ? ' active' : ' btn-default');
+  });
+  genProblem();
+}
+
+function genProblem() {
+  if (_type === 'no') {
+    // No-carry addition: ones digits add < 10
+    var tens = Math.floor(Math.random() * 9) + 1;
+    var a1 = Math.floor(Math.random() * 9);
+    var b1 = Math.floor(Math.random() * (9 - a1));
+    _a = tens * 10 + a1;
+    _b = Math.floor(Math.random() * 9) * 10 + b1;
+    if (_a + _b > 100) _b = Math.floor(Math.random() * 9) * 10 + b1;
+    _op = '+';
+  } else if (_type === 'carry') {
+    // Carry addition: ones digits add >= 10
+    var a1 = Math.floor(Math.random() * 9) + 1;
+    var b1 = 10 - a1 + Math.floor(Math.random() * (9 - (10 - a1) + 1));
+    b1 = Math.max(b1, 10 - a1);
+    var tens = Math.floor(Math.random() * 8) + 1;
+    _a = tens * 10 + a1;
+    _b = Math.floor(Math.random() * (9 - tens)) * 10 + b1;
+    if (_a + _b > 100 || _b < 0) { _a = 37; _b = 28; }
+    _op = '+';
+  } else if (_type === 'noborr') {
+    // No-borrow subtraction
+    var tens = Math.floor(Math.random() * 8) + 2;
+    var a1 = Math.floor(Math.random() * 9) + 1;
+    var b1 = Math.floor(Math.random() * a1);
+    _a = tens * 10 + a1;
+    _b = Math.floor(Math.random() * tens) * 10 + b1;
+    _op = '-';
+  } else {
+    // Borrow subtraction
+    var tens = Math.floor(Math.random() * 8) + 2;
+    var a1 = Math.floor(Math.random() * 9);
+    var b1 = a1 + 1 + Math.floor(Math.random() * (9 - a1));
+    _a = tens * 10 + a1;
+    _b = Math.floor(Math.random() * (tens - 1)) * 10 + b1;
+    if (_b >= _a) _b = _a - 1;
+    _op = '-';
+  }
+
+  if (_b < 0) _b = 1;
+  if (_a < 0) _a = 10;
+  updateSteps();
+  draw();
+}
+
+function getResult() { return _op === '+' ? _a + _b : _a - _b; }
+
+function updateSteps() {
+  var r = getResult();
+  var el = document.getElementById('steps');
+  var html = '';
+
+  html += '<div class="step" style="font-size:18px;font-weight:800;text-align:center;color:#c2410c">' + _a + ' ' + (_op === '+' ? '+' : '−') + ' ' + _b + ' = ?</div>';
+
+  var a1 = _a % 10, a10 = Math.floor(_a / 10);
+  var b1 = _b % 10, b10 = Math.floor(_b / 10);
+
+  if (_op === '+') {
+    html += '<div class="step">1. 先算个位：' + a1 + ' + ' + b1 + ' = ' + (a1 + b1) + '</div>';
+    if (a1 + b1 >= 10) {
+      html += '<div class="step">2. 个位满十！向十位<strong style="color:#c2410c">进1</strong></div>';
+      html += '<div class="step">3. 个位写 ' + ((a1 + b1) % 10) + '，进位1</div>';
+      html += '<div class="step">4. 再算十位：' + a10 + ' + ' + b10 + ' + 1(进位) = ' + (a10 + b10 + 1) + '</div>';
+    } else {
+      html += '<div class="step">2. 个位没有满十，不用进位</div>';
+      html += '<div class="step">3. 再算十位：' + a10 + ' + ' + b10 + ' = ' + (a10 + b10) + '</div>';
+    }
+    html += '<div class="highlight">结果：' + _a + ' + ' + _b + ' = ' + r + '</div>';
+  } else {
+    html += '<div class="step">1. 先算个位：' + a1 + ' - ' + b1 + '</div>';
+    if (a1 < b1) {
+      html += '<div class="step">2. 个位不够减！向十位<strong style="color:#c2410c">借1</strong></div>';
+      html += '<div class="step">3. 个位：' + (a1 + 10) + ' - ' + b1 + ' = ' + (a1 + 10 - b1) + '</div>';
+      html += '<div class="step">4. 十位：' + (a10 - 1) + ' - ' + b10 + ' = ' + (a10 - 1 - b10) + '</div>';
+    } else {
+      html += '<div class="step">2. 个位够减：' + a1 + ' - ' + b1 + ' = ' + (a1 - b1) + '</div>';
+      html += '<div class="step">3. 十位：' + a10 + ' - ' + b10 + ' = ' + (a10 - b10) + '</div>';
+    }
+    html += '<div class="highlight">结果：' + _a + ' - ' + _b + ' = ' + r + '</div>';
+  }
+
+  el.innerHTML = html;
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  var result = getResult();
+
+  // Title
+  ctx.fillStyle = '#9a3412'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('竖式计算', w / 2, 28);
+
+  // Draw vertical calculation
+  var cx = w / 2, startY = 55;
+  var digitW = 36, digitH = 42;
+  var a10 = Math.floor(_a / 10), a1 = _a % 10;
+  var b10 = Math.floor(_b / 10), b1 = _b % 10;
+  var r10 = Math.floor(result / 10), r1 = result % 10;
+  var hasHundreds = result >= 100;
+  var r100 = Math.floor(result / 100);
+  var digits = hasHundreds ? 3 : 2;
+
+  var ox = cx - digits * digitW / 2;
+
+  // Draw hundreds column if needed
+  var col0 = ox, col1 = ox + digitW, col2 = ox + digitW * 2;
+
+  if (hasHundreds) {
+    // First number
+    drawDigit(col2, startY, a1, '#334155');
+    drawDigit(col1, startY, a10, '#334155');
+    // Second number
+    drawDigit(col2, startY + digitH, b1, '#334155');
+    drawDigit(col1, startY + digitH, b10, '#334155');
+  } else {
+    ox = cx - digitW;
+    col0 = ox; col1 = ox + digitW;
+    drawDigit(col1, startY, a1, '#334155');
+    drawDigit(col0, startY, a10, '#334155');
+    drawDigit(col1, startY + digitH, b1, '#334155');
+    drawDigit(col0, startY + digitH, b10, '#334155');
+  }
+
+  // Operator
+  ctx.fillStyle = '#c2410c'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(_op === '+' ? '+' : '−', ox - 16, startY + digitH * 1.5 + 4);
+
+  // Horizontal line
+  var lineY = startY + digitH * 2 + 5;
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(ox - 20, lineY); ctx.lineTo(cx + digits * digitW / 2 + 10, lineY); ctx.stroke();
+
+  // Result
+  if (hasHundreds) {
+    drawDigit(col2, lineY + 5, r1, '#16a34a');
+    drawDigit(col1, lineY + 5, r10, '#16a34a');
+    drawDigit(col0, lineY + 5, r100, '#16a34a');
+  } else {
+    drawDigit(col1, lineY + 5, r1, '#16a34a');
+    drawDigit(col0, lineY + 5, r10, '#16a34a');
+  }
+
+  // Carry/borrow annotations
+  var a1V = _a % 10, b1V = _b % 10;
+  if (_op === '+' && a1V + b1V >= 10) {
+    ctx.fillStyle = '#ef4444'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+    var carryCol = hasHundreds ? col1 : col0;
+    ctx.fillText('①', carryCol + digitW / 2, startY - 4);
+    ctx.fillText('进1', carryCol + digitW / 2, startY - 16);
+  }
+  if (_op === '-' && a1V < b1V) {
+    ctx.fillStyle = '#ef4444'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+    var borrowCol = hasHundreds ? col1 : col0;
+    ctx.fillText('①', borrowCol + digitW / 2, startY - 4);
+    ctx.fillText('借1', borrowCol + digitW / 2, startY - 16);
+  }
+
+  // Steps annotation at bottom
+  var annY = lineY + digitH + 25;
+  ctx.fillStyle = '#64748b'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
+  if (_op === '+') {
+    ctx.fillText('步骤① 先算个位' + (a1V + b1V >= 10 ? '（进位）' : ''), cx, annY);
+    ctx.fillText('步骤② 再算十位', cx, annY + 18);
+  } else {
+    ctx.fillText('步骤① 先算个位' + (a1V < b1V ? '（退位）' : ''), cx, annY);
+    ctx.fillText('步骤② 再算十位', cx, annY + 18);
+  }
+
+  // Visual: ten-sticks and ones-dots
+  var visY = annY + 50;
+  ctx.fillStyle = '#9a3412'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('十根和个根表示', cx, visY);
+  visY += 20;
+
+  // Draw tens as long bars and ones as dots
+  var a10V = Math.floor(_a / 10), a1V2 = _a % 10;
+  drawTensOnes(30, visY, a10V, a1V2, '#f97316', _a);
+  if (_op === '+') {
+    ctx.fillStyle = '#c2410c'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('+', 30, visY + 28);
+    drawTensOnes(30, visY + 38, Math.floor(_b / 10), _b % 10, '#3b82f6', _b);
+  } else {
+    ctx.fillStyle = '#c2410c'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('−', 30, visY + 28);
+    drawTensOnes(30, visY + 38, Math.floor(_b / 10), _b % 10, '#ef4444', _b);
+  }
+}
+
+function drawDigit(x, y, d, color) {
+  ctx.fillStyle = '#f8fafc';
+  ctx.beginPath(); ctx.roundRect(x + 2, y + 2, digitW - 4, 36, 4); ctx.fill();
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = color; ctx.font = 'bold 22px monospace'; ctx.textAlign = 'center';
+  ctx.fillText(d, x + digitW / 2, y + 28);
+}
+
+function drawTensOnes(x, y, tens, ones, color, label) {
+  ctx.fillStyle = color; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText(label + '=', x, y + 4);
+  var sx = x + 30;
+  for (var i = 0; i < tens; i++) {
+    ctx.fillStyle = color + '55';
+    ctx.fillRect(sx + i * 14, y - 6, 10, 18);
+  }
+  for (var i = 0; i < ones; i++) {
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(sx + tens * 14 + 8 + i * 10, y + 2, 3, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+// ===== Quiz =====
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  var a, b, op, ans;
+  op = Math.random() > 0.5 ? '+' : '-';
+  if (op === '+') {
+    a = Math.floor(Math.random() * 89) + 10;
+    b = Math.floor(Math.random() * (100 - a)) + 1;
+    ans = a + b;
+  } else {
+    a = Math.floor(Math.random() * 89) + 11;
+    b = Math.floor(Math.random() * a) + 1;
+    ans = a - b;
+  }
+  var opts = [ans];
+  while (opts.length < 4) {
+    var w = ans + Math.floor(Math.random() * 21) - 10;
+    if (w >= 0 && w <= 200 && opts.indexOf(w) === -1) opts.push(w);
+  }
+  for (var i = opts.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = opts[i]; opts[i] = opts[j]; opts[j] = t;
+  }
+
+  var html = '<div class="quiz-q">' + a + ' ' + (op === '+' ? '+' : '−') + ' ' + b + ' = ?</div>';
+  html += '<div class="quiz-opts">';
+  opts.forEach(function(o) { html += '<button class="quiz-opt" onclick="answer(this,' + o + ',' + ans + ')">' + o + '</button>'; });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(el, val, ans) {
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b) {
+    b.onclick = null; b.style.cursor = 'default';
+    if (parseInt(b.textContent) === ans) b.classList.add('correct');
+    if (parseInt(b.textContent) === val && val !== ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (val === ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + ans; r.style.color = '#ef4444'; }
+  _qi++; setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

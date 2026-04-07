@@ -1,6 +1,6 @@
 import type { Tool } from "./types";
 
-/** 一年级教具（仅 3D） */
+/** 一年级教具 */
 export const p1Tools: Tool[] = [
   {
     id: "shape-match",
@@ -16,5 +16,80 @@ export const p1Tools: Tool[] = [
     tags: ["立体图形", "分类", "正方体", "长方体", "圆柱", "球"],
     gradient: ["#F59E0B", "#D97706"],
     icon: "🧊",
+  },
+  {
+    id: "addition-subtraction",
+    name: "加减法乐园",
+    subtitle: "10以内/20以内加减法",
+    chapter: "上册 · 第三单元",
+    semester: "上册",
+    unitNum: 3,
+    gradeId: "p1",
+    subjectId: "math",
+    description:
+      "交互式加减法学习，加法/减法切换，10以内/20以内范围选择，滑块自定义数字，用苹果图标直观展示加减过程（合并/拿走），含随机测验。",
+    tags: ["加法", "减法", "10以内", "20以内", "凑十法"],
+    gradient: ["#CA8A04", "#A16207"],
+    icon: "🍎",
+  },
+  {
+    id: "number-line",
+    name: "数轴与比大小",
+    subtitle: "认识数与比大小",
+    chapter: "上册 · 准备课",
+    semester: "上册",
+    unitNum: 1,
+    gradeId: "p1",
+    subjectId: "math",
+    description:
+      "数轴可视化0-20的数字，滑块选择两个数字a和b，用动物图标分组展示，自动比较大小（大于/小于/等于），数轴上高亮标注，含比大小测验。",
+    tags: ["数轴", "比大小", "大于", "小于", "等于"],
+    gradient: ["#22C55E", "#15803D"],
+    icon: "🔢",
+  },
+  {
+    id: "money-rmb",
+    name: "认识人民币",
+    subtitle: "认识人民币",
+    chapter: "下册 · 第五单元",
+    semester: "下册",
+    unitNum: 5,
+    gradeId: "p1",
+    subjectId: "math",
+    description:
+      "模拟钱包，点击纸币/硬币添加到钱包，实时计算总金额（元/角换算），设定目标金额凑钱练习（凑5元/10元），进度条显示，含人民币知识测验。",
+    tags: ["人民币", "元", "角", "分", "换算", "凑钱"],
+    gradient: ["#EAB308", "#A16207"],
+    icon: "💰",
+  },
+  {
+    id: "clock-basics",
+    name: "认识钟表",
+    subtitle: "认识钟表",
+    chapter: "上册 · 认识钟表",
+    semester: "上册",
+    unitNum: 8,
+    gradeId: "p1",
+    subjectId: "math",
+    description:
+      "大尺寸模拟钟表，时针/分针滑块分别调节，8种快捷时间按钮，区分时针（短/粗）和分针（长/细），实时显示时刻和文字描述，含识钟测验。",
+    tags: ["钟表", "时针", "分针", "整点", "半点"],
+    gradient: ["#3B82F6", "#1D4ED8"],
+    icon: "🕐",
+  },
+  {
+    id: "position-direction",
+    name: "位置与方向",
+    subtitle: "位置",
+    chapter: "下册 · 第一单元",
+    semester: "下册",
+    unitNum: 1,
+    gradeId: "p1",
+    subjectId: "math",
+    description:
+      "三种场景（教室排座/动物园/方位图），点击物体查看位置关系（上下左右前后），方向键移动物体，网格化展示，含方向测验。",
+    tags: ["位置", "方向", "上下左右", "前后", "方位"],
+    gradient: ["#10B981", "#059669"],
+    icon: "🧭",
   },
 ];

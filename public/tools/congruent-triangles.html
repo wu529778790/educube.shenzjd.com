@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>全等三角形 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+*{box-sizing:border-box}body{font-family:var(--edu-font);margin:0}
+.tool{width:100vw;height:100vh;display:flex;flex-direction:column;background:var(--edu-bg)}
+.toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#fff;border-bottom:1px solid var(--edu-border)}
+.toolbar h1{font-size:15px;color:var(--edu-primary);margin:0}
+.toolbar span{font-size:11px;color:var(--edu-text-muted);background:#f1f5f9;padding:2px 8px;border-radius:12px}
+.main{flex:1;display:grid;grid-template-columns:1fr 290px;overflow:hidden}
+.canvas-wrap{position:relative;overflow:hidden;background:linear-gradient(135deg,#eff6ff,#f0f9ff)}
+.canvas-wrap canvas{width:100%;height:100%;display:block}
+.panel{background:#fff;border-left:1px solid var(--edu-border);padding:12px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+.section{display:flex;flex-direction:column;gap:4px}
+.label{font-size:10px;font-weight:700;color:#64748b;letter-spacing:.05em}
+.divider{height:1px;background:var(--edu-border)}
+.btn{padding:6px 12px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--edu-font);transition:all .15s}
+.btn.active{background:var(--edu-primary);color:#fff}
+.btn-default{background:#f1f5f9;color:#334155}
+.btn-default:hover{background:#e2e8f0}
+.row{display:flex;gap:4px;flex-wrap:wrap}
+.slider-row{display:flex;align-items:center;gap:6px}
+.slider-row label{font-size:11px;font-weight:700;min-width:32px}
+.slider-row input[type=range]{flex:1}
+.slider-row .val{font-size:12px;font-weight:800;min-width:32px;text-align:right;color:#1e40af}
+
+.condition-card{padding:8px;border:2px solid #e2e8f0;border-radius:10px;cursor:pointer;transition:all .15s;text-align:center}
+.condition-card:hover{border-color:#3b82f6}
+.condition-card.active{border-color:#3b82f6;background:#eff6ff}
+.condition-card .title{font-size:13px;font-weight:800;color:#1e40af}
+.condition-card .desc{font-size:10px;color:#64748b;margin-top:2px}
+
+.quiz-card{background:#eff6ff;border:2px solid #93c5fd;border-radius:12px;padding:10px;text-align:center}
+.quiz-q{font-size:13px;font-weight:700;color:#1e40af}
+.quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px}
+.quiz-opt{padding:6px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;font-family:var(--edu-font)}
+.quiz-opt:hover{border-color:#3b82f6}
+.quiz-opt.correct{background:#dcfce7;border-color:#22c55e}
+.quiz-opt.wrong{background:#fef2f2;border-color:#ef4444}
+.quiz-result{font-size:11px;font-weight:700;margin-top:4px;min-height:16px}
+.info{font-size:11px;line-height:1.8;color:#334155;background:#fff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px}
+.info b{color:#1e40af}
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar"><h1>🔺 全等三角形</h1><span>八年级上册 · 第十二章</span></div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="section">
+        <div class="label">判定条件</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+          <div class="condition-card active" id="cc-sss" onclick="setCondition('SSS')"><div class="title">SSS</div><div class="desc">三边对应相等</div></div>
+          <div class="condition-card" id="cc-sas" onclick="setCondition('SAS')"><div class="title">SAS</div><div class="desc">两边+夹角</div></div>
+          <div class="condition-card" id="cc-asa" onclick="setCondition('ASA')"><div class="title">ASA</div><div class="desc">两角+夹边</div></div>
+          <div class="condition-card" id="cc-aas" onclick="setCondition('AAS')"><div class="title">AAS</div><div class="desc">两角+对边</div></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">调节三角形参数</div>
+        <div class="slider-row"><label>a=</label><input type="range" id="sl-a" min="3" max="8" value="5" oninput="onSlider()"/><div class="val" id="va">5</div></div>
+        <div class="slider-row"><label>b=</label><input type="range" id="sl-b" min="3" max="8" value="4" oninput="onSlider()"/><div class="val" id="vb">4</div></div>
+        <div class="slider-row"><label>∠C=</label><input type="range" id="sl-c" min="30" max="150" value="60" oninput="onSlider()"/><div class="val" id="vc">60°</div></div>
+      </div>
+      <div class="divider"></div>
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px;font-size:11px;line-height:1.8" id="explain"></div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">全等三角形测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>全等三角形判定</b><br/>
+        ● <strong>SSS</strong>：三边对应相等<br/>
+        ● <strong>SAS</strong>：两边及其夹角对应相等<br/>
+        ● <strong>ASA</strong>：两角及其夹边对应相等<br/>
+        ● <strong>AAS</strong>：两角及其中一角的对边对应相等<br/>
+        ● <strong>HL</strong>（直角三角形）：斜边+一直角边
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx, _cond = 'SSS', _a = 5, _b = 4, _angleC = 60;
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+  updateExplain();
+  nextQuiz();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function setCondition(c) {
+  _cond = c;
+  ['SSS','SAS','ASA','AAS'].forEach(function(k) {
+    document.getElementById('cc-' + k.toLowerCase()).className = 'condition-card' + (k === c ? ' active' : '');
+  });
+  updateExplain();
+  draw();
+}
+
+function onSlider() {
+  _a = parseInt(document.getElementById('sl-a').value);
+  _b = parseInt(document.getElementById('sl-b').value);
+  _angleC = parseInt(document.getElementById('sl-c').value);
+  document.getElementById('va').textContent = _a;
+  document.getElementById('vb').textContent = _b;
+  document.getElementById('vc').textContent = _angleC + '°';
+  updateExplain();
+  draw();
+}
+
+function updateExplain() {
+  var el = document.getElementById('explain');
+  var aRad = _angleC * Math.PI / 180;
+  // Side c from law of cos: c² = a² + b² - 2ab·cos(C)
+  var sideC = Math.sqrt(_a * _a + _b * _b - 2 * _a * _b * Math.cos(aRad));
+  var explanations = {
+    SSS: '<b style="color:#1e40af">SSS判定</b><br/>△ABC中：a=' + _a + ', b=' + _b + ', c=' + sideC.toFixed(1) + '<br/>△DEF中：d=' + _a + ', e=' + _b + ', f=' + sideC.toFixed(1) + '<br/>三边对应相等 → <strong style="color:#16a34a">△ABC ≅ △DEF</strong>',
+    SAS: '<b style="color:#1e40af">SAS判定</b><br/>△ABC中：a=' + _a + ', ∠C=' + _angleC + '°, b=' + _b + '<br/>△DEF中：d=' + _a + ', ∠F=' + _angleC + '°, e=' + _b + '<br/>两边及夹角对应相等 → <strong style="color:#16a34a">△ABC ≅ △DEF</strong>',
+    ASA: '<b style="color:#1e40af">ASA判定</b><br/>△ABC中：∠A, ∠B 及 c=' + sideC.toFixed(1) + '<br/>两角及夹边对应相等 → <strong style="color:#16a34a">△ABC ≅ △DEF</strong>',
+    AAS: '<b style="color:#1e40af">AAS判定</b><br/>△ABC中：∠A, ∠B 及 a=' + _a + '(∠A对边)<br/>两角及一角对边对应相等 → <strong style="color:#16a34a">△ABC ≅ △DEF</strong>',
+  };
+  el.innerHTML = explanations[_cond];
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  var aRad = _angleC * Math.PI / 180;
+  var sideC = Math.sqrt(_a * _a + _b * _b - 2 * _a * _b * Math.cos(aRad));
+
+  // Scale factor
+  var scale = Math.min((w * 0.35) / Math.max(_a, _b, sideC), (h * 0.5) / Math.max(_a, _b));
+
+  // === Left triangle △ABC ===
+  var lcx = w * 0.25, lcy = h * 0.55;
+  drawTriangleAt(lcx, lcy, scale, 'ABC', '#3b82f6', '#dbeafe', true);
+  ctx.fillStyle = '#1e293b'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('△ABC', lcx, 28);
+
+  // === Right triangle △DEF ===
+  var rcx = w * 0.75, rcy = h * 0.55;
+  drawTriangleAt(rcx, rcy, scale, 'DEF', '#ef4444', '#fee2e2', false);
+  ctx.fillStyle = '#1e293b'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('△DEF', rcx, 28);
+
+  // Congruent symbol in center
+  ctx.fillStyle = '#16a34a'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('≌', w / 2, h / 2);
+
+  // Highlight equal parts based on condition
+  drawHighlights(lcx, lcy, rcx, rcy, scale);
+}
+
+function drawTriangleAt(cx, cy, scale, labels, color, bgColor, isLeft) {
+  var aRad = _angleC * Math.PI / 180;
+  // Place C at origin, B along positive x-axis (side a = BC)
+  var Cx = cx - _a * scale / 2, Cy = cy + 30;
+  var Bx = Cx + _a * scale, By = Cy;
+  var Ax = Cx + _b * scale * Math.cos(aRad), Ay = Cy - _b * scale * Math.sin(aRad);
+
+  // Fill
+  ctx.fillStyle = bgColor;
+  ctx.beginPath(); ctx.moveTo(Ax, Ay); ctx.lineTo(Bx, By); ctx.lineTo(Cx, Cy); ctx.closePath(); ctx.fill();
+
+  // Stroke
+  ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(Ax, Ay); ctx.lineTo(Bx, By); ctx.lineTo(Cx, Cy); ctx.closePath(); ctx.stroke();
+
+  // Angle arc at C
+  var arcR = 18;
+  ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(Cx, Cy, arcR, -aRad, 0); ctx.stroke();
+  ctx.fillStyle = color; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(_angleC + '°', Cx + arcR + 12, Cy - 5);
+
+  // Side labels
+  ctx.font = 'bold 13px sans-serif';
+  // a = BC
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.fillText('a=' + _a, (Bx + Cx) / 2, Cy + 22);
+  // b = AC
+  ctx.fillText('b=' + _b, (Ax + Cx) / 2 - 16, (Ay + Cy) / 2);
+  // c = AB
+  var sideC = Math.sqrt(_a * _a + _b * _b - 2 * _a * _b * Math.cos(_angleC * Math.PI / 180));
+  ctx.fillText('c=' + sideC.toFixed(1), (Ax + Bx) / 2 + 16, (Ay + By) / 2 - 6);
+
+  // Vertex labels
+  ctx.fillStyle = '#1e293b'; ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(labels[0], Ax, Ay - 12);
+  ctx.fillText(labels[1], Bx + 14, By + 14);
+  ctx.fillText(labels[2], Cx - 14, Cy + 14);
+
+  // Vertex dots
+  [Ax,Ay, Bx,By, Cx,Cy].forEach(function(v, i) {
+    if (i % 2 === 0) {
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc([Ax,Bx,Cx][i/2], [Ay,By,Cy][i/2], 4, 0, Math.PI*2); ctx.fill();
+    }
+  });
+}
+
+function drawHighlights(lcx, lcy, rcx, rcy, scale) {
+  // Draw colored matching marks on equal sides/angles
+  var conditions = {
+    SSS: { sides: ['a','b','c'], angles: [] },
+    SAS: { sides: ['a','b'], angles: ['C'] },
+    ASA: { sides: ['c'], angles: ['A','B'] },
+    AAS: { sides: ['a'], angles: ['A','B'] },
+  };
+  var c = conditions[_cond];
+
+  // Draw tick marks on equal sides
+  var colors = { a: '#f59e0b', b: '#22c55e', c: '#8b5cf6' };
+  c.sides.forEach(function(side) {
+    var mark = side === 'a' ? '≈' : side === 'b' ? '≈' : '≈';
+    ctx.fillStyle = colors[side]; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
+    // Left triangle marks
+    ctx.fillText('||', lcx - 30, lcy + 10);
+    // Right triangle marks
+    ctx.fillText('||', rcx - 30, rcy + 10);
+  });
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '三角形全等的判定条件不包括？', opts: ['SSS', 'SAS', 'AAA', 'ASA'], ans: 2 },
+  { q: '有两边和一角对应相等，能判定全等吗？', opts: ['一定能', '一定不能', '不确定', '只有SAS可以'], ans: 3 },
+  { q: 'HL定理适用于什么三角形？', opts: ['任意三角形', '等腰三角形', '直角三角形', '等边三角形'], ans: 2 },
+  { q: '△ABC≅△DEF，则对应边的关系是？', opts: ['AB=DE', 'AB=EF', 'AB=DF', '不确定'], ans: 0 },
+  { q: '两个全等三角形的面积关系是？', opts: ['相等', '不等', '成比例', '不确定'], ans: 0 },
+  { q: '已知AB=DE, BC=EF, AC=DF，用的是哪个判定？', opts: ['SAS', 'SSS', 'ASA', 'AAS'], ans: 1 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML = '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) { html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>'; });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) { b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++; setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

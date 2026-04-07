@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>不等式与不等式组 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  *{box-sizing:border-box}body{font-family:var(--edu-font);margin:0}
+  .tool{width:100vw;height:100vh;display:flex;flex-direction:column;background:var(--edu-bg)}
+  .toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#fff;border-bottom:1px solid var(--edu-border)}
+  .toolbar h1{font-size:15px;color:var(--edu-primary);margin:0}
+  .toolbar span{font-size:11px;color:var(--edu-text-muted);background:#f1f5f9;padding:2px 8px;border-radius:12px}
+  .main{flex:1;display:grid;grid-template-columns:1fr 300px;overflow:hidden}
+  .canvas-wrap{position:relative;overflow:hidden;background:linear-gradient(135deg,#f0fdf4,#ecfdf5)}
+  .canvas-wrap canvas{width:100%;height:100%;display:block}
+  .panel{background:#fff;border-left:1px solid var(--edu-border);padding:12px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+  .section{display:flex;flex-direction:column;gap:4px}
+  .label{font-size:10px;font-weight:700;color:#64748b;letter-spacing:.05em}
+  .divider{height:1px;background:var(--edu-border)}
+  .btn{padding:6px 12px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--edu-font);transition:all .15s}
+  .btn.active{background:var(--edu-primary);color:#fff}
+  .btn-default{background:#f1f5f9;color:#334155}
+  .btn-default:hover{background:#e2e8f0}
+  .row{display:flex;gap:4px;flex-wrap:wrap}
+  .num-input{width:48px;padding:4px 6px;border:2px solid #d1d5db;border-radius:6px;font-size:14px;font-weight:700;text-align:center;font-family:var(--edu-font)}
+  .num-input:focus{border-color:#22c55e;outline:none}
+
+  .ineq-display{text-align:center;padding:10px;background:#f0fdf4;border:2px solid #86efac;border-radius:12px}
+  .ineq-display .eq{font-size:24px;font-weight:800;color:#166534;font-family:monospace}
+  .ineq-display .sub{font-size:12px;color:#15803d;margin-top:4px}
+
+  .quiz-card{background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:10px;text-align:center}
+  .quiz-q{font-size:13px;font-weight:700;color:#166534}
+  .quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px}
+  .quiz-opt{padding:6px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;font-family:var(--edu-font)}
+  .quiz-opt:hover{border-color:#22c55e}
+  .quiz-opt.correct{background:#dcfce7;border-color:#22c55e}
+  .quiz-opt.wrong{background:#fef2f2;border-color:#ef4444}
+  .quiz-result{font-size:11px;font-weight:700;margin-top:4px;min-height:16px}
+
+  .info{font-size:11px;line-height:1.8;color:#334155;background:#fff;border:1px solid #bbf7d0;border-radius:8px;padding:8px 10px}
+  .info b{color:#166534}
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar">
+    <h1>📏 不等式与不等式组</h1>
+    <span>七年级下册 · 第八单元</span>
+  </div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="ineq-display">
+        <div class="eq" id="ineq-display">2x + 1 > 5</div>
+        <div class="sub" id="ineq-sol">解：x > 2</div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">选择不等式</div>
+        <div class="row" id="preset-btns"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">自定义不等式 ax + b > c</div>
+        <div class="row" style="align-items:center;gap:6px">
+          <input class="num-input" id="inp-a" value="2" onchange="updateCustom()"/>
+          <span style="font-size:13px;font-weight:700">x +</span>
+          <input class="num-input" id="inp-b" value="1" onchange="updateCustom()"/>
+          <span style="font-size:16px;font-weight:800;color:#166534">></span>
+          <input class="num-input" id="inp-c" value="5" onchange="updateCustom()"/>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">性质说明</div>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px;font-size:11px;line-height:2" id="props"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">不等式测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>不等式基本性质</b><br/>
+        ● 两边<strong>±同一个数</strong>，不等号方向<strong>不变</strong><br/>
+        ● 两边<strong>×÷正数</strong>，不等号方向<strong>不变</strong><br/>
+        ● 两边<strong>×÷负数</strong>，不等号方向<strong>改变</strong>（最关键！）<br/>
+        ● 开区间用<strong>空心圆○</strong>，闭区间用<strong>实心圆●</strong>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx;
+var _a = 2, _b = 1, _c = 5, _op = '>';
+var _presets = [
+  { label: '2x+1>5', a:2, b:1, c:5, op:'>' },
+  { label: '3x-2≤7', a:3, b:-2, c:7, op:'≤' },
+  { label: '-x+4>1', a:-1, b:4, c:1, op:'>' },
+  { label: '2x≥-6', a:2, b:0, c:-6, op:'≥' },
+  { label: '3x+2<11', a:3, b:2, c:11, op:'<' },
+  { label: '-2x<4', a:-2, b:0, c:4, op:'<' },
+];
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+
+  // Build preset buttons
+  var html = '';
+  _presets.forEach(function(p, i) {
+    html += '<button class="btn btn-default" onclick="loadPreset(' + i + ')">' + p.label + '</button>';
+  });
+  document.getElementById('preset-btns').innerHTML = html;
+
+  loadPreset(0);
+  nextQuiz();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function loadPreset(i) {
+  var p = _presets[i];
+  _a = p.a; _b = p.b; _c = p.c; _op = p.op;
+  document.getElementById('inp-a').value = _a;
+  document.getElementById('inp-b').value = _b;
+  document.getElementById('inp-c').value = _c;
+  updateDisplay();
+}
+
+function updateCustom() {
+  _a = parseInt(document.getElementById('inp-a').value) || 0;
+  _b = parseInt(document.getElementById('inp-b').value) || 0;
+  _c = parseInt(document.getElementById('inp-c').value) || 0;
+  _op = '>';
+  updateDisplay();
+}
+
+function solve() {
+  // ax + b > c => ax > c - b => x >/< (c-b)/a
+  var rhs = _c - _b;
+  var x = rhs / _a;
+  var flipped = _a < 0;
+  var op = _op;
+  if (flipped) {
+    if (op === '>') op = '<';
+    else if (op === '<') op = '>';
+    else if (op === '≥') op = '≤';
+    else if (op === '≤') op = '≥';
+  }
+  return { x: x, op: op, flipped: flipped, rhs: rhs };
+}
+
+function updateDisplay() {
+  var sol = solve();
+  var lhs = (_a === 1 ? '' : _a === -1 ? '-' : _a) + 'x';
+  if (_b > 0) lhs += ' + ' + _b;
+  else if (_b < 0) lhs += ' - ' + Math.abs(_b);
+
+  document.getElementById('ineq-display').textContent = lhs + ' ' + _op + ' ' + _c;
+  var xStr = Number.isInteger(sol.x) ? sol.x : sol.x.toFixed(2);
+  document.getElementById('ineq-sol').textContent = '解：x ' + sol.op + ' ' + xStr;
+
+  // Properties
+  var html = '<div>原不等式：' + lhs + ' ' + _op + ' ' + _c + '</div>';
+  html += '<div>移项：' + (_a === 1 ? '' : _a === -1 ? '-' : _a) + 'x ' + _op + ' ' + _c + ' - ' + (_b >= 0 ? _b : '(' + _b + ')') + '</div>';
+  html += '<div>计算：' + (_a === 1 ? '' : _a === -1 ? '-' : _a) + 'x ' + _op + ' ' + sol.rhs + '</div>';
+  if (sol.flipped) {
+    html += '<div style="color:#dc2626;font-weight:700">两边÷' + _a + '（负数），不等号变向！</div>';
+  } else {
+    html += '<div>两边÷' + Math.abs(_a) + '（正数），不等号方向不变</div>';
+  }
+  html += '<div style="color:#16a34a;font-weight:700">解集：x ' + sol.op + ' ' + xStr + '</div>';
+  document.getElementById('props').innerHTML = html;
+  draw();
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+  var sol = solve();
+
+  // Title
+  ctx.fillStyle = '#166534';
+  ctx.font = 'bold 15px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('不等式解集在数轴上的表示', w / 2, 30);
+
+  // Number line
+  var lineY = h * 0.3;
+  var lx0 = 60, lx1 = w - 60;
+  var lineW = lx1 - lx0;
+  var range = 10;
+  var unitW = lineW / (range * 2);
+
+  // Main axis
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(lx0, lineY); ctx.lineTo(lx1, lineY); ctx.stroke();
+
+  // Ticks
+  for (var v = -range; v <= range; v++) {
+    var x = (w / 2) + v * unitW;
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = v === 0 ? 2 : 0.5;
+    ctx.beginPath(); ctx.moveTo(x, lineY - (v === 0 ? 10 : 5)); ctx.lineTo(x, lineY + (v === 0 ? 10 : 5)); ctx.stroke();
+    if (v % 2 === 0 || Math.abs(sol.x - v) < 0.5) {
+      ctx.fillStyle = '#334155';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(v, x, lineY + 22);
+    }
+  }
+
+  // Solution on number line
+  var solX = (w / 2) + sol.x * unitW;
+  var isOpen = (sol.op === '>' || sol.op === '<');
+  var isLeft = (sol.op === '<' || sol.op === '≤');
+
+  // Solution region shading
+  ctx.fillStyle = 'rgba(34,197,94,0.15)';
+  if (isLeft) {
+    ctx.fillRect(lx0, lineY - 15, solX - lx0, 30);
+  } else {
+    ctx.fillRect(solX, lineY - 15, lx1 - solX, 30);
+  }
+
+  // Direction arrow
+  ctx.strokeStyle = '#22c55e';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  if (isLeft) {
+    ctx.moveTo(solX - 10, lineY - 25);
+    ctx.lineTo(solX - 50, lineY - 25);
+    ctx.stroke();
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath();
+    ctx.moveTo(solX - 50, lineY - 25);
+    ctx.lineTo(solX - 42, lineY - 30);
+    ctx.lineTo(solX - 42, lineY - 20);
+    ctx.fill();
+  } else {
+    ctx.moveTo(solX + 10, lineY - 25);
+    ctx.lineTo(solX + 50, lineY - 25);
+    ctx.stroke();
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath();
+    ctx.moveTo(solX + 50, lineY - 25);
+    ctx.lineTo(solX + 42, lineY - 30);
+    ctx.lineTo(solX + 42, lineY - 20);
+    ctx.fill();
+  }
+
+  // Critical point
+  if (isOpen) {
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(solX, lineY, 7, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(solX, lineY, 5, 0, Math.PI * 2); ctx.fill();
+  } else {
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath(); ctx.arc(solX, lineY, 7, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Label
+  var xStr = Number.isInteger(sol.x) ? sol.x : sol.x.toFixed(2);
+  ctx.fillStyle = '#166534';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(xStr, solX, lineY + 40);
+
+  // Solution text
+  ctx.font = 'bold 16px sans-serif';
+  ctx.fillText('解集：x ' + sol.op + ' ' + xStr, w / 2, lineY + 65);
+
+  // === Inequality rules visualization ===
+  var ruleY = lineY + 100;
+  ctx.fillStyle = '#166534';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('不等式性质演示', w / 2, ruleY);
+  ruleY += 25;
+
+  // Show 3 properties
+  var props = [
+    { title: '性质1：两边+3', before: '2 < 5', after: '5 < 8', color: '#3b82f6', keep: true },
+    { title: '性质2：两边×2', before: '2 < 5', after: '4 < 10', color: '#22c55e', keep: true },
+    { title: '性质3：两边×(-1)', before: '2 < 5', after: '-2 > -5', color: '#ef4444', keep: false },
+  ];
+
+  var boxW = Math.min((w - 60) / 3, 200);
+  var gap = (w - 3 * boxW) / 4;
+
+  props.forEach(function(p, i) {
+    var bx = gap + i * (boxW + gap);
+    ctx.fillStyle = p.color + '11';
+    ctx.beginPath(); ctx.roundRect(bx, ruleY, boxW, 80, 8); ctx.fill();
+    ctx.strokeStyle = p.color + '44';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.fillStyle = p.color;
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.title, bx + boxW / 2, ruleY + 20);
+
+    ctx.fillStyle = '#334155';
+    ctx.font = 'bold 14px monospace';
+    ctx.fillText(p.before, bx + boxW / 2, ruleY + 45);
+
+    ctx.fillStyle = '#64748b';
+    ctx.fillText('↓', bx + boxW / 2, ruleY + 58);
+
+    ctx.fillStyle = p.keep ? '#16a34a' : '#dc2626';
+    ctx.font = 'bold 14px monospace';
+    ctx.fillText(p.after, bx + boxW / 2, ruleY + 73);
+  });
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '不等式两边同乘-1，不等号方向？', opts: ['不变', '改变', '变为等号', '不确定'], ans: 1 },
+  { q: '解不等式 2x > 6，解集是？', opts: ['x > 3', 'x < 3', 'x > 6', 'x < 6'], ans: 0 },
+  { q: '解不等式 -x < 4，解集是？', opts: ['x < 4', 'x > 4', 'x < -4', 'x > -4'], ans: 3 },
+  { q: '在数轴上表示 x ≥ 2，2处应该画？', opts: ['空心圆', '实心圆', '箭头', '无标记'], ans: 1 },
+  { q: '不等式 x > -1 的解集中包含哪个数？', opts: ['-2', '-1', '0', '-0.5'], ans: 2 },
+  { q: '2 < 5，两边同除以-1，结果是？', opts: ['-2 < -5', '-2 > -5', '-2 = -5', '2 > 5'], ans: 1 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML = '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) { html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>'; });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) {
+    b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++;
+  setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

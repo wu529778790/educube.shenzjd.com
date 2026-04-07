@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>平行四边形 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+*{box-sizing:border-box}body{font-family:var(--edu-font);margin:0}
+.tool{width:100vw;height:100vh;display:flex;flex-direction:column;background:var(--edu-bg)}
+.toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#fff;border-bottom:1px solid var(--edu-border)}
+.toolbar h1{font-size:15px;color:var(--edu-primary);margin:0}
+.toolbar span{font-size:11px;color:var(--edu-text-muted);background:#f1f5f9;padding:2px 8px;border-radius:12px}
+.main{flex:1;display:grid;grid-template-columns:1fr 290px;overflow:hidden}
+.canvas-wrap{position:relative;overflow:hidden;background:linear-gradient(135deg,#fff7ed,#fffbeb)}
+.canvas-wrap canvas{width:100%;height:100%;display:block}
+.panel{background:#fff;border-left:1px solid var(--edu-border);padding:12px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+.section{display:flex;flex-direction:column;gap:4px}
+.label{font-size:10px;font-weight:700;color:#64748b;letter-spacing:.05em}
+.divider{height:1px;background:var(--edu-border)}
+.btn{padding:6px 12px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--edu-font);transition:all .15s}
+.btn.active{background:var(--edu-primary);color:#fff}
+.btn-default{background:#f1f5f9;color:#334155}
+.btn-default:hover{background:#e2e8f0}
+.row{display:flex;gap:4px;flex-wrap:wrap}
+.slider-row{display:flex;align-items:center;gap:6px}
+.slider-row label{font-size:11px;font-weight:700;min-width:36px}
+.slider-row input[type=range]{flex:1}
+.slider-row .val{font-size:12px;font-weight:800;min-width:36px;text-align:right;color:#c2410c}
+
+.shape-card{padding:8px;border:2px solid #e2e8f0;border-radius:10px;cursor:pointer;transition:all .15s;text-align:center}
+.shape-card:hover{border-color:#f97316}
+.shape-card.active{border-color:#f97316;background:#fff7ed}
+.shape-card .title{font-size:12px;font-weight:800;color:#c2410c}
+.shape-card .desc{font-size:9px;color:#64748b;margin-top:2px}
+
+.prop-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.prop-item{padding:6px 8px;border-radius:8px;font-size:11px;line-height:1.6}
+.prop-item b{display:block}
+
+.quiz-card{background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:10px;text-align:center}
+.quiz-q{font-size:13px;font-weight:700;color:#9a3412}
+.quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px}
+.quiz-opt{padding:6px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;font-family:var(--edu-font)}
+.quiz-opt:hover{border-color:#f97316}
+.quiz-opt.correct{background:#dcfce7;border-color:#22c55e}
+.quiz-opt.wrong{background:#fef2f2;border-color:#ef4444}
+.quiz-result{font-size:11px;font-weight:700;margin-top:4px;min-height:16px}
+
+.info{font-size:11px;line-height:1.8;color:#334155;background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:8px 10px}
+.info b{color:#9a3412}
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar"><h1>▱ 平行四边形</h1><span>八年级下册 · 第十八章</span></div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="section">
+        <div class="label">选择图形</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+          <div class="shape-card active" id="sc-para" onclick="setShape('para')"><div class="title">▱ 平行四边形</div><div class="desc">对边平行且相等</div></div>
+          <div class="shape-card" id="sc-rect" onclick="setShape('rect')"><div class="title">▭ 矩形</div><div class="desc">四个直角</div></div>
+          <div class="shape-card" id="sc-rhombus" onclick="setShape('rhombus')"><div class="title">◇ 菱形</div><div class="desc">四边相等</div></div>
+          <div class="shape-card" id="sc-square" onclick="setShape('square')"><div class="title">□ 正方形</div><div class="desc">矩形+菱形</div></div>
+          <div class="shape-card" id="sc-trap" onclick="setShape('trap')"><div class="title">⏢ 梯形</div><div class="desc">仅一组对边平行</div></div>
+          <div class="shape-card" id="sc-strap" onclick="setShape('strap')"><div class="title">⏢ 等腰梯形</div><div class="desc">两腰相等</div></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">调节参数</div>
+        <div class="slider-row"><label>底=</label><input type="range" id="sl-base" min="3" max="10" value="6" oninput="onSlider()"/><div class="val" id="vbase">6</div></div>
+        <div class="slider-row"><label>高=</label><input type="range" id="sl-height" min="2" max="8" value="4" oninput="onSlider()"/><div class="val" id="vheight">4</div></div>
+        <div class="slider-row"><label>倾斜=</label><input type="range" id="sl-skew" min="0" max="4" step="0.5" value="2" oninput="onSlider()"/><div class="val" id="vskew">2</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">显示选项</div>
+        <div class="row">
+          <button class="btn active" id="tog-diag" onclick="toggleOpt('diag')">对角线</button>
+          <button class="btn active" id="tog-angles" onclick="toggleOpt('angles')">角度</button>
+          <button class="btn btn-default" id="tog-area" onclick="toggleOpt('area')">面积</button>
+          <button class="btn btn-default" id="tog-sides" onclick="toggleOpt('sides')">边长</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="prop-grid" id="prop-grid"></div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">四边形测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>四边形性质</b><br/>
+        ● <strong>平行四边形</strong>：对边平行且相等，对角相等<br/>
+        ● <strong>矩形</strong>：四个直角，对角线相等<br/>
+        ● <strong>菱形</strong>：四边相等，对角线互相垂直<br/>
+        ● <strong>正方形</strong>：矩形+菱形的全部性质<br/>
+        ● <strong>梯形</strong>：仅一组对边平行
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx, _shape = 'para';
+var _base = 6, _height = 4, _skew = 2;
+var _show = { diag: true, angles: true, area: false, sides: false };
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+  updateProps();
+  nextQuiz();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function setShape(s) {
+  _shape = s;
+  ['para','rect','rhombus','square','trap','strap'].forEach(function(k) {
+    document.getElementById('sc-' + k).className = 'shape-card' + (k === s ? ' active' : '');
+  });
+  // Lock sliders for special shapes
+  if (s === 'rect') { _skew = 0; document.getElementById('sl-skew').value = 0; document.getElementById('vskew').textContent = 0; }
+  if (s === 'square') { _skew = 0; _base = 6; _height = 6; updateSliders(); }
+  if (s === 'rhombus') { /* skew based on height */ }
+  updateProps();
+  draw();
+}
+
+function updateSliders() {
+  document.getElementById('sl-base').value = _base; document.getElementById('vbase').textContent = _base;
+  document.getElementById('sl-height').value = _height; document.getElementById('vheight').textContent = _height;
+  document.getElementById('sl-skew').value = _skew; document.getElementById('vskew').textContent = _skew;
+}
+
+function onSlider() {
+  _base = parseInt(document.getElementById('sl-base').value);
+  _height = parseInt(document.getElementById('sl-height').value);
+  _skew = parseFloat(document.getElementById('sl-skew').value);
+  document.getElementById('vbase').textContent = _base;
+  document.getElementById('vheight').textContent = _height;
+  document.getElementById('vskew').textContent = _skew;
+  updateProps();
+  draw();
+}
+
+function toggleOpt(key) {
+  _show[key] = !_show[key];
+  document.getElementById('tog-' + key).className = 'btn' + (_show[key] ? ' active' : ' btn-default');
+  draw();
+}
+
+function getVertices(w, h) {
+  var scale = Math.min(w * 0.06, h * 0.06);
+  var cx = w / 2, cy = h / 2;
+  var b = _base * scale, ht = _height * scale, sk = _skew * scale;
+
+  var A, B, C, D;
+  switch (_shape) {
+    case 'para':
+      A = [cx - b/2 + sk, cy - ht/2]; B = [cx + b/2 + sk, cy - ht/2];
+      C = [cx + b/2 - sk, cy + ht/2]; D = [cx - b/2 - sk, cy + ht/2];
+      break;
+    case 'rect':
+      A = [cx - b/2, cy - ht/2]; B = [cx + b/2, cy - ht/2];
+      C = [cx + b/2, cy + ht/2]; D = [cx - b/2, cy + ht/2];
+      break;
+    case 'rhombus':
+      A = [cx, cy - ht/2]; B = [cx + b/2, cy];
+      C = [cx, cy + ht/2]; D = [cx - b/2, cy];
+      break;
+    case 'square':
+      var s = b;
+      A = [cx - s/2, cy - s/2]; B = [cx + s/2, cy - s/2];
+      C = [cx + s/2, cy + s/2]; D = [cx - s/2, cy + s/2];
+      break;
+    case 'trap':
+      A = [cx - b/3 + sk, cy - ht/2]; B = [cx + b/3 + sk, cy - ht/2];
+      C = [cx + b/2, cy + ht/2]; D = [cx - b/2, cy + ht/2];
+      break;
+    case 'strap':
+      A = [cx - b/3, cy - ht/2]; B = [cx + b/3, cy - ht/2];
+      C = [cx + b/2, cy + ht/2]; D = [cx - b/2, cy + ht/2];
+      break;
+  }
+  return [A, B, C, D];
+}
+
+function dist(p1, p2) {
+  var dx = p2[0] - p1[0], dy = p2[1] - p1[1];
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function angleDeg(p1, vertex, p2) {
+  var v1 = [p1[0] - vertex[0], p1[1] - vertex[1]];
+  var v2 = [p2[0] - vertex[0], p2[1] - vertex[1]];
+  var dot = v1[0] * v2[0] + v1[1] * v2[1];
+  var cross = v1[0] * v2[1] - v1[1] * v2[0];
+  var angle = Math.atan2(Math.abs(cross), dot);
+  return angle * 180 / Math.PI;
+}
+
+function calcArea() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  var v = getVertices(w, h);
+  // Shoelace formula
+  var area = 0;
+  for (var i = 0; i < 4; i++) {
+    var j = (i + 1) % 4;
+    area += v[i][0] * v[j][1] - v[j][0] * v[i][1];
+  }
+  var scale = Math.min(w * 0.06, h * 0.06);
+  return Math.abs(area) / (scale * scale);
+}
+
+function updateProps() {
+  var area = calcArea();
+  var shapeName = { para: '平行四边形', rect: '矩形', rhombus: '菱形', square: '正方形', trap: '梯形', strap: '等腰梯形' };
+  var props = '';
+
+  props += '<div class="prop-item" style="background:#fff7ed"><b style="color:#c2410c">面积</b><span style="font-weight:700">' + area.toFixed(1) + '</span></div>';
+  props += '<div class="prop-item" style="background:#fef3c7"><b style="color:#92400e">形状</b><span style="font-weight:700">' + shapeName[_shape] + '</span></div>';
+
+  if (_shape === 'para') {
+    props += '<div class="prop-item" style="background:#ecfdf5"><b style="color:#166534">对边</b>平行且相等</div>';
+    props += '<div class="prop-item" style="background:#eff6ff"><b style="color:#1e40af">对角线</b>互相平分</div>';
+  } else if (_shape === 'rect') {
+    props += '<div class="prop-item" style="background:#ecfdf5"><b style="color:#166534">四个角</b>都是直角</div>';
+    props += '<div class="prop-item" style="background:#eff6ff"><b style="color:#1e40af">对角线</b>相等且平分</div>';
+  } else if (_shape === 'rhombus') {
+    props += '<div class="prop-item" style="background:#ecfdf5"><b style="color:#166534">四边</b>都相等</div>';
+    props += '<div class="prop-item" style="background:#eff6ff"><b style="color:#1e40af">对角线</b>垂直平分</div>';
+  } else if (_shape === 'square') {
+    props += '<div class="prop-item" style="background:#ecfdf5"><b style="color:#166534">全部性质</b>矩形+菱形</div>';
+    props += '<div class="prop-item" style="background:#eff6ff"><b style="color:#1e40af">对角线</b>等+垂直+平分</div>';
+  } else if (_shape === 'trap' || _shape === 'strap') {
+    props += '<div class="prop-item" style="background:#ecfdf5"><b style="color:#166534">一组对边</b>平行</div>';
+    props += '<div class="prop-item" style="background:#eff6ff"><b style="color:#1e40af">' + (_shape === 'strap' ? '两腰相等' : '一般梯形') + '</b></div>';
+  }
+
+  document.getElementById('prop-grid').innerHTML = props;
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  var v = getVertices(w, h);
+  var labels = ['A', 'B', 'C', 'D'];
+
+  // Fill
+  ctx.fillStyle = '#f9731615';
+  ctx.beginPath();
+  ctx.moveTo(v[0][0], v[0][1]);
+  for (var i = 1; i < 4; i++) ctx.lineTo(v[i][0], v[i][1]);
+  ctx.closePath();
+  ctx.fill();
+
+  // Stroke
+  ctx.strokeStyle = '#c2410c'; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(v[0][0], v[0][1]);
+  for (var i = 1; i < 4; i++) ctx.lineTo(v[i][0], v[i][1]);
+  ctx.closePath();
+  ctx.stroke();
+
+  // Parallel marks on sides
+  drawParallelMarks(v);
+
+  // Equal marks
+  drawEqualMarks(v);
+
+  // Diagonals
+  if (_show.diag) {
+    ctx.strokeStyle = '#3b82f688'; ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath(); ctx.moveTo(v[0][0], v[0][1]); ctx.lineTo(v[2][0], v[2][1]); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(v[1][0], v[1][1]); ctx.lineTo(v[3][0], v[3][1]); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Intersection point
+    var ix = (v[0][0] + v[2][0]) / 2, iy = (v[0][1] + v[2][1]) / 2;
+    ctx.fillStyle = '#3b82f6';
+    ctx.beginPath(); ctx.arc(ix, iy, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1e40af'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('O', ix + 10, iy - 6);
+  }
+
+  // Angles
+  if (_show.angles) {
+    for (var i = 0; i < 4; i++) {
+      var prev = v[(i + 3) % 4], curr = v[i], next = v[(i + 1) % 4];
+      var ang = angleDeg(prev, curr, next);
+      drawAngleArc(prev, curr, next, ang);
+    }
+  }
+
+  // Area
+  if (_show.area) {
+    var cx = 0, cy = 0;
+    v.forEach(function(p) { cx += p[0]; cy += p[1]; });
+    cx /= 4; cy /= 4;
+    var area = calcArea();
+    ctx.fillStyle = '#c2410ccc'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('S = ' + area.toFixed(1), cx, cy + 5);
+  }
+
+  // Side lengths
+  if (_show.sides) {
+    for (var i = 0; i < 4; i++) {
+      var j = (i + 1) % 4;
+      var scale = Math.min(w * 0.06, h * 0.06);
+      var d = dist(v[i], v[j]) / scale;
+      var mx = (v[i][0] + v[j][0]) / 2, my = (v[i][1] + v[j][1]) / 2;
+      // Offset outward
+      var nx = -(v[j][1] - v[i][1]), ny = v[j][0] - v[i][0];
+      var nl = Math.sqrt(nx * nx + ny * ny);
+      if (nl > 0) { nx /= nl; ny /= nl; }
+      ctx.fillStyle = '#64748b'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(d.toFixed(1), mx + nx * 14, my + ny * 14);
+    }
+  }
+
+  // Vertex labels
+  ctx.fillStyle = '#1e293b'; ctx.font = 'bold 15px sans-serif';
+  for (var i = 0; i < 4; i++) {
+    var offset = getLabelOffset(v, i);
+    ctx.textAlign = 'center';
+    ctx.fillText(labels[i], v[i][0] + offset[0], v[i][1] + offset[1]);
+  }
+
+  // Vertex dots
+  v.forEach(function(p) {
+    ctx.fillStyle = '#c2410c';
+    ctx.beginPath(); ctx.arc(p[0], p[1], 4, 0, Math.PI * 2); ctx.fill();
+  });
+}
+
+function getLabelOffset(v, i) {
+  var cx = (v[0][0] + v[1][0] + v[2][0] + v[3][0]) / 4;
+  var cy = (v[0][1] + v[1][1] + v[2][1] + v[3][1]) / 4;
+  var dx = v[i][0] - cx, dy = v[i][1] - cy;
+  var d = Math.sqrt(dx * dx + dy * dy);
+  if (d === 0) return [0, -12];
+  return [dx / d * 16, dy / d * 16];
+}
+
+function drawParallelMarks(v) {
+  // Draw arrow marks on parallel sides
+  function drawArrowMark(p1, p2, offset) {
+    var mx = (p1[0] + p2[0]) / 2, my = (p1[1] + p2[1]) / 2;
+    var dx = p2[0] - p1[0], dy = p2[1] - p1[1];
+    var len = Math.sqrt(dx * dx + dy * dy);
+    if (len === 0) return;
+    var nx = -dy / len * offset, ny = dx / len * offset;
+
+    ctx.strokeStyle = '#c2410c'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(mx + nx - 4, my + ny - 4);
+    ctx.lineTo(mx + nx, my + ny);
+    ctx.lineTo(mx + nx - 4, my + ny + 4);
+    ctx.stroke();
+  }
+  // AB and CD are parallel (top and bottom)
+  drawArrowMark(v[0], v[1], -8);
+  drawArrowMark(v[2], v[3], 8);
+  // AD and BC are parallel (sides) — for parallelogram family
+  if (_shape === 'para' || _shape === 'rect' || _shape === 'rhombus' || _shape === 'square') {
+    drawArrowMark(v[3], v[0], -8);
+    drawArrowMark(v[1], v[2], 8);
+  }
+}
+
+function drawEqualMarks(v) {
+  function drawTick(p1, p2) {
+    var mx = (p1[0] + p2[0]) / 2, my = (p1[1] + p2[1]) / 2;
+    var dx = p2[0] - p1[0], dy = p2[1] - p1[1];
+    var len = Math.sqrt(dx * dx + dy * dy);
+    if (len === 0) return;
+    var nx = -dy / len * 6, ny = dx / len * 6;
+    ctx.strokeStyle = '#16a34a'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(mx + nx, my + ny); ctx.lineTo(mx - nx, my - ny); ctx.stroke();
+  }
+
+  if (_shape === 'para') {
+    drawTick(v[0], v[1]); drawTick(v[2], v[3]); // AB = CD
+    drawTick(v[1], v[2]); drawTick(v[3], v[0]); // BC = AD
+  } else if (_shape === 'rect') {
+    drawTick(v[0], v[1]); drawTick(v[2], v[3]);
+    drawTick(v[1], v[2]); drawTick(v[3], v[0]);
+  } else if (_shape === 'rhombus' || _shape === 'square') {
+    drawTick(v[0], v[1]); drawTick(v[1], v[2]); drawTick(v[2], v[3]); drawTick(v[3], v[0]);
+  }
+}
+
+function drawAngleArc(p1, vertex, p2, deg) {
+  var a1 = Math.atan2(p1[1] - vertex[1], p1[0] - vertex[0]);
+  var a2 = Math.atan2(p2[1] - vertex[1], p2[0] - vertex[0]);
+  var r = 16;
+
+  ctx.strokeStyle = '#f97316'; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  // Draw arc from a2 to a1 (shorter path)
+  var start = Math.min(a1, a2), end = Math.max(a1, a2);
+  if (end - start > Math.PI) { var t = start; start = end; end = t + Math.PI * 2; }
+  ctx.arc(vertex[0], vertex[1], r, start, end);
+  ctx.stroke();
+
+  // Degree label
+  var midA = (start + end) / 2;
+  var lx = vertex[0] + Math.cos(midA) * (r + 14);
+  var ly = vertex[1] + Math.sin(midA) * (r + 14);
+  ctx.fillStyle = '#c2410c'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(Math.round(deg) + '°', lx, ly + 3);
+
+  // Right angle mark if close to 90°
+  if (Math.abs(deg - 90) < 2) {
+    ctx.strokeStyle = '#c2410c'; ctx.lineWidth = 1.5;
+    var sz = 8;
+    var d1 = [(p1[0] - vertex[0]), (p1[1] - vertex[1])];
+    var d2 = [(p2[0] - vertex[0]), (p2[1] - vertex[1])];
+    var l1 = Math.sqrt(d1[0] * d1[0] + d1[1] * d1[1]);
+    var l2 = Math.sqrt(d2[0] * d2[0] + d2[1] * d2[1]);
+    if (l1 > 0 && l2 > 0) {
+      d1 = [d1[0]/l1*sz, d1[1]/l1*sz]; d2 = [d2[0]/l2*sz, d2[1]/l2*sz];
+      ctx.beginPath();
+      ctx.moveTo(vertex[0] + d1[0], vertex[1] + d1[1]);
+      ctx.lineTo(vertex[0] + d1[0] + d2[0], vertex[1] + d1[1] + d2[1]);
+      ctx.lineTo(vertex[0] + d2[0], vertex[1] + d2[1]);
+      ctx.stroke();
+    }
+  }
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '平行四边形的对角线？', opts: ['相等', '互相平分', '垂直', '相等且垂直'], ans: 1 },
+  { q: '矩形的四个角都是？', opts: ['锐角', '钝角', '直角', '不确定'], ans: 2 },
+  { q: '菱形的四条边？', opts: ['对边相等', '都相等', '只有邻边相等', '不确定'], ans: 1 },
+  { q: '正方形是特殊的？', opts: ['梯形', '矩形和菱形', '只有矩形', '只有菱形'], ans: 1 },
+  { q: '平行四边形面积公式？', opts: ['底×高', '底×底', '(上底+下底)×高÷2', '对角线×对角线'], ans: 0 },
+  { q: '梯形的面积公式？', opts: ['底×高', '(上底+下底)×高÷2', '底×底÷2', '对角线×高'], ans: 1 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML = '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) { html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>'; });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) { b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++; setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

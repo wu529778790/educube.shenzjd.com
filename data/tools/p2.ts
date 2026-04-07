@@ -1,6 +1,6 @@
 import type { Tool } from "./types";
 
-/** 二年级教具（仅 3D） */
+/** 二年级教具 */
 export const p2Tools: Tool[] = [
   {
     id: "observe-simple",
@@ -16,5 +16,80 @@ export const p2Tools: Tool[] = [
     tags: ["观察物体", "正面", "侧面", "上面", "视图"],
     gradient: ["#3B82F6", "#2563EB"],
     icon: "👀",
+  },
+  {
+    id: "multiplication-table",
+    name: "乘法口诀表",
+    subtitle: "表内乘法",
+    chapter: "上册 · 第四单元",
+    semester: "上册",
+    unitNum: 4,
+    gradeId: "p2",
+    subjectId: "math",
+    description:
+      "完整九九乘法口诀表（三角形排列），鼠标悬停高亮行列关联，点击口诀按钮按行查看，彩色分行显示，含随机乘法口诀测验。",
+    tags: ["乘法口诀", "九九表", "乘法", "口诀"],
+    gradient: ["#EF4444", "#DC2626"],
+    icon: "✖️",
+  },
+  {
+    id: "length-unit",
+    name: "长度单位",
+    subtitle: "长度单位",
+    chapter: "上册 · 第一单元",
+    semester: "上册",
+    unitNum: 1,
+    gradeId: "p2",
+    subjectId: "math",
+    description:
+      "交互式尺子（毫米/厘米/分米/米），滑块调节长度，可视化尺子标注，三档参考（铅笔18cm/课桌60cm/门2m），四单位换算卡片，含单位换算测验。",
+    tags: ["长度", "厘米", "米", "毫米", "分米", "单位换算"],
+    gradient: ["#06B6D4", "#0891B2"],
+    icon: "📏",
+  },
+  {
+    id: "angle-basics",
+    name: "角的初步认识",
+    subtitle: "角的初步认识",
+    chapter: "上册 · 第三单元",
+    semester: "上册",
+    unitNum: 3,
+    gradeId: "p2",
+    subjectId: "math",
+    description:
+      "可调节角度滑块（10°-170°），实时绘制角并标注顶点和边，三种类型对比卡片（锐角/直角/钝角），快捷按钮设置典型角度，直角符号标注，含6道测验。",
+    tags: ["角", "锐角", "直角", "钝角", "顶点", "边"],
+    gradient: ["#8B5CF6", "#7C3AED"],
+    icon: "📐",
+  },
+  {
+    id: "add-sub-100",
+    name: "100以内加减法",
+    subtitle: "100以内加减法",
+    chapter: "下册 · 第二单元",
+    semester: "下册",
+    unitNum: 2,
+    gradeId: "p2",
+    subjectId: "math",
+    description:
+      "四种题型（不进位加/进位加/不退位减/退位减），竖式计算可视化，进位/退位标注，十根个根图形化表示，详细步骤分解，含随机速算挑战。",
+    tags: ["加减法", "竖式计算", "进位", "退位", "100以内"],
+    gradient: ["#F97316", "#EA580C"],
+    icon: "🔢",
+  },
+  {
+    id: "data-collect",
+    name: "数据收集整理",
+    subtitle: "数据收集整理",
+    chapter: "下册 · 第一单元",
+    semester: "下册",
+    unitNum: 1,
+    gradeId: "p2",
+    subjectId: "math",
+    description:
+      "三个调查主题（水果/运动/颜色），点击投票实时更新，画正字统计+条形统计图双视图，随机投票功能，实时统计最多/最少/总数，含6道测验。",
+    tags: ["数据收集", "统计", "正字法", "条形图", "投票"],
+    gradient: ["#22C55E", "#16A34A"],
+    icon: "📊",
   },
 ];

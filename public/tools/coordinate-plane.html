@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>平面直角坐标系 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+  *{box-sizing:border-box}body{font-family:var(--edu-font);margin:0}
+  .tool{width:100vw;height:100vh;display:flex;flex-direction:column;background:var(--edu-bg)}
+  .toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#fff;border-bottom:1px solid var(--edu-border)}
+  .toolbar h1{font-size:15px;color:var(--edu-primary);margin:0}
+  .toolbar span{font-size:11px;color:var(--edu-text-muted);background:#f1f5f9;padding:2px 8px;border-radius:12px}
+  .main{flex:1;display:grid;grid-template-columns:1fr 290px;overflow:hidden}
+  .canvas-wrap{position:relative;overflow:hidden;background:#fff}
+  .canvas-wrap canvas{width:100%;height:100%;display:block;cursor:crosshair}
+  .panel{background:#fff;border-left:1px solid var(--edu-border);padding:12px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+  .section{display:flex;flex-direction:column;gap:4px}
+  .label{font-size:10px;font-weight:700;color:#64748b;letter-spacing:.05em}
+  .divider{height:1px;background:var(--edu-border)}
+  .btn{padding:6px 12px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--edu-font);transition:all .15s}
+  .btn-default{background:#f1f5f9;color:#334155}
+  .btn-default:hover{background:#e2e8f0}
+  .btn-danger{background:#fef2f2;color:#dc2626}
+  .row{display:flex;gap:4px;flex-wrap:wrap}
+
+  .coord-box{text-align:center;padding:10px;background:#fff7ed;border:2px solid #fed7aa;border-radius:12px}
+  .coord-box .val{font-size:22px;font-weight:800;color:#c2410c;font-family:monospace}
+  .coord-box .sub{font-size:11px;color:#ea580c;margin-top:2px}
+
+  .point-list{max-height:120px;overflow:auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px 8px;font-size:11px}
+  .point-item{display:flex;justify-content:space-between;align-items:center;padding:2px 4px;border-radius:4px}
+  .point-item:hover{background:#fff7ed}
+  .point-item .del{cursor:pointer;color:#ef4444;font-weight:700}
+
+  .quadrant-info{display:grid;grid-template-columns:1fr 1fr;gap:3px;font-size:10px;font-weight:700;text-align:center;padding:4px}
+  .q-box{padding:4px;border-radius:6px}
+
+  .quiz-card{background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:10px;text-align:center}
+  .quiz-q{font-size:13px;font-weight:700;color:#c2410c}
+  .quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px}
+  .quiz-opt{padding:6px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;font-family:var(--edu-font)}
+  .quiz-opt:hover{border-color:#f97316}
+  .quiz-opt.correct{background:#dcfce7;border-color:#22c55e}
+  .quiz-opt.wrong{background:#fef2f2;border-color:#ef4444}
+  .quiz-result{font-size:11px;font-weight:700;margin-top:4px;min-height:16px}
+
+  .info{font-size:11px;line-height:1.8;color:#334155;background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:8px 10px}
+  .info b{color:#c2410c}
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar">
+    <h1>🗺️ 平面直角坐标系</h1>
+    <span>七年级下册 · 第三单元</span>
+  </div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="coord-box">
+        <div class="val" id="coord-val">( 0 , 0 )</div>
+        <div class="sub" id="coord-sub">原点</div>
+      </div>
+      <div class="divider"></div>
+      <div class="quadrant-info">
+        <div class="q-box" style="background:#fef3c7">第二象限（-,+）</div>
+        <div class="q-box" style="background:#dcfce7">第一象限（+,+）</div>
+        <div class="q-box" style="background:#dbeafe">第三象限（-,-）</div>
+        <div class="q-box" style="background:#fce7f3">第四象限（+,-）</div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">快捷操作</div>
+        <div class="row">
+          <button class="btn btn-default" onclick="addPreset('tri')">🔺 三角形</button>
+          <button class="btn btn-default" onclick="addPreset('rect')">⬜ 矩形</button>
+          <button class="btn btn-default" onclick="addPreset('line')">📏 直线</button>
+          <button class="btn btn-danger" onclick="clearAll()">🗑️ 清空</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">已标记的点</div>
+        <div class="point-list" id="point-list">点击坐标系添加点…</div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">坐标测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>平面直角坐标系</b><br/>
+        ● 横轴（x轴）→ <strong>向右为正</strong><br/>
+        ● 纵轴（y轴）→ <strong>向上为正</strong><br/>
+        ● 点的坐标：(<strong>x</strong>, <strong>y</strong>)<br/>
+        ● 第一象限：x>0, y>0；第二象限：x&lt;0, y>0<br/>
+        ● 第三象限：x&lt;0, y&lt;0；第四象限：x>0, y&lt;0
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx;
+var _pts = [];
+var _hover = null;
+var COLORS = ['#ef4444','#3b82f6','#22c55e','#f59e0b','#8b5cf6','#ec4899','#14b8a6','#f97316'];
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  resize();
+
+  cv.addEventListener('mousemove', function(e) {
+    var p = toCoord(e);
+    _hover = p;
+    if (p) {
+      document.getElementById('coord-val').textContent = '( ' + p.x + ' , ' + p.y + ' )';
+      var q = getQuadrant(p.x, p.y);
+      document.getElementById('coord-sub').textContent = q;
+    }
+    draw();
+  });
+  cv.addEventListener('mouseleave', function() { _hover = null; draw(); });
+  cv.addEventListener('click', function(e) {
+    var p = toCoord(e);
+    if (p) {
+      _pts.push({x: p.x, y: p.y});
+      updateList();
+      draw();
+    }
+  });
+  nextQuiz();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function getGridParams() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  var range = 8;
+  var cell = Math.min((w - 50) / (range * 2), (h - 50) / (range * 2), 35);
+  cell = Math.max(cell, 18);
+  var ox = w / 2, oy = h / 2;
+  return { range: range, cell: cell, ox: ox, oy: oy, w: w, h: h };
+}
+
+function toCoord(e) {
+  var rect = cv.getBoundingClientRect();
+  var mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  var g = getGridParams();
+  var x = Math.round((mx - g.ox) / g.cell);
+  var y = Math.round(-(my - g.oy) / g.cell);
+  if (Math.abs(x) <= g.range && Math.abs(y) <= g.range) return { x: x, y: y };
+  return null;
+}
+
+function getQuadrant(x, y) {
+  if (x === 0 && y === 0) return '原点';
+  if (x === 0) return '在y轴上';
+  if (y === 0) return '在x轴上';
+  if (x > 0 && y > 0) return '第一象限';
+  if (x < 0 && y > 0) return '第二象限';
+  if (x < 0 && y < 0) return '第三象限';
+  return '第四象限';
+}
+
+function addPreset(type) {
+  _pts = [];
+  if (type === 'tri') _pts = [{x:2,y:5},{x:-3,y:-1},{x:5,y:-2}];
+  if (type === 'rect') _pts = [{x:-4,y:3},{x:3,y:3},{x:3,y:-2},{x:-4,y:-2}];
+  if (type === 'line') _pts = [{x:-5,y:-3},{x:-3,y:-1},{x:-1,y:1},{x:1,y:3},{x:3,y:5}];
+  updateList();
+  draw();
+}
+
+function clearAll() { _pts = []; updateList(); draw(); }
+
+function removePoint(i) { _pts.splice(i, 1); updateList(); draw(); }
+
+function updateList() {
+  if (_pts.length === 0) { document.getElementById('point-list').innerHTML = '点击坐标系添加点…'; return; }
+  var html = '';
+  _pts.forEach(function(p, i) {
+    html += '<div class="point-item"><span style="color:' + COLORS[i % COLORS.length] + ';font-weight:700">● (' + p.x + ', ' + p.y + ') ' + getQuadrant(p.x, p.y) + '</span><span class="del" onclick="removePoint(' + i + ')">✕</span></div>';
+  });
+  document.getElementById('point-list').innerHTML = html;
+}
+
+function draw() {
+  var g = getGridParams();
+  ctx.clearRect(0, 0, g.w, g.h);
+
+  // Quadrant shading
+  ctx.fillStyle = 'rgba(254,243,199,0.2)';
+  ctx.fillRect(g.ox - g.range * g.cell, g.oy - g.range * g.cell, g.range * g.cell, g.range * g.cell);
+  ctx.fillStyle = 'rgba(220,252,231,0.2)';
+  ctx.fillRect(g.ox, g.oy - g.range * g.cell, g.range * g.cell, g.range * g.cell);
+  ctx.fillStyle = 'rgba(219,234,254,0.2)';
+  ctx.fillRect(g.ox - g.range * g.cell, g.oy, g.range * g.cell, g.range * g.cell);
+  ctx.fillStyle = 'rgba(252,231,243,0.2)';
+  ctx.fillRect(g.ox, g.oy, g.range * g.cell, g.range * g.cell);
+
+  // Grid lines
+  ctx.strokeStyle = '#e5e7eb';
+  ctx.lineWidth = 0.5;
+  for (var i = -g.range; i <= g.range; i++) {
+    ctx.beginPath(); ctx.moveTo(g.ox + i * g.cell, g.oy - g.range * g.cell); ctx.lineTo(g.ox + i * g.cell, g.oy + g.range * g.cell); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(g.ox - g.range * g.cell, g.oy + i * g.cell); ctx.lineTo(g.ox + g.range * g.cell, g.oy + i * g.cell); ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(g.ox - g.range * g.cell - 10, g.oy); ctx.lineTo(g.ox + g.range * g.cell + 10, g.oy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(g.ox, g.oy + g.range * g.cell + 10); ctx.lineTo(g.ox, g.oy - g.range * g.cell - 10); ctx.stroke();
+
+  // Arrow heads
+  ctx.fillStyle = '#334155';
+  ctx.beginPath(); ctx.moveTo(g.ox + g.range * g.cell + 10, g.oy); ctx.lineTo(g.ox + g.range * g.cell + 2, g.oy - 5); ctx.lineTo(g.ox + g.range * g.cell + 2, g.oy + 5); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(g.ox, g.oy - g.range * g.cell - 10); ctx.lineTo(g.ox - 5, g.oy - g.range * g.cell - 2); ctx.lineTo(g.ox + 5, g.oy - g.range * g.cell - 2); ctx.fill();
+
+  // Axis labels
+  ctx.fillStyle = '#334155';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('x', g.ox + g.range * g.cell + 18, g.oy + 4);
+  ctx.fillText('y', g.ox - 4, g.oy - g.range * g.cell - 14);
+  ctx.font = '11px sans-serif';
+  ctx.fillText('O', g.ox - 12, g.oy + 14);
+
+  // Tick labels
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  for (var i = -g.range; i <= g.range; i++) {
+    if (i === 0) continue;
+    ctx.fillText(i, g.ox + i * g.cell, g.oy + 14);
+    ctx.textAlign = 'right';
+    ctx.fillText(i, g.ox - 6, g.oy - i * g.cell + 4);
+    ctx.textAlign = 'center';
+  }
+
+  // Connect points
+  if (_pts.length > 1) {
+    ctx.strokeStyle = 'rgba(249,115,22,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    _pts.forEach(function(p, i) {
+      var sx = g.ox + p.x * g.cell, sy = g.oy - p.y * g.cell;
+      if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Draw points
+  _pts.forEach(function(p, i) {
+    var sx = g.ox + p.x * g.cell, sy = g.oy - p.y * g.cell;
+    ctx.fillStyle = COLORS[i % COLORS.length] + '33';
+    ctx.beginPath(); ctx.arc(sx, sy, g.cell * 0.35, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = COLORS[i % COLORS.length];
+    ctx.beginPath(); ctx.arc(sx, sy, g.cell * 0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#334155';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('(' + p.x + ',' + p.y + ')', sx, sy - g.cell * 0.35);
+  });
+
+  // Hover
+  if (_hover) {
+    var sx = g.ox + _hover.x * g.cell, sy = g.oy - _hover.y * g.cell;
+    ctx.strokeStyle = '#f97316';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([3, 2]);
+    ctx.beginPath(); ctx.moveTo(sx, g.oy); ctx.lineTo(sx, sy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(g.ox, sy); ctx.lineTo(sx, sy); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#f9731666';
+    ctx.beginPath(); ctx.arc(sx, sy, g.cell * 0.25, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+// ===== Quiz =====
+var _quizQs = [
+  { q: '点(3, 4)在第几象限？', opts: ['第一象限', '第二象限', '第三象限', '第四象限'], ans: 0 },
+  { q: '点(-2, 5)在第几象限？', opts: ['第一象限', '第二象限', '第三象限', '第四象限'], ans: 1 },
+  { q: '点(0, -3)在什么位置？', opts: ['x轴上', 'y轴上', '原点', '第二象限'], ans: 1 },
+  { q: '点(-3, -1)到x轴的距离是？', opts: ['3', '1', '4', '2'], ans: 1 },
+  { q: '点A(2,3)和点B(2,-1)的连线与什么平行？', opts: ['x轴', 'y轴', '原点连线', '都不平行'], ans: 1 },
+  { q: '第一象限内点的坐标特征是？', opts: ['x>0,y>0', 'x<0,y>0', 'x>0,y<0', 'x<0,y<0'], ans: 0 },
+];
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  if (_qi >= _quizQs.length) {
+    document.getElementById('quiz-card').innerHTML = '<div class="quiz-q">测验完成！答对 ' + _score + ' / ' + _quizQs.length + ' 题</div>';
+    return;
+  }
+  var q = _quizQs[_qi];
+  var html = '<div class="quiz-q">第' + (_qi + 1) + '题：' + q.q + '</div><div class="quiz-opts">';
+  q.opts.forEach(function(o, i) { html += '<button class="quiz-opt" onclick="answer(' + i + ')">' + o + '</button>'; });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(idx) {
+  var q = _quizQs[_qi];
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b, i) {
+    b.onclick = null; b.style.cursor = 'default';
+    if (i === q.ans) b.classList.add('correct');
+    if (i === idx && i !== q.ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (idx === q.ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + q.opts[q.ans]; r.style.color = '#ef4444'; }
+  _qi++;
+  setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

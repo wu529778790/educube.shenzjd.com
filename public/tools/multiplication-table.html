@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>乘法口诀表 — 教立方</title>
+<link rel="stylesheet" href="../edu-lib/edu-base.css"/>
+<style>
+*{box-sizing:border-box}body{font-family:var(--edu-font);margin:0}
+.tool{width:100vw;height:100vh;display:flex;flex-direction:column;background:var(--edu-bg)}
+.toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#fff;border-bottom:1px solid var(--edu-border)}
+.toolbar h1{font-size:15px;color:var(--edu-primary);margin:0}
+.toolbar span{font-size:11px;color:var(--edu-text-muted);background:#f1f5f9;padding:2px 8px;border-radius:12px}
+.main{flex:1;display:grid;grid-template-columns:1fr 280px;overflow:hidden}
+.canvas-wrap{position:relative;overflow:hidden;background:linear-gradient(135deg,#fef2f2,#fff1f2)}
+.canvas-wrap canvas{width:100%;height:100%;display:block}
+.panel{background:#fff;border-left:1px solid var(--edu-border);padding:12px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+.section{display:flex;flex-direction:column;gap:4px}
+.label{font-size:10px;font-weight:700;color:#64748b;letter-spacing:.05em}
+.divider{height:1px;background:var(--edu-border)}
+.btn{padding:6px 10px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--edu-font);transition:all .15s}
+.btn.active{background:var(--edu-primary);color:#fff}
+.btn-default{background:#f1f5f9;color:#334155}
+.btn-default:hover{background:#e2e8f0}
+.row{display:flex;gap:4px;flex-wrap:wrap}
+
+.show-box{text-align:center;padding:8px;background:#fef2f2;border:2px solid #fda4af;border-radius:12px}
+.show-box .eq{font-size:24px;font-weight:800;color:#be123c}
+.show-box .sub{font-size:11px;color:#e11d48;margin-top:2px}
+
+.quiz-card{background:#fef2f2;border:2px solid #fda4af;border-radius:12px;padding:10px;text-align:center}
+.quiz-q{font-size:16px;font-weight:700;color:#be123c}
+.quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.quiz-opt{padding:10px;border:2px solid #e2e8f0;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;background:#fff;font-family:var(--edu-font)}
+.quiz-opt:hover{border-color:#e11d48}
+.quiz-opt.correct{background:#dcfce7;border-color:#22c55e}
+.quiz-opt.wrong{background:#fef2f2;border-color:#ef4444}
+.quiz-result{font-size:12px;font-weight:700;margin-top:4px;min-height:18px}
+
+.info{font-size:11px;line-height:1.8;color:#334155;background:#fff;border:1px solid #fecdd3;border-radius:8px;padding:8px 10px}
+.info b{color:#be123c}
+</style>
+</head>
+<body>
+<div class="tool">
+  <div class="toolbar"><h1>✖️ 乘法口诀表</h1><span>二年级上册 · 第四单元</span></div>
+  <div class="main">
+    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="panel">
+      <div class="show-box">
+        <div class="eq" id="show-eq">— × — = ?</div>
+        <div class="sub" id="show-sub">点击口诀表中的格子查看</div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">查看某一口诀</div>
+        <div class="row">
+          <button class="btn btn-default" onclick="showRow(2)">2的口诀</button>
+          <button class="btn btn-default" onclick="showRow(3)">3的口诀</button>
+          <button class="btn btn-default" onclick="showRow(4)">4的口诀</button>
+          <button class="btn btn-default" onclick="showRow(5)">5的口诀</button>
+          <button class="btn btn-default" onclick="showRow(6)">6的口诀</button>
+          <button class="btn btn-default" onclick="showRow(7)">7的口诀</button>
+          <button class="btn btn-default" onclick="showRow(8)">8的口诀</button>
+          <button class="btn btn-default" onclick="showRow(9)">9的口诀</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section">
+        <div class="label">乘法测验</div>
+        <div class="quiz-card" id="quiz-card"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="info">
+        <b>乘法口诀小技巧</b><br/>
+        ● 2的口诀：每次加2<br/>
+        ● 5的口诀：尾数5-0交替<br/>
+        ● 9的口诀：十位+个位=9<br/>
+        ● 背口诀要：一一得一，一二得二...
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var cv, ctx, _hoverI = 0, _hoverJ = 0, _highlightRow = 0;
+
+function init() {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  window.addEventListener('resize', resize);
+  cv.addEventListener('mousemove', onMouse);
+  cv.addEventListener('click', onClick);
+  cv.addEventListener('mouseleave', function() { _hoverI = 0; _hoverJ = 0; draw(); });
+  resize();
+  nextQuiz();
+}
+
+function resize() {
+  var r = cv.parentElement.getBoundingClientRect();
+  cv.width = r.width * devicePixelRatio;
+  cv.height = r.height * devicePixelRatio;
+  cv.style.width = r.width + 'px';
+  cv.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function onMouse(e) {
+  var rect = cv.getBoundingClientRect();
+  var mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  var cellW = (w - 50) / 10, cellH = (h - 50) / 9;
+  var ox = 45, oy = 35;
+
+  var i = Math.floor((my - oy) / cellH) + 1;
+  var j = Math.floor((mx - ox) / cellW);
+  if (i >= 1 && i <= 9 && j >= i && j <= 9) {
+    _hoverI = i; _hoverJ = j;
+  } else {
+    _hoverI = 0; _hoverJ = 0;
+  }
+  draw();
+}
+
+function onClick() {
+  if (_hoverI > 0 && _hoverJ > 0) {
+    document.getElementById('show-eq').textContent = _hoverI + ' × ' + _hoverJ + ' = ' + (_hoverI * _hoverJ);
+    document.getElementById('show-sub').textContent = _hoverI + ' × ' + _hoverJ + ' = ' + (_hoverI * _hoverJ);
+  }
+}
+
+function showRow(n) {
+  _highlightRow = _highlightRow === n ? 0 : n;
+  draw();
+}
+
+function draw() {
+  var w = cv.width / devicePixelRatio, h = cv.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  var cellW = (w - 50) / 10, cellH = (h - 50) / 9;
+  var ox = 45, oy = 35;
+
+  // Title
+  ctx.fillStyle = '#be123c';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('九九乘法口诀表', w / 2, 20);
+
+  // Column headers
+  ctx.fillStyle = '#64748b'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+  for (var j = 1; j <= 9; j++) {
+    ctx.fillText(j, ox + j * cellW + cellW / 2, oy - 4);
+  }
+
+  // Rows
+  var colors = ['#3b82f6','#8b5cf6','#ec4899','#ef4444','#f97316','#eab308','#22c55e','#14b8a6','#6366f1'];
+  for (var i = 1; i <= 9; i++) {
+    // Row header
+    ctx.fillStyle = colors[i - 1];
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(i, ox - 6, oy + i * cellH - cellH / 2 + 4);
+
+    for (var j = i; j <= 9; j++) {
+      var x = ox + j * cellW, y = oy + (i - 1) * cellH;
+      var val = i * j;
+      var isHover = _hoverI === i && _hoverJ === j;
+      var isRowHL = _highlightRow === i;
+      var isRelated = _hoverI > 0 && (i === _hoverI || j === _hoverJ || val === _hoverI * _hoverJ);
+
+      // Cell background
+      if (isHover) {
+        ctx.fillStyle = colors[i - 1] + '33';
+      } else if (isRowHL) {
+        ctx.fillStyle = colors[i - 1] + '22';
+      } else if (isRelated) {
+        ctx.fillStyle = colors[i - 1] + '11';
+      } else {
+        ctx.fillStyle = '#fff';
+      }
+      ctx.beginPath(); ctx.roundRect(x + 1, y + 1, cellW - 2, cellH - 2, 4); ctx.fill();
+
+      // Border
+      ctx.strokeStyle = isHover ? colors[i - 1] : '#e2e8f0';
+      ctx.lineWidth = isHover ? 2 : 0.5;
+      ctx.beginPath(); ctx.roundRect(x + 1, y + 1, cellW - 2, cellH - 2, 4); ctx.stroke();
+
+      // Text
+      ctx.fillStyle = isHover ? colors[i - 1] : '#334155';
+      ctx.font = (isHover ? 'bold ' : '') + Math.max(9, Math.min(cellW, cellH) * 0.22) + 'px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(val, x + cellW / 2, y + cellH / 2 + 3);
+    }
+  }
+
+  // Hover info
+  if (_hoverI > 0 && _hoverJ > 0) {
+    document.getElementById('show-eq').textContent = _hoverI + ' × ' + _hoverJ + ' = ' + (_hoverI * _hoverJ);
+    document.getElementById('show-sub').textContent = '口诀：' + _hoverI + (_hoverI * _hoverJ < 10 ? '得' : '') + (_hoverI * _hoverJ);
+  }
+}
+
+// ===== Quiz =====
+var _qi = 0, _score = 0;
+
+function nextQuiz() {
+  var a = Math.floor(Math.random() * 8) + 2;
+  var b = Math.floor(Math.random() * 8) + 2;
+  if (a > b) { var t = a; a = b; b = t; }
+  var ans = a * b;
+  var opts = [ans];
+  while (opts.length < 4) {
+    var w = ans + Math.floor(Math.random() * 11) - 5;
+    if (w > 0 && opts.indexOf(w) === -1) opts.push(w);
+  }
+  for (var i = opts.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = opts[i]; opts[i] = opts[j]; opts[j] = t;
+  }
+
+  var html = '<div class="quiz-q">' + a + ' × ' + b + ' = ?</div><div class="quiz-opts">';
+  opts.forEach(function(o) { html += '<button class="quiz-opt" onclick="answer(this,' + o + ',' + ans + ')">' + o + '</button>'; });
+  html += '</div><div class="quiz-result" id="qr"></div>';
+  document.getElementById('quiz-card').innerHTML = html;
+}
+
+function answer(el, val, ans) {
+  var opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(function(b) {
+    b.onclick = null; b.style.cursor = 'default';
+    if (parseInt(b.textContent) === ans) b.classList.add('correct');
+    if (parseInt(b.textContent) === val && val !== ans) b.classList.add('wrong');
+  });
+  var r = document.getElementById('qr');
+  if (val === ans) { r.textContent = '✓ 正确！'; r.style.color = '#16a34a'; _score++; }
+  else { r.textContent = '✗ 正确答案：' + ans; r.style.color = '#ef4444'; }
+  _qi++; setTimeout(nextQuiz, 1200);
+}
+
+init();
+</script>
+</body>
+</html>
