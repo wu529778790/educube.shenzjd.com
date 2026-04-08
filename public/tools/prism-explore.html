@@ -254,7 +254,7 @@ function buildUnfolded(n, h, r) {
 
   // Top face (polygon) - above the middle side face
   var topShape = new THREE.Shape();
-  var tv = getVertices(n, r * 0.8, 0);
+  var tv = getVertices(n, r, 0);
   for (var j = 0; j < n; j++) {
     if (j === 0) topShape.moveTo(tv[j].x, tv[j].z);
     else topShape.lineTo(tv[j].x, tv[j].z);

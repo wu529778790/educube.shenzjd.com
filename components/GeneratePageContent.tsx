@@ -214,7 +214,7 @@ export default function GeneratePageContent() {
               描述需求，自动生成交互式教具
             </span>
             {remaining !== null && (
-              <span className="ml-auto text-xs text-white/60 shrink-0">
+              <span className="ml-auto text-xs text-white/60 shrink-0" title="每个IP每小时限5次">
                 剩余 {remaining} 次
               </span>
             )}
@@ -375,7 +375,7 @@ export default function GeneratePageContent() {
                   onClick={handleReset}
                   className="px-4 py-2.5 rounded-xl font-semibold text-sm border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors"
                 >
-                  重新填写
+                  清空所有
                 </button>
               )}
               {savedTool && (
@@ -439,7 +439,7 @@ export default function GeneratePageContent() {
                   : "预览区域（生成后显示）"}
               </span>
             </div>
-            <div className="h-[600px]">
+            <div className="min-h-[300px] lg:min-h-[600px]">
               {previewHtml ? (
                 <PreviewIframe html={previewHtml} />
               ) : (

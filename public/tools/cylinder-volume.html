@@ -119,7 +119,6 @@ var _scene, _camera, _renderer, _controls;
 var _cylMesh, _cylEdges, _labelGroup, _expandGroup, _fillGroup;
 var _mode = 'solid';
 var _animId = null;
-var _fillProgress = 0;
 
 function init() {
   var canvas = document.getElementById('c3d');
@@ -422,7 +421,6 @@ function resetAll() {
   document.getElementById('sr').value = 2;
   document.getElementById('sh').value = 4;
   _mode = 'solid';
-  _fillProgress = 0;
   while (_fillGroup.children.length) _fillGroup.remove(_fillGroup.children[0]);
   while (_expandGroup.children.length) _expandGroup.remove(_expandGroup.children[0]);
   ['solid', 'wire', 'expand'].forEach(function (k) {

@@ -208,7 +208,7 @@ function buildFlat() {
       var pts2 = [];
       for (var j = 0; j <= 64; j++) {
         var a2 = Math.PI * 2 * j / 64;
-        pts2.push(new THREE.Vector2(0.6 + Math.cos(a2) * 0.6, Math.sin(a2) * 1.2));
+        pts2.push(new THREE.Vector2(0.6 + Math.cos(a2) * 0.6, Math.sin(a2) * 0.6));
       }
       shape = new THREE.Shape(pts2);
       break;

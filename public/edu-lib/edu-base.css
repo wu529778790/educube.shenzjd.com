@@ -19,7 +19,7 @@
   --edu-radius-sm: 8px;
   --edu-font: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC",
     sans-serif;
-  --edu-serif: "'Noto Serif SC', serif";
+  --edu-serif: 'Noto Serif SC', serif;
 }
 
 *,

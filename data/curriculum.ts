@@ -51,7 +51,7 @@ export function getPathLabel(
   subjectId: string,
 ): string {
   const gr = gradeId === "all" ? "全部年级" : (getGrade(gradeId)?.name ?? gradeId);
-  const sub = getSubject(subjectId)?.name ?? subjectId;
+  const sub = subjectId === "all" ? "全部学科" : (getSubject(subjectId)?.name ?? subjectId);
   return `${gr} · ${sub}`;
 }
 

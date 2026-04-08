@@ -124,15 +124,15 @@
           <div class="view-layout">
             <div class="view-cell">
               <div class="view-title vt-main">主视图</div>
-              <canvas id="cv-main" width="100" height="80"></canvas>
+              <canvas id="cv-main" width="160" height="120"></canvas>
             </div>
             <div class="view-cell">
               <div class="view-title vt-left">左视图</div>
-              <canvas id="cv-left" width="80" height="80"></canvas>
+              <canvas id="cv-left" width="120" height="120"></canvas>
             </div>
             <div class="view-cell">
               <div class="view-title vt-top">俯视图</div>
-              <canvas id="cv-top" width="100" height="80"></canvas>
+              <canvas id="cv-top" width="160" height="120"></canvas>
             </div>
             <div class="view-cell empty-cell"><div></div></div>
           </div>
@@ -359,7 +359,12 @@ function setShape(key) {
 }
 
 // ===== Quiz =====
-var _quizIdx = 0;
+var _quizIdx = -1;
+var _lastQuizIdx = -1;
+var _quizScore = 0;
+var _quizCount = 0;
+var _quizAnswered = false;
+var _askedSet = [];
 var _quizzes = [
   { q: '圆柱的主视图是什么形状？', opts: ['圆', '长方形', '三角形', '梯形'], ans: 1 },
   { q: '圆锥的俯视图是什么形状？', opts: ['三角形', '长方形', '圆（含圆心点）', '椭圆'], ans: 2 },
@@ -372,12 +377,48 @@ var _quizzes = [
 ];
 
 function nextQuiz() {
-  _quizIdx = Math.floor(Math.random() * _quizzes.length);
+  // Check if all questions have been asked
+  if (_askedSet.length >= _quizzes.length) {
+    var section = document.getElementById('quiz-section');
+    section.style.display = '';
+    var card = document.getElementById('quiz-card');
+    card.innerHTML =
+      '<div class="quiz-q">测验完成！</div>' +
+      '<div class="quiz-result" style="color:#f97316;font-size:16px;margin-top:8px;">全部 ' + _quizzes.length + ' 题已做完</div>' +
+      '<div style="font-size:14px;font-weight:700;margin-top:6px;color:#92400e;">得分: ' + _quizScore + ' / ' + _quizzes.length + '</div>' +
+      '<button class="quiz-opt" style="margin-top:10px;text-align:center;background:#fff7ed;border-color:#f97316;color:#92400e;cursor:pointer;" onclick="restartQuiz()">重新开始测验</button>';
+    return;
+  }
+
+  // Pick a random question that hasn't been asked yet and isn't the same as last
+  var available = [];
+  for (var i = 0; i < _quizzes.length; i++) {
+    if (_askedSet.indexOf(i) === -1 && i !== _lastQuizIdx) available.push(i);
+  }
+  if (available.length === 0) {
+    // Fallback: allow last question if it's the only one left
+    for (var j = 0; j < _quizzes.length; j++) {
+      if (_askedSet.indexOf(j) === -1) available.push(j);
+    }
+  }
+  var pick = available[Math.floor(Math.random() * available.length)];
+
+  _quizIdx = pick;
+  _lastQuizIdx = pick;
+  _askedSet.push(pick);
+  _quizCount = _askedSet.length;
+  _quizAnswered = false;
+
   var q = _quizzes[_quizIdx];
   var section = document.getElementById('quiz-section');
   section.style.display = '';
   var card = document.getElementById('quiz-card');
-  var html = '<div class="quiz-q">' + q.q + '</div><div class="quiz-opts">';
+  var html =
+    '<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:#92400e;margin-bottom:6px;">' +
+      '<span>第 ' + _quizCount + ' 题（共 ' + _quizzes.length + ' 题）</span>' +
+      '<span>得分: ' + _quizScore + '</span>' +
+    '</div>' +
+    '<div class="quiz-q">' + q.q + '</div><div class="quiz-opts">';
   q.opts.forEach(function(opt, i) {
     html += '<button class="quiz-opt" onclick="answerQuiz(' + i + ')">' + ['A','B','C','D'][i] + '. ' + opt + '</button>';
   });
@@ -386,6 +427,9 @@ function nextQuiz() {
 }
 
 function answerQuiz(idx) {
+  if (_quizAnswered) return;
+  _quizAnswered = true;
+
   var q = _quizzes[_quizIdx];
   var opts = document.querySelectorAll('.quiz-opt');
   opts.forEach(function(btn, i) {
@@ -396,16 +440,34 @@ function answerQuiz(idx) {
   });
   var result = document.getElementById('quiz-result');
   if (idx === q.ans) {
+    _quizScore++;
     result.textContent = '✓ 正确！';
     result.style.color = '#16a34a';
   } else {
     result.textContent = '✗ 错误，正确答案是 ' + ['A','B','C','D'][q.ans];
     result.style.color = '#ef4444';
   }
+  // Update score display
+  var scoreSpan = document.querySelector('#quiz-card > div:first-child > span:last-child');
+  if (scoreSpan) scoreSpan.textContent = '得分: ' + _quizScore;
+}
+
+function restartQuiz() {
+  _quizScore = 0;
+  _quizCount = 0;
+  _quizIdx = -1;
+  _lastQuizIdx = -1;
+  _askedSet = [];
+  nextQuiz();
 }
 
 function resetAll() {
   _currentShape = 'cube';
+  _quizScore = 0;
+  _quizCount = 0;
+  _quizIdx = -1;
+  _lastQuizIdx = -1;
+  _askedSet = [];
   setShape('cube');
 }
 

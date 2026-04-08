@@ -340,7 +340,7 @@ var SHAPES = {
       c1.userData = { explodeY: -2 };
       _shapeGroup.add(c1);
 
-      var c2Geo = new THREE.CylinderGeometry(r2, r1, h2, 32);
+      var c2Geo = new THREE.CylinderGeometry(r2, r2, h2, 32);
       var c2 = new THREE.Mesh(c2Geo, new THREE.MeshLambertMaterial({ color: parts[1].color, transparent: true, opacity: 0.7 }));
       c2.position.y = h1 + h2 / 2;
       c2.userData = { explodeY: 0 };

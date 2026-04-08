@@ -448,6 +448,8 @@ function buildUnfolded() {
 function getUnfoldedLinePoints(pathIdx, a, b, c, ox, oz) {
   // For each path, compute the unfolded straight line from A to B
   // The unfolding is always centered around the "front" face in our cross layout
+  // gap must match the value in buildUnfolded()
+  var gap = 0.08;
   var A, B;
   switch (pathIdx) {
     case 0: // front + right: A at front-bottom-left, B at right-top-right

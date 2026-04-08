@@ -13,7 +13,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 function sortToolsForDisplay(list: Tool[]): Tool[] {
   return [...list].sort((a, b) => {
     if (a.semester !== b.semester) return a.semester === "上册" ? -1 : 1;
-    return a.unitNum - b.unitNum;
+    if (a.unitNum !== b.unitNum) return a.unitNum - b.unitNum;
+    return a.id.localeCompare(b.id);
   });
 }
 
@@ -22,6 +23,7 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
   const searchParams = useSearchParams();
 
   const gradeId = searchParams.get("grade") ?? defaultCatalogPath.gradeId;
+  // 当前仅支持数学学科，其他学科即将上线
   const subjectId = defaultCatalogPath.subjectId;
   const [searchInput, setSearchInput] = useState(searchParams.get("q") ?? "");
   const searchQuery = useDeferredValue(searchInput);
@@ -98,6 +100,7 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
       />
 
       {/* ── 教具列表 ── */}
+      <h2 id="main-content" className="sr-only">教具列表</h2>
       <section id="tools" className="max-w-6xl mx-auto px-4 sm:px-6 pb-20 scroll-mt-20">
         {searchQuery.trim() && catalogTools.length > 0 && displayTools.length === 0 ? (
           <EmptyState>

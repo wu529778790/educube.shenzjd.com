@@ -73,6 +73,26 @@ export default function FilterPanel({
           共 {displayCount} 个教具
         </span>
       </div>
+
+      {/* ── 其他学科即将上线 ── */}
+      <div className="flex items-center gap-2 mt-2">
+        <span className="text-xs" style={{ color: "var(--edu-text-muted)" }}>
+          即将上线
+        </span>
+        {["语文", "英语", "科学", "道德与法治"].map((subject) => (
+          <span
+            key={subject}
+            className="inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-medium opacity-40 line-through select-none"
+            style={{
+              borderColor: "var(--edu-border)",
+              background: "var(--edu-surface)",
+              color: "var(--edu-text-muted)",
+            }}
+          >
+            {subject}
+          </span>
+        ))}
+      </div>
     </section>
   );
 }

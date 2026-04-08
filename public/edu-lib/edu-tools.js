@@ -206,6 +206,45 @@ function initClassroomTool() {
       }
     }
   }, true);
+
+  // Show first-use help overlay
+  showHelpOverlay();
+}
+
+function showHelpOverlay() {
+  if (localStorage.getItem('edu-help-seen')) return;
+
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;';
+
+  var modal = document.createElement('div');
+  modal.style.cssText = 'background:#fff;border-radius:16px;padding:20px;max-width:400px;width:90%;z-index:10000;font-size:16px;line-height:2;text-align:center;color:#334155;box-shadow:0 8px 32px rgba(0,0,0,0.2);';
+
+  var msg = document.createElement('div');
+  msg.innerHTML = '拖拽旋转3D模型 · 滚轮/双指缩放<br/>点击按钮切换模式<br/>点击📋按钮显示/隐藏控制面板';
+  msg.style.marginBottom = '16px';
+
+  var btn = document.createElement('button');
+  btn.textContent = '知道了';
+  btn.style.cssText = 'padding:10px 32px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;background:#3b82f6;color:#fff;font-family:var(--edu-font);';
+  btn.addEventListener('click', function () {
+    document.body.removeChild(overlay);
+    localStorage.setItem('edu-help-seen', '1');
+  });
+
+  function onEsc(e) {
+    if (e.key === 'Escape') {
+      if (overlay.parentNode) document.body.removeChild(overlay);
+      localStorage.setItem('edu-help-seen', '1');
+      document.removeEventListener('keydown', onEsc);
+    }
+  }
+  document.addEventListener('keydown', onEsc);
+
+  modal.appendChild(msg);
+  modal.appendChild(btn);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
 }
 
 function checkHasState() {

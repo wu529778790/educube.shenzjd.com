@@ -56,7 +56,8 @@ export default function ShareButton({ toolName }: ShareButtonProps) {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 text-xs text-slate-300 bg-slate-700 hover:bg-slate-600 hover:text-white px-3 py-1.5 rounded transition-colors"
+        className="flex items-center gap-1.5 text-xs hover:text-white px-3 py-1.5 rounded transition-colors"
+        style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)" }}
         title="分享教具"
         aria-label="分享教具"
       >

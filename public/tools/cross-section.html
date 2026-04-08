@@ -123,7 +123,8 @@
           ● 用一个平面去截几何体，截出的面叫做<strong>截面</strong><br/>
           ● 截面的形状由几何体的形状和切割角度决定<br/>
           ● 正方体可截出：三角形、正方形、长方形、梯形、五边形、六边形<br/>
-          ● 圆柱可截出：圆、椭圆、长方形
+          ● 圆柱可截出：圆、椭圆、长方形<br/>
+          <span style="color:#b45309">注：截面形状为示意图，实际截面可能略有差异</span>
         </div>
       </div>
     </div>
@@ -266,9 +267,6 @@ function doCut() {
     _sectionMesh = new THREE.Mesh(sectionGeo, sectionMat);
     var rot = parseFloat(document.getElementById('sl-rot').value) * Math.PI / 180;
     _sectionMesh.position.y = y + 1.2;
-    _sectionMesh.rotation.set(0, rot, angle * Math.PI / 180);
-    _sectionMesh.rotation.x = -Math.PI / 2;
-    // Fix rotation order
     _sectionMesh.rotation.set(-Math.PI / 2, rot, angle * Math.PI / 180);
     _shapeGroup.add(_sectionMesh);
 
@@ -401,7 +399,7 @@ function setShape(key) {
     pyramid: '四棱锥截面可以是：<strong>正方形、三角形、梯形</strong>',
   };
   var base = '<strong>截面知识</strong><br/>● 用一个平面去截几何体，截出的面叫做<strong>截面</strong><br/>● 截面形状由几何体和切割角度共同决定<br/>● ';
-  document.getElementById('info-box').innerHTML = base + (tips[key] || '');
+  document.getElementById('info-box').innerHTML = base + (tips[key] || '') + '<br/><span style="color:#b45309">注：截面形状为示意图，实际截面可能略有差异</span>';
 }
 
 function resetAll() {

@@ -61,14 +61,8 @@
       </div>
       <div class="control-panel">
         <div class="ctrl-section">
-          <div class="ctrl-label">展开方式</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-            <button class="pattern-btn active" id="pb-0" onclick="setPattern(0)">十字形</button>
-            <button class="pattern-btn" id="pb-1" onclick="setPattern(1)">L形</button>
-            <button class="pattern-btn" id="pb-2" onclick="setPattern(2)">Z形</button>
-            <button class="pattern-btn" id="pb-3" onclick="setPattern(3)">T形</button>
-            <button class="pattern-btn" id="pb-4" onclick="setPattern(4)">阶梯形</button>
-            <button class="pattern-btn" id="pb-5" onclick="setPattern(5)">一字形</button>
+          <div class="ctrl-label">展开方式（共 11 种）</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px" id="pattern-btns">
           </div>
         </div>
         <div class="divider"></div>
@@ -96,7 +90,7 @@
         <div class="info-box">
           <strong>正方体展开</strong><br/>
           ● 正方体有 <strong>11</strong> 种展开方式<br/>
-          ● 每个面是正方形<br/>
+          ● 分为四类：141型(6种)、231型(3种)、222型(1种)、33型(1种)<br/>
           ● 展开后 6 个面相连不断开<br/>
           ● 相对的面不相邻<br/>
           ● 拖动滑块可手动控制
@@ -114,60 +108,101 @@ var _animT = 0;
 var _currentPattern = 0;
 
 var PATTERNS = [
-  // 十字形
-  [
-    { col:1, row:1, label:'底', color:0x4f8cff },
-    { col:1, row:2, label:'前', color:0x38c6a0 },
-    { col:1, row:0, label:'后', color:0xf97316 },
-    { col:0, row:1, label:'左', color:0xa78bfa },
-    { col:2, row:1, label:'右', color:0xfbbf24 },
-    { col:1, row:3, label:'顶', color:0xf472b6 },
-  ],
-  // L形
-  [
-    { col:0, row:0, label:'底', color:0x4f8cff },
-    { col:1, row:0, label:'前', color:0x38c6a0 },
-    { col:2, row:0, label:'后', color:0xf97316 },
-    { col:3, row:0, label:'左', color:0xa78bfa },
-    { col:3, row:1, label:'右', color:0xfbbf24 },
-    { col:3, row:2, label:'顶', color:0xf472b6 },
-  ],
-  // Z形
-  [
-    { col:0, row:0, label:'底', color:0x4f8cff },
-    { col:1, row:0, label:'前', color:0x38c6a0 },
-    { col:2, row:0, label:'后', color:0xf97316 },
-    { col:2, row:1, label:'左', color:0xa78bfa },
-    { col:3, row:1, label:'右', color:0xfbbf24 },
-    { col:1, row:1, label:'顶', color:0xf472b6 },
-  ],
-  // T形
-  [
+  // 141型 (6种) — 一排4个面 + 2个附加面
+  { name: '141-十字', faces: [
     { col:1, row:0, label:'底', color:0x4f8cff },
-    { col:1, row:1, label:'前', color:0x38c6a0 },
-    { col:0, row:1, label:'后', color:0xf97316 },
+    { col:0, row:1, label:'前', color:0x38c6a0 },
+    { col:1, row:1, label:'后', color:0xf97316 },
     { col:2, row:1, label:'左', color:0xa78bfa },
     { col:3, row:1, label:'右', color:0xfbbf24 },
     { col:1, row:2, label:'顶', color:0xf472b6 },
-  ],
-  // 阶梯形
-  [
+  ]},
+  { name: '141-型2', faces: [
+    { col:1, row:0, label:'底', color:0x4f8cff },
+    { col:0, row:1, label:'前', color:0x38c6a0 },
+    { col:1, row:1, label:'后', color:0xf97316 },
+    { col:2, row:1, label:'左', color:0xa78bfa },
+    { col:3, row:1, label:'右', color:0xfbbf24 },
+    { col:2, row:2, label:'顶', color:0xf472b6 },
+  ]},
+  { name: '141-型3', faces: [
+    { col:2, row:0, label:'底', color:0x4f8cff },
+    { col:0, row:1, label:'前', color:0x38c6a0 },
+    { col:1, row:1, label:'后', color:0xf97316 },
+    { col:2, row:1, label:'左', color:0xa78bfa },
+    { col:3, row:1, label:'右', color:0xfbbf24 },
+    { col:1, row:2, label:'顶', color:0xf472b6 },
+  ]},
+  { name: '141-型4', faces: [
+    { col:0, row:0, label:'底', color:0x4f8cff },
+    { col:1, row:0, label:'前', color:0x38c6a0 },
+    { col:0, row:1, label:'后', color:0xf97316 },
+    { col:1, row:1, label:'左', color:0xa78bfa },
+    { col:2, row:1, label:'右', color:0xfbbf24 },
+    { col:3, row:1, label:'顶', color:0xf472b6 },
+  ]},
+  { name: '141-型5', faces: [
+    { col:2, row:0, label:'底', color:0x4f8cff },
+    { col:3, row:0, label:'前', color:0x38c6a0 },
+    { col:0, row:1, label:'后', color:0xf97316 },
+    { col:1, row:1, label:'左', color:0xa78bfa },
+    { col:2, row:1, label:'右', color:0xfbbf24 },
+    { col:3, row:1, label:'顶', color:0xf472b6 },
+  ]},
+  { name: '141-型6', faces: [
+    { col:1, row:0, label:'底', color:0x4f8cff },
+    { col:2, row:0, label:'前', color:0x38c6a0 },
+    { col:0, row:1, label:'后', color:0xf97316 },
+    { col:1, row:1, label:'左', color:0xa78bfa },
+    { col:2, row:1, label:'右', color:0xfbbf24 },
+    { col:3, row:1, label:'顶', color:0xf472b6 },
+  ]},
+
+  // 231型 (3种) — 2+3+1 分布
+  { name: '231-型1', faces: [
+    { col:0, row:0, label:'底', color:0x4f8cff },
+    { col:1, row:0, label:'前', color:0x38c6a0 },
+    { col:0, row:1, label:'后', color:0xf97316 },
+    { col:1, row:1, label:'左', color:0xa78bfa },
+    { col:2, row:1, label:'右', color:0xfbbf24 },
+    { col:1, row:2, label:'顶', color:0xf472b6 },
+  ]},
+  { name: '231-型2', faces: [
+    { col:1, row:0, label:'底', color:0x4f8cff },
+    { col:2, row:0, label:'前', color:0x38c6a0 },
+    { col:0, row:1, label:'后', color:0xf97316 },
+    { col:1, row:1, label:'左', color:0xa78bfa },
+    { col:2, row:1, label:'右', color:0xfbbf24 },
+    { col:1, row:2, label:'顶', color:0xf472b6 },
+  ]},
+  { name: '231-型3', faces: [
+    { col:0, row:0, label:'底', color:0x4f8cff },
+    { col:1, row:0, label:'前', color:0x38c6a0 },
+    { col:0, row:1, label:'后', color:0xf97316 },
+    { col:1, row:1, label:'左', color:0xa78bfa },
+    { col:2, row:1, label:'右', color:0xfbbf24 },
+    { col:0, row:2, label:'顶', color:0xf472b6 },
+  ]},
+
+  // 222型 (1种) — 三级台阶
+  { name: '222型', faces: [
     { col:0, row:0, label:'底', color:0x4f8cff },
     { col:1, row:0, label:'前', color:0x38c6a0 },
     { col:1, row:1, label:'后', color:0xf97316 },
     { col:2, row:1, label:'左', color:0xa78bfa },
     { col:2, row:2, label:'右', color:0xfbbf24 },
     { col:3, row:2, label:'顶', color:0xf472b6 },
-  ],
-  // 一字形
-  [
+  ]},
+
+  // 33型 (1种) — 两行各三个
+  { name: '33型', faces: [
     { col:0, row:0, label:'底', color:0x4f8cff },
     { col:1, row:0, label:'前', color:0x38c6a0 },
     { col:2, row:0, label:'后', color:0xf97316 },
-    { col:3, row:0, label:'左', color:0xa78bfa },
-    { col:4, row:0, label:'右', color:0xfbbf24 },
-    { col:5, row:0, label:'顶', color:0xf472b6 },
-  ],
+    { col:1, row:1, label:'左', color:0xa78bfa },
+    { col:2, row:1, label:'右', color:0xfbbf24 },
+    { col:3, row:1, label:'顶', color:0xf472b6 },
+  ]},
 ];
 
 var FACE_SIZE = 1.5;
@@ -180,7 +215,21 @@ function init() {
   Edu3D.addGrid(_scene, 12, 12);
 
   createFaces();
+  buildPatternBtns();
   Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+
+function buildPatternBtns() {
+  var container = document.getElementById('pattern-btns');
+  container.innerHTML = '';
+  PATTERNS.forEach(function(p, i) {
+    var btn = document.createElement('button');
+    btn.className = 'pattern-btn' + (i === _currentPattern ? ' active' : '');
+    btn.id = 'pb-' + i;
+    btn.textContent = p.name;
+    btn.onclick = (function(idx) { return function() { setPattern(idx); }; })(i);
+    container.appendChild(btn);
+  });
 }
 
 function createFaces() {
@@ -188,7 +237,7 @@ function createFaces() {
   _faceMeshes = [];
 
   var pattern = PATTERNS[_currentPattern];
-  pattern.forEach(function (f, i) {
+  pattern.faces.forEach(function (f, i) {
     var geo = new THREE.PlaneGeometry(FACE_SIZE, FACE_SIZE);
     var mat = new THREE.MeshLambertMaterial({ color: f.color, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
     var mesh = new THREE.Mesh(geo, mat);
@@ -316,10 +365,10 @@ function playAll() {
 
 function setPattern(i) {
   _currentPattern = i;
-  for (var j = 0; j < 6; j++) {
+  PATTERNS.forEach(function(_, j) {
     var el = document.getElementById('pb-' + j);
     if (el) el.classList.toggle('active', j === i);
-  }
+  });
   _animT = 0;
   _isUnfolded = false;
   document.getElementById('btn-toggle').textContent = '▶ 展开';

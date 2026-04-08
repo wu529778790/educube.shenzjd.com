@@ -6,6 +6,7 @@ import Link from "next/link";
 import BackArrow from "@/components/BackArrow";
 import ShareButton from "@/components/ShareButton";
 import ToolIframe from "@/components/ToolIframe";
+import FullscreenButton from "@/components/FullscreenButton";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -67,8 +68,8 @@ export default async function ToolPage({ params }: PageProps) {
       <header
         className="flex-shrink-0 flex items-center justify-between px-4 h-12 border-b gap-3"
         style={{
-          background: "var(--edu-primary)",
-          borderColor: "rgba(255,255,255,0.1)",
+          background: "var(--edu-header-bg)",
+          borderColor: "var(--edu-header-border)",
         }}
       >
         {/* 返回 */}
@@ -100,14 +101,7 @@ export default async function ToolPage({ params }: PageProps) {
         {/* 右侧：操作按钮 */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <ShareButton toolName={tool.name} />
-          <span className="hidden md:inline-flex items-center gap-1 text-xs text-white/60 px-2 py-1 rounded-md"
-            style={{ background: "rgba(255,255,255,0.08)" }}
-          >
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            按 F11 全屏
-          </span>
+          <FullscreenButton />
           <a
             href={iframeSrc}
             target="_blank"

@@ -116,15 +116,15 @@
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
             <div class="view-card">
               <div class="view-title" style="color:#3b82f6;">正面</div>
-              <canvas class="view-canvas" id="cv-front" width="80" height="60"></canvas>
+              <canvas class="view-canvas" id="cv-front" width="120" height="90"></canvas>
             </div>
             <div class="view-card">
               <div class="view-title" style="color:#22c55e;">侧面</div>
-              <canvas class="view-canvas" id="cv-side" width="80" height="60"></canvas>
+              <canvas class="view-canvas" id="cv-side" width="120" height="90"></canvas>
             </div>
             <div class="view-card">
               <div class="view-title" style="color:#f97316;">上面</div>
-              <canvas class="view-canvas" id="cv-top" width="80" height="60"></canvas>
+              <canvas class="view-canvas" id="cv-top" width="120" height="90"></canvas>
             </div>
           </div>
         </div>
@@ -217,12 +217,6 @@ function buildBlocks() {
     for (var c = 0; c < cols; c++) {
       var h = grid[r][c];
       for (var l = 0; l < h; l++) {
-        // 判断是否被遮挡（上面有积木遮挡）
-        var isHidden = false;
-        if (l < h - 1) {
-          // 上方有积木，只有 reveal 时用不同颜色
-        }
-
         var color = COLORS[l % COLORS.length];
         var mat = new THREE.MeshLambertMaterial({ color: color, transparent: true, opacity: 0.85 });
         var mesh = new THREE.Mesh(blockGeo, mat);
@@ -234,9 +228,13 @@ function buildBlocks() {
       }
 
       // 隐藏积木（被上方遮挡的）- 用透明黄色显示
-      if (_showHidden) {
+      if (_showHidden && h > 1) {
         for (var l2 = 0; l2 < h - 1; l2++) {
-          // 已经在上面添加了，只是颜色不同
+          var blockIdx = _blockGroup.children.length - h + l2;
+          if (_blockGroup.children[blockIdx]) {
+            _blockGroup.children[blockIdx].material.color.setHex(0xfef3c7);
+            _blockGroup.children[blockIdx].material.opacity = 0.45;
+          }
         }
       }
     }

@@ -290,10 +290,10 @@ function buildWater(ml) {
 function buildRuler() {
   var container = document.getElementById('ruler');
   container.innerHTML = '';
-  for (var ml = 0; ml <= 500; ml += 50) {
+  for (var ml = 0; ml <= 1000; ml += 100) {
     var tick = document.createElement('div');
     tick.className = 'ruler-tick';
-    var isMajor = ml % 100 === 0;
+    var isMajor = ml % 200 === 0;
     tick.innerHTML = '<div class="bar ' + (isMajor ? 'major' : 'minor') + '"></div>' +
       (isMajor ? '<span>' + ml + '</span>' : '');
     container.appendChild(tick);
@@ -333,9 +333,9 @@ function dropObject() {
   document.getElementById('btn-drop').disabled = true;
 
   var def = OBJECTS[_currentObj];
-  var waterH = _initialWater * ML_PER_UNIT;
   var objRadius = def.radius || (def.size || 0) / 2;
-  var targetY = waterH + objRadius * 0.3; // partially submerged
+  var objHalfH = def.geoType === 'box' ? def.size / 2 : (def.geoType === 'cylinder' ? def.height / 2 : objRadius);
+  var targetY = objHalfH; // object sinks to tank bottom
 
   // Animate object dropping
   var startY = _objMesh.position.y;
@@ -351,6 +351,10 @@ function dropObject() {
     if (p < 1) {
       _animId = requestAnimationFrame(animDrop);
     } else {
+      // Show apple density note
+      if (_currentObj === 'apple') {
+        showAppleNote();
+      }
       // Now animate water rising
       var newWater = _initialWater + def.volume;
       animateWaterRise(newWater);
@@ -432,6 +436,25 @@ function resetAll() {
   document.getElementById('water-val').textContent = _initialWater;
   document.getElementById('result-section').style.display = 'none';
   setObj('stone');
+}
+
+function showAppleNote() {
+  var canvasArea = document.querySelector('.canvas-area');
+  if (!canvasArea) return;
+  // Remove any existing note first
+  var old = canvasArea.querySelector('.apple-note');
+  if (old) old.parentNode.removeChild(old);
+  var note = document.createElement('div');
+  note.className = 'apple-note';
+  note.textContent = '苹果密度小于水，实际会浮起。教学中需按压使其完全浸没';
+  note.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fef3c7;color:#92400e;padding:14px 20px;border-radius:10px;font-size:14px;font-weight:600;line-height:1.6;z-index:100;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.15);transition:opacity 1s ease;pointer-events:none;max-width:80%;';
+  canvasArea.appendChild(note);
+  setTimeout(function () {
+    note.style.opacity = '0';
+    setTimeout(function () {
+      if (note.parentNode) note.parentNode.removeChild(note);
+    }, 1000);
+  }, 5000);
 }
 
 init();
