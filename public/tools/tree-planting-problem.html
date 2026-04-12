@@ -6,16 +6,25 @@
   <title>植树问题 — 教立方</title>
   <!-- play-ref:jiaohukejian:0VW1RV3 | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <script src="../edu-lib/three.min.js"></script>
+  <script src="../edu-lib/OrbitControls.js"></script>
+  <script src="../edu-lib/edu-3d.js"></script>
   <style>
     .main-layout { display: grid; grid-template-columns: 1fr minmax(280px, 300px); height: 100%; }
-    .canvas-wrap { background: #f0fdf4; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 10px; }
-    #cvs { background: #fff; border-radius: var(--edu-radius); border: 1px solid var(--edu-border); max-width: 100%; }
-    .panel { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; }
-    .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
-    .tab { flex: 1; padding: 8px; font-size: 12px; font-weight: 700; border-radius: 8px; border: 2px solid var(--edu-border); cursor: pointer; background: #f8fafc; }
-    .tab.active { border-color: var(--edu-primary); color: var(--edu-primary); }
+    .canvas-area { position: relative; background: linear-gradient(180deg, #ecfdf5 0%, #d1fae5 45%, #bbf7d0 100%); overflow: hidden; min-height: 0; }
+    .canvas-area canvas { width: 100%; height: 100%; display: block; }
+    .orbit-hint {
+      position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+      background: rgba(255,255,255,.9); padding: 6px 14px; border-radius: 20px;
+      font-size: 11px; color: #64748b; pointer-events: none; border: 1px solid #e2e8f0;
+    }
+    .panel { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; display: flex; flex-direction: column; gap: 10px; }
+    .tabs { display: flex; gap: 6px; }
+    .tab { flex: 1; padding: 8px; font-size: 12px; font-weight: 700; border-radius: 8px; border: 2px solid var(--edu-border); cursor: pointer; background: #f8fafc; font-family: var(--edu-font); }
+    .tab.active { border-color: var(--edu-primary); color: var(--edu-primary); background: #eff6ff; }
     .slider-block label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
-    .out { font-weight: 800; margin-top: 10px; font-size: 14px; color: var(--edu-primary); }
+    .out { font-weight: 800; font-size: 14px; color: var(--edu-primary); line-height: 1.55; padding: 10px; background: #f0fdf4; border-radius: 10px; border: 1px solid #bbf7d0; }
+    .hint { font-size: 11px; color: var(--edu-text-muted); line-height: 1.65; }
   </style>
 </head>
 <body>
@@ -23,75 +32,186 @@
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">🌳 植树问题</span>
-      <span class="edu-toolbar-subtitle">线段 · 环形</span>
+      <span class="edu-toolbar-subtitle">线段 · 环形 · 与算式同步的 3D 示意</span>
     </div>
   </div>
   <div class="edu-content">
     <div class="main-layout">
-      <div class="canvas-wrap"><canvas id="cvs" width="500" height="220"></canvas></div>
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽环视 · 滚轮缩放 · 右侧调总长与间隔</div>
+      </div>
       <div class="panel">
         <div class="tabs">
           <button type="button" class="tab active" id="t1">线段两端都栽</button>
           <button type="button" class="tab" id="t2">环形</button>
         </div>
-        <div class="slider-block"><label><span>总长 m</span><span id="lv">20</span></label><input type="range" id="len" min="6" max="40" value="20" /></div>
+        <div class="slider-block"><label><span>总长 m（线段为路长；环形为周长）</span><span id="lv">20</span></label><input type="range" id="len" min="6" max="40" value="20" /></div>
         <div class="slider-block"><label><span>间隔 d</span><span id="dv">4</span></label><input type="range" id="d" min="2" max="8" value="4" /></div>
         <div class="out" id="out"></div>
+        <p class="hint">线段：棵数 = ⌊m÷d⌋ + 1。环形：棵数 = ⌊m÷d⌋。3D 中路长按约 0.12 倍缩放便于一眼看清株距。</p>
       </div>
     </div>
   </div>
 </div>
 <script>
 (function () {
-  const c = document.getElementById("cvs"), x = c.getContext("2d");
-  let mode = "line";
-  const len = document.getElementById("len"), d = document.getElementById("d"), out = document.getElementById("out");
-  function draw() {
-    const L = Number(len.value), D = Number(d.value);
-    document.getElementById("lv").textContent = String(L);
-    document.getElementById("dv").textContent = String(D);
-    c.width = c.parentElement.clientWidth - 12;
-    c.height = 200;
-    x.clearRect(0, 0, c.width, c.height);
-    let trees;
-    if (mode === "line") {
-      trees = Math.floor(L / D) + 1;
-      const px = (c.width - 40) / L;
-      x.strokeStyle = "#64748b";
-      x.lineWidth = 3;
-      x.beginPath();
-      x.moveTo(20, 100);
-      x.lineTo(20 + L * px, 100);
-      x.stroke();
-      for (let i = 0; i < trees; i++) {
-        const pxv = 20 + i * D * px;
-        x.fillStyle = "#16a34a";
-        x.font = "18px sans-serif";
-        x.fillText("🌲", pxv - 10, 88);
-      }
-      out.textContent = "棵数 = ⌊m/d⌋+1 = " + trees + "（两端都栽）";
-    } else {
-      trees = Math.floor(L / D);
-      const R = 70;
-      x.strokeStyle = "#64748b";
-      x.lineWidth = 3;
-      x.beginPath();
-      x.arc(c.width / 2, 100, R, 0, Math.PI * 2);
-      x.stroke();
-      for (let i = 0; i < trees; i++) {
-        const ang = (i / trees) * Math.PI * 2 - Math.PI / 2;
-        const cx = c.width / 2 + R * Math.cos(ang);
-        const cy = 100 + R * Math.sin(ang);
-        x.fillText("🌲", cx - 10, cy + 6);
-      }
-      out.textContent = "棵数 = ⌊m/d⌋ = " + trees + "（封闭环形）";
+  var mode = "line";
+  var SCALE = 0.12;
+
+  var _scene, _camera, _renderer, _controls;
+  var _world = new THREE.Group();
+  var _treeGroup = new THREE.Group();
+
+  function makeTreeMesh() {
+    var trunkMat = new THREE.MeshLambertMaterial({ color: 0x78350f });
+    var leafMat = new THREE.MeshLambertMaterial({ color: 0x22c55e });
+    var g = new THREE.Group();
+    var trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.09, 0.22, 8), trunkMat);
+    trunk.position.y = 0.11;
+    var top = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.4, 10), leafMat);
+    top.position.y = 0.38;
+    g.add(trunk);
+    g.add(top);
+    trunk.castShadow = true;
+    top.castShadow = true;
+    return g;
+  }
+
+  function clearTrees() {
+    while (_treeGroup.children.length) {
+      var ch = _treeGroup.children[0];
+      _treeGroup.remove(ch);
+      ch.traverse(function (o) {
+        if (o.geometry) o.geometry.dispose();
+        if (o.material) o.material.dispose();
+      });
     }
   }
-  document.getElementById("t1").addEventListener("click", function () { mode = "line"; document.getElementById("t1").classList.add("active"); document.getElementById("t2").classList.remove("active"); draw(); });
-  document.getElementById("t2").addEventListener("click", function () { mode = "ring"; document.getElementById("t2").classList.add("active"); document.getElementById("t1").classList.remove("active"); draw(); });
-  len.addEventListener("input", draw); d.addEventListener("input", draw);
-  window.addEventListener("resize", draw);
-  draw();
+
+  function buildLineScene(L, D, treeCount) {
+    clearTrees();
+    var roadLen = L * SCALE;
+    var road = new THREE.Mesh(
+      new THREE.BoxGeometry(roadLen, 0.06, 0.45),
+      new THREE.MeshLambertMaterial({ color: 0x78716c })
+    );
+    road.position.y = 0.03;
+    road.receiveShadow = true;
+    _treeGroup.add(road);
+
+    var grass = new THREE.Mesh(
+      new THREE.PlaneGeometry(roadLen + 2, 3),
+      new THREE.MeshLambertMaterial({ color: 0xbbf7d0, transparent: true, opacity: 0.85 })
+    );
+    grass.rotation.x = -Math.PI / 2;
+    grass.position.y = 0.01;
+    grass.receiveShadow = true;
+    _treeGroup.add(grass);
+
+    var x0 = -roadLen / 2;
+    var step = D * SCALE;
+    for (var i = 0; i < treeCount; i++) {
+      var t = makeTreeMesh();
+      t.position.set(x0 + i * step, 0, 0);
+      _treeGroup.add(t);
+    }
+  }
+
+  function buildRingScene(L, D, treeCount) {
+    clearTrees();
+    var R = (L * SCALE) / (Math.PI * 2);
+    if (R < 0.35) R = 0.35;
+
+    var track = new THREE.Mesh(
+      new THREE.TorusGeometry(R, 0.05, 8, 64),
+      new THREE.MeshLambertMaterial({ color: 0x78716c })
+    );
+    track.rotation.x = Math.PI / 2;
+    track.position.y = 0.05;
+    track.receiveShadow = true;
+    _treeGroup.add(track);
+
+    var pad = new THREE.Mesh(
+      new THREE.CircleGeometry(R + 0.35, 48),
+      new THREE.MeshLambertMaterial({ color: 0xd9f99d, transparent: true, opacity: 0.55 })
+    );
+    pad.rotation.x = -Math.PI / 2;
+    pad.position.y = 0.02;
+    pad.receiveShadow = true;
+    _treeGroup.add(pad);
+
+    if (treeCount <= 0) return;
+    for (var j = 0; j < treeCount; j++) {
+      var ang = (j / treeCount) * Math.PI * 2 - Math.PI / 2;
+      var tr = makeTreeMesh();
+      tr.position.set(R * Math.cos(ang), 0, R * Math.sin(ang));
+      _treeGroup.add(tr);
+    }
+  }
+
+  function sync3D() {
+    var L = Number(document.getElementById("len").value);
+    var D = Number(document.getElementById("d").value);
+    document.getElementById("lv").textContent = String(L);
+    document.getElementById("dv").textContent = String(D);
+
+    var trees;
+    var outEl = document.getElementById("out");
+    if (mode === "line") {
+      trees = Math.floor(L / D) + 1;
+      buildLineScene(L, D, trees);
+      outEl.textContent = "棵数 = ⌊" + L + "÷" + D + "⌋ + 1 = " + trees + "（两端都栽）";
+    } else {
+      trees = Math.floor(L / D);
+      buildRingScene(L, D, trees);
+      outEl.textContent = "棵数 = ⌊" + L + "÷" + D + "⌋ = " + trees + "（封闭环形，首尾同一棵不重计）";
+    }
+  }
+
+  function init() {
+    var canvas = document.getElementById("c3d");
+    var r = Edu3D.createScene(canvas, { bg: 0xe8fce8, camX: 5.5, camY: 4.2, camZ: 5.5 });
+    _scene = r.scene;
+    _camera = r.camera;
+    _renderer = r.renderer;
+    _controls = r.controls;
+    Edu3D.addLights(_scene);
+    Edu3D.addGrid(_scene, 14, 14);
+    _scene.add(_world);
+    _world.add(_treeGroup);
+    sync3D();
+    Edu3D.startLoop(_scene, _camera, _renderer, _controls, function onFrame() {
+      _world.rotation.y += 0.0015;
+    });
+  }
+
+  document.getElementById("t1").addEventListener("click", function () {
+    mode = "line";
+    document.getElementById("t1").classList.add("active");
+    document.getElementById("t2").classList.remove("active");
+    sync3D();
+  });
+  document.getElementById("t2").addEventListener("click", function () {
+    mode = "ring";
+    document.getElementById("t2").classList.add("active");
+    document.getElementById("t1").classList.remove("active");
+    sync3D();
+  });
+  document.getElementById("len").addEventListener("input", sync3D);
+  document.getElementById("d").addEventListener("input", sync3D);
+  window.addEventListener("resize", function () {
+    var canvas = document.getElementById("c3d");
+    if (!canvas || !_renderer || !_camera) return;
+    var w = canvas.parentElement.clientWidth;
+    var h = canvas.parentElement.clientHeight;
+    if (w < 10 || h < 10) return;
+    _renderer.setSize(w, h, false);
+    _camera.aspect = w / h;
+    _camera.updateProjectionMatrix();
+  });
+
+  init();
 })();
 </script>
 </body>
