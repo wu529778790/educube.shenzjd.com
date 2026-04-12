@@ -165,7 +165,7 @@ function init() {
 
 function clearGroup() { while (_group.children.length) _group.remove(_group.children[0]); }
 
-/** 与 buildFlat / buildRevolved 尺寸一致的 Lathe 截面（x=离旋转轴距离，y=沿轴高度） */
+/** 与 buildFlat / 最终 Lathe 旋转体尺寸一致的截面（x=离旋转轴距离，y=沿轴高度） */
 function getLatheProfile(shapeKey) {
   switch (shapeKey) {
     case 'rect':
@@ -309,7 +309,7 @@ function playRevolve() {
       color: def.resultColor,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.82,
+      opacity: 0.78,
     });
     var sweepMesh = new THREE.Mesh(new THREE.BufferGeometry(), sweepMat);
     sweepMesh.position.y = 0.5;
@@ -334,11 +334,8 @@ function playRevolve() {
       if (p < 1) {
         _animId = requestAnimationFrame(phase1);
       } else {
-        _group.remove(sweepMesh);
-        sweepMesh.geometry.dispose();
-        sweepMat.dispose();
-        clearGroup();
-        buildRevolved();
+        /** 末帧已是完整 Lathe，勿再换成 Cylinder/Sphere（位置 y=1.5 与细分不同会闪一下） */
+        finalizeLatheAsRevolvedSolid(sweepMesh);
         _animId = null;
         document.getElementById('btn-play').disabled = false;
       }
@@ -348,43 +345,29 @@ function playRevolve() {
   });
 }
 
-function buildRevolved() {
+/** 在完整扫掠网格上加棱线、结果标签与长旋转轴；不替换几何体，避免与末帧 Lathe 不连贯 */
+function finalizeLatheAsRevolvedSolid(sweepMesh) {
   var def = SHAPES[_currentShape];
-  /** 直接为最终透明度，避免「先透明再显现」被看成柱体渐出 */
-  var mat = new THREE.MeshLambertMaterial({ color: def.resultColor, transparent: true, opacity: 0.78 });
+  sweepMesh.userData.isRevolvedSolid = true;
+  delete sweepMesh.userData.isSweep;
+  sweepMesh.castShadow = true;
+
   var edgeMat = new THREE.LineBasicMaterial({ color: 0x1e293b, transparent: true, opacity: 0.42 });
-
-  var geo;
-  switch (_currentShape) {
-    case 'rect':
-      geo = new THREE.CylinderGeometry(1.2, 1.2, 2, 48);
-      break;
-    case 'rtriangle':
-      geo = new THREE.ConeGeometry(1.2, 2, 48);
-      break;
-    case 'semicircle':
-      geo = new THREE.SphereGeometry(1.2, 48, 48);
-      break;
-    case 'trapezoid':
-      geo = new THREE.CylinderGeometry(0.8, 1.2, 2, 48);
-      break;
-    case 'circle':
-      geo = new THREE.SphereGeometry(1.2, 48, 48);
-      break;
-  }
-
-  var mesh = new THREE.Mesh(geo, mat);
-  mesh.userData.isRevolvedSolid = true;
-  mesh.position.y = 1.5;
-  mesh.castShadow = true;
-  mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 15), edgeMat));
-  _group.add(mesh);
+  var edges = new THREE.LineSegments(new THREE.EdgesGeometry(sweepMesh.geometry, 15), edgeMat);
+  sweepMesh.add(edges);
 
   var lbl = Edu3D.textSprite(def.result, { color: '#334155', scale: 0.5 });
   lbl.position.set(0, 3.5, 0);
   lbl.material.transparent = true;
   lbl.material.opacity = 1;
   _group.add(lbl);
+
+  var ch = _group.children.slice();
+  for (var i = 0; i < ch.length; i++) {
+    if (ch[i] !== sweepMesh && ch[i] !== lbl) {
+      _group.remove(ch[i]);
+    }
+  }
 
   var axisGeo = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 4, 0)
