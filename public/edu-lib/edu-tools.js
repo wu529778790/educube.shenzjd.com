@@ -196,28 +196,6 @@ function initClassroomTool() {
     panel.appendChild(closeBtn);
   }
 
-  // Fullscreen button in toolbar
-  var toolbar = document.querySelector(".edu-toolbar-actions");
-  if (toolbar && !toolbar.querySelector(".fullscreen-btn")) {
-    var fsBtn = document.createElement("button");
-    fsBtn.className = "edu-btn edu-btn-outline fullscreen-btn";
-    fsBtn.innerHTML = "⛶ 全屏";
-    fsBtn.title = "切换全屏模式";
-    fsBtn.addEventListener("click", function () {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(function () {});
-        fsBtn.innerHTML = "✕ 退出全屏";
-      } else {
-        document.exitFullscreen();
-        fsBtn.innerHTML = "⛶ 全屏";
-      }
-    });
-    document.addEventListener("fullscreenchange", function () {
-      fsBtn.innerHTML = document.fullscreenElement ? "✕ 退出全屏" : "⛶ 全屏";
-    });
-    toolbar.appendChild(fsBtn);
-  }
-
   // Intercept reset buttons to add confirmation
   document.addEventListener("click", function (e) {
     var btn = e.target.closest(".edu-btn, .unfold-btn, .reset-btn");
