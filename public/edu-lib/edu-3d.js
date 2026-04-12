@@ -130,24 +130,33 @@ var Edu3D = (function () {
     loop();
   }
 
-  /** 3D 文字精灵 */
+  /** 3D 文字精灵（画布宽度随 measureText 增大，避免「直角三角形」等长标签被裁切） */
   function textSprite(text, opts) {
     opts = opts || {};
     var canvas = document.createElement("canvas");
-    var size = opts.size || 128;
-    canvas.width = size;
-    canvas.height = size / 2;
     var ctx = canvas.getContext("2d");
-    ctx.font = "bold " + (size / 4) + "px sans-serif";
+    var baseSize = opts.size || 128;
+    var fontPx = Math.round(baseSize / 4);
+    var pad = opts.pad != null ? opts.pad : 24;
+    ctx.font = "bold " + fontPx + "px sans-serif";
+    var mw = ctx.measureText(text || " ").width;
+    var w = Math.max(baseSize, Math.ceil(mw + pad * 2));
+    var h = Math.round(baseSize / 2);
+    canvas.width = w;
+    canvas.height = h;
+
+    ctx.font = "bold " + fontPx + "px sans-serif";
     ctx.fillStyle = opts.color || "#1e293b";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(text, size / 2, size / 4);
+    ctx.fillText(text, w / 2, h / 2);
 
     var texture = new THREE.CanvasTexture(canvas);
-    var spriteMat = new THREE.SpriteMaterial({ map: texture });
+    var spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
     var sprite = new THREE.Sprite(spriteMat);
-    sprite.scale.set(opts.scale || 0.5, (opts.scale || 0.5) / 2, 1);
+    var sc = opts.scale || 0.5;
+    var aspect = w / h;
+    sprite.scale.set((sc / 2) * aspect, sc / 2, 1);
     return sprite;
   }
 
