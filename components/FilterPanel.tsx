@@ -38,7 +38,7 @@ export default function FilterPanel({
   return (
     <section
       id="catalog"
-      className="max-w-6xl mx-auto px-4 sm:px-6 py-3 scroll-mt-20"
+      className="max-w-[95.5rem] mx-auto px-4 sm:px-6 py-3 scroll-mt-20"
     >
       <div className="flex flex-wrap items-center gap-1.5">
         <FilterButton

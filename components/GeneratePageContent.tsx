@@ -197,7 +197,7 @@ export default function GeneratePageContent() {
           borderColor: "var(--edu-header-border)",
         }}
       >
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
+        <div className="max-w-[95.5rem] mx-auto px-4 sm:px-6 py-3">
           <div className="flex items-center gap-3">
             <Link
               href="/"
@@ -222,7 +222,7 @@ export default function GeneratePageContent() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+      <main className="max-w-[95.5rem] mx-auto px-4 sm:px-6 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-4">
             <div

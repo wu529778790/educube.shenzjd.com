@@ -100,7 +100,7 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
 
       {/* ── 教具列表 ── */}
       <h2 id="main-content" className="sr-only">教具列表</h2>
-      <section id="tools" className="max-w-6xl mx-auto px-4 sm:px-6 pb-20 scroll-mt-20">
+      <section id="tools" className="max-w-[95.5rem] mx-auto px-4 sm:px-6 pb-20 scroll-mt-20">
         {searchQuery.trim() && catalogTools.length > 0 && displayTools.length === 0 ? (
           <EmptyState>
             <p className="font-medium mb-1" style={{ color: "var(--edu-text)" }}>
@@ -136,7 +136,7 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
       {/* ── 页脚 ── */}
       <footer className="border-t" style={{ borderColor: "var(--edu-border)", background: "var(--edu-surface)" }}>
         <div
-          className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm"
+          className="max-w-[95.5rem] mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm"
           style={{ color: "var(--edu-text-muted)" }}
         >
           <div className="flex items-center gap-2">
