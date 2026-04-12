@@ -81,7 +81,7 @@ export default function ToolIframe({ src, title }: ToolIframeProps) {
         src={src}
         className="w-full h-full border-0"
         title={title}
-        sandbox="allow-scripts"
+        sandbox="allow-scripts allow-same-origin"
         onLoad={handleLoad}
         onError={handleError}
       />

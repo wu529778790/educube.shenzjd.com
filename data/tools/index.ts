@@ -11,8 +11,20 @@ import { p6Tools } from "./p6";
 import { j7Tools } from "./j7";
 import { j8Tools } from "./j8";
 import { j9Tools } from "./j9";
+import { referenceStubTools } from "./reference-stubs";
 
-export const tools: Tool[] = [...p1Tools, ...p2Tools, ...p3Tools, ...p4Tools, ...p5Tools, ...p6Tools, ...j7Tools, ...j8Tools, ...j9Tools];
+export const tools: Tool[] = [
+  ...p1Tools,
+  ...p2Tools,
+  ...p3Tools,
+  ...p4Tools,
+  ...p5Tools,
+  ...p6Tools,
+  ...j7Tools,
+  ...j8Tools,
+  ...j9Tools,
+  ...referenceStubTools,
+];
 
 export function filterToolsByCatalog(
   list: Tool[],

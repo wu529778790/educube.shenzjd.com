@@ -9,3 +9,5 @@ data/generated-tools.json
 
 # Claude Code 本地权限配置
 .claude/settings.local.json
+
+.playwright-mcp/

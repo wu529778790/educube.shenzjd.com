@@ -3,6 +3,33 @@
  */
 
 /**
+ * 沙箱 iframe 若未带 allow-same-origin，访问 localStorage 会抛 SecurityError。
+ * 安全读写 + 本页内存兜底（关闭帮助后同一次脚本生命周期内不再弹出）。
+ */
+var eduHelpSeenVolatile = false;
+
+function eduStorageGet(key) {
+  try {
+    return window.localStorage.getItem(key);
+  } catch (err) {
+    return null;
+  }
+}
+
+function eduStorageSet(key, val) {
+  try {
+    window.localStorage.setItem(key, val);
+  } catch (err) {
+    /* 忽略：opaque origin / 隐私模式等 */
+  }
+}
+
+function markEduHelpSeen() {
+  eduHelpSeenVolatile = true;
+  eduStorageSet("edu-help-seen", "1");
+}
+
+/**
  * 让元素可拖拽（鼠标 + 触摸）
  */
 function makeDraggable(el, container) {
@@ -207,12 +234,50 @@ function initClassroomTool() {
     }
   }, true);
 
+  wireRangeDragFeedback();
+
   // Show first-use help overlay
   showHelpOverlay();
 }
 
+/** 滑块拖动时加类名，配合 edu-base.css 放大滑块头（对标参考课件「跟手」） */
+function wireRangeDragFeedback() {
+  function clearFromTarget(t) {
+    if (t && t.matches && t.matches("input[type=\"range\"]")) {
+      t.classList.remove("edu-range-dragging");
+    }
+  }
+  document.addEventListener(
+    "pointerdown",
+    function (e) {
+      var t = e.target;
+      if (t && t.matches && t.matches("input[type=\"range\"]")) {
+        t.classList.add("edu-range-dragging");
+      }
+    },
+    true,
+  );
+  document.addEventListener(
+    "pointerup",
+    function (e) {
+      clearFromTarget(e.target);
+    },
+    true,
+  );
+  document.addEventListener(
+    "pointercancel",
+    function (e) {
+      clearFromTarget(e.target);
+    },
+    true,
+  );
+  document.addEventListener("blur", function (e) {
+    clearFromTarget(e.target);
+  }, true);
+}
+
 function showHelpOverlay() {
-  if (localStorage.getItem('edu-help-seen')) return;
+  if (eduHelpSeenVolatile || eduStorageGet("edu-help-seen")) return;
 
   var overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;';
@@ -221,7 +286,12 @@ function showHelpOverlay() {
   modal.style.cssText = 'background:#fff;border-radius:16px;padding:20px;max-width:400px;width:90%;z-index:10000;font-size:16px;line-height:2;text-align:center;color:#334155;box-shadow:0 8px 32px rgba(0,0,0,0.2);';
 
   var msg = document.createElement('div');
-  msg.innerHTML = '拖拽旋转3D模型 · 滚轮/双指缩放<br/>点击按钮切换模式<br/>点击📋按钮显示/隐藏控制面板';
+  msg.innerHTML =
+    '<strong>操作说明（大屏）</strong><br/>' +
+    "主视图区尽量占满，参数与步骤在<strong>右侧可拖动面板</strong>；<br/>" +
+    "拖拽 ⠿ 区域移动面板 · 双指或滚轮缩放 3D<br/>" +
+    "点击 <strong>📋</strong> 可收起面板，方便全班观看板书。<br/>" +
+    "<span style=\"font-size:13px;color:#64748b\">滑块拖动时略有放大，便于手指粗调。</span>";
   msg.style.marginBottom = '16px';
 
   var btn = document.createElement('button');
@@ -229,13 +299,13 @@ function showHelpOverlay() {
   btn.style.cssText = 'padding:10px 32px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;background:#3b82f6;color:#fff;font-family:var(--edu-font);';
   btn.addEventListener('click', function () {
     document.body.removeChild(overlay);
-    localStorage.setItem('edu-help-seen', '1');
+    markEduHelpSeen();
   });
 
   function onEsc(e) {
     if (e.key === 'Escape') {
       if (overlay.parentNode) document.body.removeChild(overlay);
-      localStorage.setItem('edu-help-seen', '1');
+      markEduHelpSeen();
       document.removeEventListener('keydown', onEsc);
     }
   }

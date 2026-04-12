@@ -1,4 +1,5 @@
 /* 教立方 EduCube — 教具公共基础样式（与 globals.css 统一色板） */
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600;700&family=Noto+Serif+SC:wght@600;700;800&family=Nunito:wght@600;700&display=swap");
 
 :root {
   --edu-bg: #faf8f3;
@@ -12,14 +13,25 @@
   --edu-danger: #e5484d;
   --edu-text: #2c2c2c;
   --edu-text-secondary: #5c5650;
-  --edu-text-muted: #8b8680;
+  --edu-text-muted: #706b65;
   --edu-border: #e8e4dd;
+  --edu-shadow-sm: 0 1px 3px rgba(44, 44, 44, 0.06);
   --edu-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  --edu-shadow-md: 0 2px 14px rgba(45, 58, 140, 0.08);
   --edu-radius: 12px;
   --edu-radius-sm: 8px;
-  --edu-font: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC",
-    sans-serif;
-  --edu-serif: 'Noto Serif SC', serif;
+  --edu-toolbar-gradient: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--edu-surface) 82%, var(--edu-primary)) 0%,
+    var(--edu-surface) 65%
+  );
+  --edu-font: "Nunito", -apple-system, "PingFang SC", "Microsoft YaHei",
+    "Noto Sans SC", sans-serif;
+  --edu-serif: "Noto Serif SC", "Songti SC", "SimSun", serif;
+  /* 触控与动画节奏（对标参考课件「跟手、好讲」） */
+  --edu-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --edu-ease-press: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --edu-duration-tap: 0.18s;
 }
 
 *,
@@ -46,21 +58,36 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--edu-bg);
+  background: radial-gradient(
+      ellipse 130% 90% at 50% -35%,
+      color-mix(in srgb, var(--edu-accent2) 14%, transparent) 0%,
+      transparent 58%
+    ),
+    var(--edu-bg);
   overflow: hidden;
 }
 
-/* 顶部工具栏 */
+/* 顶部工具栏（参考常见交互课件：轻渐变顶栏 + 靛色底边） */
 .edu-toolbar {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 20px;
-  background: var(--edu-surface);
-  border-bottom: 1px solid var(--edu-border);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  background: var(--edu-toolbar-gradient);
+  border-bottom: 1px solid color-mix(in srgb, var(--edu-primary) 18%, var(--edu-border));
+  box-shadow: var(--edu-shadow-md);
   gap: 12px;
+}
+
+.edu-toolbar-lead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.edu-toolbar-lead--wrap {
+  flex-wrap: wrap;
 }
 
 .edu-toolbar-title {
@@ -73,9 +100,10 @@ body {
 
 .edu-toolbar-subtitle {
   font-size: 12px;
-  color: var(--edu-text-muted);
-  padding: 3px 8px;
-  background: #f1f5f9;
+  color: var(--edu-text-secondary);
+  padding: 3px 10px;
+  background: color-mix(in srgb, var(--edu-accent) 10%, var(--edu-surface));
+  border: 1px solid color-mix(in srgb, var(--edu-accent) 28%, var(--edu-border));
   border-radius: 20px;
   white-space: nowrap;
 }
@@ -146,10 +174,6 @@ body {
   font-family: var(--edu-font);
   white-space: nowrap;
   user-select: none;
-}
-
-.edu-btn:active {
-  transform: scale(0.97);
 }
 
 .edu-btn-primary {
@@ -270,6 +294,166 @@ input[type="range"]::-webkit-slider-thumb:hover {
   flex-shrink: 0;
 }
 
+/* ── 导航占位教具（reference-stubs） ── */
+.edu-stub-tool .edu-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px 32px;
+}
+
+.edu-stub-body {
+  width: 100%;
+  max-width: 560px;
+}
+
+.edu-stub-card {
+  background: var(--edu-surface);
+  border: 1px solid color-mix(in srgb, var(--edu-primary) 12%, var(--edu-border));
+  border-radius: 18px;
+  padding: 22px 24px 26px;
+  box-shadow: var(--edu-shadow);
+}
+
+.edu-stub-lead {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--edu-primary);
+  margin-bottom: 10px;
+  line-height: 1.65;
+}
+
+.edu-stub-text {
+  font-size: 14px;
+  color: var(--edu-text-secondary);
+  line-height: 1.75;
+  margin-bottom: 14px;
+}
+
+.edu-stub-list {
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: 14px;
+  color: var(--edu-text);
+  line-height: 1.85;
+}
+
+.edu-stub-list code {
+  font-size: 12px;
+  background: color-mix(in srgb, var(--edu-primary) 6%, var(--edu-bg));
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+/* 占位页：可展开的体验对标说明（<details> 零脚本） */
+.edu-stub-details {
+  margin-top: 16px;
+  border-top: 1px dashed color-mix(in srgb, var(--edu-primary) 20%, var(--edu-border));
+  padding-top: 12px;
+}
+
+.edu-stub-summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--edu-primary);
+  list-style: none;
+}
+
+.edu-stub-summary::-webkit-details-marker {
+  display: none;
+}
+
+.edu-stub-summary::before {
+  content: "▸ ";
+  display: inline-block;
+  transition: transform var(--edu-duration-tap) var(--edu-ease-smooth);
+}
+
+.edu-stub-details[open] .edu-stub-summary::before {
+  transform: rotate(90deg);
+}
+
+.edu-stub-ux {
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--edu-text-secondary);
+}
+
+.edu-stub-ux strong {
+  color: var(--edu-text);
+}
+
+/* ── 交互反馈：通用按钮/滑块（与参考课件一致的「按下有反馈」） ── */
+button:not(:disabled),
+.edu-btn,
+.pattern-btn,
+.mode-btn,
+.preset-btn,
+.shape-btn,
+.obj-btn,
+.drop-btn,
+.reset-btn,
+.reveal-btn,
+.check-btn,
+.mode-tab {
+  transition: transform var(--edu-duration-tap) var(--edu-ease-press),
+    box-shadow var(--edu-duration-tap) var(--edu-ease-smooth),
+    border-color var(--edu-duration-tap) var(--edu-ease-smooth),
+    background var(--edu-duration-tap) var(--edu-ease-smooth);
+}
+
+button:not(:disabled):active,
+.edu-btn:active,
+.pattern-btn:active,
+.mode-btn:active,
+.preset-btn:active,
+.shape-btn:active,
+.obj-btn:active,
+.drop-btn:active,
+.reset-btn:active,
+.reveal-btn:active,
+.check-btn:active,
+.mode-tab:active {
+  transform: scale(0.98);
+}
+
+input[type="range"]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--edu-accent2) 65%, var(--edu-primary));
+  outline-offset: 4px;
+}
+
+button:focus-visible,
+.edu-btn:focus-visible {
+  outline: 2px solid var(--edu-accent2);
+  outline-offset: 2px;
+}
+
+/* 拖动滑块时略放大拇指（由 JS 添加 .edu-range-dragging） */
+input[type="range"].edu-range-dragging::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+input[type="range"].edu-range-dragging::-moz-range-thumb {
+  transform: scale(1.12);
+}
+
+.edu-tool * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edu-tool * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+
+  .edu-stub-summary::before {
+    transition: none;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════
    课堂大屏触屏模式 — 默认激活，所有教具均为大屏优化
    使用高特异性选择器 + !important 覆盖各工具内联 <style>
@@ -278,6 +462,9 @@ input[type="range"]::-webkit-slider-thumb:hover {
 /* ── 工具栏：加大 ── */
 .edu-toolbar {
   padding: 14px 24px !important;
+  background: var(--edu-toolbar-gradient) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--edu-primary) 18%, var(--edu-border)) !important;
+  box-shadow: var(--edu-shadow-md) !important;
 }
 .edu-toolbar-title {
   font-size: 22px !important;
@@ -325,11 +512,11 @@ input[type="range"]::-webkit-slider-thumb {
   top: 70px !important;
   width: 380px !important;
   max-height: calc(100vh - 90px) !important;
-  background: rgba(255,255,255,.97) !important;
-  border: 2px solid #c7cad0 !important;
+  background: color-mix(in srgb, var(--edu-surface) 96%, var(--edu-bg)) !important;
+  border: 2px solid color-mix(in srgb, var(--edu-primary) 14%, #c7cad0) !important;
   border-radius: 16px !important;
   padding: 16px !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18) !important;
+  box-shadow: 0 8px 32px rgba(45, 58, 140, 0.14), 0 2px 8px rgba(0, 0, 0, 0.06) !important;
   z-index: 100 !important;
   overflow: auto !important;
   border-left: none !important;
