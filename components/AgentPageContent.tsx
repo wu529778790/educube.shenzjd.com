@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import Link from "next/link";
 
 /* ──────────────────────────────────────
  * 类型定义
@@ -276,9 +277,9 @@ export default function AgentPageContent() {
     <div className="agent-page">
       {/* ── 头部 ── */}
       <header className="agent-header">
-        <a href="/" className="agent-logo">
+        <Link href="/" className="agent-logo">
           教立方
-        </a>
+        </Link>
         <h1 className="agent-title">AI 教具助手</h1>
         <div className="agent-header-actions">
           {previewHtml && (
