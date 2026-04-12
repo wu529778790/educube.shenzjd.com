@@ -23,7 +23,6 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
   const searchParams = useSearchParams();
 
   const gradeId = searchParams.get("grade") ?? defaultCatalogPath.gradeId;
-  // 当前仅支持数学学科，其他学科即将上线
   const subjectId = defaultCatalogPath.subjectId;
   const [searchInput, setSearchInput] = useState(searchParams.get("q") ?? "");
   const searchQuery = useDeferredValue(searchInput);
