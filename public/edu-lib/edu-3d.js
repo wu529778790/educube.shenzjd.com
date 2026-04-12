@@ -21,10 +21,11 @@ var Edu3D = (function () {
     );
     camera.position.set(
       opts.camX || 5,
-      opts.camY || 4,
+      opts.camY || 4.4,
       opts.camZ || 5
     );
-    camera.lookAt(opts.lookX || 0, opts.lookY || 0, opts.lookZ || 0);
+    /** 略抬高注视点，地平线在画面中不会顶得太靠上（各教具共用） */
+    camera.lookAt(opts.lookX || 0, opts.lookY !== undefined ? opts.lookY : 0.42, opts.lookZ || 0);
 
     var renderer = new THREE.WebGLRenderer({
       canvas: canvas,
@@ -41,7 +42,11 @@ var Edu3D = (function () {
     controls.minDistance = opts.minDist || 2;
     controls.maxDistance = opts.maxDist || 20;
     controls.enablePan = opts.enablePan !== undefined ? opts.enablePan : false;
-    controls.target.set(opts.lookX || 0, opts.lookY || 0, opts.lookZ || 0);
+    controls.target.set(
+      opts.lookX || 0,
+      opts.lookY !== undefined ? opts.lookY : 0.42,
+      opts.lookZ || 0
+    );
 
     return { scene: scene, camera: camera, renderer: renderer, controls: controls };
   }
@@ -60,13 +65,18 @@ var Edu3D = (function () {
     scene.add(new THREE.HemisphereLight(0xe8f4ff, 0xfff3e0, 0.4));
   }
 
-  /** 地面网格 */
-  function addGrid(scene, size, divisions, color) {
+  /**
+   * 地面网格（XZ 平面）
+   * @param {number} [groundY] 整体竖直偏移，默认略低于 y=0，避免地平线在画面里顶得过靠上
+   */
+  function addGrid(scene, size, divisions, color, groundY) {
     size = size || 10;
     divisions = divisions || 10;
     color = color || 0xd1d5db;
+    var gy = groundY !== undefined && groundY !== null ? groundY : -0.72;
 
     var grid = new THREE.GridHelper(size, divisions, color, color);
+    grid.position.y = gy;
     grid.material.opacity = 0.4;
     grid.material.transparent = true;
     scene.add(grid);
@@ -79,7 +89,7 @@ var Edu3D = (function () {
     });
     var floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -0.01;
+    floor.position.y = gy - 0.01;
     floor.receiveShadow = true;
     scene.add(floor);
   }
