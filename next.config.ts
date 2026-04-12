@@ -51,6 +51,15 @@ const generatedToolHeaders: Record<string, string> = {
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   output: "standalone",
+  async redirects() {
+    return [
+      {
+        source: "/tools/three-views",
+        destination: "/tools/block-build",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

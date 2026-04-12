@@ -3,21 +3,6 @@ import type { Tool } from "./types";
 /** 四年级教具 */
 export const p4Tools: Tool[] = [
   {
-    id: "three-views",
-    name: "积木三视图观察器",
-    subtitle: "观察物体",
-    chapter: "下册 · 第二单元",
-    semester: "下册",
-    unitNum: 2,
-    gradeId: "p4",
-    subjectId: "math",
-    description:
-      "切换正视图、侧视图、俯视图，直观理解从不同方向观察同一堆积木时看到的形状。",
-    tags: ["三视图", "空间想象", "观察物体"],
-    gradient: ["#3B82F6", "#0EA5E9"],
-    icon: "🧊",
-  },
-  {
     id: "cube-unfold",
     name: "正方体展开图",
     subtitle: "空间想象辅助",
