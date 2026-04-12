@@ -381,8 +381,9 @@ function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-function applyFaceAnimBlend(mesh, t) {
-  var u = easeInOutCubic(Math.max(0, Math.min(1, t)));
+/** u∈[0,1] 为已缓动的展开系数；位姿线性插值，由时间轴只做一次 ease，避免「一块块硬接」 */
+function setFaceNetBlend(mesh, u) {
+  u = Math.max(0, Math.min(1, u));
   var d = mesh.userData;
   mesh.position.lerpVectors(d.cPos, d.oPos, u);
   mesh.rotation.x = d.cRot.x + (d.oRot.x - d.cRot.x) * u;
@@ -407,6 +408,7 @@ function rebuildUnfoldFaceAnimations(n, h, sliderR) {
   var hPlane = h - gap;
   var startX = (-n * actualSideLen) / 2 + actualSideLen / 2;
   var zSpread = h / 2 + R + 0.35;
+  var flatY = 0.02 - halfH;
 
   for (var i = 0; i < n; i++) {
     var Vi = Vb[i];
@@ -445,7 +447,7 @@ function rebuildUnfoldFaceAnimations(n, h, sliderR) {
 
     sideMesh.userData.cPos = new THREE.Vector3(mx, 0, mz);
     sideMesh.userData.cRot = new THREE.Euler(0, thetaY, 0);
-    sideMesh.userData.oPos = new THREE.Vector3(startX + i * actualSideLen, 0.01 - halfH, 0);
+    sideMesh.userData.oPos = new THREE.Vector3(startX + i * actualSideLen, flatY, 0);
     sideMesh.userData.oRot = new THREE.Euler(-Math.PI / 2, 0, 0);
 
     sideMesh.position.copy(sideMesh.userData.cPos);
@@ -469,7 +471,7 @@ function rebuildUnfoldFaceAnimations(n, h, sliderR) {
 
   topMesh.userData.cPos = new THREE.Vector3(0, halfH, 0);
   topMesh.userData.cRot = new THREE.Euler(0, 0, 0);
-  topMesh.userData.oPos = new THREE.Vector3(0, 0.03 - halfH, -zSpread);
+  topMesh.userData.oPos = new THREE.Vector3(0, flatY, -zSpread);
   topMesh.userData.oRot = new THREE.Euler(0, 0, 0);
   topMesh.position.copy(topMesh.userData.cPos);
   topMesh.rotation.copy(topMesh.userData.cRot);
@@ -491,7 +493,7 @@ function rebuildUnfoldFaceAnimations(n, h, sliderR) {
 
   botMesh.userData.cPos = new THREE.Vector3(0, -halfH, 0);
   botMesh.userData.cRot = new THREE.Euler(0, 0, 0);
-  botMesh.userData.oPos = new THREE.Vector3(0, 0.03 - halfH, zSpread);
+  botMesh.userData.oPos = new THREE.Vector3(0, flatY, zSpread);
   botMesh.userData.oRot = new THREE.Euler(0, 0, 0);
   botMesh.position.copy(botMesh.userData.cPos);
   botMesh.rotation.copy(botMesh.userData.cRot);
@@ -516,9 +518,8 @@ function toggleUnfold() {
   _isUnfolded = !_isUnfolded;
   document.getElementById("btn-toggle").textContent = _isUnfolded ? "🔼 折叠回棱柱" : "🔽 展开棱柱";
 
-  var stepMs = 520;
+  var durMs = 2800;
   var nF = _faceAnimList.length;
-  var totalMs = Math.max(stepMs, nF * stepMs);
 
   if (_isUnfolded) {
     if (_prismRootRef) _prismRootRef.visible = false;
@@ -529,25 +530,23 @@ function toggleUnfold() {
     setUnfoldGroupOpacityFactor(1);
 
     for (var i0 = 0; i0 < nF; i0++) {
-      applyFaceAnimBlend(_faceAnimList[i0], 0);
+      setFaceNetBlend(_faceAnimList[i0], 0);
     }
 
     var tStart = performance.now();
 
     function tickExpand(now) {
       var elapsed = now - tStart;
-      var u = elapsed / stepMs;
+      var raw = Math.min(1, elapsed / durMs);
+      var eased = easeInOutCubic(raw);
       for (var k = 0; k < nF; k++) {
-        var local = 0;
-        if (u >= k + 1) local = 1;
-        else if (u > k) local = u - k;
-        applyFaceAnimBlend(_faceAnimList[k], local);
+        setFaceNetBlend(_faceAnimList[k], eased);
       }
-      if (elapsed < totalMs) {
+      if (raw < 1) {
         _animId = requestAnimationFrame(tickExpand);
       } else {
         for (var kf = 0; kf < nF; kf++) {
-          applyFaceAnimBlend(_faceAnimList[kf], 1);
+          setFaceNetBlend(_faceAnimList[kf], 1);
         }
         _animId = null;
       }
@@ -558,19 +557,16 @@ function toggleUnfold() {
 
     function tickCollapse(now) {
       var elapsed = now - tStartF;
-      var u = (totalMs - elapsed) / stepMs;
-      if (u < 0) u = 0;
+      var raw = Math.min(1, elapsed / durMs);
+      var eased = easeInOutCubic(1 - raw);
       for (var k = 0; k < nF; k++) {
-        var local = 0;
-        if (u >= k + 1) local = 1;
-        else if (u > k) local = u - k;
-        applyFaceAnimBlend(_faceAnimList[k], local);
+        setFaceNetBlend(_faceAnimList[k], eased);
       }
-      if (elapsed < totalMs) {
+      if (raw < 1) {
         _animId = requestAnimationFrame(tickCollapse);
       } else {
         for (var kc = 0; kc < nF; kc++) {
-          applyFaceAnimBlend(_faceAnimList[kc], 0);
+          setFaceNetBlend(_faceAnimList[kc], 0);
         }
         _unfoldGroup.visible = false;
         if (_prismRootRef) _prismRootRef.visible = true;
