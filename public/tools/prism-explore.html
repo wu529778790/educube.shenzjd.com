@@ -123,6 +123,11 @@
 <script>
 var _scene, _camera, _renderer, _controls;
 var _group, _unfoldGroup;
+/** 展开动画：侧面 n 个 + 上底 + 下底，顺序播放 */
+var _faceAnimList = [];
+var _prismRootRef = null;
+var _prismTitleSprite = null;
+var _prismHeightSprite = null;
 var _sides = 3, _h = 2.5, _r = 1.2;
 /** 滑块数值含义：circum=外接圆半径 R；apothem=边心距 a（中心到边的垂直距离），几何用 R=a/cos(π/n) */
 var _radiusMeaning = "circum";
@@ -309,6 +314,7 @@ function buildPrism() {
 
   var prismRoot = new THREE.Group();
   prismRoot.position.y = h / 2;
+  _prismRootRef = prismRoot;
 
   var meshBody = new THREE.Mesh(prismGeo, matPrism);
   meshBody.castShadow = true;
@@ -326,14 +332,15 @@ function buildPrism() {
   var nameLbl = Edu3D.textSprite(names[n] || n + '棱柱', { color: '#1e40af', scale: 0.5 });
   nameLbl.position.set(0, h + 0.8, 0);
   _group.add(nameLbl);
+  _prismTitleSprite = nameLbl;
 
   // Height label
   var hLbl = Edu3D.textSprite('h=' + h.toFixed(1), { color: '#16a34a', scale: 0.35 });
   hLbl.position.set(-r - 0.6, h / 2, 0);
   _group.add(hLbl);
+  _prismHeightSprite = hLbl;
 
-  // Build unfolded state（隐藏，展开时用缩放+淡入动画）
-  buildUnfolded(n, h, _r);
+  rebuildUnfoldFaceAnimations(n, h, _r);
   stashUnfoldBaseOpacity(_unfoldGroup);
 
   _group.visible = true;
@@ -370,70 +377,134 @@ function setUnfoldGroupOpacityFactor(factor) {
   });
 }
 
-/** 略带回弹，展开时更明显 */
-function easeOutBack(t) {
-  var c1 = 1.525;
-  var c3 = c1 + 1;
-  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-function buildUnfolded(n, h, sliderR) {
+function applyFaceAnimBlend(mesh, t) {
+  var u = easeInOutCubic(Math.max(0, Math.min(1, t)));
+  var d = mesh.userData;
+  mesh.position.lerpVectors(d.cPos, d.oPos, u);
+  mesh.rotation.x = d.cRot.x + (d.oRot.x - d.cRot.x) * u;
+  mesh.rotation.y = d.cRot.y + (d.oRot.y - d.cRot.y) * u;
+  mesh.rotation.z = d.cRot.z + (d.oRot.z - d.cRot.z) * u;
+}
+
+/** 与闭合棱柱同原点：_unfoldGroup.position.y = h/2，面片在「柱心局部」与展开平面之间插值 */
+function rebuildUnfoldFaceAnimations(n, h, sliderR) {
   clearGroup(_unfoldGroup);
+  _faceAnimList.length = 0;
 
   var R = circumRadiusFromSlider(n, sliderR);
-  var verts = getVertices(n, R, 0);
-  var actualSideLen = verts[0].distanceTo(verts[1]);
+  var halfH = h / 2;
+  _unfoldGroup.position.set(0, halfH, 0);
 
+  var Vb = getVertices(n, R, -halfH);
+  var vertsFlat = getVertices(n, R, 0);
+  var actualSideLen = vertsFlat[0].distanceTo(vertsFlat[1]);
   var gap = 0.05;
-  var totalW = n * actualSideLen;
-  var startX = -totalW / 2 + actualSideLen / 2;
+  var wPlane = actualSideLen - gap;
+  var hPlane = h - gap;
+  var startX = (-n * actualSideLen) / 2 + actualSideLen / 2;
+  var zSpread = h / 2 + R + 0.35;
 
-  // Side faces
   for (var i = 0; i < n; i++) {
-    var sideGeo = new THREE.PlaneGeometry(actualSideLen - gap, h - gap);
+    var Vi = Vb[i];
+    var Vi1 = Vb[(i + 1) % n];
+    var mx = (Vi.x + Vi1.x) / 2;
+    var mz = (Vi.z + Vi1.z) / 2;
+    var ex = Vi1.x - Vi.x;
+    var ez = Vi1.z - Vi.z;
+    var el = Math.sqrt(ex * ex + ez * ez) || 1;
+    ex /= el;
+    ez /= el;
+    var nx = -ez;
+    var nz = ex;
+    if (nx * mx + nz * mz < 0) {
+      nx = -nx;
+      nz = -nz;
+    }
+    var thetaY = Math.atan2(nx, nz);
+
+    var sideGeo = new THREE.PlaneGeometry(wPlane, hPlane);
     var sideMat = new THREE.MeshLambertMaterial({
       color: COLORS.sides[i % COLORS.sides.length],
-      side: THREE.DoubleSide, transparent: true, opacity: 0.6
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.62,
+      depthWrite: true
     });
     var sideMesh = new THREE.Mesh(sideGeo, sideMat);
-    sideMesh.rotation.x = -Math.PI / 2;
-    sideMesh.position.set(startX + i * actualSideLen, 0.01, 0);
     sideMesh.add(new THREE.LineSegments(
       new THREE.EdgesGeometry(sideGeo),
-      new THREE.LineBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.3 })
+      new THREE.LineBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.35 })
     ));
-
-    // Label
-    var sLbl = Edu3D.textSprite('侧面' + (i + 1), { color: '#334155', scale: 0.3 });
+    var sLbl = Edu3D.textSprite("侧面" + (i + 1), { color: "#334155", scale: 0.28 });
     sLbl.position.y = 0.02;
     sideMesh.add(sLbl);
 
+    sideMesh.userData.cPos = new THREE.Vector3(mx, 0, mz);
+    sideMesh.userData.cRot = new THREE.Euler(0, thetaY, 0);
+    sideMesh.userData.oPos = new THREE.Vector3(startX + i * actualSideLen, 0.01 - halfH, 0);
+    sideMesh.userData.oRot = new THREE.Euler(-Math.PI / 2, 0, 0);
+
+    sideMesh.position.copy(sideMesh.userData.cPos);
+    sideMesh.rotation.copy(sideMesh.userData.cRot);
+
     _unfoldGroup.add(sideMesh);
+    _faceAnimList.push(sideMesh);
   }
 
-  // 上、下底：水平放置（法线 +Y），与闭合棱柱顶点一致
-  var zSpread = h / 2 + R + 0.35;
-  var topGeoU = createPrismCapGeometry(n, R, 0);
-  var topMesh = new THREE.Mesh(topGeoU, new THREE.MeshLambertMaterial({
-    color: COLORS.top, side: THREE.DoubleSide, transparent: true, opacity: 0.5
+  var topGeo = createPrismCapGeometry(n, R, 0);
+  var topMesh = new THREE.Mesh(topGeo, new THREE.MeshLambertMaterial({
+    color: COLORS.top,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.55,
+    depthWrite: true
   }));
-  topMesh.position.set(0, 0.03, -zSpread);
-  _unfoldGroup.add(topMesh);
-
-  var topLbl = Edu3D.textSprite("上底面", { color: "#1e40af", scale: 0.3 });
-  topLbl.position.set(0, 0.2, 0);
+  var topLbl = Edu3D.textSprite("上底面", { color: "#1e40af", scale: 0.28 });
+  topLbl.position.set(0, 0.18, 0);
   topMesh.add(topLbl);
 
-  var botGeoU = createPrismCapGeometry(n, R, 0);
-  var botMesh = new THREE.Mesh(botGeoU, new THREE.MeshLambertMaterial({
-    color: COLORS.bottom, side: THREE.DoubleSide, transparent: true, opacity: 0.5
-  }));
-  botMesh.position.set(0, 0.03, zSpread);
-  _unfoldGroup.add(botMesh);
+  topMesh.userData.cPos = new THREE.Vector3(0, halfH, 0);
+  topMesh.userData.cRot = new THREE.Euler(0, 0, 0);
+  topMesh.userData.oPos = new THREE.Vector3(0, 0.03 - halfH, -zSpread);
+  topMesh.userData.oRot = new THREE.Euler(0, 0, 0);
+  topMesh.position.copy(topMesh.userData.cPos);
+  topMesh.rotation.copy(topMesh.userData.cRot);
 
-  var botLbl = Edu3D.textSprite("下底面", { color: "#1e40af", scale: 0.3 });
-  botLbl.position.set(0, 0.2, 0);
+  _unfoldGroup.add(topMesh);
+  _faceAnimList.push(topMesh);
+
+  var botGeo = createPrismCapGeometry(n, R, 0);
+  var botMesh = new THREE.Mesh(botGeo, new THREE.MeshLambertMaterial({
+    color: COLORS.bottom,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.55,
+    depthWrite: true
+  }));
+  var botLbl = Edu3D.textSprite("下底面", { color: "#1e40af", scale: 0.28 });
+  botLbl.position.set(0, 0.18, 0);
   botMesh.add(botLbl);
+
+  botMesh.userData.cPos = new THREE.Vector3(0, -halfH, 0);
+  botMesh.userData.cRot = new THREE.Euler(0, 0, 0);
+  botMesh.userData.oPos = new THREE.Vector3(0, 0.03 - halfH, zSpread);
+  botMesh.userData.oRot = new THREE.Euler(0, 0, 0);
+  botMesh.position.copy(botMesh.userData.cPos);
+  botMesh.rotation.copy(botMesh.userData.cRot);
+
+  _unfoldGroup.add(botMesh);
+  _faceAnimList.push(botMesh);
+
+  setUnfoldGroupOpacityFactor(1);
+}
+
+function setPrismLabelsVisible(vis) {
+  if (_prismTitleSprite) _prismTitleSprite.visible = vis;
+  if (_prismHeightSprite) _prismHeightSprite.visible = vis;
 }
 
 function toggleUnfold() {
@@ -443,54 +514,71 @@ function toggleUnfold() {
   }
 
   _isUnfolded = !_isUnfolded;
-  document.getElementById('btn-toggle').textContent = _isUnfolded ? '🔼 折叠回棱柱' : '🔽 展开棱柱';
+  document.getElementById("btn-toggle").textContent = _isUnfolded ? "🔼 折叠回棱柱" : "🔽 展开棱柱";
+
+  var stepMs = 520;
+  var nF = _faceAnimList.length;
+  var totalMs = Math.max(stepMs, nF * stepMs);
 
   if (_isUnfolded) {
-    _group.visible = false;
+    if (_prismRootRef) _prismRootRef.visible = false;
+    setPrismLabelsVisible(false);
+
     _unfoldGroup.visible = true;
     stashUnfoldBaseOpacity(_unfoldGroup);
-    _unfoldGroup.scale.set(0.04, 0.04, 0.04);
-    setUnfoldGroupOpacityFactor(0);
+    setUnfoldGroupOpacityFactor(1);
 
-    var t0 = performance.now();
-    var dur = 580;
+    for (var i0 = 0; i0 < nF; i0++) {
+      applyFaceAnimBlend(_faceAnimList[i0], 0);
+    }
 
-    function tick(now) {
-      var raw = Math.min((now - t0) / dur, 1);
-      var eased = easeOutBack(raw);
-      _unfoldGroup.scale.set(eased, eased, eased);
-      setUnfoldGroupOpacityFactor(raw);
-      if (raw < 1) {
-        _animId = requestAnimationFrame(tick);
+    var tStart = performance.now();
+
+    function tickExpand(now) {
+      var elapsed = now - tStart;
+      var u = elapsed / stepMs;
+      for (var k = 0; k < nF; k++) {
+        var local = 0;
+        if (u >= k + 1) local = 1;
+        else if (u > k) local = u - k;
+        applyFaceAnimBlend(_faceAnimList[k], local);
+      }
+      if (elapsed < totalMs) {
+        _animId = requestAnimationFrame(tickExpand);
       } else {
-        _unfoldGroup.scale.set(1, 1, 1);
-        setUnfoldGroupOpacityFactor(1);
+        for (var kf = 0; kf < nF; kf++) {
+          applyFaceAnimBlend(_faceAnimList[kf], 1);
+        }
         _animId = null;
       }
     }
-    _animId = requestAnimationFrame(tick);
+    _animId = requestAnimationFrame(tickExpand);
   } else {
-    var t1 = performance.now();
-    var durFold = 420;
+    var tStartF = performance.now();
 
-    function tickFold(now) {
-      var raw = Math.min((now - t1) / durFold, 1);
-      var e = 1 - raw;
-      e = e * e;
-      var s = 0.05 + (1 - 0.05) * (1 - raw);
-      _unfoldGroup.scale.set(s, s, s);
-      setUnfoldGroupOpacityFactor(1 - raw);
-      if (raw < 1) {
-        _animId = requestAnimationFrame(tickFold);
+    function tickCollapse(now) {
+      var elapsed = now - tStartF;
+      var u = (totalMs - elapsed) / stepMs;
+      if (u < 0) u = 0;
+      for (var k = 0; k < nF; k++) {
+        var local = 0;
+        if (u >= k + 1) local = 1;
+        else if (u > k) local = u - k;
+        applyFaceAnimBlend(_faceAnimList[k], local);
+      }
+      if (elapsed < totalMs) {
+        _animId = requestAnimationFrame(tickCollapse);
       } else {
+        for (var kc = 0; kc < nF; kc++) {
+          applyFaceAnimBlend(_faceAnimList[kc], 0);
+        }
         _unfoldGroup.visible = false;
-        _group.visible = true;
-        _unfoldGroup.scale.set(1, 1, 1);
-        setUnfoldGroupOpacityFactor(1);
+        if (_prismRootRef) _prismRootRef.visible = true;
+        setPrismLabelsVisible(true);
         _animId = null;
       }
     }
-    _animId = requestAnimationFrame(tickFold);
+    _animId = requestAnimationFrame(tickCollapse);
   }
 }
 
