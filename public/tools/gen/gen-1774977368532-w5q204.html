@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>长方体正方体认识 — 教立方</title>
+<link rel="stylesheet" href="../../edu-lib/edu-base.css"/>
+<script src="../../edu-lib/three.min.js"></script>
+<script src="../../edu-lib/OrbitControls.js"></script>
+<script src="../../edu-lib/edu-3d.js"></script>
+<style>
+  .main-layout { display:grid; grid-template-columns:1fr minmax(260px,300px); height:100%; }
+  .canvas-area { position:relative; background:linear-gradient(135deg,#eff6ff,#dbeafe); overflow:hidden; }
+  .canvas-area canvas { width:100%; height:100%; display:block; }
+  .control-panel { background:#fff; border-left:1px solid #e2e8f0; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .ctrl-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:.04em; }
+  .slider-row { display:flex; align-items:center; gap:8px; }
+  .slider-row label { font-size:12px; font-weight:600; color:#64748b; min-width:36px; }
+  .slider-row input[type=range] { flex:1; }
+  .slider-row .val { font-size:13px; font-weight:700; color:#2563EB; min-width:40px; text-align:right; }
+  .info-box { background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:10px 12px; font-size:11px; color:#475569; line-height:1.65; max-height:28vh; overflow:auto; white-space:pre-wrap; }
+  .orbit-hint { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,.88); padding:6px 12px; border-radius:18px; font-size:11px; color:#64748b; pointer-events:none; }
+</style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div class="edu-toolbar-lead">
+      <span class="edu-toolbar-title">📐 长方体正方体认识</span>
+      <span class="edu-toolbar-subtitle">长方体正方体认识</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button type="button" class="edu-btn edu-btn-outline" onclick="resetAll()">重置</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+      </div>
+      <div class="control-panel">
+        <div class="ctrl-label">尺寸（厘米，示意缩放显示）</div>
+        <div class="slider-row"><label>长</label><input type="range" id="sl" min="2" max="100" value="10" oninput="rebuild()"/><span class="val" id="vl">10</span><span>cm</span></div>
+        <div class="slider-row"><label>宽</label><input type="range" id="sw" min="2" max="100" value="10" oninput="rebuild()"/><span class="val" id="vw">10</span><span>cm</span></div>
+        <div class="slider-row"><label>高</label><input type="range" id="sh" min="2" max="100" value="10" oninput="rebuild()"/><span class="val" id="vh">10</span><span>cm</span></div>
+        <div class="ctrl-label">体积</div>
+        <p style="font-size:18px;font-weight:800;color:#1d4ed8" id="vol">1000 立方厘米</p>
+        <div class="ctrl-label">说明</div>
+        <div class="info-box">1. 教学目标
+   - 学生能够识别长方体和正方体的特征。
+   - 学生能够通过拖拽滑块改变长方体和正方体的长、宽、高。
+   - 学生能够计算并理解长方体和正方体的体积。
+
+2. 界面与交互
+   - 画布区域：展示一个简单的透视效果的长方体或正方体，初始状态为正方体。
+   - 控件：三个滑块，分别控制长、宽、高。
+   - 每个滑块控制：拖拽滑块可以改变长方体或正方体的相应维度。
+
+3. 数学/学科约束
+   - 数值范围：长、宽、高的数值范围应为0到100（单位：厘米）。
+   - 单位：所有尺寸单位统一为厘米。
+   - 标注：在画布上标注长、宽、高的尺寸。
+
+4. 默认状态与重置行为
+   - 默认状态：正方体的长、宽、高均为10厘米。
+   - 重置行为：点击“重置”按钮，长方体或正方体恢复到默认状态，滑块归位。</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var _scene, _camera, _renderer, _controls, _mesh, _edges;
+function cmToScene(cm) { return cm * 0.08; }
+function init() {
+  var canvas = document.getElementById("c3d");
+  var r = Edu3D.createScene(canvas, { bg: 0xf0f5ff, camX: 7, camY: 5, camZ: 7 });
+  _scene = r.scene; _camera = r.camera; _renderer = r.renderer; _controls = r.controls;
+  Edu3D.addLights(_scene);
+  Edu3D.addGrid(_scene, 14, 14);
+  rebuild();
+  Edu3D.startLoop(_scene, _camera, _renderer, _controls);
+}
+function rebuild() {
+  var lc = parseFloat(document.getElementById("sl").value);
+  var wc = parseFloat(document.getElementById("sw").value);
+  var hc = parseFloat(document.getElementById("sh").value);
+  document.getElementById("vl").textContent = String(lc);
+  document.getElementById("vw").textContent = String(wc);
+  document.getElementById("vh").textContent = String(hc);
+  document.getElementById("vol").textContent = (lc * wc * hc).toFixed(0) + " 立方厘米";
+  var l = cmToScene(lc), w = cmToScene(wc), h = cmToScene(hc);
+  if (_mesh) { _scene.remove(_mesh); _mesh.geometry.dispose(); _mesh.material.dispose(); }
+  if (_edges) { _scene.remove(_edges); _edges.geometry.dispose(); _edges.material.dispose(); }
+  var geo = new THREE.BoxGeometry(l, h, w);
+  geo.translate(0, h / 2, 0);
+  var mat = new THREE.MeshLambertMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.92 });
+  _mesh = new THREE.Mesh(geo, mat);
+  _mesh.castShadow = true;
+  _scene.add(_mesh);
+  var em = new THREE.LineBasicMaterial({ color: 0x1e293b, linewidth: 1 });
+  _edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), em);
+  _scene.add(_edges);
+}
+function resetAll() {
+  document.getElementById("sl").value = "10";
+  document.getElementById("sw").value = "10";
+  document.getElementById("sh").value = "10";
+  rebuild();
+}
+init();
+</script>
+</body>
+</html>

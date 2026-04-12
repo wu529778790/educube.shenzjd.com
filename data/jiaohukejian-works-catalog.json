@@ -1,0 +1,265 @@
+{
+  "_meta": {
+    "description": "徐老师导航 https://www.jiaohukejian.com/math/daohang/ 同源 API /math/api/works 快照，供教立方与 reference-play-mapping 对照",
+    "fetchedAt": "2026-04-12",
+    "playBase": "https://www.jiaohukejian.com/math/play/"
+  },
+  "items": [
+    {
+      "hashId": "193DIGW",
+      "title": "包装盒捆扎问题",
+      "category": "五年级",
+      "display_order": 1,
+      "description": "包装盒捆扎丝带问题，长方体和圆柱礼盒，各种捆扎方式解决",
+      "playUrl": "https://www.jiaohukejian.com/math/play/193DIGW/"
+    },
+    {
+      "hashId": "0SZLFA2",
+      "title": "五下表面积难题",
+      "category": "五年级",
+      "display_order": 2,
+      "description": "挖出正方体，领奖台，多重切割引起的表面积问题合集",
+      "playUrl": "https://www.jiaohukejian.com/math/play/0SZLFA2/"
+    },
+    {
+      "hashId": "127FEAT",
+      "title": "水中浸物（排水法求体积）",
+      "category": "五年级",
+      "display_order": 3,
+      "description": "用体积天平解决各种类型的水中浸物（排水法球体积）的问题",
+      "playUrl": "https://www.jiaohukejian.com/math/play/127FEAT/"
+    },
+    {
+      "hashId": "0C6OVSC",
+      "title": "表面积难题2类",
+      "category": "六年级",
+      "display_order": 4,
+      "description": "叠放，高变化引起的表面积变化问题；支持长方体，圆柱等多种图形的最多三层组合",
+      "playUrl": "https://www.jiaohukejian.com/math/play/0C6OVSC/"
+    },
+    {
+      "hashId": "00CZI2H",
+      "title": "环形相遇追及问题",
+      "category": "四年级",
+      "display_order": 5,
+      "description": "实时显示运动轨迹，并且可以拖动轨迹的环形跑道的相遇追及问题课件",
+      "playUrl": "https://www.jiaohukejian.com/math/play/00CZI2H/"
+    },
+    {
+      "hashId": "0LEIT9Z",
+      "title": "鸡兔同笼",
+      "category": "四年级",
+      "display_order": 6,
+      "description": "自己动手组装鸡和兔，实际操作中感受多余的腿到底是谁的",
+      "playUrl": "https://www.jiaohukejian.com/math/play/0LEIT9Z/"
+    },
+    {
+      "hashId": "1E5TA88",
+      "title": "表面涂色问题",
+      "category": "五年级",
+      "display_order": 7,
+      "description": "不同阶数正方体涂色问题及阶梯三角锥涂色练习",
+      "playUrl": "https://www.jiaohukejian.com/math/play/1E5TA88/"
+    },
+    {
+      "hashId": "055FQDD",
+      "title": "长方体茶盒",
+      "category": "五年级",
+      "display_order": 8,
+      "description": "五下难题正方体容器内最多能放几个茶盒",
+      "playUrl": "https://www.jiaohukejian.com/math/play/055FQDD/"
+    },
+    {
+      "hashId": "1NDNJ6B",
+      "title": "圆柱圆锥复习课",
+      "category": "六年级",
+      "display_order": 9,
+      "description": "瓶子倒置求体积，削去最大圆柱圆锥，倍拼法求体积",
+      "playUrl": "https://www.jiaohukejian.com/math/play/1NDNJ6B/"
+    },
+    {
+      "hashId": "1UC3JB2",
+      "title": "正比例与反比例",
+      "category": "六年级",
+      "display_order": 10,
+      "description": "正比例与反比例的举例，图像与概念",
+      "playUrl": "https://www.jiaohukejian.com/math/play/1UC3JB2/"
+    },
+    {
+      "hashId": "1O09ST7",
+      "title": "圆柱的体积",
+      "category": "六年级",
+      "display_order": 11,
+      "description": "支持最多10000份的极限思想验证圆柱的体积公式，以及底面积乘高的多直柱体对比",
+      "playUrl": "https://www.jiaohukejian.com/math/play/1O09ST7/"
+    },
+    {
+      "hashId": "179V6GD",
+      "title": "观察物体（三）",
+      "category": "五年级",
+      "display_order": 12,
+      "description": "从平面三视图到立体，或者从立体到平面，都由你操作",
+      "playUrl": "https://www.jiaohukejian.com/math/play/179V6GD/"
+    },
+    {
+      "hashId": "1UYPTAE",
+      "title": "长（正）方体的体积和进率",
+      "category": "五年级",
+      "display_order": 13,
+      "description": "从点线面体的角度探索长（正）方体的体积及进率",
+      "playUrl": "https://www.jiaohukejian.com/math/play/1UYPTAE/"
+    },
+    {
+      "hashId": "0JFPR2O",
+      "title": "多边形内角和",
+      "category": "四年级",
+      "display_order": 14,
+      "description": "利用拼角法和辅助线的方法验证多边形的内角和",
+      "playUrl": "https://www.jiaohukejian.com/math/play/0JFPR2O/"
+    },
+    {
+      "hashId": "0QGYWHR",
+      "title": "圆锥的体积",
+      "category": "六年级",
+      "display_order": 15,
+      "description": "圆锥的认识，展开图，体积以及切面学习",
+      "playUrl": "https://www.jiaohukejian.com/math/play/0QGYWHR/"
+    },
+    {
+      "hashId": "0GZ5E0K",
+      "title": "长（正）方体表面积和展开图",
+      "category": "五年级",
+      "display_order": 16,
+      "description": "自由拼搭验证立体图形展开图以及切割面积增减问题",
+      "playUrl": "https://www.jiaohukejian.com/math/play/0GZ5E0K/"
+    },
+    {
+      "hashId": "0XS1NKY",
+      "title": "面动成体",
+      "category": "六年级",
+      "display_order": 17,
+      "description": "用任意设计的平面图形进行3d旋转变身吧",
+      "playUrl": "https://www.jiaohukejian.com/math/play/0XS1NKY/"
+    },
+    {
+      "hashId": "0A7VV61",
+      "title": "圆柱表面积",
+      "category": "六年级",
+      "display_order": 18,
+      "description": "圆柱表面积展开图",
+      "playUrl": "https://www.jiaohukejian.com/math/play/0A7VV61/"
+    },
+    {
+      "hashId": "1XV65WR",
+      "title": "阴影面积",
+      "category": "六年级",
+      "display_order": 19,
+      "description": "可以自由拼组的阴影部分面积课件",
+      "playUrl": "https://www.jiaohukejian.com/math/play/1XV65WR/"
+    },
+    {
+      "hashId": "1LWRXC4",
+      "title": "圆绕图形运动",
+      "category": "六年级",
+      "display_order": 20,
+      "description": "圆绕图形外侧或者内部运动可视化扫过面积和圆心运动轨迹",
+      "playUrl": "https://www.jiaohukejian.com/math/play/1LWRXC4/"
+    },
+    {
+      "hashId": "081VZUA",
+      "title": "阴影部分随机出题系统",
+      "category": "六年级",
+      "display_order": 21,
+      "description": "pdf一键下载打印，几何出题不再麻烦",
+      "playUrl": "https://www.jiaohukejian.com/math/play/081VZUA/"
+    },
+    {
+      "hashId": "0OUSM1S",
+      "title": "拉窗帘模型",
+      "category": "五年级",
+      "display_order": 22,
+      "description": "可以自由框选的等积变形课件",
+      "playUrl": "https://www.jiaohukejian.com/math/play/0OUSM1S/"
+    },
+    {
+      "hashId": "1H4RGFX",
+      "title": "平面图形面积推导",
+      "category": "五年级",
+      "display_order": 23,
+      "description": "平行四边形、三角形、梯形面积公式推导课件",
+      "playUrl": "https://www.jiaohukejian.com/math/play/1H4RGFX/"
+    },
+    {
+      "hashId": "153VNRQ",
+      "title": "羊吃草问题",
+      "category": "六年级",
+      "display_order": 24,
+      "description": "自由放置墙体，拖动羊吃草吧",
+      "playUrl": "https://www.jiaohukejian.com/math/play/153VNRQ/"
+    },
+    {
+      "hashId": "0F0C0CX",
+      "title": "数与形",
+      "category": "六年级",
+      "display_order": 25,
+      "description": "自定义等差数列拖动变形模拟器",
+      "playUrl": "https://www.jiaohukejian.com/math/play/0F0C0CX/"
+    },
+    {
+      "hashId": "0K2C13S",
+      "title": "工程问题",
+      "category": "六年级",
+      "display_order": 26,
+      "description": "把工作可视化，并且能各题型随机出题的工程问题课件",
+      "playUrl": "https://www.jiaohukejian.com/math/play/0K2C13S/"
+    },
+    {
+      "hashId": "1SSQ143",
+      "title": "圆的面积",
+      "category": "六年级",
+      "display_order": 27,
+      "description": "可以把圆平均分成1万份的圆面积推导课件",
+      "playUrl": "https://www.jiaohukejian.com/math/play/1SSQ143/"
+    },
+    {
+      "hashId": "0VW1RV3",
+      "title": "植树问题",
+      "category": "五年级",
+      "display_order": 28,
+      "description": "学生可以自己动手种树探究的植树问题课件",
+      "playUrl": "https://www.jiaohukejian.com/math/play/0VW1RV3/"
+    },
+    {
+      "hashId": "039FV1M",
+      "title": "六上计算出题系统",
+      "category": "六年级",
+      "display_order": 29,
+      "description": "随机出题，自动排版，可pdf下载打印",
+      "playUrl": "https://www.jiaohukejian.com/math/play/039FV1M/"
+    },
+    {
+      "hashId": "1C2BOAD",
+      "title": "量角器炮塔",
+      "category": "四年级",
+      "display_order": 30,
+      "description": "练习量角器读数的有趣的射击游戏",
+      "playUrl": "https://www.jiaohukejian.com/math/play/1C2BOAD/"
+    },
+    {
+      "hashId": "1LK575O",
+      "title": "确定起跑线",
+      "category": "六年级",
+      "display_order": 31,
+      "description": "跑步比赛可视化，跑道可展开帮助学生理解的课件",
+      "playUrl": "https://www.jiaohukejian.com/math/play/1LK575O/"
+    },
+    {
+      "hashId": "0QTLN2F",
+      "title": "浓度问题",
+      "category": "六年级",
+      "display_order": 32,
+      "description": "把盐和水以及盐水分离可视化，还能随机出题的浓度问题课件",
+      "playUrl": "https://www.jiaohukejian.com/math/play/0QTLN2F/"
+    }
+  ]
+}

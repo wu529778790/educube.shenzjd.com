@@ -1,6 +1,9 @@
 import { getPathLabel } from "@/data/curriculum";
 import { getToolById, tools } from "@/data/tools";
-import { loadGeneratedTools } from "@/data/generated-tools";
+import {
+  ensureGeneratedToolHtmlFile,
+  loadGeneratedTools,
+} from "@/data/generated-tools";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import BackArrow from "@/components/BackArrow";
@@ -58,6 +61,13 @@ export default async function ToolPage({ params }: PageProps) {
   if (!result) notFound();
 
   const { tool, isGenerated } = result;
+  if (isGenerated) {
+    try {
+      await ensureGeneratedToolHtmlFile(tool);
+    } catch (err) {
+      console.error("[tools/[id]] 补全生成教具 HTML 失败:", err);
+    }
+  }
   const iframeSrc = isGenerated
     ? `/tools/gen/${id}.html`
     : `/tools/${id}.html`;

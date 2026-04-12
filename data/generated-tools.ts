@@ -6,7 +6,16 @@
  * 安全策略：逐条校验、最大记录数裁剪、索引自动压缩。
  */
 import type { Tool } from "@/data/tools";
-import { readFile, writeFile, mkdir, rename, unlink } from "fs/promises";
+import { buildGeneratedToolFallbackHtml } from "@/data/gen-tool-fallback-html";
+import {
+  access,
+  constants,
+  readFile,
+  writeFile,
+  mkdir,
+  rename,
+  unlink,
+} from "fs/promises";
 import { join } from "path";
 
 interface GeneratedToolRecord {
@@ -370,8 +379,13 @@ export async function saveGeneratedTool(
       icon: meta.icon,
     };
 
+    /** 模型输出异常或过短时仍保证可打开的页面，避免只写入索引、磁盘无 HTML */
+    const htmlTrim = html.trim();
+    const finalHtml =
+      htmlTrim.length >= 120 ? html : buildGeneratedToolFallbackHtml(tool);
+
     // 1. 写 HTML 到临时文件
-    await writeFile(htmlTmpPath, html, "utf-8");
+    await writeFile(htmlTmpPath, finalHtml, "utf-8");
 
     // 2. 读取并更新索引，写到临时文件
     let records: GeneratedToolRecord[] = [];
@@ -441,4 +455,19 @@ export async function getGeneratedToolById(
 ): Promise<Tool | undefined> {
   const tools = await loadGeneratedTools();
   return tools.find((t) => t.id === id);
+}
+
+/**
+ * 若索引里已有生成教具但磁盘上缺少对应 HTML（曾写入失败或仅拷贝了 JSON），
+ * 则写入默认可运行的长方体演示页，避免 iframe 404。
+ */
+export async function ensureGeneratedToolHtmlFile(tool: Tool): Promise<void> {
+  const htmlFinalPath = join(HTML_DIR, `${tool.id}.html`);
+  try {
+    await access(htmlFinalPath, constants.F_OK);
+  } catch {
+    await mkdir(HTML_DIR, { recursive: true });
+    const html = buildGeneratedToolFallbackHtml(tool);
+    await writeFile(htmlFinalPath, html, "utf-8");
+  }
 }

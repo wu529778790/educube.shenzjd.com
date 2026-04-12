@@ -115,6 +115,29 @@ body {
   flex-wrap: wrap;
 }
 
+/**
+ * 交互动画竞品参考（与 data/reference-play-mapping 对照用）
+ * 新标签打开，不嵌入第三方脚本。
+ */
+a.edu-play-ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--edu-primary-light);
+  text-decoration: none;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--edu-primary) 22%, var(--edu-border));
+  background: color-mix(in srgb, var(--edu-surface) 88%, var(--edu-primary));
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+a.edu-play-ref:hover {
+  background: color-mix(in srgb, var(--edu-surface) 70%, var(--edu-accent2));
+  border-color: color-mix(in srgb, var(--edu-accent2) 35%, var(--edu-border));
+}
+
 /* 教具主内容区 */
 .edu-content {
   flex: 1;

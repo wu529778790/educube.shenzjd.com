@@ -1,5 +1,6 @@
 /**
  * 交互动画 play 页与教立方教具的对照（导航 JSON + hashId）。
+ * 徐老师导航目录 API 快照（标题/简介/play 链）：`data/jiaohukejian-works-catalog.json`（可用 curl 或 Playwright 定期更新）。
  * play 地址：https://www.jiaohukejian.com/math/play/{hashId}/
  *
  * **用途（竞品参考，非代码复刻）**：仅记录「对方课题标识 ↔ 教立方教具 id」与体验验收要点，

@@ -123,7 +123,7 @@ var grid = [];
 for (var i = 0; i < ROWS; i++) { grid[i] = []; for (var j = 0; j < COLS; j++) grid[i][j] = 0; }
 var mode = 'add';
 var _interactionMode = 'build'; // 'observe' or 'build'
-var history = [];
+var gridHistory = [];
 
 var _scene, _camera, _renderer, _controls;
 var _blockGroup, _gridGroup;
@@ -168,13 +168,13 @@ function buildBaseGrid() {
 
 function saveHistory() {
   var snap = grid.map(function(row) { return row.slice(); });
-  history.push(snap);
-  if (history.length > 50) history.shift();
+  gridHistory.push(snap);
+  if (gridHistory.length > 50) gridHistory.shift();
 }
 
 function undoAction() {
-  if (history.length === 0) return;
-  grid = history.pop();
+  if (gridHistory.length === 0) return;
+  grid = gridHistory.pop();
   rebuildBlocks();
 }
 
