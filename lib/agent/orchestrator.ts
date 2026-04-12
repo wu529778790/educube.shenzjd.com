@@ -1,0 +1,407 @@
+/**
+ * 教立方 EduCube — Agent 编排器
+ *
+ * 核心职责：
+ * 1. 意图识别（创建/修改/审查/推荐）
+ * 2. 多轮对话状态管理
+ * 3. 分阶段生成（规划 → 生成 → 审查）
+ * 4. 流式输出 SSE 事件
+ */
+
+import { generateChatText } from "@/lib/ai-client";
+import { buildSystemPrompt, buildRefineUserPrompt, parseRefinedSpecOutput } from "@/data/prompt-template";
+
+/* ──────────────────────────────────────
+ * 类型定义
+ * ────────────────────────────────────── */
+
+export interface AgentMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface AgentEvent {
+  type: "thinking" | "planning" | "generating" | "reviewing" | "editing" | "done" | "error";
+  content: string;
+  /** 生成的 HTML（仅 generating/done 阶段） */
+  html?: string;
+  /** 生成的 JSON Spec（仅 planning 阶段） */
+  spec?: Record<string, unknown>;
+  /** 可选的操作按钮 */
+  actions?: AgentAction[];
+}
+
+export interface AgentAction {
+  label: string;
+  action: string;
+}
+
+export interface SessionState {
+  messages: AgentMessage[];
+  currentHtml: string | null;
+  currentSpec: Record<string, unknown> | null;
+  stage: "idle" | "planning" | "generating" | "reviewing" | "editing";
+  toolName: string | null;
+  chapter: string | null;
+  grade: string | null;
+  subject: string | null;
+}
+
+/* ──────────────────────────────────────
+ * Agent 编排器
+ * ────────────────────────────────────── */
+
+export class AgentOrchestrator {
+  private state: SessionState;
+
+  constructor(initialState?: Partial<SessionState>) {
+    this.state = {
+      messages: initialState?.messages || [],
+      currentHtml: initialState?.currentHtml || null,
+      currentSpec: initialState?.currentSpec || null,
+      stage: initialState?.stage || "idle",
+      toolName: initialState?.toolName || null,
+      chapter: initialState?.chapter || null,
+      grade: initialState?.grade || null,
+      subject: initialState?.subject || null,
+    };
+  }
+
+  getState(): SessionState {
+    return { ...this.state };
+  }
+
+  /**
+   * 处理用户消息，返回 SSE 事件流
+   */
+  async *handleMessage(userInput: string): AsyncGenerator<AgentEvent> {
+    // 记录用户消息
+    this.state.messages.push({ role: "user", content: userInput });
+
+    // 意图识别
+    const intent = this.detectIntent(userInput);
+
+    switch (intent) {
+      case "create":
+        yield* this.handleCreate(userInput);
+        break;
+      case "modify":
+        yield* this.handleModify(userInput);
+        break;
+      case "review":
+        yield* this.handleReview();
+        break;
+      default:
+        yield* this.handleCreate(userInput);
+        break;
+    }
+  }
+
+  /* ── 意图识别（规则 + AI 辅助） ── */
+
+  private detectIntent(input: string): "create" | "modify" | "review" | "create" {
+    const text = input.trim().toLowerCase();
+
+    // 修改意图：已有 HTML 且用户要求修改
+    if (this.state.currentHtml) {
+      const modifyKeywords = [
+        "改", "修改", "调整", "换成", "增加", "加上", "添加", "去掉", "删除",
+        "移除", "放大", "缩小", "变", "把", "换成", "改成", "变成",
+        "不要", "换成蓝色", "改成红色", "移动", "拖到",
+      ];
+      if (modifyKeywords.some((k) => text.includes(k))) return "modify";
+    }
+
+    // 审查意图
+    const reviewKeywords = ["检查", "审查", "有问题", "看看", "评价", "审查质量"];
+    if (reviewKeywords.some((k) => text.includes(k)) && this.state.currentHtml) {
+      return "review";
+    }
+
+    // 默认为创建
+    return "create";
+  }
+
+  /* ── 创建新教具（三阶段） ── */
+
+  private async *handleCreate(userInput: string): AsyncGenerator<AgentEvent> {
+    this.state.stage = "planning";
+
+    // 阶段 1：需求整理
+    yield { type: "thinking", content: "正在分析你的需求..." };
+
+    const gradeLabel = this.state.grade || "未指定年级";
+    const subjectLabel = this.state.subject || "数学";
+
+    let refinedSpec: { name: string; spec: string };
+    try {
+      const refineResult = await generateChatText(
+        REFINE_SYSTEM_AGENT,
+        buildRefineUserPrompt({
+          gradeLabel,
+          subjectLabel,
+          userIntent: userInput,
+        }),
+        { maxTokens: 2048, temperature: 0.2 },
+      );
+      refinedSpec = parseRefinedSpecOutput(refineResult, userInput);
+    } catch {
+      refinedSpec = {
+        name: userInput.slice(0, 18),
+        spec: userInput,
+      };
+    }
+
+    this.state.toolName = refinedSpec.name;
+    yield {
+      type: "planning",
+      content: `我理解你需要「${refinedSpec.name}」。正在生成教具...\n\n${refinedSpec.spec}`,
+    };
+
+    // 阶段 2：生成 HTML
+    this.state.stage = "generating";
+    yield { type: "generating", content: "正在生成教具代码..." };
+
+    try {
+      const html = await generateChatText(
+        buildSystemPrompt(),
+        `请制作一个交互式教具：\n\n教具名称：${refinedSpec.name}\n适用年级：${gradeLabel}\n学科：${subjectLabel}\n\n<requirement>\n${refinedSpec.spec}\n</requirement>\n\n直接输出完整 HTML，不要输出任何解释文字。`,
+        {
+          maxTokens: parseInt(process.env.AI_MAX_TOKENS || "16000", 10),
+          temperature: 0.3,
+        },
+      );
+
+      // 清理可能的 markdown 包裹
+      const cleanHtml = cleanHtmlOutput(html);
+      this.state.currentHtml = cleanHtml;
+      this.state.stage = "idle";
+
+      // 阶段 3：自动审查
+      yield { type: "reviewing", content: "正在检查生成质量..." };
+      const reviewResult = this.quickReview(cleanHtml);
+
+      yield {
+        type: "done",
+        content: `教具「${refinedSpec.name}」已生成！\n\n${reviewResult.summary}\n\n你可以说"修改XXX"来调整，或"重置"重新开始。`,
+        html: cleanHtml,
+        actions: [
+          { label: "保存教具", action: "save" },
+          { label: "继续优化", action: "iterate" },
+          { label: "重新生成", action: "restart" },
+        ],
+      };
+
+      this.state.messages.push({
+        role: "assistant",
+        content: `已生成教具「${refinedSpec.name}」`,
+      });
+    } catch (err) {
+      this.state.stage = "idle";
+      yield {
+        type: "error",
+        content: `生成失败：${err instanceof Error ? err.message : "未知错误"}，请重试。`,
+      };
+    }
+  }
+
+  /* ── 修改已有教具 ── */
+
+  private async *handleModify(userInput: string): AsyncGenerator<AgentEvent> {
+    if (!this.state.currentHtml) {
+      yield { type: "error", content: "当前没有可修改的教具，请先创建一个。" };
+      return;
+    }
+
+    this.state.stage = "editing";
+    yield { type: "thinking", content: "正在理解修改需求..." };
+
+    try {
+      const modifiedHtml = await generateChatText(
+        EDIT_SYSTEM_PROMPT,
+        buildEditPrompt(this.state.currentHtml, userInput, this.state.messages.slice(-6)),
+        {
+          maxTokens: parseInt(process.env.AI_MAX_TOKENS || "16000", 10),
+          temperature: 0.2,
+        },
+      );
+
+      const cleanHtml = cleanHtmlOutput(modifiedHtml);
+      this.state.currentHtml = cleanHtml;
+      this.state.stage = "idle";
+
+      yield {
+        type: "done",
+        content: "已修改完成！右侧预览已更新。",
+        html: cleanHtml,
+        actions: [
+          { label: "保存教具", action: "save" },
+          { label: "继续优化", action: "iterate" },
+        ],
+      };
+
+      this.state.messages.push({
+        role: "assistant",
+        content: `已按"${userInput}"修改了教具`,
+      });
+    } catch (err) {
+      this.state.stage = "idle";
+      yield {
+        type: "error",
+        content: `修改失败：${err instanceof Error ? err.message : "未知错误"}`,
+      };
+    }
+  }
+
+  /* ── 审查当前教具 ── */
+
+  private async *handleReview(): AsyncGenerator<AgentEvent> {
+    if (!this.state.currentHtml) {
+      yield { type: "error", content: "当前没有可审查的教具。" };
+      return;
+    }
+
+    yield { type: "reviewing", content: "正在审查教具质量..." };
+
+    const result = this.quickReview(this.state.currentHtml);
+
+    yield {
+      type: "done",
+      content: `审查完成：\n\n${result.summary}\n\n你可以说"修改XXX"来修复问题。`,
+      html: this.state.currentHtml,
+      actions: [
+        { label: "自动修复", action: "autoFix" },
+        { label: "保存教具", action: "save" },
+      ],
+    };
+  }
+
+  /* ── 快速审查（不消耗 AI token，基于规则） ── */
+
+  private quickReview(html: string): {
+    score: number;
+    summary: string;
+  } {
+    let score = 100;
+    const issues: string[] = [];
+    const good: string[] = [];
+
+    // 检查必需结构
+    if (!html.includes("edu-tool")) { score -= 20; issues.push("缺少 .edu-tool 容器"); }
+    else good.push("✓ 使用了标准容器结构");
+
+    if (!html.includes("edu-toolbar")) { score -= 15; issues.push("缺少工具栏"); }
+    else good.push("✓ 包含工具栏");
+
+    if (!html.includes("edu-content") && !html.includes("main-layout")) {
+      score -= 15; issues.push("缺少主内容区布局");
+    } else good.push("✓ 包含标准布局");
+
+    if (!html.includes("resetAll")) { score -= 10; issues.push("缺少重置函数 resetAll()"); }
+    else good.push("✓ 包含重置功能");
+
+    // 检查交互控件
+    const sliderCount = (html.match(/input[^>]*type="range"/g) || []).length;
+    if (sliderCount === 0) { score -= 15; issues.push("缺少滑块交互控件"); }
+    else if (sliderCount >= 3) good.push(`✓ 包含 ${sliderCount} 个交互滑块`);
+    else good.push(`✓ 包含 ${sliderCount} 个滑块（建议 3 个以上）`);
+
+    // 检查 info-box
+    if (!html.includes("info-box")) { score -= 5; issues.push("建议添加知识点说明卡片"); }
+    else good.push("✓ 包含知识点说明");
+
+    // 检查 Canvas 或 3D
+    if (html.includes("<canvas") || html.includes("Edu3D")) {
+      good.push("✓ 包含可视化内容");
+    } else {
+      score -= 20; issues.push("缺少可视化内容（Canvas 或 3D）");
+    }
+
+    // 检查中文内容
+    const hasChinese = /[\u4e00-\u9fff]/.test(html);
+    if (!hasChinese) { score -= 10; issues.push("缺少中文界面文字"); }
+    else good.push("✓ 包含中文界面");
+
+    score = Math.max(0, Math.min(100, score));
+
+    let summary = `质量评分：${score}/100\n\n`;
+    if (good.length > 0) summary += `优点：\n${good.join("\n")}\n\n`;
+    if (issues.length > 0) summary += `需要改进：\n${issues.map((i) => "• " + i).join("\n")}`;
+
+    return { score, summary };
+  }
+}
+
+/* ──────────────────────────────────────
+ * Prompt 模板
+ * ────────────────────────────────────── */
+
+const REFINE_SYSTEM_AGENT = `你是资深小学/初中教研员兼产品经理。用户会用口语描述想做的交互教具，你要整理成给前端工程师用的「标准需求说明」。
+
+## 输出格式（严格遵守，不要 markdown，不要代码块）
+第一行必须是：
+【教具名称】（这里写不超过18个字的简短名称，不要书名号）
+
+换行后写：
+【需求规格】
+然后换行，用有序列表或分段说明，必须包含：
+1. 教学目标（学生要理解什么）
+2. 界面与交互（画布区域展示什么、右侧有哪些控件、每个控件控制什么）
+3. 数学/学科约束（数值范围、单位、是否需要标注）
+4. 默认状态与重置行为
+
+语言简洁、可执行，总字数建议 200～500 字。不要输出 HTML。`;
+
+const EDIT_SYSTEM_PROMPT = `你是前端开发专家，专门修改中国中小学课堂的交互式 HTML 教具。
+
+## 严格规则
+1. 你收到的当前教具 HTML 代码和用户的修改要求
+2. 只修改用户要求的部分，保持其他部分不变
+3. 输出完整的修改后 HTML 文件（不是 diff）
+4. 不要输出 markdown 代码围栏，直接输出纯 HTML
+5. 保持与 edu-base.css 的兼容性
+6. 所有界面文字使用中文
+7. 保持 resetAll() 函数有效
+
+## 修改原则
+- 用户说"改颜色"：只改配色
+- 用户说"加功能"：在现有结构上扩展
+- 用户说"简化"：减少控件或视觉元素
+- 保持代码整洁，不要引入冗余代码`;
+
+function buildEditPrompt(
+  currentHtml: string,
+  userRequest: string,
+  recentMessages: AgentMessage[],
+): string {
+  let context = "";
+  if (recentMessages.length > 0) {
+    context = "\n## 对话上下文\n" + recentMessages
+      .map((m) => `${m.role === "user" ? "用户" : "助手"}: ${m.content.slice(0, 200)}`)
+      .join("\n");
+  }
+
+  return `当前教具代码如下：
+
+\`\`\`html
+${currentHtml}
+\`\`\`
+${context}
+
+## 用户的修改要求
+${userRequest}
+
+请按要求修改教具，输出完整的修改后 HTML 文件。`;
+}
+
+/* ──────────────────────────────────────
+ * 工具函数
+ * ────────────────────────────────────── */
+
+function cleanHtmlOutput(raw: string): string {
+  let html = raw.trim();
+  // 去掉 markdown 代码围栏
+  html = html.replace(/^```(?:html)?\s*\n?/i, "");
+  html = html.replace(/\n?```\s*$/i, "");
+  return html.trim();
+}

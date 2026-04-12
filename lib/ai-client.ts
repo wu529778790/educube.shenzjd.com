@@ -72,7 +72,7 @@ interface ChatOptions {
   temperature: number;
 }
 
-async function generateChatText(
+export async function generateChatText(
   systemPrompt: string,
   userPrompt: string,
   options: ChatOptions,
