@@ -115,7 +115,7 @@ var _group;
 var _currentShape = 'rect';
 var _animId = null;
 /** 空闲时绕 Y 轴缓慢旋转，便于理解「面动成体」；播放动画时暂停 */
-var _idleSpinSpeed = 0.0045;
+var _idleSpinSpeed = 0.0028;
 
 var SHAPES = {
   rect: {
@@ -165,13 +165,45 @@ function init() {
 
 function clearGroup() { while (_group.children.length) _group.remove(_group.children[0]); }
 
-function buildFlat() {
-  clearGroup();
-  var def = SHAPES[_currentShape];
-  var mat = new THREE.MeshLambertMaterial({ color: def.color, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
-  var edgeMat = new THREE.LineBasicMaterial({ color: 0x1e293b, linewidth: 2 });
+/** 与 buildFlat / buildRevolved 尺寸一致的 Lathe 截面（x=离旋转轴距离，y=沿轴高度） */
+function getLatheProfile(shapeKey) {
+  switch (shapeKey) {
+    case 'rect':
+      return [
+        new THREE.Vector2(0.02, 0),
+        new THREE.Vector2(1.2, 0),
+        new THREE.Vector2(1.2, 2),
+        new THREE.Vector2(0.02, 2),
+      ];
+    case 'rtriangle':
+      return [
+        new THREE.Vector2(0.02, 0),
+        new THREE.Vector2(1.2, 0),
+        new THREE.Vector2(0.02, 2),
+      ];
+    case 'semicircle':
+    case 'circle': {
+      var R = 1.2;
+      var pts = [];
+      for (var i = 0; i <= 40; i++) {
+        var phi = -Math.PI / 2 + (Math.PI * i) / 40;
+        pts.push(new THREE.Vector2(R * Math.cos(phi), R + R * Math.sin(phi)));
+      }
+      return pts;
+    }
+    case 'trapezoid':
+      return [
+        new THREE.Vector2(0.02, 0),
+        new THREE.Vector2(1.2, 0),
+        new THREE.Vector2(0.8, 2),
+        new THREE.Vector2(0.02, 2),
+      ];
+    default:
+      return null;
+  }
+}
 
-  // Rotation axis (dashed line along Y)
+function addRotationAxisToGroup() {
   var axisGeo = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(0, -2, 0), new THREE.Vector3(0, 3, 0)
   ]);
@@ -179,11 +211,17 @@ function buildFlat() {
   var axis = new THREE.Line(axisGeo, axisMat);
   axis.computeLineDistances();
   _group.add(axis);
-
-  // Axis label
   var axisLbl = Edu3D.textSprite('旋转轴', { color: '#ef4444', scale: 0.35 });
   axisLbl.position.set(0.3, 2.8, 0);
   _group.add(axisLbl);
+}
+
+function buildFlat() {
+  clearGroup();
+  addRotationAxisToGroup();
+  var def = SHAPES[_currentShape];
+  var mat = new THREE.MeshLambertMaterial({ color: def.color, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+  var edgeMat = new THREE.LineBasicMaterial({ color: 0x1e293b, linewidth: 2 });
 
   var shape;
   switch (_currentShape) {
@@ -248,118 +286,73 @@ function buildFlat() {
   _group.add(arrow);
 }
 
-function setMaterialsOpacityBatch(list, factor) {
-  list.forEach(function (item) {
-    item.mat.opacity = Math.max(0, item.base * factor);
-  });
-}
-
 function playRevolve() {
   if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
   document.getElementById('btn-play').disabled = true;
 
-  var startRot = _group.rotation.y;
-  var t = 0;
-  var phase1Frames = 96;
-  var fadeList = [];
-  var seenMat = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
-  _group.traverse(function (child) {
-    if (!child.material) return;
-    var mats = Array.isArray(child.material) ? child.material : [child.material];
-    mats.forEach(function (m) {
-      if (!m || m.opacity === undefined) return;
-      if (seenMat && seenMat.has(m)) return;
-      if (seenMat) seenMat.add(m);
-      m.transparent = true;
-      fadeList.push({ mat: m, base: m.opacity });
+  var profile = getLatheProfile(_currentShape);
+  if (!profile) {
+    document.getElementById('btn-play').disabled = false;
+    return;
+  }
+
+  _group.rotation.y = 0;
+  /** 每次播放都从「平面 + 轴」状态开始，避免第二次仍停在柱体上再渐隐 */
+  buildFlat();
+
+  _animId = requestAnimationFrame(function beginSweepAfterFlat() {
+    clearGroup();
+    addRotationAxisToGroup();
+
+    var def = SHAPES[_currentShape];
+    var sweepMat = new THREE.MeshLambertMaterial({
+      color: def.resultColor,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.82,
     });
-  });
+    var sweepMesh = new THREE.Mesh(new THREE.BufferGeometry(), sweepMat);
+    sweepMesh.position.y = 0.5;
+    sweepMesh.userData.isSweep = true;
+    _group.add(sweepMesh);
 
-  function easeOutCubic(p) {
-    return 1 - Math.pow(1 - p, 3);
-  }
-  function easeOutBack(p) {
-    var c1 = 1.70158;
-    var c3 = c1 + 1;
-    return 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2);
-  }
+    var t = 0;
+    var phase1Frames = 168;
 
-  function phase1() {
-    t++;
-    var p = Math.min(t / phase1Frames, 1);
-    var e = easeOutCubic(p);
-    _group.rotation.y = startRot + e * Math.PI * 2 * 2;
-    setMaterialsOpacityBatch(fadeList, 1 - e * 0.92);
-    if (p < 1) {
-      _animId = requestAnimationFrame(phase1);
-    } else {
-      _group.rotation.y = 0;
-      clearGroup();
-      buildRevolved();
-      phase2();
+    function easeOutCubic(p) {
+      return 1 - Math.pow(1 - p, 3);
     }
-  }
 
-  var solidMesh = null;
-  var solidEdge = null;
-  var label = null;
-  var axisLine = null;
-
-  function phase2() {
-    t = 0;
-    var steps = 56;
-    solidMesh = null;
-    label = null;
-    axisLine = null;
-    _group.children.forEach(function (c) {
-      if (c.userData && c.userData.isRevolvedSolid) solidMesh = c;
-      if (c.isSprite) label = c;
-      if (c.isLine && c.material && c.material.isLineDashedMaterial) axisLine = c;
-    });
-    if (!solidMesh) {
-      document.getElementById('btn-play').disabled = false;
-      _animId = null;
-      return;
-    }
-    solidEdge = solidMesh.children[0];
-    solidMesh.scale.set(0.02, 0.02, 0.02);
-    if (solidMesh.material) solidMesh.material.opacity = 0;
-    if (solidEdge && solidEdge.material) solidEdge.material.opacity = 0;
-    if (label && label.material) label.material.opacity = 0;
-    if (axisLine && axisLine.material) axisLine.material.opacity = 0;
-
-    function tick2() {
+    function phase1() {
       t++;
-      var p = Math.min(t / steps, 1);
-      var e = easeOutBack(p);
-      var eClamped = Math.max(0, Math.min(1, e));
-      var sc = 0.02 + (1 - 0.02) * eClamped;
-      solidMesh.scale.set(sc, sc, sc);
-      var op = Math.min(1, p * 1.15) * 0.78;
-      if (solidMesh.material) solidMesh.material.opacity = op;
-      if (solidEdge && solidEdge.material) solidEdge.material.opacity = op * 0.45;
-      if (label && label.material) label.material.opacity = Math.min(1, p * 1.2);
-      if (axisLine && axisLine.material) axisLine.material.opacity = Math.min(0.75, p * 0.9);
+      var p = Math.min(t / phase1Frames, 1);
+      var e = easeOutCubic(p);
+      var phiLen = Math.max(0.06, e * Math.PI * 2);
+      var oldGeo = sweepMesh.geometry;
+      sweepMesh.geometry = new THREE.LatheGeometry(profile, 48, 0, phiLen);
+      oldGeo.dispose();
       if (p < 1) {
-        _animId = requestAnimationFrame(tick2);
+        _animId = requestAnimationFrame(phase1);
       } else {
+        _group.remove(sweepMesh);
+        sweepMesh.geometry.dispose();
+        sweepMat.dispose();
+        clearGroup();
+        buildRevolved();
         _animId = null;
         document.getElementById('btn-play').disabled = false;
-        solidMesh.scale.set(1, 1, 1);
-        if (solidMesh.material) solidMesh.material.opacity = 0.78;
-        if (solidEdge && solidEdge.material) solidEdge.material.opacity = 0.42;
       }
     }
-    tick2();
-  }
 
-  _animId = requestAnimationFrame(phase1);
+    _animId = requestAnimationFrame(phase1);
+  });
 }
 
 function buildRevolved() {
   var def = SHAPES[_currentShape];
-  var mat = new THREE.MeshLambertMaterial({ color: def.resultColor, transparent: true, opacity: 0 });
-  var edgeMat = new THREE.LineBasicMaterial({ color: 0x1e293b, transparent: true, opacity: 0 });
+  /** 直接为最终透明度，避免「先透明再显现」被看成柱体渐出 */
+  var mat = new THREE.MeshLambertMaterial({ color: def.resultColor, transparent: true, opacity: 0.78 });
+  var edgeMat = new THREE.LineBasicMaterial({ color: 0x1e293b, transparent: true, opacity: 0.42 });
 
   var geo;
   switch (_currentShape) {
@@ -390,13 +383,13 @@ function buildRevolved() {
   var lbl = Edu3D.textSprite(def.result, { color: '#334155', scale: 0.5 });
   lbl.position.set(0, 3.5, 0);
   lbl.material.transparent = true;
-  lbl.material.opacity = 0;
+  lbl.material.opacity = 1;
   _group.add(lbl);
 
   var axisGeo = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 4, 0)
   ]);
-  var axisMat = new THREE.LineDashedMaterial({ color: 0xef4444, dashSize: 0.15, gapSize: 0.1, transparent: true, opacity: 0 });
+  var axisMat = new THREE.LineDashedMaterial({ color: 0xef4444, dashSize: 0.15, gapSize: 0.1, transparent: true, opacity: 0.75 });
   var axis = new THREE.Line(axisGeo, axisMat);
   axis.computeLineDistances();
   _group.add(axis);
