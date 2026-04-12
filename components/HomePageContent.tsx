@@ -148,7 +148,7 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
             </div>
             <span>教立方 EduCube</span>
           </div>
-          <span>多年级 · 多学科 · 交互教具持续扩充</span>
+          <span>多年级 · 数学 · 交互教具持续扩充</span>
         </div>
       </footer>
     </div>

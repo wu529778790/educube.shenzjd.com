@@ -41,7 +41,7 @@ export default function Header({ searchInput, onSearchChange }: HeaderProps) {
               <span className="text-white/60 text-sm">EduCube</span>
             </div>
             <p className="text-white/60 text-xs mt-0.5 hidden sm:block">
-              中小学交互教具平台 · 按教材与年级浏览
+              中小学数学交互教具 · 按年级与学期浏览
             </p>
           </div>
         </Link>

@@ -12,7 +12,8 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://educube.cn"),
   alternates: { canonical: "/" },
   title: "教立方 EduCube — 中小学数学交互教具平台",
-  description: "为数学老师提供即用型交互式教具，拿来就能上课。浏览器打开即用，按教材与年级浏览。",
+  description:
+    "为数学老师提供即用型交互式教具，拿来就能上课。浏览器打开即用，教具按年级与学期整理，便于课堂选用。",
   openGraph: {
     title: "教立方 EduCube — 中小学数学交互教具平台",
     description: "为数学老师提供即用型交互式教具，拿来就能上课。浏览器打开即用，无需安装。",
