@@ -6,11 +6,37 @@
   <title>包装盒捆扎问题 — 教立方</title>
   <!-- play-ref:jiaohukejian:193DIGW | 自研：参考外站「控件结构/讲解顺序」，非复刻脚本 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <script src="../edu-lib/three.min.js"></script>
+  <script src="../edu-lib/OrbitControls.js"></script>
+  <script src="../edu-lib/edu-3d.js"></script>
   <style>
     .main-layout { display: grid; grid-template-columns: 1fr minmax(300px, 340px); height: 100%; }
     .canvas-wrap {
       position: relative; min-height: 0; background: linear-gradient(165deg, #fdf4f8, #f8fafc);
-      display: flex; align-items: center; justify-content: center; padding: 10px;
+      display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 0;
+    }
+
+    .gift-viz3d {
+      position: relative;
+      flex: 0 0 min(26vh, 200px);
+      min-height: 120px;
+      border-bottom: 1px solid var(--edu-border);
+      background: linear-gradient(180deg, #fdf4f8, #fff);
+    }
+
+    .gift-viz3d canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .canvas-2d-gift {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
     }
     #cvs { max-width: 100%; max-height: 100%; width: auto; height: auto; display: block;
       border-radius: var(--edu-radius); background: #fff; box-shadow: var(--edu-shadow); border: 1px solid var(--edu-border); }
@@ -67,7 +93,10 @@
   <div class="edu-content">
     <div class="main-layout">
       <div class="canvas-wrap">
-        <canvas id="cvs" width="520" height="400" aria-label="包装盒与丝带示意"></canvas>
+        <div class="gift-viz3d" aria-hidden="true"><canvas id="c3d"></canvas></div>
+        <div class="canvas-2d-gift">
+          <canvas id="cvs" width="520" height="400" aria-label="包装盒与丝带示意"></canvas>
+        </div>
       </div>
       <div class="control-panel">
         <div>
@@ -115,6 +144,73 @@
     </div>
   </div>
 </div>
+<script>
+(function () {
+  var canvas3 = document.getElementById("c3d");
+  if (!canvas3 || !window.Edu3D || typeof THREE === "undefined") return;
+  var ctx3 = Edu3D.createScene(canvas3, {
+    bg: 0xfff7f7,
+    fov: 42,
+    camX: 6,
+    camY: 4.5,
+    camZ: 6,
+    lookX: 0,
+    lookY: 0.25,
+    lookZ: 0,
+    minDist: 2.5,
+    maxDist: 20,
+  });
+  Edu3D.addLights(ctx3.scene);
+  Edu3D.addGrid(ctx3.scene, 12, 12, 0xfce7f3, -0.72);
+  var w3 = new THREE.Group();
+  ctx3.scene.add(w3);
+  var last = [];
+
+  function clear3() {
+    last.forEach(function (m) {
+      w3.remove(m);
+      if (m.geometry) m.geometry.dispose();
+      if (m.material) m.material.dispose();
+    });
+    last = [];
+  }
+
+  window.addEventListener("gift-3d", function (ev) {
+    var d = ev.detail || {};
+    clear3();
+    if (d.shape === "net") return;
+    var sc = 0.045;
+    if (d.shape === "cuboid") {
+      var bx = new THREE.Mesh(
+        new THREE.BoxGeometry(d.L * sc, d.H * sc, d.W * sc),
+        Edu3D.material(0xf9a8d4)
+      );
+      bx.position.y = -0.66 + (d.H * sc) / 2;
+      w3.add(bx);
+      last.push(bx);
+    } else {
+      var cyl = new THREE.Mesh(
+        new THREE.CylinderGeometry(d.cr * sc, d.cr * sc, d.ch * sc, 32),
+        Edu3D.material(0xc4b5fd)
+      );
+      cyl.position.y = -0.66 + (d.ch * sc) / 2;
+      w3.add(cyl);
+      last.push(cyl);
+    }
+  });
+
+  function r3() {
+    var cw = canvas3.clientWidth || 2;
+    var ch = canvas3.clientHeight || 2;
+    ctx3.renderer.setSize(cw, ch, false);
+    ctx3.camera.aspect = cw / ch;
+    ctx3.camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", r3);
+  r3();
+  Edu3D.startLoop(ctx3.scene, ctx3.camera, ctx3.renderer, ctx3.controls, null);
+})();
+</script>
 <script>
 (function () {
   const canvas = document.getElementById("cvs");
@@ -293,10 +389,23 @@
   function draw() {
     if (dismantle && shape === "cuboid") {
       drawNet();
+      window.dispatchEvent(new CustomEvent("gift-3d", { detail: { shape: "net" } }));
       return;
     }
     if (shape === "cuboid") drawCuboidIso();
     else drawCylinder();
+    window.dispatchEvent(
+      new CustomEvent("gift-3d", {
+        detail: {
+          shape: shape,
+          L: L,
+          W: W,
+          H: H,
+          cr: Number(rad.value),
+          ch: Number(chei.value),
+        },
+      }),
+    );
   }
 
   function syncLabels() {

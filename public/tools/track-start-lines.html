@@ -6,13 +6,17 @@
   <title>确定起跑线 — 教立方</title>
   <!-- play-ref:jiaohukejian:1LK575O | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <script src="../edu-lib/three.min.js"></script>
+  <script src="../edu-lib/OrbitControls.js"></script>
+  <script src="../edu-lib/edu-3d.js"></script>
   <style>
     .main-layout { display: grid; grid-template-columns: 1fr minmax(280px, 300px); height: 100%; }
-    .canvas-wrap { background: #fef2f2; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 10px; }
-    #cvs { background: #fff; border-radius: var(--edu-radius); border: 1px solid var(--edu-border); max-width: 100%; }
+    .canvas-area { position: relative; background: #fef2f2; overflow: hidden; min-height: 0; }
+    .canvas-area canvas { width: 100%; height: 100%; display: block; }
     .panel { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; }
     .slider-block label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
     .out { font-weight: 800; color: var(--edu-primary); margin-top: 12px; font-size: 14px; line-height: 1.5; }
+    .orbit-hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); background: rgba(255,255,255,.92); padding: 4px 10px; border-radius: 14px; font-size: 10px; color: #64748b; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -20,16 +24,19 @@
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">🏃 确定起跑线</span>
-      <span class="edu-toolbar-subtitle">弯道外圈更长 · 周长差</span>
+      <span class="edu-toolbar-subtitle">弯道周长差 · 3D 跑道</span>
     </div>
   </div>
   <div class="edu-content">
     <div class="main-layout">
-      <div class="canvas-wrap"><canvas id="cvs" width="480" height="280"></canvas></div>
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">两弯道合成整圆：外圈多跑 2πw</div>
+      </div>
       <div class="panel">
         <div class="slider-block"><label><span>分道宽 w（米）</span><span id="wv">1.2</span></label><input type="range" id="w" min="80" max="200" value="120" /></div>
-        <div class="slider-block"><label><span>弯道半圆半径 R（内沿）</span><span id="rv">36</span></label><input type="range" id="r" min="280" max="500" value="360" /></div>
-        <p style="font-size:11px;color:var(--edu-text-muted)">标准跑道两弯道合为一个整圆：外圈比内圈多跑 2π×分道宽（模型）。</p>
+        <div class="slider-block"><label><span>弯道内沿半径 R（米）</span><span id="rv">36</span></label><input type="range" id="r" min="280" max="500" value="360" /></div>
+        <p style="font-size:11px;color:var(--edu-text-muted)">模型：直道段相同，差别来自两侧半圆合成的一整圆。</p>
         <div class="out" id="out"></div>
       </div>
     </div>
@@ -37,37 +44,99 @@
 </div>
 <script>
 (function () {
-  const c = document.getElementById("cvs"), x = c.getContext("2d");
-  const w = document.getElementById("w"), r = document.getElementById("r"), out = document.getElementById("out");
-  function draw() {
-    const Wm = Number(w.value) / 100;
-    const Rm = Number(r.value) / 10;
+  var canvas = document.getElementById("c3d");
+  var wEl = document.getElementById("w");
+  var rEl = document.getElementById("r");
+  var out = document.getElementById("out");
+
+  var ctx = Edu3D.createScene(canvas, {
+    bg: 0xfff7ed,
+    fov: 42,
+    camX: 16,
+    camY: 10,
+    camZ: 16,
+    lookX: 0,
+    lookY: 0,
+    lookZ: 0,
+    minDist: 5,
+    maxDist: 55,
+  });
+  Edu3D.addLights(ctx.scene);
+  Edu3D.addGrid(ctx.scene, 40, 20, 0xfecaca, -0.72);
+
+  var world = new THREE.Group();
+  ctx.scene.add(world);
+  var trackIn = null;
+  var trackOut = null;
+  var straight = null;
+
+  function sync() {
+    var Wm = Number(wEl.value) / 100;
+    var Rm = Number(rEl.value) / 10;
     document.getElementById("wv").textContent = Wm.toFixed(1);
     document.getElementById("rv").textContent = Rm.toFixed(1);
-    const diff = 2 * Math.PI * Wm;
-    out.innerHTML = "相邻跑道一圈周长差 ≈ <strong>" + diff.toFixed(2) + "</strong> 米<br>（2πw，与 R 无关）";
-    c.width = c.parentElement.clientWidth - 12;
-    c.height = 260;
-    x.clearRect(0, 0, c.width, c.height);
-    const cy = c.height / 2, rx = 120, ry = 40;
-    x.strokeStyle = "#64748b";
-    x.lineWidth = 8;
-    x.beginPath();
-    x.ellipse(c.width * 0.35, cy, rx, ry, 0, Math.PI * 0.15, Math.PI * 0.85);
-    x.stroke();
-    x.strokeStyle = "#ef4444";
-    x.lineWidth = 6;
-    x.beginPath();
-    x.ellipse(c.width * 0.35, cy, rx + 18, ry + 6, 0, Math.PI * 0.15, Math.PI * 0.85);
-    x.stroke();
-    x.fillStyle = "#334155";
-    x.font = "12px sans-serif";
-    x.fillText("内道", 40, cy - ry - 10);
-    x.fillText("外道", 40, cy - ry - 28);
+    var diff = 2 * Math.PI * Wm;
+    out.innerHTML =
+      "相邻跑道一圈周长差 ≈ <strong>" +
+      diff.toFixed(2) +
+      "</strong> 米<br><span style=\"font-size:11px;color:#64748b\">2πw，与 R 无关（示意）</span>";
+
+    if (trackIn) {
+      world.remove(trackIn);
+      trackIn.geometry.dispose();
+      trackIn.material.dispose();
+    }
+    if (trackOut) {
+      world.remove(trackOut);
+      trackOut.geometry.dispose();
+      trackOut.material.dispose();
+    }
+    if (straight) {
+      world.remove(straight);
+      straight.geometry.dispose();
+      straight.material.dispose();
+    }
+
+    var scale = 0.35;
+    var Ri = Rm * scale;
+    var Ro = (Rm + Wm) * scale;
+    var straightLen = 14 * scale;
+
+    var torusIn = new THREE.TorusGeometry(Ri, 0.06, 10, 48, Math.PI);
+    torusIn.rotateY(Math.PI / 2);
+    torusIn.rotateX(Math.PI / 2);
+    trackIn = new THREE.Mesh(torusIn, Edu3D.material(0x64748b));
+    trackIn.position.set(-straightLen / 2, -0.65, 0);
+    world.add(trackIn);
+
+    var torusOut = new THREE.TorusGeometry(Ro, 0.07, 10, 48, Math.PI);
+    torusOut.rotateY(Math.PI / 2);
+    torusOut.rotateX(Math.PI / 2);
+    trackOut = new THREE.Mesh(torusOut, Edu3D.material(0xef4444));
+    trackOut.position.set(straightLen / 2, -0.65, 0);
+    world.add(trackOut);
+
+    var sg = new THREE.BoxGeometry(straightLen, 0.04, Ri * 2 + 0.2);
+    straight = new THREE.Mesh(sg, Edu3D.material(0xe2e8f0));
+    straight.position.set(0, -0.68, 0);
+    straight.receiveShadow = true;
+    world.add(straight);
   }
-  w.addEventListener("input", draw); r.addEventListener("input", draw);
-  window.addEventListener("resize", draw);
-  draw();
+
+  wEl.addEventListener("input", sync);
+  rEl.addEventListener("input", sync);
+
+  function onResize() {
+    var w = canvas.clientWidth || 400;
+    var h = canvas.clientHeight || 300;
+    ctx.renderer.setSize(w, h, false);
+    ctx.camera.aspect = w / h;
+    ctx.camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", onResize);
+  sync();
+  onResize();
+  Edu3D.startLoop(ctx.scene, ctx.camera, ctx.renderer, ctx.controls, null);
 })();
 </script>
 </body>

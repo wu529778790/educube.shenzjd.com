@@ -6,11 +6,18 @@
   <title>六年级计算练习生成 — 教立方</title>
   <!-- play-ref:jiaohukejian:039FV1M | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <script src="../edu-lib/three.min.js"></script>
+  <script src="../edu-lib/OrbitControls.js"></script>
+  <script src="../edu-lib/edu-3d.js"></script>
   <style>
-    .edu-content { padding: 16px; overflow: auto; max-width: 28rem; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
-    .card { background: var(--edu-surface); border: 1px solid var(--edu-border); border-radius: var(--edu-radius); padding: 20px; box-shadow: var(--edu-shadow); font-size: 18px; font-weight: 700; text-align: center; min-height: 3em; display: flex; align-items: center; justify-content: center; }
-    .sol { font-size: 15px; color: var(--edu-success); font-weight: 700; display: none; text-align: center; }
+    .main-layout { display: grid; grid-template-columns: 1fr minmax(260px, 320px); height: 100%; min-height: 0; }
+    .canvas-area { position: relative; background: linear-gradient(180deg, #eff6ff, #f8fafc); overflow: hidden; min-height: 0; }
+    .canvas-area canvas { width: 100%; height: 100%; display: block; }
+    .side { border-left: 1px solid var(--edu-border); padding: 16px; overflow: auto; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+    .card { background: var(--edu-surface); border: 1px solid var(--edu-border); border-radius: var(--edu-radius); padding: 18px; box-shadow: var(--edu-shadow); font-size: 17px; font-weight: 700; text-align: center; width: 100%; }
+    .sol { font-size: 14px; color: var(--edu-success); font-weight: 700; display: none; text-align: center; }
     .sol.show { display: block; }
+    .orbit-hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 10px; background: rgba(255,255,255,.92); padding: 4px 10px; border-radius: 14px; color: #64748b; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -18,47 +25,123 @@
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">📄 六年级计算练习生成</span>
-      <span class="edu-toolbar-subtitle">分数加减 · 换题稳定</span>
+      <span class="edu-toolbar-subtitle">分数加法 · 3D 条带</span>
     </div>
   </div>
-  <div class="edu-content">
-    <div class="card" id="q"></div>
-    <div class="sol" id="sol"></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
-      <button type="button" class="edu-btn edu-btn-primary" id="new">换一批</button>
-      <button type="button" class="edu-btn edu-btn-outline" id="show">看答案</button>
+  <div class="edu-content" style="padding:0;height:100%;overflow:hidden;">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">两段分数条拼成长条（示意通分）</div>
+      </div>
+      <div class="side">
+        <div class="card" id="q"></div>
+        <div class="sol" id="sol"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+          <button type="button" class="edu-btn edu-btn-primary" id="new">换一批</button>
+          <button type="button" class="edu-btn edu-btn-outline" id="show">看答案</button>
+        </div>
+        <p style="font-size:11px;color:var(--edu-text-muted);text-align:center;margin:0">打印：Ctrl+P。</p>
+      </div>
     </div>
-    <p style="font-size:12px;color:var(--edu-text-muted);text-align:center">打印：Ctrl+P 或系统分享为 PDF。</p>
   </div>
 </div>
 <script>
 (function () {
-  function gcd(a, b) { return b ? gcd(b, a % b) : a; }
+  function gcd(a, b) {
+    return b ? gcd(b, a % b) : a;
+  }
   function simp(n, d) {
-    const g = gcd(Math.abs(n), d);
+    var g = gcd(Math.abs(n), d);
     return [n / g, d / g];
   }
   function fracStr(n, d) {
-    const s = simp(n, d);
+    var s = simp(n, d);
     if (s[1] === 1) return String(s[0]);
     return s[0] + "/" + s[1];
   }
   function gen() {
-    const a = 1 + Math.floor(Math.random() * 8), b = 2 + Math.floor(Math.random() * 7);
-    const c = 1 + Math.floor(Math.random() * 8), e = 2 + Math.floor(Math.random() * 7);
-    const ansN = a * e + c * b, ansD = b * e;
-    const q = fracStr(a, b) + " + " + fracStr(c, e) + " = ?";
-    return { q: q, a: fracStr(ansN, ansD) };
+    var a = 1 + Math.floor(Math.random() * 8);
+    var b = 2 + Math.floor(Math.random() * 7);
+    var c = 1 + Math.floor(Math.random() * 8);
+    var e = 2 + Math.floor(Math.random() * 7);
+    var ansN = a * e + c * b;
+    var ansD = b * e;
+    var q = fracStr(a, b) + " + " + fracStr(c, e) + " = ?";
+    return { q: q, a: fracStr(ansN, ansD), an: a, ad: b, cn: c, ce: e };
   }
-  let cur = gen();
+
+  var canvas = document.getElementById("c3d");
+  var ctx = Edu3D.createScene(canvas, {
+    bg: 0xf8fafc,
+    fov: 40,
+    camX: 4,
+    camY: 2.8,
+    camZ: 4,
+    lookX: 0,
+    lookY: 0.15,
+    lookZ: 0,
+    minDist: 2,
+    maxDist: 14,
+  });
+  Edu3D.addLights(ctx.scene);
+  Edu3D.addGrid(ctx.scene, 10, 10, 0xe2e8f0, -0.72);
+  var world = new THREE.Group();
+  ctx.scene.add(world);
+
+  function showBars(cur) {
+    while (world.children.length) {
+      var ch = world.children[0];
+      world.remove(ch);
+      if (ch.geometry) ch.geometry.dispose();
+      if (ch.material) ch.material.dispose();
+    }
+    var den = cur.ad * cur.ce;
+    var w1 = (cur.an * cur.ce) / den;
+    var w2 = (cur.cn * cur.ad) / den;
+    var total = w1 + w2;
+    var scale = 2.2 / Math.max(total, 0.01);
+    var m1 = new THREE.Mesh(
+      new THREE.BoxGeometry(w1 * scale, 0.25, 0.35),
+      Edu3D.material(0x3b82f6)
+    );
+    m1.position.set(-(total * scale) / 2 + (w1 * scale) / 2, -0.58, 0);
+    var m2 = new THREE.Mesh(
+      new THREE.BoxGeometry(w2 * scale, 0.25, 0.35),
+      Edu3D.material(0x8b5cf6)
+    );
+    m2.position.set(-(total * scale) / 2 + w1 * scale + (w2 * scale) / 2, -0.58, 0);
+    world.add(m1);
+    world.add(m2);
+  }
+
+  var cur = gen();
   function show() {
     document.getElementById("q").textContent = cur.q;
     document.getElementById("sol").textContent = "答案：" + cur.a;
     document.getElementById("sol").classList.remove("show");
+    showBars(cur);
   }
-  document.getElementById("new").addEventListener("click", function () { cur = gen(); show(); });
-  document.getElementById("show").addEventListener("click", function () { document.getElementById("sol").classList.add("show"); });
+
+  document.getElementById("new").addEventListener("click", function () {
+    cur = gen();
+    show();
+  });
+  document.getElementById("show").addEventListener("click", function () {
+    document.getElementById("sol").classList.add("show");
+  });
+
+  function onResize() {
+    var w = canvas.clientWidth || 300;
+    var h = canvas.clientHeight || 200;
+    ctx.renderer.setSize(w, h, false);
+    ctx.camera.aspect = w / h;
+    ctx.camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", onResize);
   show();
+  onResize();
+  Edu3D.startLoop(ctx.scene, ctx.camera, ctx.renderer, ctx.controls, null);
 })();
 </script>
 </body>

@@ -6,6 +6,9 @@
   <title>环形跑道相遇与追及 — 教立方</title>
   <!-- play-ref:jiaohukejian:00CZI2H | 自研交互：双对象角位置与时间轴，课堂演示用 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <script src="../edu-lib/three.min.js"></script>
+  <script src="../edu-lib/OrbitControls.js"></script>
+  <script src="../edu-lib/edu-3d.js"></script>
   <style>
     .main-layout {
       display: grid;
@@ -118,6 +121,25 @@
       text-align: left;
       line-height: 1.5;
     }
+
+    .stage {
+      flex-direction: column;
+    }
+
+    .ring-viz3d {
+      position: relative;
+      width: 100%;
+      flex: 0 0 min(24vh, 180px);
+      min-height: 110px;
+      border-bottom: 1px solid var(--edu-border);
+      background: linear-gradient(180deg, #f0f9ff, #fff);
+    }
+
+    .ring-viz3d canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -134,6 +156,7 @@
   <div class="edu-content">
     <div class="main-layout">
       <div class="stage">
+        <div class="ring-viz3d" aria-hidden="true"><canvas id="c3d"></canvas></div>
         <div class="canvas-wrap">
           <canvas id="cvs" width="480" height="480" aria-label="环形跑道示意图"></canvas>
         </div>
@@ -179,6 +202,77 @@
     </div>
   </div>
 </div>
+<script>
+(function () {
+  var canvas3 = document.getElementById("c3d");
+  if (!canvas3 || !window.Edu3D || typeof THREE === "undefined") return;
+  var ctx3 = Edu3D.createScene(canvas3, {
+    bg: 0xf8fafc,
+    fov: 42,
+    camX: 0,
+    camY: 5.2,
+    camZ: 5.2,
+    lookX: 0,
+    lookY: 0,
+    lookZ: 0,
+    minDist: 2,
+    maxDist: 14,
+  });
+  Edu3D.addLights(ctx3.scene);
+  Edu3D.addGrid(ctx3.scene, 8, 8, 0xe0f2fe, -0.72);
+  var w3 = new THREE.Group();
+  ctx3.scene.add(w3);
+  var ringMesh = null;
+  var aMesh = null;
+  var bMesh = null;
+
+  window.addEventListener("ring-3d-sync", function (ev) {
+    var d = ev.detail || {};
+    var R = d.r != null ? d.r : 1.4;
+    var ta = d.ta;
+    var tb = d.tb;
+    if (ringMesh) {
+      w3.remove(ringMesh);
+      ringMesh.geometry.dispose();
+      ringMesh.material.dispose();
+    }
+    ringMesh = new THREE.Mesh(
+      new THREE.TorusGeometry(R, 0.06, 12, 48),
+      new THREE.MeshLambertMaterial({ color: 0xcbd5e1, transparent: true, opacity: 0.9 })
+    );
+    ringMesh.rotation.x = Math.PI / 2;
+    ringMesh.position.y = -0.66;
+    w3.add(ringMesh);
+    if (aMesh) {
+      w3.remove(aMesh);
+      aMesh.geometry.dispose();
+      aMesh.material.dispose();
+    }
+    if (bMesh) {
+      w3.remove(bMesh);
+      bMesh.geometry.dispose();
+      bMesh.material.dispose();
+    }
+    aMesh = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 12), Edu3D.material(0x2563eb));
+    aMesh.position.set(R * Math.cos(ta), -0.66 + 0.14, R * Math.sin(ta));
+    bMesh = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 12), Edu3D.material(0xea580c));
+    bMesh.position.set(R * Math.cos(tb), -0.66 + 0.14, R * Math.sin(tb));
+    w3.add(aMesh);
+    w3.add(bMesh);
+  });
+
+  function r3() {
+    var cw = canvas3.clientWidth || 2;
+    var ch = canvas3.clientHeight || 2;
+    ctx3.renderer.setSize(cw, ch, false);
+    ctx3.camera.aspect = cw / ch;
+    ctx3.camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", r3);
+  r3();
+  Edu3D.startLoop(ctx3.scene, ctx3.camera, ctx3.renderer, ctx3.controls, null);
+})();
+</script>
 <script>
 (function () {
   const canvas = document.getElementById("cvs");
@@ -286,6 +380,12 @@
     angB.textContent = angleB.toFixed(0) + "°";
     timeS.textContent = t.toFixed(1);
     lblT.textContent = t.toFixed(1) + " s / " + T_MAX + " s";
+
+    const ta = ((angleA - 90) * Math.PI) / 180;
+    const tb = ((angleB - 90) * Math.PI) / 180;
+    window.dispatchEvent(
+      new CustomEvent("ring-3d-sync", { detail: { ta: ta, tb: tb, r: 1.45 } }),
+    );
   }
 
   function syncScrubFromT() {

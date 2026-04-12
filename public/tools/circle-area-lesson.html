@@ -6,13 +6,17 @@
   <title>圆的面积 — 教立方</title>
   <!-- play-ref:jiaohukejian:1SSQ143 | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <script src="../edu-lib/three.min.js"></script>
+  <script src="../edu-lib/OrbitControls.js"></script>
+  <script src="../edu-lib/edu-3d.js"></script>
   <style>
     .main-layout { display: grid; grid-template-columns: 1fr minmax(280px, 300px); height: 100%; }
-    .canvas-wrap { background: #e0f2fe; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 10px; }
-    #cvs { background: #fff; border-radius: var(--edu-radius); border: 1px solid var(--edu-border); max-width: 100%; }
+    .canvas-area { position: relative; background: #e0f2fe; overflow: hidden; min-height: 0; }
+    .canvas-area canvas { width: 100%; height: 100%; display: block; }
     .panel { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; }
     .slider-block label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
-    .out { font-weight: 800; color: var(--edu-primary); margin-top: 10px; font-size: 14px; }
+    .out { font-weight: 800; color: var(--edu-primary); margin-top: 10px; font-size: 13px; line-height: 1.45; }
+    .orbit-hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); background: rgba(255,255,255,.9); font-size: 10px; color: #64748b; padding: 4px 10px; border-radius: 14px; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -20,16 +24,19 @@
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">⭕ 圆的面积</span>
-      <span class="edu-toolbar-subtitle">分割份数 · 近似平行四边形</span>
+      <span class="edu-toolbar-subtitle">扇形拼柱 · 3D</span>
     </div>
   </div>
   <div class="edu-content">
     <div class="main-layout">
-      <div class="canvas-wrap"><canvas id="cvs" width="480" height="360"></canvas></div>
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">份数 n 越大，交错越接近柱体侧面积≈πR×高</div>
+      </div>
       <div class="panel">
         <div class="slider-block"><label><span>扇形份数 n</span><span id="nv">8</span></label><input type="range" id="n" min="4" max="36" value="8" /></div>
         <div class="slider-block"><label><span>半径 R</span><span id="rv">5</span></label><input type="range" id="r" min="3" max="10" value="5" /></div>
-        <p style="font-size:11px;color:var(--edu-text-muted)">份数越多，交错拼接越接近「底≈半周长、高≈半径」的平行四边形，面积趋近 πR²。</p>
+        <p style="font-size:11px;color:var(--edu-text-muted)">圆柱侧壁由 n 个薄扇形条围成；高取 0.6R 便于观察「半周长×半径」直觉。</p>
         <div class="out" id="out"></div>
       </div>
     </div>
@@ -37,35 +44,86 @@
 </div>
 <script>
 (function () {
-  const c = document.getElementById("cvs"), x = c.getContext("2d");
-  const n = document.getElementById("n"), r = document.getElementById("r"), out = document.getElementById("out");
-  function draw() {
-    const N = Number(n.value), R = Number(r.value);
+  var canvas = document.getElementById("c3d");
+  var elN = document.getElementById("n");
+  var elR = document.getElementById("r");
+  var out = document.getElementById("out");
+
+  var ctx = Edu3D.createScene(canvas, {
+    bg: 0xf0f9ff,
+    fov: 42,
+    camX: 8,
+    camY: 5,
+    camZ: 8,
+    lookX: 0,
+    lookY: 0.35,
+    lookZ: 0,
+    minDist: 2,
+    maxDist: 28,
+  });
+  Edu3D.addLights(ctx.scene);
+  Edu3D.addGrid(ctx.scene, 14, 14, 0xbae6fd, -0.72);
+
+  var world = new THREE.Group();
+  ctx.scene.add(world);
+  var wedgeGroup = null;
+
+  function sync() {
+    var N = Number(elN.value);
+    var R = Number(elR.value);
     document.getElementById("nv").textContent = String(N);
     document.getElementById("rv").textContent = String(R);
-    c.width = c.parentElement.clientWidth - 12;
-    c.height = 340;
-    x.clearRect(0, 0, c.width, c.height);
-    const cx = c.width * 0.35, cy = c.height * 0.5, px = 12 * R;
-    for (let i = 0; i < N; i++) {
-      const a0 = (-Math.PI / 2 + (i / N) * Math.PI * 2);
-      const a1 = a0 + (Math.PI * 2) / N;
-      x.fillStyle = i % 2 === 0 ? "#7dd3fc" : "#bae6fd";
-      x.beginPath();
-      x.moveTo(cx, cy);
-      x.arc(cx, cy, px, a0, a1);
-      x.closePath();
-      x.fill();
-      x.strokeStyle = "#0369a1";
-      x.stroke();
+
+    if (wedgeGroup) {
+      world.remove(wedgeGroup);
+      wedgeGroup.traverse(function (o) {
+        if (o.geometry) o.geometry.dispose();
+        if (o.material) o.material.dispose();
+      });
     }
-    const approx = Math.PI * R * R;
-    const stair = (N * 0.5 * (2 * Math.PI * R / N) * R);
-    out.textContent = "πR² ≈ " + approx.toFixed(2) + "（R=" + R + "）；分割示意周长一半×高 ≈ " + stair.toFixed(2);
+    wedgeGroup = new THREE.Group();
+    var H = R * 0.12;
+    var i;
+    for (i = 0; i < N; i++) {
+      var t0 = (i / N) * Math.PI * 2;
+      var t1 = ((i + 1) / N) * Math.PI * 2;
+      var sh = new THREE.Shape();
+      sh.moveTo(0, 0);
+      sh.absarc(0, 0, R * 0.14, t0, t1, false);
+      sh.lineTo(0, 0);
+      var ext = new THREE.ExtrudeGeometry(sh, { depth: H, bevelEnabled: false });
+      ext.rotateX(-Math.PI / 2);
+      var col = new THREE.Color().setHSL(0.55 + (i % 2) * 0.03, 0.65, 0.55);
+      var mesh = new THREE.Mesh(ext, new THREE.MeshLambertMaterial({ color: col, side: THREE.DoubleSide }));
+      mesh.position.y = -0.66 + H / 2;
+      mesh.castShadow = true;
+      wedgeGroup.add(mesh);
+    }
+    world.add(wedgeGroup);
+
+    var approx = Math.PI * R * R;
+    var stair = N * 0.5 * ((2 * Math.PI * R) / N) * R;
+    out.innerHTML =
+      "πR² ≈ " +
+      approx.toFixed(2) +
+      "；分割示意「半周长×R」≈ " +
+      stair.toFixed(2);
   }
-  n.addEventListener("input", draw); r.addEventListener("input", draw);
-  window.addEventListener("resize", draw);
-  draw();
+
+  elN.addEventListener("input", sync);
+  elR.addEventListener("input", sync);
+
+  function onResize() {
+    var w = canvas.clientWidth || 400;
+    var h = canvas.clientHeight || 320;
+    ctx.renderer.setSize(w, h, false);
+    ctx.camera.aspect = w / h;
+    ctx.camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", onResize);
+  sync();
+  onResize();
+  Edu3D.startLoop(ctx.scene, ctx.camera, ctx.renderer, ctx.controls, null);
 })();
 </script>
 </body>

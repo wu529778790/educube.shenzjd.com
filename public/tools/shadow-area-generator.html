@@ -6,13 +6,19 @@
   <title>阴影面积随机出题 — 教立方</title>
   <!-- play-ref:jiaohukejian:081VZUA | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <script src="../edu-lib/three.min.js"></script>
+  <script src="../edu-lib/OrbitControls.js"></script>
+  <script src="../edu-lib/edu-3d.js"></script>
   <style>
-    .edu-content { display: flex; flex-direction: column; align-items: center; padding: 16px; overflow: auto; gap: 14px; max-width: 42rem; margin: 0 auto; }
-    .card { width: 100%; background: var(--edu-surface); border: 1px solid var(--edu-border); border-radius: var(--edu-radius); padding: 16px; box-shadow: var(--edu-shadow); }
-    .q { font-size: 15px; line-height: 1.65; font-weight: 600; color: var(--edu-text); }
-    .ans { margin-top: 12px; padding: 12px; background: #f0fdf4; border-radius: 8px; font-size: 14px; font-weight: 700; color: #166534; display: none; }
+    .main-layout { display: grid; grid-template-columns: 1fr minmax(300px, 360px); height: 100%; min-height: 0; }
+    .canvas-area { position: relative; background: #f1f5f9; overflow: hidden; min-height: 0; }
+    .canvas-area canvas { width: 100%; height: 100%; display: block; }
+    .side { border-left: 1px solid var(--edu-border); padding: 14px; background: var(--edu-surface); overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+    .q { font-size: 14px; line-height: 1.65; font-weight: 600; color: var(--edu-text); }
+    .ans { padding: 12px; background: #f0fdf4; border-radius: 8px; font-size: 13px; font-weight: 700; color: #166534; display: none; }
     .ans.show { display: block; }
-    .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .orbit-hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 10px; background: rgba(255,255,255,.92); padding: 4px 10px; border-radius: 14px; color: #64748b; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -20,46 +26,148 @@
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">📝 阴影面积随机出题</span>
-      <span class="edu-toolbar-subtitle">出题 · 自核 · 再随机</span>
+      <span class="edu-toolbar-subtitle">出题 · 3D 示意</span>
     </div>
   </div>
-  <div class="edu-content">
-    <div class="card">
-      <p class="q" id="q"></p>
-      <div class="row">
-        <button type="button" class="edu-btn edu-btn-primary" id="new">随机一题</button>
-        <button type="button" class="edu-btn edu-btn-outline" id="show">显示解析</button>
+  <div class="edu-content" style="padding:0;height:100%;overflow:hidden;">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">题型一：方减扇 · 题型二：框形</div>
       </div>
-      <div class="ans" id="ans"></div>
+      <div class="side">
+        <p class="q" id="q"></p>
+        <div class="row">
+          <button type="button" class="edu-btn edu-btn-primary" id="new">随机一题</button>
+          <button type="button" class="edu-btn edu-btn-outline" id="show">显示解析</button>
+        </div>
+        <div class="ans" id="ans"></div>
+        <p style="font-size:11px;color:var(--edu-text-muted);margin:0">题目为整数边长的简单组合图形；3D 为示意。</p>
+      </div>
     </div>
-    <p style="font-size:12px;color:var(--edu-text-muted)">题目为整数边长的简单组合图形，课堂口算用；打印可浏览器 Ctrl+P。</p>
   </div>
 </div>
 <script>
 (function () {
-  const q = document.getElementById("q"), ans = document.getElementById("ans");
+  var canvas = document.getElementById("c3d");
+  var qEl = document.getElementById("q");
+  var ansEl = document.getElementById("ans");
+
+  var ctx = Edu3D.createScene(canvas, {
+    bg: 0xf8fafc,
+    fov: 42,
+    camX: 9,
+    camY: 6,
+    camZ: 9,
+    lookX: 0,
+    lookY: 0.1,
+    lookZ: 0,
+    minDist: 3,
+    maxDist: 30,
+  });
+  Edu3D.addLights(ctx.scene);
+  Edu3D.addGrid(ctx.scene, 16, 16, 0xe2e8f0, -0.72);
+
+  var world = new THREE.Group();
+  ctx.scene.add(world);
+
+  function clearW() {
+    while (world.children.length) {
+      var ch = world.children[0];
+      world.remove(ch);
+      if (ch.geometry) ch.geometry.dispose();
+      if (ch.material) ch.material.dispose();
+    }
+  }
+
+  function buildType1(a, r) {
+    clearW();
+    var S = 0.7 / Math.max(a, 1);
+    var sh = new THREE.Shape();
+    sh.moveTo(0, a * S);
+    sh.lineTo(a * S, a * S);
+    sh.lineTo(a * S, 0);
+    sh.lineTo(r * S, 0);
+    sh.absarc(0, 0, r * S, 0, Math.PI / 2, false);
+    sh.lineTo(0, a * S);
+    var g = new THREE.ExtrudeGeometry(sh, { depth: 0.12, bevelEnabled: false });
+    g.rotateX(Math.PI / 2);
+    var mesh = new THREE.Mesh(
+      g,
+      new THREE.MeshLambertMaterial({ color: 0x1e40af, transparent: true, opacity: 0.85 })
+    );
+    mesh.position.set(-(a * S) / 2, -0.66, -(a * S) / 2);
+    world.add(mesh);
+  }
+
+  function buildType2(a, b) {
+    clearW();
+    var S = 0.6 / Math.max(a, b, 1);
+    var outer = new THREE.Mesh(
+      new THREE.BoxGeometry(a * S, 0.14, b * S),
+      Edu3D.material(0x94a3b8)
+    );
+    outer.position.y = -0.66;
+    var inner = new THREE.Mesh(
+      new THREE.BoxGeometry((a - 2) * S, 0.16, (b - 2) * S),
+      Edu3D.material(0xf1f5f9)
+    );
+    inner.position.y = -0.64;
+    world.add(outer);
+    world.add(inner);
+  }
+
   function pick() {
-    const a = 4 + Math.floor(Math.random() * 8);
-    const b = 3 + Math.floor(Math.random() * 7);
-    const r = 1 + Math.floor(Math.random() * 4);
-    const types = [
+    var a = 4 + Math.floor(Math.random() * 8);
+    var b = 3 + Math.floor(Math.random() * 7);
+    var r = 1 + Math.floor(Math.random() * 4);
+    var types = [
       function () {
-        const s = a * b, qn = (Math.PI * r * r) / 4;
-        return { text: "边长为 " + a + " 的正方形一角剪去半径为 " + r + " 的四分之一圆，求剩余面积。", sol: (s - qn).toFixed(2) + "（正方形 − 四分之一圆）" };
+        var s = a * b;
+        var qn = (Math.PI * r * r) / 4;
+        return {
+          text: "边长为 " + a + " 的正方形一角剪去半径为 " + r + " 的四分之一圆，求剩余面积。",
+          sol: (s - qn).toFixed(2) + "（正方形 − 四分之一圆）",
+          kind: 1,
+          pa: a,
+          pr: r,
+        };
       },
       function () {
-        const s = a * b - (a - 2) * (b - 2);
-        return { text: "外矩形 " + a + "×" + b + "，内部挖去小矩形 " + (a - 2) + "×" + (b - 2) + "（居中环带示意），求阴影框形面积。", sol: String(s) };
-      }
+        var s = a * b - (a - 2) * (b - 2);
+        return {
+          text: "外矩形 " + a + "×" + b + "，内部挖去小矩形 " + (a - 2) + "×" + (b - 2) + "（居中环带示意），求阴影框形面积。",
+          sol: String(s),
+          kind: 2,
+          pa: a,
+          pb: b,
+        };
+      },
     ];
-    const t = types[Math.floor(Math.random() * types.length)]();
-    q.textContent = t.text;
-    ans.textContent = "参考思路：" + t.sol;
-    ans.classList.remove("show");
+    var t = types[Math.floor(Math.random() * types.length)]();
+    qEl.textContent = t.text;
+    ansEl.textContent = "参考思路：" + t.sol;
+    ansEl.classList.remove("show");
+    if (t.kind === 1) buildType1(t.pa, t.pr);
+    else buildType2(t.pa, t.pb);
   }
+
   document.getElementById("new").addEventListener("click", pick);
-  document.getElementById("show").addEventListener("click", function () { ans.classList.add("show"); });
+  document.getElementById("show").addEventListener("click", function () {
+    ansEl.classList.add("show");
+  });
+
+  function onResize() {
+    var w = canvas.clientWidth || 320;
+    var h = canvas.clientHeight || 320;
+    ctx.renderer.setSize(w, h, false);
+    ctx.camera.aspect = w / h;
+    ctx.camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", onResize);
   pick();
+  onResize();
+  Edu3D.startLoop(ctx.scene, ctx.camera, ctx.renderer, ctx.controls, null);
 })();
 </script>
 </body>

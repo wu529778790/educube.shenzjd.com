@@ -6,6 +6,9 @@
   <title>五下表面积综合难题 — 教立方</title>
   <!-- play-ref:jiaohukejian:0SZLFA2 | 自研：题型壳与数值同步，参考外站模块划分 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <script src="../edu-lib/three.min.js"></script>
+  <script src="../edu-lib/OrbitControls.js"></script>
+  <script src="../edu-lib/edu-3d.js"></script>
   <style>
     .main-layout { display: grid; grid-template-columns: 1fr minmax(300px, 340px); height: 100%; }
     .canvas-wrap { min-height: 0; background: linear-gradient(165deg, #f0fdf4, #f8fafc); display: flex; align-items: center; justify-content: center; padding: 10px; }
@@ -18,6 +21,34 @@
     .slider-block label { font-size: 12px; font-weight: 600; display: flex; justify-content: space-between; }
     .sa-readout { font-size: 15px; font-weight: 800; color: var(--edu-accent); padding: 10px; border-radius: var(--edu-radius-sm); background: color-mix(in srgb, var(--edu-accent) 10%, #fff); border: 1px solid var(--edu-border); text-align: center; }
     .hint { font-size: 11px; color: var(--edu-text-muted); line-height: 1.45; }
+
+    .viz3d-sa {
+      position: relative;
+      flex: 0 0 min(26vh, 200px);
+      min-height: 120px;
+      border-bottom: 1px solid var(--edu-border);
+      background: linear-gradient(165deg, #ecfdf5, #f8fafc);
+    }
+
+    .viz3d-sa canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .canvas-wrap {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .canvas-2d-sa {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
   </style>
 </head>
 <body>
@@ -30,7 +61,10 @@
   </div>
   <div class="edu-content">
     <div class="main-layout">
-      <div class="canvas-wrap"><canvas id="cvs" width="480" height="360"></canvas></div>
+      <div class="canvas-wrap">
+        <div class="viz3d-sa" aria-hidden="true"><canvas id="c3d"></canvas></div>
+        <div class="canvas-2d-sa"><canvas id="cvs" width="480" height="360"></canvas></div>
+      </div>
       <div class="control-panel">
         <div>
           <div class="ctrl-label">题型</div>
@@ -63,6 +97,72 @@
     </div>
   </div>
 </div>
+<script>
+(function () {
+  var canvas3 = document.getElementById("c3d");
+  if (canvas3 && window.Edu3D && typeof THREE !== "undefined") {
+    var ctx3 = Edu3D.createScene(canvas3, {
+      bg: 0xf8fafc,
+      fov: 40,
+      camX: 5,
+      camY: 4,
+      camZ: 5,
+      lookX: 0,
+      lookY: 0.3,
+      lookZ: 0,
+      minDist: 2,
+      maxDist: 16,
+    });
+    Edu3D.addLights(ctx3.scene);
+    Edu3D.addGrid(ctx3.scene, 10, 10, 0xd1fae5, -0.72);
+    var w3 = new THREE.Group();
+    ctx3.scene.add(w3);
+    var last3 = [];
+
+    function clear3() {
+      last3.forEach(function (m) {
+        w3.remove(m);
+        if (m.geometry) m.geometry.dispose();
+        if (m.material) m.material.dispose();
+      });
+      last3 = [];
+    }
+
+    window.addEventListener("sa-hard5-3d", function (ev) {
+      var d = ev.detail || {};
+      clear3();
+      var sc = 0.09;
+      var mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(d.L * sc, d.H * sc, d.W * sc),
+        Edu3D.material(0x86efac)
+      );
+      mesh.position.y = -0.66 + (d.H * sc) / 2;
+      w3.add(mesh);
+      last3.push(mesh);
+      if (d.mode === "hole" && d.kk > 0) {
+        var hole = new THREE.Mesh(
+          new THREE.BoxGeometry(d.kk * sc * 0.95, d.kk * sc * 0.95, d.kk * sc * 0.95),
+          new THREE.MeshLambertMaterial({ color: 0xf87171, transparent: true, opacity: 0.65 })
+        );
+        hole.position.set(0, -0.66 + d.H * sc - (d.kk * sc) / 2, 0);
+        w3.add(hole);
+        last3.push(hole);
+      }
+    });
+
+    function r3() {
+      var cw = canvas3.clientWidth || 2;
+      var ch = canvas3.clientHeight || 2;
+      ctx3.renderer.setSize(cw, ch, false);
+      ctx3.camera.aspect = cw / ch;
+      ctx3.camera.updateProjectionMatrix();
+    }
+    window.addEventListener("resize", r3);
+    r3();
+    Edu3D.startLoop(ctx3.scene, ctx3.camera, ctx3.renderer, ctx3.controls, null);
+  }
+})();
+</script>
 <script>
 (function () {
   const canvas = document.getElementById("cvs");
@@ -157,6 +257,17 @@
     }
     const r = compute();
     saOut.textContent = r.t + " 表面积 ≈ " + Math.round(r.v) + " cm²（基 " + Math.round(r.base) + (r.add >= 0 ? " + " : " − ") + Math.abs(Math.round(r.add)) + "）";
+    window.dispatchEvent(
+      new CustomEvent("sa-hard5-3d", {
+        detail: {
+          mode: mode,
+          L: Number(l.value),
+          W: Number(w.value),
+          H: Number(h.value),
+          kk: mode === "hole" ? Number(k.value) : 0,
+        },
+      }),
+    );
   }
 
   document.querySelectorAll(".mode-btn").forEach(function (b) {

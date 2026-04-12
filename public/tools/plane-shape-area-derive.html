@@ -6,16 +6,20 @@
   <title>平面图形面积推导 — 教立方</title>
   <!-- play-ref:jiaohukejian:1H4RGFX | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <script src="../edu-lib/three.min.js"></script>
+  <script src="../edu-lib/OrbitControls.js"></script>
+  <script src="../edu-lib/edu-3d.js"></script>
   <style>
     .main-layout { display: grid; grid-template-columns: 1fr minmax(280px, 300px); height: 100%; }
-    .canvas-wrap { background: #f0fdf4; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 10px; }
-    #cvs { background: #fff; border-radius: var(--edu-radius); border: 1px solid var(--edu-border); max-width: 100%; }
+    .canvas-area { position: relative; background: #f0fdf4; overflow: hidden; min-height: 0; }
+    .canvas-area canvas { width: 100%; height: 100%; display: block; }
     .panel { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; }
     .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
     .tab { flex: 1; padding: 8px; font-size: 12px; font-weight: 700; border-radius: 8px; border: 2px solid var(--edu-border); cursor: pointer; background: #f8fafc; }
     .tab.active { border-color: var(--edu-primary); color: var(--edu-primary); }
     .slider-block label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
     .formula { font-size: 14px; font-weight: 800; color: var(--edu-primary); margin-top: 8px; }
+    .orbit-hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 10px; background: rgba(255,255,255,.92); padding: 4px 10px; border-radius: 14px; color: #64748b; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -23,12 +27,15 @@
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">🔺 平面图形面积推导</span>
-      <span class="edu-toolbar-subtitle">平行四边形 → 长方形</span>
+      <span class="edu-toolbar-subtitle">割补 · 3D</span>
     </div>
   </div>
   <div class="edu-content">
     <div class="main-layout">
-      <div class="canvas-wrap"><canvas id="cvs" width="460" height="320"></canvas></div>
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖动底、高、倾斜量</div>
+      </div>
       <div class="panel">
         <div class="tabs">
           <button type="button" class="tab active" id="t1">平行四边形</button>
@@ -44,70 +51,102 @@
 </div>
 <script>
 (function () {
-  const c = document.getElementById("cvs"), x = c.getContext("2d");
-  let mode = "para";
-  const b = document.getElementById("b"), h = document.getElementById("h"), s = document.getElementById("s");
-  function draw() {
-    const B = Number(b.value), H = Number(h.value), S = Number(s.value);
+  var canvas = document.getElementById("c3d");
+  var b = document.getElementById("b");
+  var h = document.getElementById("h");
+  var s = document.getElementById("s");
+  var mode = "para";
+
+  var ctx = Edu3D.createScene(canvas, {
+    bg: 0xf0fdf4,
+    fov: 42,
+    camX: 7,
+    camY: 5,
+    camZ: 7,
+    lookX: 0,
+    lookY: 0.2,
+    lookZ: 0,
+    minDist: 2,
+    maxDist: 22,
+  });
+  Edu3D.addLights(ctx.scene);
+  Edu3D.addGrid(ctx.scene, 12, 12, 0xbbf7d0, -0.72);
+  var world = new THREE.Group();
+  ctx.scene.add(world);
+  var mesh = null;
+
+  function sync() {
+    var B = Number(b.value);
+    var H = Number(h.value);
+    var Sk = Number(s.value);
     document.getElementById("bv").textContent = String(B);
     document.getElementById("hv").textContent = String(H);
-    document.getElementById("sv").textContent = String(S);
-    c.width = c.parentElement.clientWidth - 12;
-    c.height = 300;
-    x.clearRect(0, 0, c.width, c.height);
-    const sc = 18, ox = 50, oy = 220;
-    if (mode === "para") {
-      x.fillStyle = "#bbf7d0";
-      x.strokeStyle = "#166534";
-      x.lineWidth = 2;
-      x.beginPath();
-      x.moveTo(ox, oy);
-      x.lineTo(ox + B * sc + S * sc, oy);
-      x.lineTo(ox + B * sc, oy - H * sc);
-      x.lineTo(ox - S * sc, oy - H * sc);
-      x.closePath();
-      x.fill();
-      x.stroke();
-      x.setLineDash([6, 4]);
-      x.strokeStyle = "#dc2626";
-      x.beginPath();
-      x.moveTo(ox + B * sc, oy - H * sc);
-      x.lineTo(ox + B * sc + S * sc, oy - H * sc);
-      x.lineTo(ox + B * sc + S * sc, oy);
-      x.stroke();
-      x.setLineDash([]);
-      document.getElementById("f").textContent = "S = 底×高 = " + B + "×" + H + " = " + (B * H);
-    } else {
-      document.getElementById("skew-wrap").style.display = "none";
-      x.fillStyle = "#fde68a";
-      x.strokeStyle = "#b45309";
-      x.beginPath();
-      x.moveTo(ox, oy);
-      x.lineTo(ox + B * sc, oy);
-      x.lineTo(ox + B * sc / 2, oy - H * sc);
-      x.closePath();
-      x.fill();
-      x.stroke();
-      document.getElementById("f").textContent = "S = ½×底×高 = " + (B * H / 2);
+    document.getElementById("sv").textContent = String(Sk);
+
+    if (mesh) {
+      world.remove(mesh);
+      mesh.geometry.dispose();
+      mesh.material.dispose();
     }
+
+    var Scl = 0.14;
+    if (mode === "para") {
+      document.getElementById("f").textContent = "S = 底×高 = " + B + "×" + H + " = " + B * H;
+      var sh = new THREE.Shape();
+      sh.moveTo(0, 0);
+      sh.lineTo(B * Scl + Sk * Scl, 0);
+      sh.lineTo(B * Scl, H * Scl);
+      sh.lineTo(-Sk * Scl, H * Scl);
+      sh.lineTo(0, 0);
+      var g = new THREE.ExtrudeGeometry(sh, { depth: 0.12, bevelEnabled: false });
+      g.rotateX(-Math.PI / 2);
+      mesh = new THREE.Mesh(g, Edu3D.material(0x4ade80));
+      mesh.position.y = -0.66;
+    } else {
+      document.getElementById("f").textContent = "S = ½×底×高 = " + (B * H) / 2;
+      var sh2 = new THREE.Shape();
+      sh2.moveTo(0, 0);
+      sh2.lineTo(B * Scl, 0);
+      sh2.lineTo((B * Scl) / 2, H * Scl);
+      sh2.lineTo(0, 0);
+      var g2 = new THREE.ExtrudeGeometry(sh2, { depth: 0.12, bevelEnabled: false });
+      g2.rotateX(-Math.PI / 2);
+      mesh = new THREE.Mesh(g2, Edu3D.material(0xfbbf24));
+      mesh.position.y = -0.66;
+    }
+    mesh.castShadow = true;
+    world.add(mesh);
   }
+
   document.getElementById("t1").addEventListener("click", function () {
     mode = "para";
     document.getElementById("skew-wrap").style.display = "";
     document.getElementById("t1").classList.add("active");
     document.getElementById("t2").classList.remove("active");
-    draw();
+    sync();
   });
   document.getElementById("t2").addEventListener("click", function () {
     mode = "tri";
     document.getElementById("skew-wrap").style.display = "none";
     document.getElementById("t2").classList.add("active");
     document.getElementById("t1").classList.remove("active");
-    draw();
+    sync();
   });
-  b.addEventListener("input", draw); h.addEventListener("input", draw); s.addEventListener("input", draw);
-  window.addEventListener("resize", draw);
-  draw();
+  b.addEventListener("input", sync);
+  h.addEventListener("input", sync);
+  s.addEventListener("input", sync);
+
+  function onResize() {
+    var w = canvas.clientWidth || 400;
+    var h0 = canvas.clientHeight || 300;
+    ctx.renderer.setSize(w, h0, false);
+    ctx.camera.aspect = w / h0;
+    ctx.camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", onResize);
+  sync();
+  onResize();
+  Edu3D.startLoop(ctx.scene, ctx.camera, ctx.renderer, ctx.controls, null);
 })();
 </script>
 </body>

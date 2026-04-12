@@ -6,13 +6,17 @@
   <title>数与形 — 教立方</title>
   <!-- play-ref:jiaohukejian:0F0C0CX | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <script src="../edu-lib/three.min.js"></script>
+  <script src="../edu-lib/OrbitControls.js"></script>
+  <script src="../edu-lib/edu-3d.js"></script>
   <style>
     .main-layout { display: grid; grid-template-columns: 1fr minmax(260px, 280px); height: 100%; }
-    .canvas-wrap { background: #fdf2f8; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 10px; }
-    #cvs { background: #fff; border-radius: var(--edu-radius); border: 1px solid var(--edu-border); }
+    .canvas-area { position: relative; background: #fdf2f8; overflow: hidden; min-height: 0; }
+    .canvas-area canvas { width: 100%; height: 100%; display: block; }
     .panel { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; }
     .slider-block label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
-    .eq { font-size: 15px; font-weight: 800; color: var(--edu-primary); margin-top: 10px; line-height: 1.5; }
+    .eq { font-size: 14px; font-weight: 800; color: var(--edu-primary); margin-top: 10px; line-height: 1.5; }
+    .orbit-hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 10px; background: rgba(255,255,255,.9); padding: 4px 10px; border-radius: 14px; color: #64748b; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -20,12 +24,15 @@
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">🔢 数与形</span>
-      <span class="edu-toolbar-subtitle">从 1 起的连续奇数和 = 平方数</span>
+      <span class="edu-toolbar-subtitle">奇数和 · 正方形数 · 3D</span>
     </div>
   </div>
   <div class="edu-content">
     <div class="main-layout">
-      <div class="canvas-wrap"><canvas id="cvs" width="400" height="400"></canvas></div>
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">n×n 小立方体拼成大正方形</div>
+      </div>
       <div class="panel">
         <div class="slider-block"><label><span>加到第 n 个奇数</span><span id="nv">4</span></label><input type="range" id="n" min="1" max="10" value="4" /></div>
         <div class="eq" id="eq"></div>
@@ -35,44 +42,79 @@
 </div>
 <script>
 (function () {
-  const c = document.getElementById("cvs"), x = c.getContext("2d");
-  const n = document.getElementById("n");
-  function draw() {
-    const N = Number(n.value);
+  var canvas = document.getElementById("c3d");
+  var elN = document.getElementById("n");
+
+  var ctx = Edu3D.createScene(canvas, {
+    bg: 0xfff1f2,
+    fov: 42,
+    camX: 6 + 0.4,
+    camY: 7,
+    camZ: 6 + 0.4,
+    lookX: 0,
+    lookY: 0.5,
+    lookZ: 0,
+    minDist: 2,
+    maxDist: 24,
+  });
+  Edu3D.addLights(ctx.scene);
+  Edu3D.addGrid(ctx.scene, 16, 16, 0xfbcfe8, -0.72);
+
+  var world = new THREE.Group();
+  ctx.scene.add(world);
+  var cols = ["#fca5a5", "#fdba74", "#fde047", "#86efac", "#67e8f9", "#93c5fd", "#c4b5fd", "#f0abfc", "#fb7185", "#34d399"];
+
+  function sync() {
+    var N = Number(elN.value);
     document.getElementById("nv").textContent = String(N);
-    const cell = 28, margin = 30, side = N * cell;
-    c.width = side + margin * 2;
-    c.height = side + margin * 2;
-    x.clearRect(0, 0, c.width, c.height);
-    let sum = 0, parts = [];
-    for (let k = 1; k <= N; k++) {
-      const odd = 2 * k - 1;
+    var sum = 0;
+    var parts = [];
+    var k;
+    for (k = 1; k <= N; k++) {
+      var odd = 2 * k - 1;
       sum += odd;
       parts.push(odd);
     }
-    x.strokeStyle = "#cbd5e1";
-    for (let i = 0; i <= N; i++) {
-      x.beginPath();
-      x.moveTo(margin + i * cell, margin);
-      x.lineTo(margin + i * cell, margin + N * cell);
-      x.stroke();
-      x.beginPath();
-      x.moveTo(margin, margin + i * cell);
-      x.lineTo(margin + N * cell, margin + i * cell);
-      x.stroke();
+    document.getElementById("eq").innerHTML = parts.join(" + ") + " = " + sum + " = " + N + "²";
+
+    while (world.children.length) {
+      var ch = world.children[0];
+      world.remove(ch);
+      if (ch.geometry) ch.geometry.dispose();
+      if (ch.material) ch.material.dispose();
     }
-    const colors = ["#fca5a5", "#fdba74", "#fde047", "#86efac", "#67e8f9", "#93c5fd", "#c4b5fd", "#f0abfc", "#fb7185", "#34d399"];
-    let filled = 0;
-    for (let row = 0; row < N; row++) {
-      for (let col = 0; col < N; col++) {
-        x.fillStyle = colors[(row + col) % colors.length];
-        x.fillRect(margin + col * cell + 1, margin + row * cell + 1, cell - 2, cell - 2);
+
+    var cell = 0.38;
+    var base = (-(N * cell) / 2) + cell / 2;
+    var row;
+    var col;
+    for (row = 0; row < N; row++) {
+      for (col = 0; col < N; col++) {
+        var g = new THREE.BoxGeometry(cell * 0.92, cell * 0.45, cell * 0.92);
+        var mesh = new THREE.Mesh(
+          g,
+          new THREE.MeshLambertMaterial({ color: cols[(row + col) % cols.length] })
+        );
+        mesh.position.set(base + col * cell, -0.66 + cell * 0.22, base + row * cell);
+        mesh.castShadow = true;
+        world.add(mesh);
       }
     }
-    document.getElementById("eq").innerHTML = parts.join(" + ") + " = " + sum + " = " + N + "²";
   }
-  n.addEventListener("input", draw);
-  draw();
+
+  elN.addEventListener("input", sync);
+
+  function onResize() {
+    var w = canvas.clientWidth || 400;
+    var h = canvas.clientHeight || 360;
+    ctx.renderer.setSize(w, h, false);
+    ctx.camera.aspect = w / h;
+    ctx.camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", onResize);
+  sync();
+  onResize();
+  Edu3D.startLoop(ctx.scene, ctx.camera, ctx.renderer, ctx.controls, null);
 })();
 </script>
 </body>

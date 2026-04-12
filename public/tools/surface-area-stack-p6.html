@@ -6,13 +6,17 @@
   <title>表面积变化（叠放与高）— 教立方</title>
   <!-- play-ref:jiaohukejian:0C6OVSC | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <script src="../edu-lib/three.min.js"></script>
+  <script src="../edu-lib/OrbitControls.js"></script>
+  <script src="../edu-lib/edu-3d.js"></script>
   <style>
     .main-layout { display: grid; grid-template-columns: 1fr minmax(300px, 320px); height: 100%; }
-    .canvas-wrap { min-height: 0; background: linear-gradient(165deg, #fff7ed, #f8fafc); display: flex; align-items: center; justify-content: center; padding: 10px; }
-    #cvs { max-width: 100%; max-height: 100%; border-radius: var(--edu-radius); background: #fff; border: 1px solid var(--edu-border); box-shadow: var(--edu-shadow); }
+    .canvas-area { position: relative; background: linear-gradient(165deg, #fff7ed, #f8fafc); overflow: hidden; min-height: 0; }
+    .canvas-area canvas { width: 100%; height: 100%; display: block; }
     .control-panel { border-left: 1px solid var(--edu-border); background: var(--edu-surface); padding: 12px; overflow: auto; display: flex; flex-direction: column; gap: 10px; }
     .slider-block label { font-size: 12px; font-weight: 600; display: flex; justify-content: space-between; }
     .readout { font-weight: 800; font-size: 14px; color: var(--edu-primary); padding: 10px; background: #f1f5f9; border-radius: 8px; text-align: center; }
+    .orbit-hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 10px; background: rgba(255,255,255,.92); padding: 4px 10px; border-radius: 14px; color: #64748b; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -20,18 +24,21 @@
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">📊 表面积变化（叠放与高）</span>
-      <span class="edu-toolbar-subtitle">两层长方体贴合 · 总表面积即时算</span>
+      <span class="edu-toolbar-subtitle">两层长方体 · 3D</span>
     </div>
   </div>
   <div class="edu-content">
     <div class="main-layout">
-      <div class="canvas-wrap"><canvas id="cvs" width="460" height="380"></canvas></div>
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">蓝下层 · 黄上层 · 贴合面不外露</div>
+      </div>
       <div class="control-panel">
         <div class="slider-block"><label><span>公共底边长</span><span id="a-l">8</span></label><input type="range" id="a" min="4" max="14" value="8" /></div>
         <div class="slider-block"><label><span>公共宽</span><span id="b-l">5</span></label><input type="range" id="b" min="3" max="10" value="5" /></div>
         <div class="slider-block"><label><span>下层高 h₁</span><span id="h1-l">3</span></label><input type="range" id="h1" min="2" max="8" value="3" /></div>
         <div class="slider-block"><label><span>上层高 h₂</span><span id="h2-l">4</span></label><input type="range" id="h2" min="2" max="10" value="4" /></div>
-        <p style="font-size:11px;color:var(--edu-text-muted);line-height:1.45">两长方体完全对齐叠放：贴合面不再外露，总表面积 = SA₁ + SA₂ − 2×底面积。</p>
+        <p style="font-size:11px;color:var(--edu-text-muted);line-height:1.45">总表面积 = SA₁ + SA₂ − 2×底面积。</p>
         <div class="readout" id="out">—</div>
       </div>
     </div>
@@ -39,47 +46,85 @@
 </div>
 <script>
 (function () {
-  const c = document.getElementById("cvs");
-  const x = c.getContext("2d");
-  const a = document.getElementById("a");
-  const b = document.getElementById("b");
-  const h1 = document.getElementById("h1");
-  const h2 = document.getElementById("h2");
-  const out = document.getElementById("out");
-  function sa(A, B, H) { return 2 * (A * B + A * H + B * H); }
-  function draw() {
-    const A = Number(a.value), B = Number(b.value), H1 = Number(h1.value), H2 = Number(h2.value);
+  var canvas = document.getElementById("c3d");
+  var a = document.getElementById("a");
+  var b = document.getElementById("b");
+  var h1 = document.getElementById("h1");
+  var h2 = document.getElementById("h2");
+  var out = document.getElementById("out");
+
+  var ctx = Edu3D.createScene(canvas, {
+    bg: 0xfff7ed,
+    fov: 42,
+    camX: 9,
+    camY: 6,
+    camZ: 9,
+    lookX: 0,
+    lookY: 0.5,
+    lookZ: 0,
+    minDist: 3,
+    maxDist: 28,
+  });
+  Edu3D.addLights(ctx.scene);
+  Edu3D.addGrid(ctx.scene, 14, 14, 0xfed7aa, -0.72);
+  var world = new THREE.Group();
+  ctx.scene.add(world);
+
+  function sa(A, B, H) {
+    return 2 * (A * B + A * H + B * H);
+  }
+
+  function sync() {
+    var A = Number(a.value);
+    var B = Number(b.value);
+    var H1 = Number(h1.value);
+    var H2 = Number(h2.value);
     document.getElementById("a-l").textContent = String(A);
     document.getElementById("b-l").textContent = String(B);
     document.getElementById("h1-l").textContent = String(H1);
     document.getElementById("h2-l").textContent = String(H2);
-    const base = A * B;
-    const total = sa(A, B, H1) + sa(A, B, H2) - 2 * base;
+    var base = A * B;
+    var total = sa(A, B, H1) + sa(A, B, H2) - 2 * base;
     out.textContent = "组合体表面积 ≈ " + Math.round(total) + " cm²";
-    const W = c.parentElement.clientWidth - 16;
-    c.width = Math.max(280, W);
-    c.height = 320;
-    x.clearRect(0, 0, c.width, c.height);
-    const cx = c.width / 2, scale = 14;
-    const w = A * scale, d = B * scale * 0.55, h2p = H2 * scale, h1p = H1 * scale;
-    x.save();
-    x.translate(cx, c.height * 0.72);
-    x.fillStyle = "#93c5fd";
-    x.strokeStyle = "#2563eb";
-    x.lineWidth = 2;
-    x.beginPath();
-    x.moveTo(0, 0); x.lineTo(w, -d * 0.4); x.lineTo(w, -h1p - d * 0.4); x.lineTo(0, -h1p);
-    x.closePath(); x.fill(); x.stroke();
-    x.fillStyle = "#fcd34d";
-    x.strokeStyle = "#d97706";
-    x.beginPath();
-    x.moveTo(0, -h1p); x.lineTo(w, -h1p - d * 0.4); x.lineTo(w, -h1p - h2p - d * 0.4); x.lineTo(0, -h1p - h2p);
-    x.closePath(); x.fill(); x.stroke();
-    x.restore();
+
+    while (world.children.length) {
+      var ch = world.children[0];
+      world.remove(ch);
+      if (ch.geometry) ch.geometry.dispose();
+      if (ch.material) ch.material.dispose();
+    }
+
+    var sc = 0.1;
+    var low = new THREE.Mesh(
+      new THREE.BoxGeometry(A * sc, H1 * sc, B * sc),
+      Edu3D.material(0x3b82f6)
+    );
+    low.position.set(0, -0.68 + (H1 * sc) / 2, 0);
+    low.castShadow = true;
+    world.add(low);
+    var high = new THREE.Mesh(
+      new THREE.BoxGeometry(A * sc, H2 * sc, B * sc),
+      Edu3D.material(0xfbbf24)
+    );
+    high.position.set(0, -0.68 + H1 * sc + (H2 * sc) / 2, 0);
+    high.castShadow = true;
+    world.add(high);
   }
-  [a, b, h1, h2].forEach(function (el) { el.addEventListener("input", draw); });
-  window.addEventListener("resize", draw);
-  draw();
+
+  [a, b, h1, h2].forEach(function (el) {
+    el.addEventListener("input", sync);
+  });
+  function onResize() {
+    var w = canvas.clientWidth || 400;
+    var h = canvas.clientHeight || 320;
+    ctx.renderer.setSize(w, h, false);
+    ctx.camera.aspect = w / h;
+    ctx.camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", onResize);
+  sync();
+  onResize();
+  Edu3D.startLoop(ctx.scene, ctx.camera, ctx.renderer, ctx.controls, null);
 })();
 </script>
 </body>
