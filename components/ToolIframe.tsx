@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 
 interface ToolIframeProps {
   src: string;
@@ -10,15 +10,67 @@ interface ToolIframeProps {
 export default function ToolIframe({ src, title }: ToolIframeProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const handleLoad = useCallback(() => {
+  const finishLoad = useCallback(() => {
     setLoading(false);
   }, []);
+
+  const handleLoad = useCallback(() => {
+    finishLoad();
+  }, [finishLoad]);
 
   const handleError = useCallback(() => {
     setLoading(false);
     setError(true);
   }, []);
+
+  /**
+   * 部分浏览器在强缓存下会在绑定 onLoad 之前就让 iframe 进入 complete，
+   * 导致 React 的 onLoad 永远不触发、遮罩一直显示。这里用 ref + readyState 复查，并超时兜底。
+   */
+  useEffect(() => {
+    let done = false;
+    const complete = () => {
+      if (done) return;
+      done = true;
+      finishLoad();
+    };
+
+    const el = iframeRef.current;
+    if (!el) {
+      const fallbackId = window.setTimeout(complete, 15000);
+      return () => {
+        done = true;
+        window.clearTimeout(fallbackId);
+      };
+    }
+
+    const onLoadEv = () => complete();
+    el.addEventListener("load", onLoadEv);
+
+    const checkAlreadyDone = () => {
+      try {
+        if (el.contentDocument?.readyState === "complete") {
+          complete();
+        }
+      } catch {
+        /* 非同源时不可读 document，依赖 load 事件 */
+      }
+    };
+
+    checkAlreadyDone();
+    const rafId = requestAnimationFrame(checkAlreadyDone);
+
+    const timeoutId = window.setTimeout(complete, 15000);
+
+    return () => {
+      done = true;
+      el.removeEventListener("load", onLoadEv);
+      cancelAnimationFrame(rafId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [src, finishLoad]);
 
   return (
     <div className="relative flex-1 overflow-hidden min-h-0">
@@ -77,6 +129,7 @@ export default function ToolIframe({ src, title }: ToolIframeProps) {
         </div>
       )}
       <iframe
+        ref={iframeRef}
         key={src}
         src={src}
         className="w-full h-full border-0"

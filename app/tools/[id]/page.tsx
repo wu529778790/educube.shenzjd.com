@@ -118,7 +118,7 @@ export default async function ToolPage({ params }: PageProps) {
         </div>
       </header>
 
-      <ToolIframe src={iframeSrc} title={tool.name} />
+      <ToolIframe key={iframeSrc} src={iframeSrc} title={tool.name} />
     </div>
   );
 }

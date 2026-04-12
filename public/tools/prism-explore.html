@@ -91,9 +91,14 @@
             <span class="val" id="val-h">2.5</span>
           </div>
           <div class="slider-row">
-            <label>半径</label>
+            <label id="lbl-r">外接圆半径 R</label>
             <input type="range" id="sl-r" min="0.5" max="2" step="0.1" value="1.2" oninput="onParam()">
             <span class="val" id="val-r">1.2</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px">
+            <span style="font-size:10px;font-weight:700;color:#64748b">滑块表示</span>
+            <button type="button" class="shape-btn active" id="rm-circum" style="padding:6px 8px;font-size:10px" onclick="setRadiusMeaning('circum')">外接圆半径 R</button>
+            <button type="button" class="shape-btn" id="rm-apo" style="padding:6px 8px;font-size:10px" onclick="setRadiusMeaning('apothem')">边心距 a</button>
           </div>
         </div>
         <div class="divider"></div>
@@ -108,7 +113,8 @@
           ● 侧面都是<strong>平行四边形</strong>（直棱柱为长方形）<br/>
           ● 棱数 = 3n，顶点数 = 2n<br/>
           ● 面数 = n + 2<br/>
-          ● V = S底 × h
+          ● V = S底 × h<br/>
+          ● 正 n 边形：<strong>R</strong>（外接圆半径）与<strong>a</strong>（边心距）满足 <strong>R = a ÷ cos(180°/n)</strong>，请与滑块含义一致再对照数值
         </div>
       </div>
     </div>
@@ -118,6 +124,8 @@
 var _scene, _camera, _renderer, _controls;
 var _group, _unfoldGroup;
 var _sides = 3, _h = 2.5, _r = 1.2;
+/** 滑块数值含义：circum=外接圆半径 R；apothem=边心距 a（中心到边的垂直距离），几何用 R=a/cos(π/n) */
+var _radiusMeaning = "circum";
 var _isUnfolded = false;
 var _animId = null;
 
@@ -143,13 +151,143 @@ function init() {
 
 function clearGroup(g) { while (g.children.length) g.remove(g.children[0]); }
 
+/** 由滑块值得到底面外接圆半径（顶点到底面中心距离），供顶点与面积公式统一使用 */
+function circumRadiusFromSlider(n, sliderVal) {
+  if (_radiusMeaning === "apothem") {
+    return sliderVal / Math.cos(Math.PI / n);
+  }
+  return sliderVal;
+}
+
+function setRadiusMeaning(mode) {
+  _radiusMeaning = mode === "apothem" ? "apothem" : "circum";
+  var lbl = document.getElementById("lbl-r");
+  if (lbl) lbl.textContent = _radiusMeaning === "apothem" ? "边心距 a" : "外接圆半径 R";
+  var bc = document.getElementById("rm-circum");
+  var ba = document.getElementById("rm-apo");
+  if (bc) bc.classList.toggle("active", _radiusMeaning === "circum");
+  if (ba) ba.classList.toggle("active", _radiusMeaning === "apothem");
+  buildPrism();
+}
+
+/**
+ * 底面正 n 边形第 i 个顶点在 xz 平面上的极角（绕 Y 轴）。
+ * 在 θ=2πi/n 基础上加 π/n，使 n=4 时截面为正放矩形（棱平行坐标轴）、n=6 为平顶六边形，
+ * 与教材正视图常见取向一致；不改变外接圆半径下的边长与面积。
+ */
+function prismBaseRingAngle(i, n) {
+  return (Math.PI * 2 * i) / n + Math.PI / n;
+}
+
+/**
+ * 与 CylinderGeometry 相同约定：x=r*sin(θ), z=r*cos(θ)；θ 由 prismBaseRingAngle 统一。
+ */
 function getVertices(n, radius, y) {
   var verts = [];
   for (var i = 0; i < n; i++) {
-    var angle = (Math.PI * 2 * i / n) - Math.PI / 2;
-    verts.push(new THREE.Vector3(Math.cos(angle) * radius, y, Math.sin(angle) * radius));
+    var angle = prismBaseRingAngle(i, n);
+    verts.push(new THREE.Vector3(
+      Math.sin(angle) * radius,
+      y,
+      Math.cos(angle) * radius
+    ));
   }
   return verts;
+}
+
+/** 水平放置的正 n 边形面（法线约 +Y），顶点与柱体底面一致 */
+function createPrismCapGeometry(n, radius, y) {
+  var verts = getVertices(n, radius, y);
+  var pos = new Float32Array(n * 3);
+  for (var i = 0; i < n; i++) {
+    pos[i * 3] = verts[i].x;
+    pos[i * 3 + 1] = y;
+    pos[i * 3 + 2] = verts[i].z;
+  }
+  var idx = [];
+  for (var j = 1; j < n - 1; j++) {
+    idx.push(0, j, j + 1);
+  }
+  var geo = new THREE.BufferGeometry();
+  geo.setIndex(idx);
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/**
+ * 直正 n 棱柱（轴线 Y，中心在原点）：顶点 0..n-1 为下底逆时针，
+ * n..2n-1 为上底与下底同角标同 (x,z)，2n / 2n+1 为上下底中心。
+ * 与 getVertices 共用 prismBaseRingAngle，避免「底顶交错索引」与 buffer 读错导致俯视错位。
+ */
+function buildPrismBufferGeometry(n, radius, height) {
+  var halfH = height / 2;
+  var pos = new Float32Array((2 * n + 2) * 3);
+  for (var i = 0; i < n; i++) {
+    var ang = prismBaseRingAngle(i, n);
+    var x = Math.sin(ang) * radius;
+    var z = Math.cos(ang) * radius;
+    pos[i * 3] = x;
+    pos[i * 3 + 1] = -halfH;
+    pos[i * 3 + 2] = z;
+    var j = n + i;
+    pos[j * 3] = x;
+    pos[j * 3 + 1] = halfH;
+    pos[j * 3 + 2] = z;
+  }
+  var iCT = 2 * n;
+  var iCB = 2 * n + 1;
+  pos[iCT * 3] = 0;
+  pos[iCT * 3 + 1] = halfH;
+  pos[iCT * 3 + 2] = 0;
+  pos[iCB * 3] = 0;
+  pos[iCB * 3 + 1] = -halfH;
+  pos[iCB * 3 + 2] = 0;
+
+  var idx = [];
+  for (var s = 0; s < n; s++) {
+    var b0 = s;
+    var b1 = (s + 1) % n;
+    var u0 = n + s;
+    var u1 = n + ((s + 1) % n);
+    idx.push(b0, b1, u0, b1, u1, u0);
+  }
+  for (var t = 0; t < n; t++) {
+    idx.push(iCT, n + t, n + ((t + 1) % n));
+  }
+  for (var b = 0; b < n; b++) {
+    idx.push(iCB, (b + 1) % n, b);
+  }
+
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/** 红点与 buildPrismBufferGeometry 角点用同一解析式，不依赖 position buffer 下标推断 */
+function addPrismVertexDots(prismRoot, n, radius, height) {
+  var halfH = height / 2;
+  var dotMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+  dotMat.depthTest = true;
+  dotMat.depthWrite = true;
+
+  for (var i = 0; i < n; i++) {
+    var ang = prismBaseRingAngle(i, n);
+    var x = Math.sin(ang) * radius;
+    var z = Math.cos(ang) * radius;
+
+    var dotB = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 12), dotMat);
+    dotB.position.set(x, -halfH, z);
+    dotB.renderOrder = 2;
+    prismRoot.add(dotB);
+
+    var dotT = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 12), dotMat);
+    dotT.position.set(x, halfH, z);
+    dotT.renderOrder = 2;
+    prismRoot.add(dotT);
+  }
 }
 
 function buildPrism() {
@@ -158,44 +296,30 @@ function buildPrism() {
   _isUnfolded = false;
   document.getElementById('btn-toggle').textContent = '🔽 展开棱柱';
 
-  var n = _sides, h = _h, r = _r;
+  var n = _sides, h = _h, r = circumRadiusFromSlider(n, _r);
 
-  // Use CylinderGeometry for the solid
-  var prismGeo = new THREE.CylinderGeometry(r, r, h, n);
-  var prismMat = new THREE.MeshLambertMaterial({ color: COLORS.sides[0], transparent: true, opacity: 0.55 });
-  var prism = new THREE.Mesh(prismGeo, prismMat);
-  prism.position.y = h / 2;
-  prism.castShadow = true;
-
-  var edgeGeo = new THREE.EdgesGeometry(prismGeo);
-  prism.add(new THREE.LineSegments(edgeGeo, new THREE.LineBasicMaterial({ color: 0x1e40af, transparent: true, opacity: 0.5 })));
-  _group.add(prism);
-
-  // Top face highlight
-  var topGeo = new THREE.CircleGeometry(r, n);
-  var topMat = new THREE.MeshLambertMaterial({ color: COLORS.top, side: THREE.DoubleSide, transparent: true, opacity: 0.5 });
-  var topMesh = new THREE.Mesh(topGeo, topMat);
-  topMesh.rotation.x = -Math.PI / 2;
-  topMesh.position.y = h;
-  _group.add(topMesh);
-
-  // Bottom face highlight
-  var botMesh = topMesh.clone();
-  botMesh.position.y = 0;
-  botMesh.material = topMat.clone();
-  botMesh.material.color.setHex(COLORS.bottom);
-  _group.add(botMesh);
-
-  // Vertex dots
-  var topVerts = getVertices(n, r, h);
-  var botVerts = getVertices(n, r, 0);
-  var dotGeo = new THREE.SphereGeometry(0.06, 8, 8);
-  var dotMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
-  topVerts.concat(botVerts).forEach(function(v) {
-    var dot = new THREE.Mesh(dotGeo, dotMat);
-    dot.position.copy(v);
-    _group.add(dot);
+  var prismGeo = buildPrismBufferGeometry(n, r, h);
+  var matPrism = new THREE.MeshLambertMaterial({
+    color: COLORS.sides[0],
+    transparent: true,
+    opacity: 0.52,
+    side: THREE.DoubleSide,
+    depthWrite: true
   });
+
+  var prismRoot = new THREE.Group();
+  prismRoot.position.y = h / 2;
+
+  var meshBody = new THREE.Mesh(prismGeo, matPrism);
+  meshBody.castShadow = true;
+  prismRoot.add(meshBody);
+
+  var edgeGeo = new THREE.EdgesGeometry(prismGeo.clone());
+  prismRoot.add(new THREE.LineSegments(edgeGeo, new THREE.LineBasicMaterial({ color: 0x1e40af, transparent: true, opacity: 0.5 })));
+
+  _group.add(prismRoot);
+
+  addPrismVertexDots(prismRoot, n, r, h);
 
   // Labels
   var names = { 3: '三棱柱', 4: '四棱柱（长方体）', 5: '五棱柱', 6: '六棱柱' };
@@ -208,21 +332,56 @@ function buildPrism() {
   hLbl.position.set(-r - 0.6, h / 2, 0);
   _group.add(hLbl);
 
-  // Build unfolded state (hidden)
-  buildUnfolded(n, h, r);
+  // Build unfolded state（隐藏，展开时用缩放+淡入动画）
+  buildUnfolded(n, h, _r);
+  stashUnfoldBaseOpacity(_unfoldGroup);
 
   _group.visible = true;
   _unfoldGroup.visible = false;
+  _unfoldGroup.scale.set(1, 1, 1);
 
-  updateProps(n, h, r);
+  updateProps(n, h, _r, r);
 }
 
-function buildUnfolded(n, h, r) {
+/** 记录各面初始透明度，供展开动画插值 */
+function stashUnfoldBaseOpacity(g) {
+  g.traverse(function (obj) {
+    if (obj.material) {
+      var mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      mats.forEach(function (m) {
+        if (m && m.opacity !== undefined && m.userData.baseOpacity == null) {
+          m.userData.baseOpacity = m.opacity;
+        }
+      });
+    }
+  });
+}
+
+function setUnfoldGroupOpacityFactor(factor) {
+  _unfoldGroup.traverse(function (obj) {
+    if (obj.material) {
+      var mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      mats.forEach(function (m) {
+        if (m && m.opacity !== undefined && m.userData.baseOpacity != null) {
+          m.opacity = m.userData.baseOpacity * factor;
+        }
+      });
+    }
+  });
+}
+
+/** 略带回弹，展开时更明显 */
+function easeOutBack(t) {
+  var c1 = 1.525;
+  var c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
+
+function buildUnfolded(n, h, sliderR) {
   clearGroup(_unfoldGroup);
 
-  var sideLen = 2 * r * Math.sin(Math.PI / n); // approximate side length
-  // Actually compute side length properly
-  var verts = getVertices(n, r, 0);
+  var R = circumRadiusFromSlider(n, sliderR);
+  var verts = getVertices(n, R, 0);
   var actualSideLen = verts[0].distanceTo(verts[1]);
 
   var gap = 0.05;
@@ -252,75 +411,96 @@ function buildUnfolded(n, h, r) {
     _unfoldGroup.add(sideMesh);
   }
 
-  // Top face (polygon) - above the middle side face
-  var topShape = new THREE.Shape();
-  var tv = getVertices(n, r, 0);
-  for (var j = 0; j < n; j++) {
-    if (j === 0) topShape.moveTo(tv[j].x, tv[j].z);
-    else topShape.lineTo(tv[j].x, tv[j].z);
-  }
-  topShape.closePath();
-  var topGeo = new THREE.ShapeGeometry(topShape);
-  var topMesh = new THREE.Mesh(topGeo, new THREE.MeshLambertMaterial({
+  // 上、下底：水平放置（法线 +Y），与闭合棱柱顶点一致
+  var zSpread = h / 2 + R + 0.35;
+  var topGeoU = createPrismCapGeometry(n, R, 0);
+  var topMesh = new THREE.Mesh(topGeoU, new THREE.MeshLambertMaterial({
     color: COLORS.top, side: THREE.DoubleSide, transparent: true, opacity: 0.5
   }));
-  topMesh.rotation.x = -Math.PI / 2;
-  topMesh.position.set(0, 0.02, -(h / 2 + r + 0.3));
+  topMesh.position.set(0, 0.03, -zSpread);
   _unfoldGroup.add(topMesh);
 
-  var topLbl = Edu3D.textSprite('上底面', { color: '#1e40af', scale: 0.3 });
-  topLbl.position.y = 0.04;
-  topLbl.position.z = 0;
+  var topLbl = Edu3D.textSprite("上底面", { color: "#1e40af", scale: 0.3 });
+  topLbl.position.set(0, 0.2, 0);
   topMesh.add(topLbl);
 
-  // Bottom face - below the middle side face
-  var botMesh = topMesh.clone();
-  botMesh.position.z = h / 2 + r + 0.3;
-  botMesh.material = topMesh.material.clone();
-  botMesh.material.color.setHex(COLORS.bottom);
+  var botGeoU = createPrismCapGeometry(n, R, 0);
+  var botMesh = new THREE.Mesh(botGeoU, new THREE.MeshLambertMaterial({
+    color: COLORS.bottom, side: THREE.DoubleSide, transparent: true, opacity: 0.5
+  }));
+  botMesh.position.set(0, 0.03, zSpread);
   _unfoldGroup.add(botMesh);
 
-  var botLbl = Edu3D.textSprite('下底面', { color: '#1e40af', scale: 0.3 });
-  botLbl.position.y = 0.04;
-  botLbl.position.z = 0;
+  var botLbl = Edu3D.textSprite("下底面", { color: "#1e40af", scale: 0.3 });
+  botLbl.position.set(0, 0.2, 0);
   botMesh.add(botLbl);
 }
 
 function toggleUnfold() {
-  if (_animId) { cancelAnimationFrame(_animId); _animId = null; }
+  if (_animId) {
+    cancelAnimationFrame(_animId);
+    _animId = null;
+  }
+
   _isUnfolded = !_isUnfolded;
   document.getElementById('btn-toggle').textContent = _isUnfolded ? '🔼 折叠回棱柱' : '🔽 展开棱柱';
 
-  _group.visible = !_isUnfolded;
-  _unfoldGroup.visible = _isUnfolded;
-
   if (_isUnfolded) {
-    _unfoldGroup.children.forEach(function(c) {
-      if (c.material) { c.material.transparent = true; c.material.opacity = 0; }
-    });
-    var t = 0, steps = 30;
-    function fadeIn() {
-      t++;
-      var p = Math.min(t / steps, 1);
-      _unfoldGroup.children.forEach(function(c) {
-        if (c.material && c.material.opacity !== undefined) c.material.opacity = p * 0.6;
-      });
-      if (p < 1) _animId = requestAnimationFrame(fadeIn);
-      else _animId = null;
+    _group.visible = false;
+    _unfoldGroup.visible = true;
+    stashUnfoldBaseOpacity(_unfoldGroup);
+    _unfoldGroup.scale.set(0.04, 0.04, 0.04);
+    setUnfoldGroupOpacityFactor(0);
+
+    var t0 = performance.now();
+    var dur = 580;
+
+    function tick(now) {
+      var raw = Math.min((now - t0) / dur, 1);
+      var eased = easeOutBack(raw);
+      _unfoldGroup.scale.set(eased, eased, eased);
+      setUnfoldGroupOpacityFactor(raw);
+      if (raw < 1) {
+        _animId = requestAnimationFrame(tick);
+      } else {
+        _unfoldGroup.scale.set(1, 1, 1);
+        setUnfoldGroupOpacityFactor(1);
+        _animId = null;
+      }
     }
-    fadeIn();
+    _animId = requestAnimationFrame(tick);
+  } else {
+    var t1 = performance.now();
+    var durFold = 420;
+
+    function tickFold(now) {
+      var raw = Math.min((now - t1) / durFold, 1);
+      var e = 1 - raw;
+      e = e * e;
+      var s = 0.05 + (1 - 0.05) * (1 - raw);
+      _unfoldGroup.scale.set(s, s, s);
+      setUnfoldGroupOpacityFactor(1 - raw);
+      if (raw < 1) {
+        _animId = requestAnimationFrame(tickFold);
+      } else {
+        _unfoldGroup.visible = false;
+        _group.visible = true;
+        _unfoldGroup.scale.set(1, 1, 1);
+        setUnfoldGroupOpacityFactor(1);
+        _animId = null;
+      }
+    }
+    _animId = requestAnimationFrame(tickFold);
   }
 }
 
-function updateProps(n, h, r) {
-  // Compute actual side length
-  var verts = getVertices(n, r, 0);
+function updateProps(n, h, sliderVal, circumR) {
+  var R = circumR !== undefined ? circumR : circumRadiusFromSlider(n, sliderVal);
+  var verts = getVertices(n, R, 0);
   var sideLen = verts[0].distanceTo(verts[1]);
 
-  // Apothem (inradius)
-  var apothem = r * Math.cos(Math.PI / n);
+  var apothem = R * Math.cos(Math.PI / n);
 
-  // Base area (regular polygon)
   var baseArea = 0.5 * n * sideLen * apothem;
   var lateralArea = n * sideLen * h;
   var totalArea = lateralArea + 2 * baseArea;
@@ -330,6 +510,8 @@ function updateProps(n, h, r) {
 
   var html = '<tr><td>类型</td><td>' + (names[n] || n + '棱柱') + '</td></tr>';
   html += '<tr><td>底面边数</td><td>' + n + '</td></tr>';
+  html += '<tr><td>外接圆半径 R</td><td>' + R.toFixed(2) + '</td></tr>';
+  html += '<tr><td>边心距 a</td><td>' + apothem.toFixed(2) + '</td></tr>';
   html += '<tr><td>底面边长</td><td>' + sideLen.toFixed(2) + '</td></tr>';
   html += '<tr><td>棱数</td><td>' + (3 * n) + '</td></tr>';
   html += '<tr><td>顶点数</td><td>' + (2 * n) + '</td></tr>';
@@ -361,10 +543,17 @@ function onParam() {
 
 function resetAll() {
   _sides = 3; _h = 2.5; _r = 1.2;
+  _radiusMeaning = "circum";
   document.getElementById('sl-h').value = _h;
   document.getElementById('sl-r').value = _r;
   document.getElementById('val-h').textContent = _h.toFixed(1);
   document.getElementById('val-r').textContent = _r.toFixed(1);
+  var lbl = document.getElementById('lbl-r');
+  if (lbl) lbl.textContent = '外接圆半径 R';
+  var bc = document.getElementById('rm-circum');
+  var ba = document.getElementById('rm-apo');
+  if (bc) bc.classList.add('active');
+  if (ba) ba.classList.remove('active');
   setSides(3);
 }
 
