@@ -38,9 +38,9 @@ export default function FilterPanel({
   return (
     <section
       id="catalog"
-      className="max-w-[95.5rem] mx-auto px-4 sm:px-6 py-3 scroll-mt-20"
+      className="max-w-[95.5rem] mx-auto px-4 sm:px-6 py-4 sm:py-5 scroll-mt-20"
     >
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
         <FilterButton
           active={gradeId === "all"}
           onClick={() => onGradeChange("all")}
@@ -58,7 +58,7 @@ export default function FilterPanel({
             {g.name}
           </FilterButton>
         ))}
-        <span className="px-1" style={{ color: "var(--edu-border)" }} aria-hidden>|</span>
+        <span className="px-1 text-sm leading-none" style={{ color: "var(--edu-border)" }} aria-hidden>|</span>
         {juniorGrades.map((g) => (
           <FilterButton
             key={g.id}
@@ -69,7 +69,7 @@ export default function FilterPanel({
             {g.name}
           </FilterButton>
         ))}
-        <span className="ml-auto text-xs" style={{ color: "var(--edu-text-muted)" }}>
+        <span className="ml-auto text-sm" style={{ color: "var(--edu-text-muted)" }}>
           共 {displayCount} 个教具
         </span>
       </div>
@@ -95,7 +95,7 @@ function FilterButton({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium transition-all"
+      className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all"
       style={{
         borderColor: active ? "var(--edu-primary)" : "var(--edu-border)",
         background: active ? "var(--edu-primary)" : "var(--edu-surface)",
