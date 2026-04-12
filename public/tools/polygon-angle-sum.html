@@ -6,15 +6,24 @@
   <title>多边形内角和 — 教立方</title>
   <!-- play-ref:jiaohukejian:0JFPR2O | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <script src="../edu-lib/three.min.js"></script>
+  <script src="../edu-lib/OrbitControls.js"></script>
+  <script src="../edu-lib/edu-3d.js"></script>
   <style>
     .main-layout { display: grid; grid-template-columns: 1fr minmax(280px, 300px); height: 100%; }
-    .canvas-wrap { display: flex; align-items: center; justify-content: center; background: linear-gradient(165deg, #ecfeff, #f8fafc); min-height: 0; padding: 10px; }
-    #cvs { background: #fff; border-radius: var(--edu-radius); border: 1px solid var(--edu-border); max-width: 100%; max-height: 100%; }
+    .canvas-area { position: relative; background: linear-gradient(165deg, #ecfeff, #f8fafc); overflow: hidden; min-height: 0; }
+    .canvas-area canvas { width: 100%; height: 100%; display: block; }
     .panel { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; display: flex; flex-direction: column; gap: 10px; }
     .tabs { display: flex; gap: 6px; }
     .tab { flex: 1; padding: 8px; font-size: 12px; font-weight: 700; border-radius: 8px; border: 2px solid var(--edu-border); cursor: pointer; background: #f8fafc; }
     .tab.active { border-color: var(--edu-primary); color: var(--edu-primary); }
-    .big { font-size: 22px; font-weight: 800; color: var(--edu-accent); text-align: center; }
+    .big { font-size: 20px; font-weight: 800; color: var(--edu-accent); text-align: center; line-height: 1.45; }
+    .orbit-hint {
+      position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.9); padding: 5px 12px; border-radius: 18px;
+      font-size: 11px; color: #64748b; pointer-events: none; box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .hint { font-size: 11px; color: var(--edu-text-muted); line-height: 1.5; }
   </style>
 </head>
 <body>
@@ -22,12 +31,15 @@
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">⬡ 多边形内角和</span>
-      <span class="edu-toolbar-subtitle">(n−2)×180° · 拼角示意</span>
+      <span class="edu-toolbar-subtitle">(n−2)×180° · 扇形剖分 · 3D</span>
     </div>
   </div>
   <div class="edu-content">
     <div class="main-layout">
-      <div class="canvas-wrap"><canvas id="cvs" width="440" height="400"></canvas></div>
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+      </div>
       <div class="panel">
         <div class="tabs">
           <button type="button" class="tab active" id="t1">边数 n</button>
@@ -36,60 +48,170 @@
         <div id="p1">
           <label style="font-size:12px;font-weight:600;display:flex;justify-content:space-between"><span>边数 n（≥3）</span><span id="nv">6</span></label>
           <input type="range" id="n" min="3" max="12" value="6" />
+          <p class="hint">金色小球为剖分顶点：从该点连对角线，把 n 边形分成 <strong id="triN">4</strong> 个三角形（n−2 个）。</p>
         </div>
         <div id="p2" hidden>
-          <p style="font-size:12px;line-height:1.5;color:var(--edu-text-secondary)">从同一顶点作对角线把 n 边形分成 (n−2) 个三角形，每个三角形内角和 180°，故内角和 = (n−2)×180°。</p>
+          <p class="hint">从同一顶点作所有对角线，可将凸 n 边形分成恰好 (n−2) 个三角形；每个三角形内角和为 180°，故 n 边形内角和 = (n−2)×180°。</p>
         </div>
-        <div class="big" id="sum">720°</div>
+        <div class="big" id="sum">内角和 = 720°</div>
       </div>
     </div>
   </div>
 </div>
 <script>
 (function () {
-  const c = document.getElementById("cvs"), x = c.getContext("2d");
-  const n = document.getElementById("n");
-  function draw() {
-    const N = Number(n.value);
-    document.getElementById("nv").textContent = String(N);
-    const sum = (N - 2) * 180;
-    document.getElementById("sum").textContent = "内角和 = " + sum + "°";
-    const W = c.parentElement.clientWidth - 16, H = 380;
-    c.width = Math.max(260, W); c.height = H;
-    x.clearRect(0, 0, c.width, c.height);
-    const cx = c.width / 2, cy = c.height / 2, R = Math.min(c.width, c.height) * 0.35;
-    x.beginPath();
-    for (let i = 0; i <= N; i++) {
-      const ang = -Math.PI / 2 + (i / N) * Math.PI * 2;
-      const px = cx + R * Math.cos(ang), py = cy + R * Math.sin(ang);
-      if (i === 0) x.moveTo(px, py); else x.lineTo(px, py);
+  var canvas = document.getElementById("c3d");
+  var elN = document.getElementById("n");
+  var nv = document.getElementById("nv");
+  var sumEl = document.getElementById("sum");
+  var triNEl = document.getElementById("triN");
+
+  var ctx = Edu3D.createScene(canvas, {
+    bg: 0xf8fafc,
+    fov: 42,
+    camX: 5.2,
+    camY: 5.8,
+    camZ: 5.2,
+    lookX: 0,
+    lookY: 0.05,
+    lookZ: 0,
+    minDist: 2.2,
+    maxDist: 22,
+  });
+  Edu3D.addLights(ctx.scene);
+  Edu3D.addGrid(ctx.scene, 14, 14, 0xcffafe, -0.72);
+
+  var world = new THREE.Group();
+  ctx.scene.add(world);
+
+  var fillMesh = null;
+  var borderLine = null;
+  var diagLines = null;
+  var apex = null;
+
+  function disposeMesh(m) {
+    if (!m) return;
+    world.remove(m);
+    if (m.geometry) m.geometry.dispose();
+    if (m.material) {
+      if (Array.isArray(m.material)) m.material.forEach(function (x) { x.dispose(); });
+      else m.material.dispose();
     }
-    x.closePath();
-    x.fillStyle = color(N);
-    x.fill();
-    x.strokeStyle = "#0f766e";
-    x.lineWidth = 3;
-    x.stroke();
-    x.fillStyle = "#134e4a";
-    x.font = "700 13px sans-serif";
-    x.fillText("n = " + N, cx - 20, cy + R + 28);
   }
-  function color(n) {
-    const t = (n - 3) / 9;
-    return "rgba(45, 212, 191," + (0.25 + t * 0.45) + ")";
+
+  function polygonVerts(N, R) {
+    var v = [];
+    var i;
+    for (i = 0; i < N; i++) {
+      var ang = -Math.PI / 2 + (i / N) * Math.PI * 2;
+      v.push(new THREE.Vector3(R * Math.cos(ang), 0, R * Math.sin(ang)));
+    }
+    return v;
   }
-  n.addEventListener("input", draw);
+
+  function sync() {
+    var N = Number(elN.value);
+    nv.textContent = String(N);
+    var triCount = Math.max(0, N - 2);
+    triNEl.textContent = String(triCount);
+    var sumDeg = (N - 2) * 180;
+    sumEl.textContent = "内角和 = " + sumDeg + "° = (n−2)×180°";
+
+    disposeMesh(fillMesh);
+    fillMesh = null;
+    disposeMesh(borderLine);
+    borderLine = null;
+    disposeMesh(diagLines);
+    diagLines = null;
+    disposeMesh(apex);
+    apex = null;
+
+    var R = 2.15;
+    var verts = polygonVerts(N, R);
+    var y0 = -0.66;
+    var yTop = -0.58;
+
+    var positions = [];
+    var colors = [];
+    var a = verts[0];
+    var i;
+    for (i = 1; i < N - 1; i++) {
+      var b = verts[i];
+      var c = verts[i + 1];
+      var t = (i - 1) / Math.max(1, N - 3);
+      var col = new THREE.Color().setHSL(0.48 + t * 0.12, 0.62, 0.52);
+      positions.push(a.x, y0, a.z, b.x, y0, b.z, c.x, y0, c.z);
+      for (var k = 0; k < 3; k++) {
+        colors.push(col.r, col.g, col.b);
+      }
+    }
+
+    var fanGeo = new THREE.BufferGeometry();
+    fanGeo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    fanGeo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+    fanGeo.computeVertexNormals();
+    var fanMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+    fillMesh = new THREE.Mesh(fanGeo, fanMat);
+    fillMesh.receiveShadow = true;
+    fillMesh.castShadow = true;
+    world.add(fillMesh);
+
+    var borderPts = verts.map(function (p) {
+      return new THREE.Vector3(p.x, y0 + 0.012, p.z);
+    });
+    borderPts.push(borderPts[0].clone());
+    var bGeo = new THREE.BufferGeometry().setFromPoints(borderPts);
+    borderLine = new THREE.Line(bGeo, new THREE.LineBasicMaterial({ color: 0x0f766e, linewidth: 1 }));
+    world.add(borderLine);
+
+    if (N > 3) {
+      var dArr = [];
+      for (i = 2; i <= N - 2; i++) {
+        dArr.push(a.x, y0 + 0.018, a.z, verts[i].x, y0 + 0.018, verts[i].z);
+      }
+      var dGeo = new THREE.BufferGeometry();
+      dGeo.setAttribute("position", new THREE.Float32BufferAttribute(dArr, 3));
+      diagLines = new THREE.LineSegments(
+        dGeo,
+        new THREE.LineBasicMaterial({ color: 0xf97316, linewidth: 1 })
+      );
+      world.add(diagLines);
+    }
+
+    var apexGeo = new THREE.SphereGeometry(0.14, 18, 14);
+    var apexMat = Edu3D.material(0xf59e0b);
+    apex = new THREE.Mesh(apexGeo, apexMat);
+    apex.position.set(a.x, yTop, a.z);
+    apex.castShadow = true;
+    world.add(apex);
+  }
+
+  elN.addEventListener("input", sync);
+
   document.getElementById("t1").addEventListener("click", function () {
-    document.getElementById("p1").hidden = false; document.getElementById("p2").hidden = true;
-    document.getElementById("t1").classList.add("active"); document.getElementById("t2").classList.remove("active");
+    document.getElementById("p1").hidden = false;
+    document.getElementById("p2").hidden = true;
+    document.getElementById("t1").classList.add("active");
+    document.getElementById("t2").classList.remove("active");
   });
   document.getElementById("t2").addEventListener("click", function () {
-    document.getElementById("p1").hidden = true; document.getElementById("p2").hidden = false;
-    document.getElementById("t2").classList.add("active"); document.getElementById("t1").classList.remove("active");
+    document.getElementById("p1").hidden = true;
+    document.getElementById("p2").hidden = false;
+    document.getElementById("t2").classList.add("active");
+    document.getElementById("t1").classList.remove("active");
   });
-  window.addEventListener("resize", draw);
-  draw();
+
+  function onResize() {
+    var w = canvas.clientWidth || 400;
+    var h = canvas.clientHeight || 400;
+    ctx.renderer.setSize(w, h, false);
+    ctx.camera.aspect = w / h;
+    ctx.camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", onResize);
+
+  sync();
+  onResize();
+
+  Edu3D.startLoop(ctx.scene, ctx.camera, ctx.renderer, ctx.controls, null);
 })();
-</script>
-</body>
-</html>

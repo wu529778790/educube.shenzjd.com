@@ -6,14 +6,22 @@
   <title>工程问题 — 教立方</title>
   <!-- play-ref:jiaohukejian:0K2C13S | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <script src="../edu-lib/three.min.js"></script>
+  <script src="../edu-lib/OrbitControls.js"></script>
+  <script src="../edu-lib/edu-3d.js"></script>
   <style>
-    .edu-content { display: flex; flex-direction: column; padding: 16px; overflow: auto; gap: 14px; max-width: 36rem; margin: 0 auto; }
-    .card { background: var(--edu-surface); border: 1px solid var(--edu-border); border-radius: var(--edu-radius); padding: 16px; box-shadow: var(--edu-shadow); }
-    .q { font-size: 15px; font-weight: 600; line-height: 1.6; }
-    .bars { display: flex; gap: 8px; margin: 14px 0; height: 120px; align-items: flex-end; }
-    .bar { flex: 1; background: linear-gradient(180deg, #93c5fd, #2563eb); border-radius: 6px 6px 0 0; min-height: 8px; position: relative; }
-    .bar span { position: absolute; bottom: -22px; left: 0; right: 0; text-align: center; font-size: 11px; font-weight: 700; color: var(--edu-text-secondary); }
-    .ans { margin-top: 12px; padding: 10px; background: #eff6ff; border-radius: 8px; font-size: 14px; display: none; }
+    .main-layout { display: grid; grid-template-columns: 1fr minmax(280px, 340px); height: 100%; min-height: 0; }
+    .canvas-area { position: relative; background: linear-gradient(180deg, #eff6ff, #f8fafc); overflow: hidden; min-height: 0; }
+    .canvas-area canvas { width: 100%; height: 100%; display: block; }
+    .orbit-hint {
+      position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.9); padding: 4px 10px; border-radius: 16px;
+      font-size: 10px; color: #64748b; pointer-events: none;
+    }
+    .side { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+    .card { background: #fff; border: 1px solid var(--edu-border); border-radius: var(--edu-radius); padding: 14px; box-shadow: var(--edu-shadow); }
+    .q { font-size: 14px; font-weight: 600; line-height: 1.55; color: #1e293b; }
+    .ans { padding: 10px; background: #eff6ff; border-radius: 8px; font-size: 13px; line-height: 1.5; display: none; }
     .ans.show { display: block; }
   </style>
 </head>
@@ -22,59 +30,174 @@
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">🏗️ 工程问题</span>
-      <span class="edu-toolbar-subtitle">工量条 · 合作天数</span>
+      <span class="edu-toolbar-subtitle">工量柱 · 合作天数 · 3D</span>
     </div>
   </div>
-  <div class="edu-content">
-    <div class="card">
-      <p class="q" id="q"></p>
-      <div class="bars" id="bars"></div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button type="button" class="edu-btn edu-btn-primary" id="new">换题</button>
-        <button type="button" class="edu-btn edu-btn-outline" id="show">显示思路</button>
+  <div class="edu-content" style="padding:0;overflow:hidden;height:100%;">
+    <div class="main-layout">
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 柱高对应当日「完成份额」示意</div>
       </div>
-      <div class="ans" id="ans"></div>
+      <div class="side">
+        <div class="card">
+          <p class="q" id="q"></p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+            <button type="button" class="edu-btn edu-btn-primary" id="new">换题</button>
+            <button type="button" class="edu-btn edu-btn-outline" id="show">显示思路</button>
+          </div>
+          <div class="ans" id="ans"></div>
+        </div>
+        <p style="font-size:11px;color:var(--edu-text-muted);line-height:1.45;margin:0">设总工量为 1：柱高按 1÷单独天数 的比例缩放，第三柱为两人合作时每日完成量之和（仍与「合干」思路一致）。</p>
+      </div>
     </div>
   </div>
 </div>
 <script>
 (function () {
+  var canvas = document.getElementById("c3d");
+
+  var ctx = Edu3D.createScene(canvas, {
+    bg: 0xf8fafc,
+    fov: 40,
+    camX: 4.2,
+    camY: 3.4,
+    camZ: 5.2,
+    lookX: 0,
+    lookY: 0.55,
+    lookZ: 0,
+    minDist: 2.5,
+    maxDist: 18,
+  });
+  Edu3D.addLights(ctx.scene);
+  Edu3D.addGrid(ctx.scene, 12, 12, 0xbfdbfe, -0.72);
+
+  var world = new THREE.Group();
+  ctx.scene.add(world);
+
+  var bars = [];
+  var labels = [];
+  var pad = null;
+
+  function clearBars() {
+    var i;
+    for (i = 0; i < bars.length; i++) {
+      world.remove(bars[i]);
+      if (bars[i].geometry) bars[i].geometry.dispose();
+      if (bars[i].material) bars[i].material.dispose();
+    }
+    bars = [];
+    for (i = 0; i < labels.length; i++) {
+      world.remove(labels[i]);
+      if (labels[i].material) labels[i].material.dispose();
+    }
+    labels = [];
+    if (pad) {
+      world.remove(pad);
+      pad.geometry.dispose();
+      pad.material.dispose();
+      pad = null;
+    }
+  }
+
+  function addBar(x, h, color, lab) {
+    var geo = new THREE.BoxGeometry(0.55, Math.max(0.08, h), 0.55);
+    var mat = Edu3D.material(color);
+    var mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, -0.68 + h / 2, 0);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    world.add(mesh);
+    bars.push(mesh);
+
+    var sp = Edu3D.textSprite(lab, { scale: 0.42, color: "#334155" });
+    sp.position.set(x, -0.68 + h + 0.35, 0);
+    world.add(sp);
+    labels.push(sp);
+  }
+
   function gen() {
-    const a = 4 + Math.floor(Math.random() * 8);
-    const b = 5 + Math.floor(Math.random() * 8);
-    const rateA = 1 / a, rateB = 1 / b, rateT = rateA + rateB;
-    const days = 1 / rateT;
+    var a = 4 + Math.floor(Math.random() * 8);
+    var b = 5 + Math.floor(Math.random() * 8);
+    var rateA = 1 / a;
+    var rateB = 1 / b;
+    var rateT = rateA + rateB;
+    var days = 1 / rateT;
     return {
       text: "一件工作，甲单独完成需 " + a + " 天，乙单独完成需 " + b + " 天。若两人合作，几天能完成？（设工作总量为 1）",
       days: days,
-      hint: "甲每天完成 1/" + a + "，乙每天完成 1/" + b + "，合作每天完成 1/" + a + "+1/" + b + "，故天数 = 1÷(1/" + a + "+1/" + b + ") ≈ " + days.toFixed(2) + " 天。",
-      ha: Math.round(100 / a), hb: Math.round(100 / b)
+      hint:
+        "甲每天完成 1/" +
+        a +
+        "，乙每天完成 1/" +
+        b +
+        "，合作每天完成 1/" +
+        a +
+        "+1/" +
+        b +
+        "，故天数 = 1÷(1/" +
+        a +
+        "+1/" +
+        b +
+        ") ≈ " +
+        days.toFixed(2) +
+        " 天。",
+      ha: Math.round(100 / a),
+      hb: Math.round(100 / b),
     };
   }
-  let cur = gen();
+
+  var cur = gen();
+
+  function render3d() {
+    clearBars();
+    var h1 = cur.ha;
+    var h2 = cur.hb;
+    var h3 = Math.min(100, cur.ha + cur.hb);
+    var m = Math.max(h1, h2, h3, 1);
+    var scale = 2.4 / m;
+    var y1 = (h1 / 100) * scale;
+    var y2 = (h2 / 100) * scale;
+    var y3 = (h3 / 100) * scale;
+
+    var padGeo = new THREE.BoxGeometry(2.6, 0.06, 1.1);
+    var padMat = Edu3D.material(0xe2e8f0);
+    pad = new THREE.Mesh(padGeo, padMat);
+    pad.position.set(0, -0.71, 0);
+    pad.receiveShadow = true;
+    world.add(pad);
+
+    addBar(-0.85, y1, 0x3b82f6, "甲/天");
+    addBar(0, y2, 0x0ea5e9, "乙/天");
+    addBar(0.85, y3, 0x6366f1, "合/天");
+  }
+
   function render() {
     document.getElementById("q").textContent = cur.text;
     document.getElementById("ans").textContent = cur.hint;
     document.getElementById("ans").classList.remove("show");
-    const bars = document.getElementById("bars");
-    bars.innerHTML = "";
-    function addBar(h, lab) {
-      const d = document.createElement("div");
-      d.className = "bar";
-      d.style.height = h + "%";
-      const s = document.createElement("span");
-      s.textContent = lab;
-      d.appendChild(s);
-      bars.appendChild(d);
-    }
-    addBar(cur.ha, "甲/天");
-    addBar(cur.hb, "乙/天");
-    addBar(Math.min(100, cur.ha + cur.hb), "合/天");
+    render3d();
   }
-  document.getElementById("new").addEventListener("click", function () { cur = gen(); render(); });
-  document.getElementById("show").addEventListener("click", function () { document.getElementById("ans").classList.add("show"); });
+
+  document.getElementById("new").addEventListener("click", function () {
+    cur = gen();
+    render();
+  });
+  document.getElementById("show").addEventListener("click", function () {
+    document.getElementById("ans").classList.add("show");
+  });
+
+  function onResize() {
+    var w = canvas.clientWidth || 320;
+    var h = canvas.clientHeight || 320;
+    ctx.renderer.setSize(w, h, false);
+    ctx.camera.aspect = w / h;
+    ctx.camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", onResize);
+
   render();
+  onResize();
+
+  Edu3D.startLoop(ctx.scene, ctx.camera, ctx.renderer, ctx.controls, null);
 })();
-</script>
-</body>
-</html>

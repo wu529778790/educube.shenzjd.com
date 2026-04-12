@@ -6,13 +6,22 @@
   <title>阴影部分面积 — 教立方</title>
   <!-- play-ref:jiaohukejian:1XV65WR | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <script src="../edu-lib/three.min.js"></script>
+  <script src="../edu-lib/OrbitControls.js"></script>
+  <script src="../edu-lib/edu-3d.js"></script>
   <style>
     .main-layout { display: grid; grid-template-columns: 1fr minmax(280px, 300px); height: 100%; }
-    .canvas-wrap { background: #f1f5f9; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 10px; }
-    #cvs { background: #fff; border-radius: var(--edu-radius); border: 1px solid var(--edu-border); max-width: 100%; }
+    .canvas-area { position: relative; background: linear-gradient(165deg, #f1f5f9, #e2e8f0); overflow: hidden; min-height: 0; }
+    .canvas-area canvas { width: 100%; height: 100%; display: block; }
     .panel { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; }
     .slider-block label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
-    .out { font-weight: 800; font-size: 15px; color: var(--edu-accent); margin-top: 10px; text-align: center; }
+    .out { font-weight: 800; font-size: 14px; color: var(--edu-accent); margin-top: 10px; text-align: center; line-height: 1.55; }
+    .orbit-hint {
+      position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.9); padding: 5px 12px; border-radius: 18px;
+      font-size: 11px; color: #64748b; pointer-events: none; box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .hint { font-size: 11px; color: var(--edu-text-muted); line-height: 1.5; margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -20,16 +29,19 @@
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">🌓 阴影部分面积</span>
-      <span class="edu-toolbar-subtitle">方减圆 · 可调半径</span>
+      <span class="edu-toolbar-subtitle">方减圆 · 弯角模型 · 3D</span>
     </div>
   </div>
   <div class="edu-content">
     <div class="main-layout">
-      <div class="canvas-wrap"><canvas id="cvs" width="400" height="400"></canvas></div>
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">拖拽旋转 · 滚轮缩放</div>
+      </div>
       <div class="panel">
-        <p style="font-size:12px;color:var(--edu-text-muted);line-height:1.45">正方形边长 a，内切四分之一圆叠放成「弯角」阴影模型（示意）。</p>
+        <p class="hint">正方形边长 a，一角为圆心作半径 r 的四分之一圆；阴影面积为整块正方形去掉该「弯角」后的部分。</p>
         <div class="slider-block"><label><span>正方形边长 a</span><span id="av">10</span></label><input type="range" id="a" min="6" max="16" value="10" /></div>
-        <div class="slider-block"><label><span>圆半径 r</span><span id="rv">4</span></label><input type="range" id="r" min="2" max="8" value="4" /></div>
+        <div class="slider-block"><label><span>圆半径 r</span><span id="rv">4</span></label><input type="range" id="r" min="1" max="10" value="4" /></div>
         <div class="out" id="out"></div>
       </div>
     </div>
@@ -37,39 +49,168 @@
 </div>
 <script>
 (function () {
-  const c = document.getElementById("cvs"), x = c.getContext("2d");
-  const a = document.getElementById("a"), r = document.getElementById("r"), out = document.getElementById("out");
-  function draw() {
-    const A = Number(a.value), R = Number(r.value);
-    document.getElementById("av").textContent = String(A);
-    document.getElementById("rv").textContent = String(R);
-    const s = 22, W = A * s, H = A * s;
-    c.width = W + 40; c.height = H + 40;
-    x.translate(20, 20);
-    x.fillStyle = "#e2e8f0";
-    x.fillRect(0, 0, W, H);
-    x.strokeStyle = "#64748b";
-    x.strokeRect(0, 0, W, H);
-    x.fillStyle = "#94a3b8";
-    x.beginPath();
-    x.arc(0, 0, R * s, 0, Math.PI / 2);
-    x.lineTo(0, 0);
-    x.closePath();
-    x.fill();
-    x.fillStyle = "rgba(30,64,175,0.45)";
-    x.beginPath();
-    x.moveTo(0, 0); x.lineTo(W, 0); x.lineTo(W, H); x.lineTo(0, H); x.closePath();
-    x.moveTo(0, 0);
-    x.arc(0, 0, R * s, 0, Math.PI / 2);
-    x.closePath();
-    x.fill("evenodd");
-    const square = A * A;
-    const quarter = (Math.PI * R * R) / 4;
-    const shade = square - quarter;
-    out.textContent = "阴影 ≈ " + shade.toFixed(1) + "（a² − ¼πr²，单位一致即可）";
+  var canvas = document.getElementById("c3d");
+  var elA = document.getElementById("a");
+  var elR = document.getElementById("r");
+  var av = document.getElementById("av");
+  var rv = document.getElementById("rv");
+  var out = document.getElementById("out");
+
+  var ctx = Edu3D.createScene(canvas, {
+    bg: 0xf8fafc,
+    fov: 40,
+    camX: 14,
+    camY: 11,
+    camZ: 14,
+    lookX: 0,
+    lookY: 0.15,
+    lookZ: 0,
+    minDist: 4,
+    maxDist: 55,
+  });
+  Edu3D.addLights(ctx.scene);
+  Edu3D.addGrid(ctx.scene, 32, 16, 0xd1d5db, -0.72);
+
+  var world = new THREE.Group();
+  ctx.scene.add(world);
+
+  var shadeMesh = null;
+  var cutQuarterMesh = null;
+  var squareLine = null;
+  var arcLine = null;
+
+  function makeShadeShape(A, rEff) {
+    var sh = new THREE.Shape();
+    if (rEff < 1e-4) {
+      sh.moveTo(0, 0);
+      sh.lineTo(A, 0);
+      sh.lineTo(A, A);
+      sh.lineTo(0, A);
+      sh.lineTo(0, 0);
+      return sh;
+    }
+    sh.moveTo(0, A);
+    sh.lineTo(A, A);
+    sh.lineTo(A, 0);
+    sh.lineTo(rEff, 0);
+    sh.absarc(0, 0, rEff, 0, Math.PI / 2, false);
+    sh.lineTo(0, A);
+    return sh;
   }
-  a.addEventListener("input", draw); r.addEventListener("input", draw);
-  draw();
+
+  function disposeMesh(m) {
+    if (!m) return;
+    world.remove(m);
+    if (m.geometry) m.geometry.dispose();
+    if (m.material) {
+      if (Array.isArray(m.material)) m.material.forEach(function (x) { x.dispose(); });
+      else m.material.dispose();
+    }
+  }
+
+  function sync() {
+    var A = Number(elA.value);
+    var Rraw = Number(elR.value);
+    elR.max = String(A);
+    var R = Math.min(Rraw, A);
+    if (Rraw > A) elR.value = String(R);
+    av.textContent = String(A);
+    rv.textContent = String(R);
+
+    disposeMesh(shadeMesh);
+    shadeMesh = null;
+    disposeMesh(cutQuarterMesh);
+    cutQuarterMesh = null;
+    disposeMesh(squareLine);
+    squareLine = null;
+    disposeMesh(arcLine);
+    arcLine = null;
+
+    var rEff = R;
+    var sh = makeShadeShape(A, rEff);
+    var depth = 0.16;
+    var shadeGeo = new THREE.ExtrudeGeometry(sh, { depth: depth, bevelEnabled: false, curveSegments: 24 });
+    shadeGeo.rotateX(Math.PI / 2);
+    shadeGeo.translate(0, -depth / 2, 0);
+    var shadeMat = new THREE.MeshLambertMaterial({
+      color: 0x1e40af,
+      transparent: true,
+      opacity: 0.78,
+      side: THREE.DoubleSide,
+    });
+    shadeMesh = new THREE.Mesh(shadeGeo, shadeMat);
+    shadeMesh.position.y = -0.66;
+    shadeMesh.castShadow = true;
+    shadeMesh.receiveShadow = true;
+    world.add(shadeMesh);
+
+    if (rEff > 1e-4) {
+      var cutGeo = new THREE.CircleGeometry(rEff, 40, 0, Math.PI / 2);
+      cutGeo.rotateX(Math.PI / 2);
+      var cutMat = new THREE.MeshLambertMaterial({
+        color: 0x94a3b8,
+        transparent: true,
+        opacity: 0.55,
+        side: THREE.DoubleSide,
+      });
+      cutQuarterMesh = new THREE.Mesh(cutGeo, cutMat);
+      cutQuarterMesh.position.set(0, -0.58, 0);
+      cutQuarterMesh.receiveShadow = true;
+      world.add(cutQuarterMesh);
+    }
+
+    var yLine = -0.62;
+    var sqPts = [
+      new THREE.Vector3(0, yLine, 0),
+      new THREE.Vector3(A, yLine, 0),
+      new THREE.Vector3(A, yLine, A),
+      new THREE.Vector3(0, yLine, A),
+      new THREE.Vector3(0, yLine, 0),
+    ];
+    var sqGeo = new THREE.BufferGeometry().setFromPoints(sqPts);
+    squareLine = new THREE.Line(sqGeo, new THREE.LineBasicMaterial({ color: 0x475569, linewidth: 1 }));
+    world.add(squareLine);
+
+    if (rEff > 1e-4) {
+      var arcPts = [];
+      var seg = 36;
+      var ya = -0.61;
+      var i;
+      for (i = 0; i <= seg; i++) {
+        var t = (i / seg) * (Math.PI / 2);
+        arcPts.push(new THREE.Vector3(rEff * Math.cos(t), ya, rEff * Math.sin(t)));
+      }
+      var arcGeo = new THREE.BufferGeometry().setFromPoints(arcPts);
+      arcLine = new THREE.Line(arcGeo, new THREE.LineBasicMaterial({ color: 0xf97316, linewidth: 1 }));
+      world.add(arcLine);
+    }
+
+    world.position.set(-A / 2, 0, -A / 2);
+
+    var square = A * A;
+    var quarter = (Math.PI * R * R) / 4;
+    var shade = square - quarter;
+    out.innerHTML =
+      "阴影面积 = <strong>a² − ¼πr²</strong> ≈ " +
+      shade.toFixed(2) +
+      "<br/><span style=\"font-size:11px;font-weight:600;color:#64748b\">蓝板为阴影区域 · 灰片示意被减去的四分之一圆</span>";
+  }
+
+  elA.addEventListener("input", sync);
+  elR.addEventListener("input", sync);
+  sync();
+
+  function onResize() {
+    var w = canvas.clientWidth || 400;
+    var h = canvas.clientHeight || 400;
+    ctx.renderer.setSize(w, h, false);
+    ctx.camera.aspect = w / h;
+    ctx.camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", onResize);
+  onResize();
+
+  Edu3D.startLoop(ctx.scene, ctx.camera, ctx.renderer, ctx.controls, null);
 })();
 </script>
 </body>

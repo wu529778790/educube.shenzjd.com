@@ -6,17 +6,22 @@
   <title>浓度问题 — 教立方</title>
   <!-- play-ref:jiaohukejian:0QTLN2F | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <script src="../edu-lib/three.min.js"></script>
+  <script src="../edu-lib/OrbitControls.js"></script>
+  <script src="../edu-lib/edu-3d.js"></script>
   <style>
-    .main-layout { display: grid; grid-template-columns: 1fr minmax(280px, 300px); height: 100%; }
-    .viz { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; background: #ecfeff; min-height: 0; }
-    .beaker {
-      width: 100px; height: 160px; border: 3px solid #0e7490; border-radius: 0 0 16px 16px;
-      position: relative; overflow: hidden; background: linear-gradient(180deg, #e0f2fe 0%, #fff 40%);
+    .main-layout { display: grid; grid-template-columns: 1fr minmax(280px, 300px); height: 100%; min-height: 0; }
+    .canvas-area { position: relative; background: linear-gradient(165deg, #ecfeff, #f0f9ff); overflow: hidden; min-height: 0; }
+    .canvas-area canvas { width: 100%; height: 100%; display: block; }
+    .orbit-hint {
+      position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.92); padding: 4px 12px; border-radius: 18px;
+      font-size: 10px; color: #64748b; pointer-events: none;
     }
-    .fill { position: absolute; left: 0; right: 0; bottom: 0; transition: height 0.2s ease; border-radius: 0 0 12px 12px; }
     .panel { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; }
     .slider-block label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
-    .pct { font-size: 22px; font-weight: 800; color: var(--edu-primary); text-align: center; margin-top: 8px; }
+    .pct { font-size: 20px; font-weight: 800; color: var(--edu-primary); text-align: center; margin-top: 8px; line-height: 1.4; }
+    .hint { font-size: 11px; color: var(--edu-text-muted); line-height: 1.45; margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -24,50 +29,147 @@
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">🧪 浓度问题</span>
-      <span class="edu-toolbar-subtitle">盐 + 水 → 盐水质量分数</span>
+      <span class="edu-toolbar-subtitle">盐 + 水 · 质量分数 · 3D</span>
     </div>
   </div>
   <div class="edu-content">
     <div class="main-layout">
-      <div class="viz">
-        <div class="beaker">
-          <div class="fill" id="fill" style="height:40%;background:linear-gradient(180deg,#bae6fd,#38bdf8)"></div>
-        </div>
-        <p style="font-size:12px;color:var(--edu-text-muted)">颜色深浅随浓度变化（示意）。</p>
+      <div class="canvas-area">
+        <canvas id="c3d"></canvas>
+        <div class="orbit-hint">液柱高度 ∝ 盐水总质量 · 颜色深浅 ∝ 浓度</div>
       </div>
       <div class="panel">
         <div class="slider-block"><label><span>盐（克）</span><span id="sv">10</span></label><input type="range" id="salt" min="1" max="50" value="10" /></div>
         <div class="slider-block"><label><span>水（克）</span><span id="wv">90</span></label><input type="range" id="water" min="20" max="200" value="90" /></div>
         <div class="pct" id="pct"></div>
+        <p class="hint">溶质质量分数 = 盐 ÷（盐 + 水）× 100%。</p>
         <button type="button" class="edu-btn edu-btn-outline" id="rnd">随机一题</button>
-        <p id="quiz" style="font-size:13px;margin-top:10px;font-weight:600"></p>
+        <p id="quiz" style="font-size:13px;margin-top:10px;font-weight:600;line-height:1.45"></p>
       </div>
     </div>
   </div>
 </div>
 <script>
 (function () {
-  const salt = document.getElementById("salt"), water = document.getElementById("water");
-  const pct = document.getElementById("pct"), fill = document.getElementById("fill"), quiz = document.getElementById("quiz");
+  var canvas = document.getElementById("c3d");
+  var salt = document.getElementById("salt");
+  var water = document.getElementById("water");
+  var pct = document.getElementById("pct");
+  var quiz = document.getElementById("quiz");
+
+  var ctx = Edu3D.createScene(canvas, {
+    bg: 0xf0f9ff,
+    fov: 42,
+    camX: 2.8,
+    camY: 1.85,
+    camZ: 3.6,
+    lookX: 0,
+    lookY: 0.12,
+    lookZ: 0,
+    minDist: 1.8,
+    maxDist: 12,
+  });
+  Edu3D.addLights(ctx.scene);
+  Edu3D.addGrid(ctx.scene, 8, 8, 0xc7e9f3, -0.72);
+
+  var world = new THREE.Group();
+  ctx.scene.add(world);
+
+  function clearWorld() {
+    while (world.children.length) {
+      var ch = world.children[0];
+      world.remove(ch);
+      if (ch.geometry) ch.geometry.dispose();
+      if (ch.material) ch.material.dispose();
+    }
+  }
+
   function sync() {
-    const s = Number(salt.value), w = Number(water.value);
+    var s = Number(salt.value);
+    var w = Number(water.value);
     document.getElementById("sv").textContent = String(s);
     document.getElementById("wv").textContent = String(w);
-    const p = (100 * s) / (s + w);
-    pct.textContent = "浓度 ≈ " + p.toFixed(1) + "%";
-    const h = 25 + (p / 40) * 65;
-    fill.style.height = Math.min(90, h) + "%";
-    fill.style.opacity = String(0.35 + p / 120);
+    var total = s + w;
+    var p = (100 * s) / total;
+
+    pct.innerHTML =
+      "浓度 ≈ <strong>" +
+      p.toFixed(1) +
+      "</strong>%<br/><span style=\"font-size:11px;font-weight:600;color:#64748b\">盐 " +
+      s +
+      " g · 水 " +
+      w +
+      " g</span>";
+
+    var maxTotal = 250;
+    var fillH = 0.1 + (total / maxTotal) * 1.02;
+    fillH = Math.min(1.12, Math.max(0.1, fillH));
+
+    clearWorld();
+
+    var floorY = -0.68;
+    var glassH = 1.18;
+    var glassRTop = 0.42;
+    var glassRBot = 0.34;
+
+    var glassMat = new THREE.MeshLambertMaterial({
+      color: 0x22d3ee,
+      transparent: true,
+      opacity: 0.2,
+      side: THREE.DoubleSide,
+    });
+    var glass = new THREE.Mesh(
+      new THREE.CylinderGeometry(glassRTop, glassRBot, glassH, 48, 1, true),
+      glassMat
+    );
+    glass.position.y = floorY + glassH / 2;
+    world.add(glass);
+
+    var bottom = new THREE.Mesh(
+      new THREE.CircleGeometry(glassRBot, 48),
+      new THREE.MeshLambertMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.55 })
+    );
+    bottom.rotation.x = -Math.PI / 2;
+    bottom.position.y = floorY + 0.01;
+    bottom.receiveShadow = true;
+    world.add(bottom);
+
+    var sat = 0.25 + Math.min(0.65, p / 55);
+    var light = 0.42 + Math.min(0.35, p / 120);
+    var liqCol = new THREE.Color().setHSL(0.58, sat, light);
+    var liqR = 0.33;
+    var liquid = new THREE.Mesh(
+      new THREE.CylinderGeometry(liqR, liqR, fillH, 48, 1, false),
+      new THREE.MeshLambertMaterial({ color: liqCol, transparent: true, opacity: 0.9 })
+    );
+    liquid.position.y = floorY + fillH / 2 + 0.02;
+    liquid.castShadow = true;
+    liquid.receiveShadow = true;
+    world.add(liquid);
   }
-  salt.addEventListener("input", sync); water.addEventListener("input", sync);
+
+  salt.addEventListener("input", sync);
+  water.addEventListener("input", sync);
+
   document.getElementById("rnd").addEventListener("click", function () {
     salt.value = String(5 + Math.floor(Math.random() * 20));
     water.value = String(40 + Math.floor(Math.random() * 100));
-    quiz.textContent = "现有盐 " + salt.value + " g、水 " + water.value + " g，完全溶解后浓度是多少？";
+    quiz.textContent =
+      "现有盐 " + salt.value + " g、水 " + water.value + " g，完全溶解后浓度是多少？";
     sync();
   });
+
+  function onResize() {
+    var cw = canvas.clientWidth || 320;
+    var ch = canvas.clientHeight || 320;
+    ctx.renderer.setSize(cw, ch, false);
+    ctx.camera.aspect = cw / ch;
+    ctx.camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", onResize);
+
   document.getElementById("rnd").click();
+  onResize();
+
+  Edu3D.startLoop(ctx.scene, ctx.camera, ctx.renderer, ctx.controls, null);
 })();
-</script>
-</body>
-</html>
