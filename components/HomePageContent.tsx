@@ -86,7 +86,10 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
   }, [catalogTools, searchQuery]);
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--edu-bg)" }}>
+    <div
+      className="flex min-h-screen flex-col"
+      style={{ background: "var(--edu-bg)" }}
+    >
       <Header searchInput={searchInput} onSearchChange={handleSearchChange} />
 
       {/* ── 筛选 ── */}
@@ -98,43 +101,52 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
         onGradeChange={handleGradeChange}
       />
 
-      {/* ── 教具列表 ── */}
-      <h2 id="main-content" className="sr-only">教具列表</h2>
-      <section id="tools" className="max-w-[95.5rem] mx-auto px-4 sm:px-6 pb-20 scroll-mt-20">
-        {searchQuery.trim() && catalogTools.length > 0 && displayTools.length === 0 ? (
-          <EmptyState>
-            <p className="font-medium mb-1" style={{ color: "var(--edu-text)" }}>
-              没有找到匹配「{searchQuery.trim()}」的教具
-            </p>
-            <p className="text-sm" style={{ color: "var(--edu-text-muted)" }}>
-              试试换个关键词，或清空搜索浏览全部教具。
-            </p>
-          </EmptyState>
-        ) : catalogTools.length === 0 ? (
-          <EmptyState>
-            <p className="font-medium text-lg mb-2" style={{ color: "var(--edu-text)" }}>
-              该目录下暂无教具
-            </p>
-            <p className="text-sm max-w-md mx-auto leading-relaxed" style={{ color: "var(--edu-text-muted)" }}>
-              该分类的交互内容正在制作与审核中。您可以切换筛选条件查看已上线的教具。
-            </p>
-          </EmptyState>
-        ) : displayTools.length === 0 ? (
-          <EmptyState>
-            <p className="font-medium mb-1" style={{ color: "var(--edu-text)" }}>
-              当前年级下暂无教具
-            </p>
-            <p className="text-sm" style={{ color: "var(--edu-text-muted)" }}>
-              请切换到其他年级查看。
-            </p>
-          </EmptyState>
-        ) : (
-          <ToolGrid tools={displayTools} />
-        )}
-      </section>
+      <main className="flex w-full min-h-0 flex-1 flex-col">
+        <h2 id="main-content" className="sr-only">
+          教具列表
+        </h2>
+        <section
+          id="tools"
+          className="mx-auto w-full max-w-[95.5rem] scroll-mt-20 px-4 pb-20 sm:px-6"
+        >
+          {searchQuery.trim() && catalogTools.length > 0 && displayTools.length === 0 ? (
+            <EmptyState>
+              <p className="font-medium mb-1" style={{ color: "var(--edu-text)" }}>
+                没有找到匹配「{searchQuery.trim()}」的教具
+              </p>
+              <p className="text-sm" style={{ color: "var(--edu-text-muted)" }}>
+                试试换个关键词，或清空搜索浏览全部教具。
+              </p>
+            </EmptyState>
+          ) : catalogTools.length === 0 ? (
+            <EmptyState>
+              <p className="font-medium text-lg mb-2" style={{ color: "var(--edu-text)" }}>
+                该目录下暂无教具
+              </p>
+              <p className="text-sm max-w-md mx-auto leading-relaxed" style={{ color: "var(--edu-text-muted)" }}>
+                该分类的交互内容正在制作与审核中。您可以切换筛选条件查看已上线的教具。
+              </p>
+            </EmptyState>
+          ) : displayTools.length === 0 ? (
+            <EmptyState>
+              <p className="font-medium mb-1" style={{ color: "var(--edu-text)" }}>
+                当前年级下暂无教具
+              </p>
+              <p className="text-sm" style={{ color: "var(--edu-text-muted)" }}>
+                请切换到其他年级查看。
+              </p>
+            </EmptyState>
+          ) : (
+            <ToolGrid tools={displayTools} />
+          )}
+        </section>
+      </main>
 
       {/* ── 页脚 ── */}
-      <footer className="border-t" style={{ borderColor: "var(--edu-border)", background: "var(--edu-surface)" }}>
+      <footer
+        className="shrink-0 border-t"
+        style={{ borderColor: "var(--edu-border)", background: "var(--edu-surface)" }}
+      >
         <div
           className="max-w-[95.5rem] mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm"
           style={{ color: "var(--edu-text-muted)" }}
