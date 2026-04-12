@@ -225,8 +225,8 @@
     .cr-viz3d {
       position: relative;
       width: 100%;
-      flex: 0 0 min(26vh, 180px);
-      min-height: 120px;
+      flex: 0 0 clamp(200px, 32vh, 340px);
+      min-height: 200px;
       border-bottom: 1px solid var(--edu-border);
       background: linear-gradient(180deg, #f0fdf4, #fefce8);
     }
@@ -542,8 +542,8 @@
   });
 
   function onResize() {
-    var w = canvas.clientWidth || 2;
-    var h = canvas.clientHeight || 2;
+    var w = canvas.clientWidth || 480;
+    var h = canvas.clientHeight || 360;
     ctx.renderer.setSize(w, h, false);
     ctx.camera.aspect = w / h;
     ctx.camera.updateProjectionMatrix();

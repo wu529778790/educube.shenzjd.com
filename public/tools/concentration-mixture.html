@@ -160,8 +160,8 @@
   });
 
   function onResize() {
-    var cw = canvas.clientWidth || 320;
-    var ch = canvas.clientHeight || 320;
+    var cw = canvas.clientWidth || 480;
+    var ch = canvas.clientHeight || 360;
     ctx.renderer.setSize(cw, ch, false);
     ctx.camera.aspect = cw / ch;
     ctx.camera.updateProjectionMatrix();

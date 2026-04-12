@@ -129,8 +129,8 @@
     .ring-viz3d {
       position: relative;
       width: 100%;
-      flex: 0 0 min(24vh, 180px);
-      min-height: 110px;
+      flex: 0 0 clamp(200px, 32vh, 340px);
+      min-height: 200px;
       border-bottom: 1px solid var(--edu-border);
       background: linear-gradient(180deg, #f0f9ff, #fff);
     }
@@ -262,8 +262,8 @@
   });
 
   function r3() {
-    var cw = canvas3.clientWidth || 2;
-    var ch = canvas3.clientHeight || 2;
+    var cw = canvas3.clientWidth || 480;
+    var ch = canvas3.clientHeight || 360;
     ctx3.renderer.setSize(cw, ch, false);
     ctx3.camera.aspect = cw / ch;
     ctx3.camera.updateProjectionMatrix();

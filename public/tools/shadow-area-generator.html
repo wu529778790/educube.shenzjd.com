@@ -10,12 +10,33 @@
   <script src="../edu-lib/OrbitControls.js"></script>
   <script src="../edu-lib/edu-3d.js"></script>
   <style>
-    .main-layout { display: grid; grid-template-columns: 1fr minmax(300px, 360px); height: 100%; min-height: 0; }
-    .canvas-area { position: relative; background: #f1f5f9; overflow: hidden; min-height: 0; }
+    /* 左侧 3D 区尽量大：约 2 : 1，侧栏略收窄 */
+    .main-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 2.1fr) minmax(260px, min(32vw, 380px));
+      height: 100%;
+      min-height: 0;
+    }
+    .canvas-area {
+      position: relative;
+      background: #f1f5f9;
+      overflow: hidden;
+      min-height: 0;
+      /* 大屏下保底高度，避免 3D 条带过扁 */
+      min-height: clamp(320px, 58vh, 920px);
+    }
     .canvas-area canvas { width: 100%; height: 100%; display: block; }
-    .side { border-left: 1px solid var(--edu-border); padding: 14px; background: var(--edu-surface); overflow: auto; display: flex; flex-direction: column; gap: 12px; }
-    .q { font-size: 14px; line-height: 1.65; font-weight: 600; color: var(--edu-text); }
-    .ans { padding: 12px; background: #f0fdf4; border-radius: 8px; font-size: 13px; font-weight: 700; color: #166534; display: none; }
+    .side {
+      border-left: 1px solid var(--edu-border);
+      padding: 16px 18px;
+      background: var(--edu-surface);
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .q { font-size: clamp(15px, 1.05rem + 0.2vw, 18px); line-height: 1.7; font-weight: 600; color: var(--edu-text); }
+    .ans { padding: 14px; background: #f0fdf4; border-radius: 8px; font-size: 14px; font-weight: 700; color: #166534; display: none; }
     .ans.show { display: block; }
     .row { display: flex; flex-wrap: wrap; gap: 10px; }
     .orbit-hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 10px; background: rgba(255,255,255,.92); padding: 4px 10px; border-radius: 14px; color: #64748b; pointer-events: none; }
@@ -55,18 +76,18 @@
 
   var ctx = Edu3D.createScene(canvas, {
     bg: 0xf8fafc,
-    fov: 42,
-    camX: 9,
-    camY: 6,
-    camZ: 9,
+    fov: 38,
+    camX: 4.8,
+    camY: 3.6,
+    camZ: 4.8,
     lookX: 0,
-    lookY: 0.1,
+    lookY: 0.12,
     lookZ: 0,
-    minDist: 3,
-    maxDist: 30,
+    minDist: 1.8,
+    maxDist: 28,
   });
   Edu3D.addLights(ctx.scene);
-  Edu3D.addGrid(ctx.scene, 16, 16, 0xe2e8f0, -0.72);
+  Edu3D.addGrid(ctx.scene, 12, 12, 0xe2e8f0, -0.72);
 
   var world = new THREE.Group();
   ctx.scene.add(world);
@@ -82,7 +103,8 @@
 
   function buildType1(a, r) {
     clearW();
-    var S = 0.7 / Math.max(a, 1);
+    /* 放大示意：同样题面数字下模型在视野中更饱满 */
+    var S = (1.05 / Math.max(a, 1));
     var sh = new THREE.Shape();
     sh.moveTo(0, a * S);
     sh.lineTo(a * S, a * S);
@@ -90,29 +112,33 @@
     sh.lineTo(r * S, 0);
     sh.absarc(0, 0, r * S, 0, Math.PI / 2, false);
     sh.lineTo(0, a * S);
-    var g = new THREE.ExtrudeGeometry(sh, { depth: 0.12, bevelEnabled: false });
+    var g = new THREE.ExtrudeGeometry(sh, { depth: 0.24, bevelEnabled: false });
     g.rotateX(Math.PI / 2);
     var mesh = new THREE.Mesh(
       g,
-      new THREE.MeshLambertMaterial({ color: 0x1e40af, transparent: true, opacity: 0.85 })
+      new THREE.MeshLambertMaterial({ color: 0x1e40af, transparent: true, opacity: 0.88 })
     );
     mesh.position.set(-(a * S) / 2, -0.66, -(a * S) / 2);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
     world.add(mesh);
   }
 
   function buildType2(a, b) {
     clearW();
-    var S = 0.6 / Math.max(a, b, 1);
+    var S = (0.95 / Math.max(a, b, 1));
     var outer = new THREE.Mesh(
-      new THREE.BoxGeometry(a * S, 0.14, b * S),
+      new THREE.BoxGeometry(a * S, 0.22, b * S),
       Edu3D.material(0x94a3b8)
     );
-    outer.position.y = -0.66;
+    outer.position.y = -0.66 + 0.11;
+    outer.castShadow = true;
     var inner = new THREE.Mesh(
-      new THREE.BoxGeometry((a - 2) * S, 0.16, (b - 2) * S),
+      new THREE.BoxGeometry((a - 2) * S, 0.24, (b - 2) * S),
       Edu3D.material(0xf1f5f9)
     );
-    inner.position.y = -0.64;
+    inner.position.y = -0.64 + 0.12;
+    inner.receiveShadow = true;
     world.add(outer);
     world.add(inner);
   }
@@ -158,8 +184,10 @@
   });
 
   function onResize() {
-    var w = canvas.clientWidth || 320;
-    var h = canvas.clientHeight || 320;
+    var pw = canvas.parentElement ? canvas.parentElement.clientWidth : 0;
+    var ph = canvas.parentElement ? canvas.parentElement.clientHeight : 0;
+    var w = canvas.clientWidth || pw || 640;
+    var h = canvas.clientHeight || ph || 480;
     ctx.renderer.setSize(w, h, false);
     ctx.camera.aspect = w / h;
     ctx.camera.updateProjectionMatrix();
@@ -167,6 +195,9 @@
   window.addEventListener("resize", onResize);
   pick();
   onResize();
+  requestAnimationFrame(function () {
+    requestAnimationFrame(onResize);
+  });
   Edu3D.startLoop(ctx.scene, ctx.camera, ctx.renderer, ctx.controls, null);
 })();
 </script>

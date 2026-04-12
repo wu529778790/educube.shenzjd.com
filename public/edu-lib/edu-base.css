@@ -143,6 +143,16 @@ a.edu-play-ref:hover {
   flex: 1;
   overflow: hidden;
   position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 主布局占满剩余高度，避免画布/iframe 内首帧高度为 0 */
+.edu-content > .main-layout {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
 }
 
 /* ── 响应式：小屏时 .main-layout 从两栏改为上下堆叠 ── */
@@ -528,6 +538,8 @@ input[type="range"]::-webkit-slider-thumb {
   position: absolute !important;
   inset: 0 !important;
   border-left: none !important;
+  /* 大屏模式：保底可视高度，减轻首帧布局未完成时画布过扁 */
+  min-height: clamp(280px, 48vh, 900px) !important;
 }
 .control-panel {
   position: fixed !important;

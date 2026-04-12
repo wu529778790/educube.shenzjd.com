@@ -30,8 +30,8 @@
 
     .viz3d-wrap {
       position: relative;
-      flex: 0 0 min(28vh, 200px);
-      min-height: 132px;
+      flex: 0 0 clamp(200px, 34vh, 360px);
+      min-height: 200px;
       border-bottom: 1px solid #e2e8f0;
       background: linear-gradient(165deg, #eef2ff, #f8fafc);
     }
@@ -660,8 +660,8 @@
       });
 
       function onResize3d() {
-        var w = canvas.clientWidth || 2;
-        var h = canvas.clientHeight || 2;
+        var w = canvas.clientWidth || 480;
+        var h = canvas.clientHeight || 360;
         ctx.renderer.setSize(w, h, false);
         ctx.camera.aspect = w / h;
         ctx.camera.updateProjectionMatrix();

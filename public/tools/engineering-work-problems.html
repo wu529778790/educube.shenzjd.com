@@ -188,8 +188,8 @@
   });
 
   function onResize() {
-    var w = canvas.clientWidth || 320;
-    var h = canvas.clientHeight || 320;
+    var w = canvas.clientWidth || 480;
+    var h = canvas.clientHeight || 360;
     ctx.renderer.setSize(w, h, false);
     ctx.camera.aspect = w / h;
     ctx.camera.updateProjectionMatrix();
