@@ -4,33 +4,76 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>数与形 — 教立方</title>
-  <!-- play-ref:jiaohukejian:0F0C0CX | ux:numbers-and-shapes -->
+  <!-- play-ref:jiaohukejian:0F0C0CX | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr minmax(260px, 280px); height: 100%; }
+    .canvas-wrap { background: #fdf2f8; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 10px; }
+    #cvs { background: #fff; border-radius: var(--edu-radius); border: 1px solid var(--edu-border); }
+    .panel { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; }
+    .slider-block label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
+    .eq { font-size: 15px; font-weight: 800; color: var(--edu-primary); margin-top: 10px; line-height: 1.5; }
+  </style>
 </head>
 <body>
-<div class="edu-tool edu-stub-tool" data-stub-id="numbers-and-shapes">
+<div class="edu-tool">
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">🔢 数与形</span>
-      <span class="edu-toolbar-subtitle">占位壳 · 交互开发中</span>
+      <span class="edu-toolbar-subtitle">从 1 起的连续奇数和 = 平方数</span>
     </div>
   </div>
   <div class="edu-content">
-    <div class="edu-stub-body">
-      <div class="edu-stub-card">
-        <p class="edu-stub-lead">本教具条目已与交互动画导航主题对齐，采用与全站一致的大屏壳层。</p>
-        <p class="edu-stub-text">完整可操作模型与步骤引导将按教立方规范迭代上线；当前用于占位与教研沟通。</p>
-        <ul class="edu-stub-list">
-          <li>顶栏、留白与控件风格与 <code>edu-base.css</code> 统一</li>
-          <li>后续版本将替换为本页独立交互脚本与画布</li>
-        </ul>
-        <details class="edu-stub-details">
-          <summary class="edu-stub-summary">交互与体验（对标参考 play）</summary>
-          <p class="edu-stub-ux"><strong>开发验收口径：</strong>数列变动时点阵与式子同步；规律猜想有试错空间。</p>
-        </details>
+    <div class="main-layout">
+      <div class="canvas-wrap"><canvas id="cvs" width="400" height="400"></canvas></div>
+      <div class="panel">
+        <div class="slider-block"><label><span>加到第 n 个奇数</span><span id="nv">4</span></label><input type="range" id="n" min="1" max="10" value="4" /></div>
+        <div class="eq" id="eq"></div>
       </div>
     </div>
   </div>
 </div>
+<script>
+(function () {
+  const c = document.getElementById("cvs"), x = c.getContext("2d");
+  const n = document.getElementById("n");
+  function draw() {
+    const N = Number(n.value);
+    document.getElementById("nv").textContent = String(N);
+    const cell = 28, margin = 30, side = N * cell;
+    c.width = side + margin * 2;
+    c.height = side + margin * 2;
+    x.clearRect(0, 0, c.width, c.height);
+    let sum = 0, parts = [];
+    for (let k = 1; k <= N; k++) {
+      const odd = 2 * k - 1;
+      sum += odd;
+      parts.push(odd);
+    }
+    x.strokeStyle = "#cbd5e1";
+    for (let i = 0; i <= N; i++) {
+      x.beginPath();
+      x.moveTo(margin + i * cell, margin);
+      x.lineTo(margin + i * cell, margin + N * cell);
+      x.stroke();
+      x.beginPath();
+      x.moveTo(margin, margin + i * cell);
+      x.lineTo(margin + N * cell, margin + i * cell);
+      x.stroke();
+    }
+    const colors = ["#fca5a5", "#fdba74", "#fde047", "#86efac", "#67e8f9", "#93c5fd", "#c4b5fd", "#f0abfc", "#fb7185", "#34d399"];
+    let filled = 0;
+    for (let row = 0; row < N; row++) {
+      for (let col = 0; col < N; col++) {
+        x.fillStyle = colors[(row + col) % colors.length];
+        x.fillRect(margin + col * cell + 1, margin + row * cell + 1, cell - 2, cell - 2);
+      }
+    }
+    document.getElementById("eq").innerHTML = parts.join(" + ") + " = " + sum + " = " + N + "²";
+  }
+  n.addEventListener("input", draw);
+  draw();
+})();
+</script>
 </body>
 </html>

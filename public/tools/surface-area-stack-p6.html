@@ -3,34 +3,84 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>表面积变化（叠放与高） — 教立方</title>
-  <!-- play-ref:jiaohukejian:0C6OVSC | ux:surface-area-stack-p6 -->
+  <title>表面积变化（叠放与高）— 教立方</title>
+  <!-- play-ref:jiaohukejian:0C6OVSC | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr minmax(300px, 320px); height: 100%; }
+    .canvas-wrap { min-height: 0; background: linear-gradient(165deg, #fff7ed, #f8fafc); display: flex; align-items: center; justify-content: center; padding: 10px; }
+    #cvs { max-width: 100%; max-height: 100%; border-radius: var(--edu-radius); background: #fff; border: 1px solid var(--edu-border); box-shadow: var(--edu-shadow); }
+    .control-panel { border-left: 1px solid var(--edu-border); background: var(--edu-surface); padding: 12px; overflow: auto; display: flex; flex-direction: column; gap: 10px; }
+    .slider-block label { font-size: 12px; font-weight: 600; display: flex; justify-content: space-between; }
+    .readout { font-weight: 800; font-size: 14px; color: var(--edu-primary); padding: 10px; background: #f1f5f9; border-radius: 8px; text-align: center; }
+  </style>
 </head>
 <body>
-<div class="edu-tool edu-stub-tool" data-stub-id="surface-area-stack-p6">
+<div class="edu-tool">
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">📊 表面积变化（叠放与高）</span>
-      <span class="edu-toolbar-subtitle">占位壳 · 交互开发中</span>
+      <span class="edu-toolbar-subtitle">两层长方体贴合 · 总表面积即时算</span>
     </div>
   </div>
   <div class="edu-content">
-    <div class="edu-stub-body">
-      <div class="edu-stub-card">
-        <p class="edu-stub-lead">本教具条目已与交互动画导航主题对齐，采用与全站一致的大屏壳层。</p>
-        <p class="edu-stub-text">完整可操作模型与步骤引导将按教立方规范迭代上线；当前用于占位与教研沟通。</p>
-        <ul class="edu-stub-list">
-          <li>顶栏、留白与控件风格与 <code>edu-base.css</code> 统一</li>
-          <li>后续版本将替换为本页独立交互脚本与画布</li>
-        </ul>
-        <details class="edu-stub-details">
-          <summary class="edu-stub-summary">交互与体验（对标参考 play）</summary>
-          <p class="edu-stub-ux"><strong>开发验收口径：</strong>叠放、变高引起表面积变化可逐步试；组合体分层操作与总和反馈一致。</p>
-        </details>
+    <div class="main-layout">
+      <div class="canvas-wrap"><canvas id="cvs" width="460" height="380"></canvas></div>
+      <div class="control-panel">
+        <div class="slider-block"><label><span>公共底边长</span><span id="a-l">8</span></label><input type="range" id="a" min="4" max="14" value="8" /></div>
+        <div class="slider-block"><label><span>公共宽</span><span id="b-l">5</span></label><input type="range" id="b" min="3" max="10" value="5" /></div>
+        <div class="slider-block"><label><span>下层高 h₁</span><span id="h1-l">3</span></label><input type="range" id="h1" min="2" max="8" value="3" /></div>
+        <div class="slider-block"><label><span>上层高 h₂</span><span id="h2-l">4</span></label><input type="range" id="h2" min="2" max="10" value="4" /></div>
+        <p style="font-size:11px;color:var(--edu-text-muted);line-height:1.45">两长方体完全对齐叠放：贴合面不再外露，总表面积 = SA₁ + SA₂ − 2×底面积。</p>
+        <div class="readout" id="out">—</div>
       </div>
     </div>
   </div>
 </div>
+<script>
+(function () {
+  const c = document.getElementById("cvs");
+  const x = c.getContext("2d");
+  const a = document.getElementById("a");
+  const b = document.getElementById("b");
+  const h1 = document.getElementById("h1");
+  const h2 = document.getElementById("h2");
+  const out = document.getElementById("out");
+  function sa(A, B, H) { return 2 * (A * B + A * H + B * H); }
+  function draw() {
+    const A = Number(a.value), B = Number(b.value), H1 = Number(h1.value), H2 = Number(h2.value);
+    document.getElementById("a-l").textContent = String(A);
+    document.getElementById("b-l").textContent = String(B);
+    document.getElementById("h1-l").textContent = String(H1);
+    document.getElementById("h2-l").textContent = String(H2);
+    const base = A * B;
+    const total = sa(A, B, H1) + sa(A, B, H2) - 2 * base;
+    out.textContent = "组合体表面积 ≈ " + Math.round(total) + " cm²";
+    const W = c.parentElement.clientWidth - 16;
+    c.width = Math.max(280, W);
+    c.height = 320;
+    x.clearRect(0, 0, c.width, c.height);
+    const cx = c.width / 2, scale = 14;
+    const w = A * scale, d = B * scale * 0.55, h2p = H2 * scale, h1p = H1 * scale;
+    x.save();
+    x.translate(cx, c.height * 0.72);
+    x.fillStyle = "#93c5fd";
+    x.strokeStyle = "#2563eb";
+    x.lineWidth = 2;
+    x.beginPath();
+    x.moveTo(0, 0); x.lineTo(w, -d * 0.4); x.lineTo(w, -h1p - d * 0.4); x.lineTo(0, -h1p);
+    x.closePath(); x.fill(); x.stroke();
+    x.fillStyle = "#fcd34d";
+    x.strokeStyle = "#d97706";
+    x.beginPath();
+    x.moveTo(0, -h1p); x.lineTo(w, -h1p - d * 0.4); x.lineTo(w, -h1p - h2p - d * 0.4); x.lineTo(0, -h1p - h2p);
+    x.closePath(); x.fill(); x.stroke();
+    x.restore();
+  }
+  [a, b, h1, h2].forEach(function (el) { el.addEventListener("input", draw); });
+  window.addEventListener("resize", draw);
+  draw();
+})();
+</script>
 </body>
 </html>

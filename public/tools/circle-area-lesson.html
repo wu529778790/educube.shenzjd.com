@@ -4,33 +4,69 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>圆的面积 — 教立方</title>
-  <!-- play-ref:jiaohukejian:1SSQ143 | ux:circle-area-lesson -->
+  <!-- play-ref:jiaohukejian:1SSQ143 | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr minmax(280px, 300px); height: 100%; }
+    .canvas-wrap { background: #e0f2fe; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 10px; }
+    #cvs { background: #fff; border-radius: var(--edu-radius); border: 1px solid var(--edu-border); max-width: 100%; }
+    .panel { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; }
+    .slider-block label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
+    .out { font-weight: 800; color: var(--edu-primary); margin-top: 10px; font-size: 14px; }
+  </style>
 </head>
 <body>
-<div class="edu-tool edu-stub-tool" data-stub-id="circle-area-lesson">
+<div class="edu-tool">
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">⭕ 圆的面积</span>
-      <span class="edu-toolbar-subtitle">占位壳 · 交互开发中</span>
+      <span class="edu-toolbar-subtitle">分割份数 · 近似平行四边形</span>
     </div>
   </div>
   <div class="edu-content">
-    <div class="edu-stub-body">
-      <div class="edu-stub-card">
-        <p class="edu-stub-lead">本教具条目已与交互动画导航主题对齐，采用与全站一致的大屏壳层。</p>
-        <p class="edu-stub-text">完整可操作模型与步骤引导将按教立方规范迭代上线；当前用于占位与教研沟通。</p>
-        <ul class="edu-stub-list">
-          <li>顶栏、留白与控件风格与 <code>edu-base.css</code> 统一</li>
-          <li>后续版本将替换为本页独立交互脚本与画布</li>
-        </ul>
-        <details class="edu-stub-details">
-          <summary class="edu-stub-summary">交互与体验（对标参考 play）</summary>
-          <p class="edu-stub-ux"><strong>开发验收口径：</strong>等分份数拉高时拼摆趋近圆；面积与半圆周关系讲解节奏可控。</p>
-        </details>
+    <div class="main-layout">
+      <div class="canvas-wrap"><canvas id="cvs" width="480" height="360"></canvas></div>
+      <div class="panel">
+        <div class="slider-block"><label><span>扇形份数 n</span><span id="nv">8</span></label><input type="range" id="n" min="4" max="36" value="8" /></div>
+        <div class="slider-block"><label><span>半径 R</span><span id="rv">5</span></label><input type="range" id="r" min="3" max="10" value="5" /></div>
+        <p style="font-size:11px;color:var(--edu-text-muted)">份数越多，交错拼接越接近「底≈半周长、高≈半径」的平行四边形，面积趋近 πR²。</p>
+        <div class="out" id="out"></div>
       </div>
     </div>
   </div>
 </div>
+<script>
+(function () {
+  const c = document.getElementById("cvs"), x = c.getContext("2d");
+  const n = document.getElementById("n"), r = document.getElementById("r"), out = document.getElementById("out");
+  function draw() {
+    const N = Number(n.value), R = Number(r.value);
+    document.getElementById("nv").textContent = String(N);
+    document.getElementById("rv").textContent = String(R);
+    c.width = c.parentElement.clientWidth - 12;
+    c.height = 340;
+    x.clearRect(0, 0, c.width, c.height);
+    const cx = c.width * 0.35, cy = c.height * 0.5, px = 12 * R;
+    for (let i = 0; i < N; i++) {
+      const a0 = (-Math.PI / 2 + (i / N) * Math.PI * 2);
+      const a1 = a0 + (Math.PI * 2) / N;
+      x.fillStyle = i % 2 === 0 ? "#7dd3fc" : "#bae6fd";
+      x.beginPath();
+      x.moveTo(cx, cy);
+      x.arc(cx, cy, px, a0, a1);
+      x.closePath();
+      x.fill();
+      x.strokeStyle = "#0369a1";
+      x.stroke();
+    }
+    const approx = Math.PI * R * R;
+    const stair = (N * 0.5 * (2 * Math.PI * R / N) * R);
+    out.textContent = "πR² ≈ " + approx.toFixed(2) + "（R=" + R + "）；分割示意周长一半×高 ≈ " + stair.toFixed(2);
+  }
+  n.addEventListener("input", draw); r.addEventListener("input", draw);
+  window.addEventListener("resize", draw);
+  draw();
+})();
+</script>
 </body>
 </html>

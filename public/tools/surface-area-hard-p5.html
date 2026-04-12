@@ -4,33 +4,192 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>五下表面积综合难题 — 教立方</title>
-  <!-- play-ref:jiaohukejian:0SZLFA2 | ux:surface-area-hard-p5 -->
+  <!-- play-ref:jiaohukejian:0SZLFA2 | 自研：题型壳与数值同步，参考外站模块划分 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr minmax(300px, 340px); height: 100%; }
+    .canvas-wrap { min-height: 0; background: linear-gradient(165deg, #f0fdf4, #f8fafc); display: flex; align-items: center; justify-content: center; padding: 10px; }
+    #cvs { max-width: 100%; max-height: 100%; border-radius: var(--edu-radius); background: #fff; border: 1px solid var(--edu-border); box-shadow: var(--edu-shadow); }
+    .control-panel { background: var(--edu-surface); border-left: 1px solid var(--edu-border); padding: 12px; overflow: auto; display: flex; flex-direction: column; gap: 10px; }
+    .mode-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .mode-btn { padding: 8px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; border: 2px solid var(--edu-border); background: #f8fafc; cursor: pointer; }
+    .mode-btn.active { border-color: var(--edu-primary); background: color-mix(in srgb, var(--edu-primary) 10%, #fff); color: var(--edu-primary); }
+    .ctrl-label { font-size: 10px; font-weight: 800; color: #64748b; letter-spacing: .06em; }
+    .slider-block label { font-size: 12px; font-weight: 600; display: flex; justify-content: space-between; }
+    .sa-readout { font-size: 15px; font-weight: 800; color: var(--edu-accent); padding: 10px; border-radius: var(--edu-radius-sm); background: color-mix(in srgb, var(--edu-accent) 10%, #fff); border: 1px solid var(--edu-border); text-align: center; }
+    .hint { font-size: 11px; color: var(--edu-text-muted); line-height: 1.45; }
+  </style>
 </head>
 <body>
-<div class="edu-tool edu-stub-tool" data-stub-id="surface-area-hard-p5">
+<div class="edu-tool">
   <div class="edu-toolbar">
-    <div class="edu-toolbar-lead">
+    <div class="edu-toolbar-lead edu-toolbar-lead--wrap">
       <span class="edu-toolbar-title">🧩 五下表面积综合难题</span>
-      <span class="edu-toolbar-subtitle">占位壳 · 交互开发中</span>
+      <span class="edu-toolbar-subtitle">切割 · 领奖台 · 挖去正方体（教学模型）</span>
     </div>
   </div>
   <div class="edu-content">
-    <div class="edu-stub-body">
-      <div class="edu-stub-card">
-        <p class="edu-stub-lead">本教具条目已与交互动画导航主题对齐，采用与全站一致的大屏壳层。</p>
-        <p class="edu-stub-text">完整可操作模型与步骤引导将按教立方规范迭代上线；当前用于占位与教研沟通。</p>
-        <ul class="edu-stub-list">
-          <li>顶栏、留白与控件风格与 <code>edu-base.css</code> 统一</li>
-          <li>后续版本将替换为本页独立交互脚本与画布</li>
-        </ul>
-        <details class="edu-stub-details">
-          <summary class="edu-stub-summary">交互与体验（对标参考 play）</summary>
-          <p class="edu-stub-ux"><strong>开发验收口径：</strong>切割或挖空后表面积变化立即算清；多道题切换不丢状态感；关键面高亮与数值同步。</p>
-        </details>
+    <div class="main-layout">
+      <div class="canvas-wrap"><canvas id="cvs" width="480" height="360"></canvas></div>
+      <div class="control-panel">
+        <div>
+          <div class="ctrl-label">题型</div>
+          <div class="mode-row">
+            <button type="button" class="mode-btn active" data-mode="cut">切割问题</button>
+            <button type="button" class="mode-btn" data-mode="podium">领奖台展开</button>
+            <button type="button" class="mode-btn" data-mode="hole">挖去正方体</button>
+          </div>
+        </div>
+        <div id="panel-cut">
+          <div class="slider-block"><label><span>长</span><span id="v-l">8</span></label><input type="range" id="l" min="4" max="14" value="8" /></div>
+          <div class="slider-block"><label><span>宽</span><span id="v-w">4</span></label><input type="range" id="w" min="2" max="10" value="4" /></div>
+          <div class="slider-block"><label><span>高</span><span id="v-h">4</span></label><input type="range" id="h" min="2" max="10" value="4" /></div>
+          <div class="slider-block"><label><span>平行切面数</span><span id="v-n">1</span></label><input type="range" id="n" min="1" max="4" value="1" /></div>
+          <p class="hint">沿高方向等距切开：每多一刀增加 2×(长×宽) 的截面面积（两面）。</p>
+        </div>
+        <div id="panel-podium" hidden>
+          <div class="slider-block"><label><span>下层长</span><span id="p-l1">10</span></label><input type="range" id="p1" min="6" max="14" value="10" /></div>
+          <div class="slider-block"><label><span>上层长(凸出)</span><span id="p-l2">6</span></label><input type="range" id="p2" min="3" max="10" value="6" /></div>
+          <div class="slider-block"><label><span>宽·总高</span><span id="p-wh">4×5</span></label><input type="range" id="ph" min="3" max="8" value="5" /></div>
+          <p class="hint">领奖台近似为两长方体组合：表面积 = 各面可见之和（底重合不计）。</p>
+        </div>
+        <div id="panel-hole" hidden>
+          <div class="slider-block"><label><span>棱长</span><span id="k-v">2</span></label><input type="range" id="k" min="1" max="4" value="2" /></div>
+          <p class="hint">从顶面正中挖去 k×k×k 方洞（未挖穿）：在「完整长方体表面积」基础上 +4k×洞深（洞深=min(k,高) 简化取 k）。</p>
+        </div>
+        <div class="sa-readout" id="sa-out">表面积 — cm²</div>
+        <button type="button" class="edu-btn edu-btn-outline" id="btn-reset">重置图形</button>
       </div>
     </div>
   </div>
 </div>
+<script>
+(function () {
+  const canvas = document.getElementById("cvs");
+  const ctx = canvas.getContext("2d");
+  let mode = "cut";
+  const l = document.getElementById("l");
+  const w = document.getElementById("w");
+  const h = document.getElementById("h");
+  const n = document.getElementById("n");
+  const p1 = document.getElementById("p1");
+  const p2 = document.getElementById("p2");
+  const ph = document.getElementById("ph");
+  const k = document.getElementById("k");
+  const saOut = document.getElementById("sa-out");
+  const panelCut = document.getElementById("panel-cut");
+  const panelPod = document.getElementById("panel-podium");
+  const panelHole = document.getElementById("panel-hole");
+
+  function saCuboid(a, b, c) {
+    return 2 * (a * b + a * c + b * c);
+  }
+
+  function compute() {
+    if (mode === "cut") {
+      const L = Number(l.value), W = Number(w.value), H = Number(h.value);
+      const cuts = Number(n.value);
+      const base = saCuboid(L, W, H);
+      const add = 2 * L * W * (cuts - 1);
+      return { v: base + add, t: "切割后", base: base, add: add };
+    }
+    if (mode === "podium") {
+      const L1 = Number(p1.value), L2 = Number(p2.value), Ht = Number(ph.value);
+      const Wd = 4;
+      const h1 = Math.max(2, Math.round(Ht * 0.55)), h2 = Ht - h1;
+      const s1 = saCuboid(L1, Wd, h1);
+      const s2 = saCuboid(L2, Wd, h2);
+      const overlap = 2 * Math.min(L1, L2) * Wd;
+      return { v: s1 + s2 - overlap, t: "领奖台(近似)", base: s1 + s2, add: -overlap };
+    }
+    const L = Number(l.value), W = Number(w.value), H = Number(h.value);
+    const kk = Number(k.value);
+    const base = saCuboid(L, W, H);
+    const depth = Math.min(kk, H);
+    const add = 4 * kk * depth;
+    return { v: base + add, t: "挖洞后(模型)", base: base, add: add };
+  }
+
+  function draw() {
+    const Wc = canvas.parentElement.clientWidth - 16;
+    const Hc = Math.min(400, window.innerHeight * 0.45);
+    canvas.width = Math.max(260, Wc);
+    canvas.height = Math.max(200, Hc);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const cx = canvas.width * 0.45, cy = canvas.height * 0.55;
+    const sx = 5, sy = 2.8;
+    const L = Number(l.value), Wi = Number(w.value), Hi = Number(h.value);
+    const a = L * 8, b = Wi * 8, c = Hi * 8;
+    function proj(x, y, z) {
+      return { x: cx + (x - z) * sx, y: cy - y * sy + (x + z) * sy * 0.32 };
+    }
+    const verts = [proj(0,0,0), proj(a,0,0), proj(a,b,0), proj(0,b,0), proj(0,0,c), proj(a,0,c), proj(a,b,c), proj(0,b,c)];
+    function face(idx, fill) {
+      ctx.beginPath();
+      idx.forEach(function (i, k) {
+        const p = verts[i];
+        if (k === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+      });
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.strokeStyle = "#64748b";
+      ctx.lineWidth = 2;
+      ctx.fill();
+      ctx.stroke();
+    }
+    face([0,1,2,3], "#f1f5f9");
+    face([4,5,6,7], "#e2e8f0");
+    face([0,1,5,4], "#fff");
+    face([1,2,6,5], "#f8fafc");
+    if (mode === "hole" && Number(k.value) > 0) {
+      const kk = Number(k.value) * 8;
+      const px = a / 2 - kk / 2, py = b / 2 - kk / 2, pz = c - kk * 0.85;
+      const hole = [proj(px,py,pz), proj(px+kk,py,pz), proj(px+kk,py+kk,pz), proj(px,py+kk,pz)];
+      ctx.fillStyle = "rgba(239,68,68,0.35)";
+      ctx.beginPath();
+      hole.forEach(function (p, k) {
+        if (k === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+      });
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#dc2626";
+      ctx.stroke();
+    }
+    const r = compute();
+    saOut.textContent = r.t + " 表面积 ≈ " + Math.round(r.v) + " cm²（基 " + Math.round(r.base) + (r.add >= 0 ? " + " : " − ") + Math.abs(Math.round(r.add)) + "）";
+  }
+
+  document.querySelectorAll(".mode-btn").forEach(function (b) {
+    b.addEventListener("click", function () {
+      mode = b.getAttribute("data-mode");
+      document.querySelectorAll(".mode-btn").forEach(function (x) { x.classList.toggle("active", x === b); });
+      panelCut.hidden = mode !== "cut";
+      panelPod.hidden = mode !== "podium";
+      panelHole.hidden = mode !== "hole";
+      draw();
+    });
+  });
+  [l,w,h,n,p1,p2,ph,k].forEach(function (el) { el.addEventListener("input", function () {
+    document.getElementById("v-l").textContent = l.value;
+    document.getElementById("v-w").textContent = w.value;
+    document.getElementById("v-h").textContent = h.value;
+    document.getElementById("v-n").textContent = n.value;
+    document.getElementById("p-l1").textContent = p1.value;
+    document.getElementById("p-l2").textContent = p2.value;
+    document.getElementById("p-wh").textContent = "4×" + ph.value;
+    document.getElementById("k-v").textContent = k.value;
+    draw();
+  }); });
+  document.getElementById("btn-reset").addEventListener("click", function () {
+    l.value = 8; w.value = 4; h.value = 4; n.value = 1; p1.value = 10; p2.value = 6; ph.value = 5; k.value = 2;
+    mode = "cut";
+    document.querySelectorAll(".mode-btn").forEach(function (x) { x.classList.toggle("active", x.getAttribute("data-mode") === "cut"); });
+    panelCut.hidden = false; panelPod.hidden = true; panelHole.hidden = true;
+    l.dispatchEvent(new Event("input"));
+  });
+  window.addEventListener("resize", draw);
+  l.dispatchEvent(new Event("input"));
+})();
+</script>
 </body>
 </html>

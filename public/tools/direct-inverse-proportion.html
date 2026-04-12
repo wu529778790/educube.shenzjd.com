@@ -4,33 +4,100 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>正比例与反比例 — 教立方</title>
-  <!-- play-ref:jiaohukejian:1UC3JB2 | ux:direct-inverse-proportion -->
+  <!-- play-ref:jiaohukejian:1UC3JB2 | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr minmax(280px, 300px); height: 100%; }
+    .canvas-wrap { min-height: 0; background: #f8fafc; display: flex; align-items: center; justify-content: center; padding: 8px; }
+    #cvs { width: 100%; max-height: 100%; background: #fff; border-radius: var(--edu-radius); border: 1px solid var(--edu-border); }
+    .panel { border-left: 1px solid var(--edu-border); padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow: auto; background: var(--edu-surface); }
+    .tabs { display: flex; gap: 6px; }
+    .tab { flex: 1; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 700; border: 2px solid var(--edu-border); background: #f8fafc; cursor: pointer; }
+    .tab.active { border-color: var(--edu-primary); color: var(--edu-primary); }
+    .slider-block label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
+    .tbl { width: 100%; font-size: 12px; border-collapse: collapse; }
+    .tbl td { border: 1px solid var(--edu-border); padding: 4px 6px; text-align: right; }
+  </style>
 </head>
 <body>
-<div class="edu-tool edu-stub-tool" data-stub-id="direct-inverse-proportion">
+<div class="edu-tool">
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">📈 正比例与反比例</span>
-      <span class="edu-toolbar-subtitle">占位壳 · 交互开发中</span>
+      <span class="edu-toolbar-subtitle">图像 · 表格 · 关系式同步</span>
     </div>
   </div>
   <div class="edu-content">
-    <div class="edu-stub-body">
-      <div class="edu-stub-card">
-        <p class="edu-stub-lead">本教具条目已与交互动画导航主题对齐，采用与全站一致的大屏壳层。</p>
-        <p class="edu-stub-text">完整可操作模型与步骤引导将按教立方规范迭代上线；当前用于占位与教研沟通。</p>
-        <ul class="edu-stub-list">
-          <li>顶栏、留白与控件风格与 <code>edu-base.css</code> 统一</li>
-          <li>后续版本将替换为本页独立交互脚本与画布</li>
-        </ul>
-        <details class="edu-stub-details">
-          <summary class="edu-stub-summary">交互与体验（对标参考 play）</summary>
-          <p class="edu-stub-ux"><strong>开发验收口径：</strong>改自变量时点图/表格/解析式同步更新；正反例对比一眼可辨。</p>
-        </details>
+    <div class="main-layout">
+      <div class="canvas-wrap"><canvas id="cvs" width="520" height="400"></canvas></div>
+      <div class="panel">
+        <div class="tabs">
+          <button type="button" class="tab active" id="t1">正比例 y=kx</button>
+          <button type="button" class="tab" id="t2">反比例 y=k/x</button>
+        </div>
+        <div class="slider-block"><label><span>k</span><span id="kv">2</span></label><input type="range" id="k" min="0.5" max="6" step="0.5" value="2" /></div>
+        <div class="slider-block"><label><span>动点 x</span><span id="xv">1</span></label><input type="range" id="xx" min="0.3" max="8" step="0.1" value="1" /></div>
+        <table class="tbl" id="tbl"></table>
+        <p id="eq" style="font-size:13px;font-weight:700;color:var(--edu-primary)"></p>
       </div>
     </div>
   </div>
 </div>
+<script>
+(function () {
+  const c = document.getElementById("cvs"), g = c.getContext("2d");
+  let kind = "dir";
+  const k = document.getElementById("k");
+  const xx = document.getElementById("xx");
+  const tbl = document.getElementById("tbl");
+  const eq = document.getElementById("eq");
+  function draw() {
+    const W = c.parentElement.clientWidth - 12, H = Math.min(420, window.innerHeight * 0.5);
+    c.width = W; c.height = H;
+    const K = Number(k.value), x0 = Number(xx.value);
+    g.clearRect(0, 0, W, H);
+    const ox = 40, oy = H - 40, sx = (W - 60) / 9, sy = (H - 60) / 9;
+    g.strokeStyle = "#cbd5e1"; g.lineWidth = 1;
+    for (let i = 0; i <= 9; i++) {
+      g.beginPath(); g.moveTo(ox + i * sx, oy); g.lineTo(ox + i * sx, oy - 9 * sy); g.stroke();
+      g.beginPath(); g.moveTo(ox, oy - i * sy); g.lineTo(ox + 9 * sx, oy - i * sy); g.stroke();
+    }
+    g.strokeStyle = "#334155"; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(ox, oy); g.lineTo(ox + 9 * sx, oy); g.lineTo(ox, oy - 9 * sy); g.stroke();
+    g.fillStyle = "#64748b"; g.font = "11px sans-serif";
+    g.fillText("x", ox + 9 * sx - 8, oy + 14);
+    g.fillText("y", ox - 18, oy - 9 * sy + 4);
+    g.strokeStyle = kind === "dir" ? "#2563eb" : "#ea580c";
+    g.lineWidth = 2.5;
+    g.beginPath();
+    for (let i = 1; i <= 80; i++) {
+      const xi = (i / 80) * 8.5 + 0.2;
+      let yi;
+      if (kind === "dir") yi = K * xi; else yi = K / xi;
+      if (yi > 8.5) continue;
+      const px = ox + xi * sx, py = oy - yi * sy;
+      if (i === 1) g.moveTo(px, py); else g.lineTo(px, py);
+    }
+    g.stroke();
+    const y0 = kind === "dir" ? K * x0 : K / x0;
+    if (y0 <= 8.5) {
+      g.fillStyle = "#e11d48";
+      g.beginPath();
+      g.arc(ox + x0 * sx, oy - y0 * sy, 7, 0, Math.PI * 2);
+      g.fill();
+    }
+    let rows = "<tr><td>x</td><td>" + x0.toFixed(1) + "</td></tr><tr><td>y</td><td>" + (y0 > 20 ? "—" : y0.toFixed(2)) + "</td></tr>";
+    tbl.innerHTML = rows;
+    eq.textContent = kind === "dir" ? "y = " + K + " · x（过原点的直线）" : "y = " + K + " / x（双曲线一支）";
+    document.getElementById("kv").textContent = k.value;
+    document.getElementById("xv").textContent = xx.value;
+  }
+  document.getElementById("t1").addEventListener("click", function () { kind = "dir"; document.getElementById("t1").classList.add("active"); document.getElementById("t2").classList.remove("active"); draw(); });
+  document.getElementById("t2").addEventListener("click", function () { kind = "inv"; document.getElementById("t2").classList.add("active"); document.getElementById("t1").classList.remove("active"); draw(); });
+  k.addEventListener("input", draw); xx.addEventListener("input", draw);
+  window.addEventListener("resize", draw);
+  draw();
+})();
+</script>
 </body>
 </html>

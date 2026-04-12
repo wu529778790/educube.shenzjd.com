@@ -4,33 +4,92 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>多边形内角和 — 教立方</title>
-  <!-- play-ref:jiaohukejian:0JFPR2O | ux:polygon-angle-sum -->
+  <!-- play-ref:jiaohukejian:0JFPR2O | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr minmax(280px, 300px); height: 100%; }
+    .canvas-wrap { display: flex; align-items: center; justify-content: center; background: linear-gradient(165deg, #ecfeff, #f8fafc); min-height: 0; padding: 10px; }
+    #cvs { background: #fff; border-radius: var(--edu-radius); border: 1px solid var(--edu-border); max-width: 100%; max-height: 100%; }
+    .panel { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; display: flex; flex-direction: column; gap: 10px; }
+    .tabs { display: flex; gap: 6px; }
+    .tab { flex: 1; padding: 8px; font-size: 12px; font-weight: 700; border-radius: 8px; border: 2px solid var(--edu-border); cursor: pointer; background: #f8fafc; }
+    .tab.active { border-color: var(--edu-primary); color: var(--edu-primary); }
+    .big { font-size: 22px; font-weight: 800; color: var(--edu-accent); text-align: center; }
+  </style>
 </head>
 <body>
-<div class="edu-tool edu-stub-tool" data-stub-id="polygon-angle-sum">
+<div class="edu-tool">
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">⬡ 多边形内角和</span>
-      <span class="edu-toolbar-subtitle">占位壳 · 交互开发中</span>
+      <span class="edu-toolbar-subtitle">(n−2)×180° · 拼角示意</span>
     </div>
   </div>
   <div class="edu-content">
-    <div class="edu-stub-body">
-      <div class="edu-stub-card">
-        <p class="edu-stub-lead">本教具条目已与交互动画导航主题对齐，采用与全站一致的大屏壳层。</p>
-        <p class="edu-stub-text">完整可操作模型与步骤引导将按教立方规范迭代上线；当前用于占位与教研沟通。</p>
-        <ul class="edu-stub-list">
-          <li>顶栏、留白与控件风格与 <code>edu-base.css</code> 统一</li>
-          <li>后续版本将替换为本页独立交互脚本与画布</li>
-        </ul>
-        <details class="edu-stub-details">
-          <summary class="edu-stub-summary">交互与体验（对标参考 play）</summary>
-          <p class="edu-stub-ux"><strong>开发验收口径：</strong>边数增加与内角和变化同步；拼角与辅助线两种验证路径可切换。</p>
-        </details>
+    <div class="main-layout">
+      <div class="canvas-wrap"><canvas id="cvs" width="440" height="400"></canvas></div>
+      <div class="panel">
+        <div class="tabs">
+          <button type="button" class="tab active" id="t1">边数 n</button>
+          <button type="button" class="tab" id="t2">拼角说明</button>
+        </div>
+        <div id="p1">
+          <label style="font-size:12px;font-weight:600;display:flex;justify-content:space-between"><span>边数 n（≥3）</span><span id="nv">6</span></label>
+          <input type="range" id="n" min="3" max="12" value="6" />
+        </div>
+        <div id="p2" hidden>
+          <p style="font-size:12px;line-height:1.5;color:var(--edu-text-secondary)">从同一顶点作对角线把 n 边形分成 (n−2) 个三角形，每个三角形内角和 180°，故内角和 = (n−2)×180°。</p>
+        </div>
+        <div class="big" id="sum">720°</div>
       </div>
     </div>
   </div>
 </div>
+<script>
+(function () {
+  const c = document.getElementById("cvs"), x = c.getContext("2d");
+  const n = document.getElementById("n");
+  function draw() {
+    const N = Number(n.value);
+    document.getElementById("nv").textContent = String(N);
+    const sum = (N - 2) * 180;
+    document.getElementById("sum").textContent = "内角和 = " + sum + "°";
+    const W = c.parentElement.clientWidth - 16, H = 380;
+    c.width = Math.max(260, W); c.height = H;
+    x.clearRect(0, 0, c.width, c.height);
+    const cx = c.width / 2, cy = c.height / 2, R = Math.min(c.width, c.height) * 0.35;
+    x.beginPath();
+    for (let i = 0; i <= N; i++) {
+      const ang = -Math.PI / 2 + (i / N) * Math.PI * 2;
+      const px = cx + R * Math.cos(ang), py = cy + R * Math.sin(ang);
+      if (i === 0) x.moveTo(px, py); else x.lineTo(px, py);
+    }
+    x.closePath();
+    x.fillStyle = color(N);
+    x.fill();
+    x.strokeStyle = "#0f766e";
+    x.lineWidth = 3;
+    x.stroke();
+    x.fillStyle = "#134e4a";
+    x.font = "700 13px sans-serif";
+    x.fillText("n = " + N, cx - 20, cy + R + 28);
+  }
+  function color(n) {
+    const t = (n - 3) / 9;
+    return "rgba(45, 212, 191," + (0.25 + t * 0.45) + ")";
+  }
+  n.addEventListener("input", draw);
+  document.getElementById("t1").addEventListener("click", function () {
+    document.getElementById("p1").hidden = false; document.getElementById("p2").hidden = true;
+    document.getElementById("t1").classList.add("active"); document.getElementById("t2").classList.remove("active");
+  });
+  document.getElementById("t2").addEventListener("click", function () {
+    document.getElementById("p1").hidden = true; document.getElementById("p2").hidden = false;
+    document.getElementById("t2").classList.add("active"); document.getElementById("t1").classList.remove("active");
+  });
+  window.addEventListener("resize", draw);
+  draw();
+})();
+</script>
 </body>
 </html>

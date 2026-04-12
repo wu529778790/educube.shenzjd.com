@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>环形跑道相遇与追及 — 教立方</title>
+  <!-- play-ref:jiaohukejian:00CZI2H | 自研交互：双对象角位置与时间轴，课堂演示用 -->
+  <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr minmax(300px, 340px);
+      height: 100%;
+    }
+    .stage {
+      position: relative;
+      min-height: 0;
+      background: linear-gradient(160deg, #e0f2fe 0%, #f0f9ff 50%, #faf8f3 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      gap: 8px;
+    }
+    .canvas-wrap {
+      position: relative;
+      width: min(92vw, 520px);
+      aspect-ratio: 1;
+      max-height: min(56vh, 520px);
+    }
+    #cvs {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: var(--edu-radius);
+      background: var(--edu-surface);
+      box-shadow: var(--edu-shadow);
+      border: 1px solid var(--edu-border);
+    }
+    .readout {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--edu-text-secondary);
+    }
+    .readout span strong {
+      color: var(--edu-primary);
+      font-variant-numeric: tabular-nums;
+    }
+    .meet-banner {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--edu-success);
+      min-height: 1.4em;
+      text-align: center;
+    }
+    .control-panel {
+      background: var(--edu-surface);
+      border-left: 1px solid var(--edu-border);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow: auto;
+    }
+    .ctrl-label {
+      font-size: 10px;
+      font-weight: 800;
+      color: #64748b;
+      letter-spacing: 0.06em;
+    }
+    .slider-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .slider-block label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--edu-text);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .slider-block input[type="range"] {
+      width: 100%;
+    }
+    .dir-row {
+      display: flex;
+      gap: 8px;
+    }
+    .dir-btn {
+      flex: 1;
+      padding: 8px 6px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 2px solid var(--edu-border);
+      background: #f8fafc;
+      cursor: pointer;
+      font-family: var(--edu-font);
+      transition: all 0.15s ease;
+    }
+    .dir-btn.active {
+      border-color: var(--edu-primary);
+      background: color-mix(in srgb, var(--edu-primary) 10%, #fff);
+      color: var(--edu-primary);
+    }
+    .play-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .edu-hint {
+      text-align: left;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+<div class="edu-tool">
+  <div class="edu-toolbar">
+    <div class="edu-toolbar-lead edu-toolbar-lead--wrap">
+      <span class="edu-toolbar-title">🏟️ 环形跑道相遇与追及</span>
+      <span class="edu-toolbar-subtitle">角位置同步 · 时间可拖可播</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button type="button" class="edu-btn edu-btn-outline" id="btn-reset-t">时间归零</button>
+    </div>
+  </div>
+  <div class="edu-content">
+    <div class="main-layout">
+      <div class="stage">
+        <div class="canvas-wrap">
+          <canvas id="cvs" width="480" height="480" aria-label="环形跑道示意图"></canvas>
+        </div>
+        <div class="meet-banner" id="meet-msg" aria-live="polite"></div>
+        <div class="readout">
+          <span>甲角：<strong id="ang-a">0°</strong></span>
+          <span>乙角：<strong id="ang-b">0°</strong></span>
+          <span>时间：<strong id="time-s">0.0</strong> s</span>
+        </div>
+      </div>
+      <div class="control-panel">
+        <div>
+          <div class="ctrl-label">运动方向（乙相对甲）</div>
+          <div class="dir-row">
+            <button type="button" class="dir-btn active" id="dir-same" data-dir="1">同向</button>
+            <button type="button" class="dir-btn" id="dir-opp" data-dir="-1">相向</button>
+          </div>
+        </div>
+        <div class="slider-block">
+          <label><span>甲角速度</span><span id="lbl-w1">120°/s</span></label>
+          <input type="range" id="w1" min="30" max="240" value="120" />
+        </div>
+        <div class="slider-block">
+          <label><span>乙角速度</span><span id="lbl-w2">80°/s</span></label>
+          <input type="range" id="w2" min="30" max="240" value="80" />
+        </div>
+        <div class="slider-block">
+          <label><span>乙初始超前角</span><span id="lbl-ph">90°</span></label>
+          <input type="range" id="phase" min="0" max="360" value="90" />
+        </div>
+        <div class="slider-block">
+          <label><span>时间轴（可拖动暂停讲解）</span><span id="lbl-t">0 s / 30 s</span></label>
+          <input type="range" id="tscrub" min="0" max="3000" value="0" />
+        </div>
+        <div class="play-row">
+          <button type="button" class="edu-btn edu-btn-primary" id="btn-play">播放</button>
+          <button type="button" class="edu-btn edu-btn-outline" id="btn-pause">暂停</button>
+        </div>
+        <p class="edu-hint">
+          两质点在同一圆周上运动：同向时「快追慢」出现追及，相向时出现相遇。拖动时间轴可定格在某一瞬间，便于板书配合。
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  const canvas = document.getElementById("cvs");
+  const ctx = canvas.getContext("2d");
+  const meetMsg = document.getElementById("meet-msg");
+  const angA = document.getElementById("ang-a");
+  const angB = document.getElementById("ang-b");
+  const timeS = document.getElementById("time-s");
+  const w1El = document.getElementById("w1");
+  const w2El = document.getElementById("w2");
+  const phaseEl = document.getElementById("phase");
+  const tscrub = document.getElementById("tscrub");
+  const lblW1 = document.getElementById("lbl-w1");
+  const lblW2 = document.getElementById("lbl-w2");
+  const lblPh = document.getElementById("lbl-ph");
+  const lblT = document.getElementById("lbl-t");
+  const btnPlay = document.getElementById("btn-play");
+  const btnPause = document.getElementById("btn-pause");
+  const btnResetT = document.getElementById("btn-reset-t");
+  const dirSame = document.getElementById("dir-same");
+  const dirOpp = document.getElementById("dir-opp");
+
+  let dirSign = 1;
+  let t = 0;
+  let playing = false;
+  let lastTs = 0;
+  const T_MAX = 30;
+
+  function resize() {
+    const wrap = canvas.parentElement;
+    const w = Math.max(200, wrap.clientWidth);
+    const h = Math.max(200, wrap.clientHeight);
+    canvas.width = w;
+    canvas.height = h;
+    canvas.style.width = w + "px";
+    canvas.style.height = h + "px";
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  function deg(d) {
+    return (d * Math.PI) / 180;
+  }
+  function normDeg(d) {
+    let x = d % 360;
+    if (x < 0) x += 360;
+    return x;
+  }
+  function angDiffDeg(a, b) {
+    let d = normDeg(a - b);
+    if (d > 180) d = 360 - d;
+    return d;
+  }
+
+  function draw() {
+    const w = canvas.parentElement.clientWidth;
+    const h = canvas.parentElement.clientHeight;
+    const s = Math.min(w, h);
+    const cx = w / 2;
+    const cy = h / 2;
+    const R = s * 0.36;
+
+    ctx.clearRect(0, 0, w, h);
+
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const w1 = Number(w1El.value);
+    const w2 = Number(w2El.value) * dirSign;
+    const ph = Number(phaseEl.value);
+    const angleA = normDeg(w1 * t);
+    const angleB = normDeg(w2 * t + ph);
+
+    function dot(angleDeg, color, label) {
+      const rad = deg(angleDeg - 90);
+      const x = cx + R * Math.cos(rad);
+      const y = cy + R * Math.sin(rad);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = "#334155";
+      ctx.font = "700 11px " + getComputedStyle(document.documentElement).getPropertyValue("--edu-font");
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, x, y);
+    }
+
+    dot(angleA, "#2563eb", "甲");
+    dot(angleB, "#ea580c", "乙");
+
+    const diff = angDiffDeg(angleA, angleB);
+    if (diff < 8) {
+      meetMsg.textContent = "● 两人位置几乎重合（相遇 / 追及瞬间）";
+    } else {
+      meetMsg.textContent = "";
+    }
+
+    angA.textContent = angleA.toFixed(0) + "°";
+    angB.textContent = angleB.toFixed(0) + "°";
+    timeS.textContent = t.toFixed(1);
+    lblT.textContent = t.toFixed(1) + " s / " + T_MAX + " s";
+  }
+
+  function syncScrubFromT() {
+    tscrub.value = String(Math.round((t / T_MAX) * Number(tscrub.max)));
+  }
+
+  function tick(ts) {
+    if (!playing) return;
+    if (!lastTs) lastTs = ts;
+    const dt = (ts - lastTs) / 1000;
+    lastTs = ts;
+    t += dt;
+    if (t > T_MAX) {
+      t = T_MAX;
+      playing = false;
+      lastTs = 0;
+      btnPlay.textContent = "播放";
+    }
+    syncScrubFromT();
+    draw();
+    if (playing) requestAnimationFrame(tick);
+  }
+
+  w1El.addEventListener("input", function () {
+    lblW1.textContent = w1El.value + "°/s";
+    draw();
+  });
+  w2El.addEventListener("input", function () {
+    lblW2.textContent = w2El.value + "°/s";
+    draw();
+  });
+  phaseEl.addEventListener("input", function () {
+    lblPh.textContent = phaseEl.value + "°";
+    draw();
+  });
+
+  tscrub.addEventListener("input", function () {
+    const v = Number(tscrub.value) / Number(tscrub.max);
+    t = v * T_MAX;
+    draw();
+  });
+
+  dirSame.addEventListener("click", function () {
+    dirSign = 1;
+    dirSame.classList.add("active");
+    dirOpp.classList.remove("active");
+    draw();
+  });
+  dirOpp.addEventListener("click", function () {
+    dirSign = -1;
+    dirOpp.classList.add("active");
+    dirSame.classList.remove("active");
+    draw();
+  });
+
+  btnPlay.addEventListener("click", function () {
+    playing = true;
+    lastTs = 0;
+    btnPlay.textContent = "继续";
+    requestAnimationFrame(tick);
+  });
+  btnPause.addEventListener("click", function () {
+    playing = false;
+    lastTs = 0;
+    btnPlay.textContent = "播放";
+  });
+  btnResetT.addEventListener("click", function () {
+    playing = false;
+    lastTs = 0;
+    t = 0;
+    tscrub.value = "0";
+    btnPlay.textContent = "播放";
+    draw();
+  });
+
+  window.addEventListener("resize", function () {
+    resize();
+    draw();
+  });
+
+  resize();
+  lblW1.textContent = w1El.value + "°/s";
+  lblW2.textContent = w2El.value + "°/s";
+  lblPh.textContent = phaseEl.value + "°";
+  draw();
+})();
+</script>
+</body>
+</html>

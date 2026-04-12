@@ -4,33 +4,95 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>植树问题 — 教立方</title>
-  <!-- play-ref:jiaohukejian:0VW1RV3 | ux:tree-planting-problem -->
+  <!-- play-ref:jiaohukejian:0VW1RV3 | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr minmax(280px, 300px); height: 100%; }
+    .canvas-wrap { background: #f0fdf4; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 10px; }
+    #cvs { background: #fff; border-radius: var(--edu-radius); border: 1px solid var(--edu-border); max-width: 100%; }
+    .panel { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+    .tab { flex: 1; padding: 8px; font-size: 12px; font-weight: 700; border-radius: 8px; border: 2px solid var(--edu-border); cursor: pointer; background: #f8fafc; }
+    .tab.active { border-color: var(--edu-primary); color: var(--edu-primary); }
+    .slider-block label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
+    .out { font-weight: 800; margin-top: 10px; font-size: 14px; color: var(--edu-primary); }
+  </style>
 </head>
 <body>
-<div class="edu-tool edu-stub-tool" data-stub-id="tree-planting-problem">
+<div class="edu-tool">
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">🌳 植树问题</span>
-      <span class="edu-toolbar-subtitle">占位壳 · 交互开发中</span>
+      <span class="edu-toolbar-subtitle">线段 · 环形</span>
     </div>
   </div>
   <div class="edu-content">
-    <div class="edu-stub-body">
-      <div class="edu-stub-card">
-        <p class="edu-stub-lead">本教具条目已与交互动画导航主题对齐，采用与全站一致的大屏壳层。</p>
-        <p class="edu-stub-text">完整可操作模型与步骤引导将按教立方规范迭代上线；当前用于占位与教研沟通。</p>
-        <ul class="edu-stub-list">
-          <li>顶栏、留白与控件风格与 <code>edu-base.css</code> 统一</li>
-          <li>后续版本将替换为本页独立交互脚本与画布</li>
-        </ul>
-        <details class="edu-stub-details">
-          <summary class="edu-stub-summary">交互与体验（对标参考 play）</summary>
-          <p class="edu-stub-ux"><strong>开发验收口径：</strong>线段/环形模型一键切换；棵树与间隔数同步高亮。</p>
-        </details>
+    <div class="main-layout">
+      <div class="canvas-wrap"><canvas id="cvs" width="500" height="220"></canvas></div>
+      <div class="panel">
+        <div class="tabs">
+          <button type="button" class="tab active" id="t1">线段两端都栽</button>
+          <button type="button" class="tab" id="t2">环形</button>
+        </div>
+        <div class="slider-block"><label><span>总长 m</span><span id="lv">20</span></label><input type="range" id="len" min="6" max="40" value="20" /></div>
+        <div class="slider-block"><label><span>间隔 d</span><span id="dv">4</span></label><input type="range" id="d" min="2" max="8" value="4" /></div>
+        <div class="out" id="out"></div>
       </div>
     </div>
   </div>
 </div>
+<script>
+(function () {
+  const c = document.getElementById("cvs"), x = c.getContext("2d");
+  let mode = "line";
+  const len = document.getElementById("len"), d = document.getElementById("d"), out = document.getElementById("out");
+  function draw() {
+    const L = Number(len.value), D = Number(d.value);
+    document.getElementById("lv").textContent = String(L);
+    document.getElementById("dv").textContent = String(D);
+    c.width = c.parentElement.clientWidth - 12;
+    c.height = 200;
+    x.clearRect(0, 0, c.width, c.height);
+    let trees;
+    if (mode === "line") {
+      trees = Math.floor(L / D) + 1;
+      const px = (c.width - 40) / L;
+      x.strokeStyle = "#64748b";
+      x.lineWidth = 3;
+      x.beginPath();
+      x.moveTo(20, 100);
+      x.lineTo(20 + L * px, 100);
+      x.stroke();
+      for (let i = 0; i < trees; i++) {
+        const pxv = 20 + i * D * px;
+        x.fillStyle = "#16a34a";
+        x.font = "18px sans-serif";
+        x.fillText("🌲", pxv - 10, 88);
+      }
+      out.textContent = "棵数 = ⌊m/d⌋+1 = " + trees + "（两端都栽）";
+    } else {
+      trees = Math.floor(L / D);
+      const R = 70;
+      x.strokeStyle = "#64748b";
+      x.lineWidth = 3;
+      x.beginPath();
+      x.arc(c.width / 2, 100, R, 0, Math.PI * 2);
+      x.stroke();
+      for (let i = 0; i < trees; i++) {
+        const ang = (i / trees) * Math.PI * 2 - Math.PI / 2;
+        const cx = c.width / 2 + R * Math.cos(ang);
+        const cy = 100 + R * Math.sin(ang);
+        x.fillText("🌲", cx - 10, cy + 6);
+      }
+      out.textContent = "棵数 = ⌊m/d⌋ = " + trees + "（封闭环形）";
+    }
+  }
+  document.getElementById("t1").addEventListener("click", function () { mode = "line"; document.getElementById("t1").classList.add("active"); document.getElementById("t2").classList.remove("active"); draw(); });
+  document.getElementById("t2").addEventListener("click", function () { mode = "ring"; document.getElementById("t2").classList.add("active"); document.getElementById("t1").classList.remove("active"); draw(); });
+  len.addEventListener("input", draw); d.addEventListener("input", draw);
+  window.addEventListener("resize", draw);
+  draw();
+})();
+</script>
 </body>
 </html>

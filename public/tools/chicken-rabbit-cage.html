@@ -4,33 +4,451 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>鸡兔同笼 — 教立方</title>
-  <!-- play-ref:jiaohukejian:0LEIT9Z | ux:chicken-rabbit-cage -->
+  <!-- play-ref:jiaohukejian:0LEIT9Z | 自研交互：对标体验（头腿同步、可逆操作），非复刻外站代码 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr minmax(300px, 340px);
+      height: 100%;
+    }
+    .stage {
+      position: relative;
+      min-height: 0;
+      background: linear-gradient(165deg, #ecfdf5 0%, #f0fdf4 40%, #fefce8 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      gap: 12px;
+    }
+    .yard {
+      width: min(92vw, 520px);
+      aspect-ratio: 16/10;
+      max-height: 48vh;
+      background: var(--edu-surface);
+      border: 2px dashed color-mix(in srgb, var(--edu-success) 45%, var(--edu-border));
+      border-radius: var(--edu-radius);
+      box-shadow: var(--edu-shadow);
+      display: flex;
+      flex-direction: column;
+      padding: 10px 12px;
+      gap: 8px;
+      overflow: hidden;
+    }
+    .yard-head {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--edu-text-secondary);
+      text-align: center;
+      font-family: var(--edu-serif);
+    }
+    .pen-row {
+      flex: 1;
+      display: flex;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      justify-content: center;
+      gap: 6px;
+      overflow-y: auto;
+      min-height: 0;
+    }
+    .token {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+      transition: transform var(--edu-duration-tap) var(--edu-ease-press);
+      user-select: none;
+    }
+    .token.chicken {
+      background: color-mix(in srgb, #facc15 35%, #fff);
+      border: 2px solid #eab308;
+    }
+    .token.rabbit {
+      background: color-mix(in srgb, #c4b5fd 40%, #fff);
+      border: 2px solid #7c3aed;
+    }
+    .token.pop {
+      animation: popIn 0.28s var(--edu-ease-press);
+    }
+    @keyframes popIn {
+      from { transform: scale(0.6); opacity: 0.4; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .stats-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px 18px;
+      padding: 10px 14px;
+      background: var(--edu-surface);
+      border-radius: var(--edu-radius);
+      border: 1px solid var(--edu-border);
+      box-shadow: var(--edu-shadow-sm);
+    }
+    .stat {
+      text-align: center;
+    }
+    .stat .k {
+      font-size: 11px;
+      color: var(--edu-text-muted);
+      font-weight: 600;
+    }
+    .stat .v {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--edu-primary);
+      font-variant-numeric: tabular-nums;
+    }
+    .stat .v.legs {
+      color: var(--edu-accent);
+    }
+    .match-ok {
+      color: var(--edu-success) !important;
+    }
+    .control-panel {
+      background: var(--edu-surface);
+      border-left: 1px solid var(--edu-border);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow: auto;
+    }
+    .ctrl-label {
+      font-size: 10px;
+      font-weight: 800;
+      color: #64748b;
+      letter-spacing: 0.06em;
+    }
+    .counter-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #f8fafc;
+      border-radius: var(--edu-radius-sm);
+      border: 1px solid var(--edu-border);
+    }
+    .counter-row .name {
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .stepper button {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 2px solid var(--edu-border);
+      background: #fff;
+      font-size: 20px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--edu-primary);
+      transition: all 0.12s ease;
+    }
+    .stepper button:hover:not(:disabled) {
+      border-color: var(--edu-primary);
+      background: color-mix(in srgb, var(--edu-primary) 8%, #fff);
+    }
+    .stepper button:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .stepper .num {
+      min-width: 36px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .challenge-box {
+      padding: 12px;
+      border-radius: var(--edu-radius-sm);
+      background: color-mix(in srgb, var(--edu-accent2) 10%, var(--edu-surface));
+      border: 1px solid color-mix(in srgb, var(--edu-accent2) 35%, var(--edu-border));
+    }
+    .challenge-box .goal {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--edu-text);
+    }
+    .challenge-box .goal strong {
+      color: var(--edu-primary);
+    }
+    .hint-line {
+      font-size: 12px;
+      color: var(--edu-text-muted);
+      margin-top: 8px;
+      line-height: 1.45;
+    }
+    .mode-tabs {
+      display: flex;
+      gap: 6px;
+    }
+    .mode-tab {
+      flex: 1;
+      padding: 8px 6px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 2px solid var(--edu-border);
+      background: #f8fafc;
+      color: var(--edu-text-secondary);
+      cursor: pointer;
+      font-family: var(--edu-font);
+      transition: all 0.15s ease;
+    }
+    .mode-tab.active {
+      background: color-mix(in srgb, var(--edu-primary) 12%, #fff);
+      border-color: var(--edu-primary);
+      color: var(--edu-primary);
+    }
+  </style>
 </head>
 <body>
-<div class="edu-tool edu-stub-tool" data-stub-id="chicken-rabbit-cage">
+<div class="edu-tool">
   <div class="edu-toolbar">
-    <div class="edu-toolbar-lead">
+    <div class="edu-toolbar-lead edu-toolbar-lead--wrap">
       <span class="edu-toolbar-title">🐔 鸡兔同笼</span>
-      <span class="edu-toolbar-subtitle">占位壳 · 交互开发中</span>
+      <span class="edu-toolbar-subtitle">头、腿与只数同步 · 可逆调节</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <button type="button" class="edu-btn edu-btn-outline" id="btn-reset">清零</button>
+      <button type="button" class="edu-btn edu-btn-primary" id="btn-new-challenge">换一题</button>
     </div>
   </div>
   <div class="edu-content">
-    <div class="edu-stub-body">
-      <div class="edu-stub-card">
-        <p class="edu-stub-lead">本教具条目已与交互动画导航主题对齐，采用与全站一致的大屏壳层。</p>
-        <p class="edu-stub-text">完整可操作模型与步骤引导将按教立方规范迭代上线；当前用于占位与教研沟通。</p>
-        <ul class="edu-stub-list">
-          <li>顶栏、留白与控件风格与 <code>edu-base.css</code> 统一</li>
-          <li>后续版本将替换为本页独立交互脚本与画布</li>
-        </ul>
-        <details class="edu-stub-details">
-          <summary class="edu-stub-summary">交互与体验（对标参考 play）</summary>
-          <p class="edu-stub-ux"><strong>开发验收口径：</strong>增删鸡兔与腿数同步；假设调整过程可逆；小学直观反馈优先于公式堆砌。</p>
-        </details>
+    <div class="main-layout">
+      <div class="stage">
+        <div class="yard" aria-label="鸡兔展示区">
+          <div class="yard-head">笼中动物（拖动课堂可一起数）</div>
+          <div class="pen-row" id="pen"></div>
+        </div>
+        <div class="stats-bar">
+          <div class="stat">
+            <div class="k">头的总数</div>
+            <div class="v" id="val-heads">0</div>
+          </div>
+          <div class="stat">
+            <div class="k">腿的总数</div>
+            <div class="v legs" id="val-legs">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="control-panel">
+        <div>
+          <div class="ctrl-label">模式</div>
+          <div class="mode-tabs" role="tablist">
+            <button type="button" class="mode-tab active" id="tab-free" role="tab" aria-selected="true">自由探索</button>
+            <button type="button" class="mode-tab" id="tab-challenge" role="tab" aria-selected="false">闯关</button>
+          </div>
+        </div>
+        <div class="challenge-box" id="challenge-box" hidden>
+          <div class="goal" id="challenge-text"></div>
+          <p class="hint-line" id="challenge-hint"></p>
+        </div>
+        <div>
+          <div class="ctrl-label">鸡（2 条腿）</div>
+          <div class="counter-row">
+            <span class="name">🐔 鸡</span>
+            <div class="stepper">
+              <button type="button" id="c-minus" aria-label="减少鸡">−</button>
+              <span class="num" id="c-val">0</span>
+              <button type="button" id="c-plus" aria-label="增加鸡">+</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="ctrl-label">兔（4 条腿）</div>
+          <div class="counter-row">
+            <span class="name">🐰 兔</span>
+            <div class="stepper">
+              <button type="button" id="r-minus" aria-label="减少兔">−</button>
+              <span class="num" id="r-val">0</span>
+              <button type="button" id="r-plus" aria-label="增加兔">+</button>
+            </div>
+          </div>
+        </div>
+        <p class="edu-hint" style="text-align:left;line-height:1.5">
+          鸡兔同笼本质是「头数 = 只数之和」「腿数 = 2×鸡 + 4×兔」。加减任意一侧，数值立刻同步，便于假设法讲解。
+        </p>
       </div>
     </div>
   </div>
 </div>
+<script>
+(function () {
+  const MAX = 18;
+  let chickens = 3;
+  let rabbits = 2;
+  let mode = "free";
+  let targetH = 0;
+  let targetL = 0;
+
+  const pen = document.getElementById("pen");
+  const valHeads = document.getElementById("val-heads");
+  const valLegs = document.getElementById("val-legs");
+  const cVal = document.getElementById("c-val");
+  const rVal = document.getElementById("r-val");
+  const cMinus = document.getElementById("c-minus");
+  const cPlus = document.getElementById("c-plus");
+  const rMinus = document.getElementById("r-minus");
+  const rPlus = document.getElementById("r-plus");
+  const tabFree = document.getElementById("tab-free");
+  const tabChallenge = document.getElementById("tab-challenge");
+  const challengeBox = document.getElementById("challenge-box");
+  const challengeText = document.getElementById("challenge-text");
+  const challengeHint = document.getElementById("challenge-hint");
+  const btnReset = document.getElementById("btn-reset");
+  const btnNew = document.getElementById("btn-new-challenge");
+
+  function heads() {
+    return chickens + rabbits;
+  }
+  function legs() {
+    return chickens * 2 + rabbits * 4;
+  }
+
+  function renderPen() {
+    pen.innerHTML = "";
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < chickens; i++) {
+      const d = document.createElement("div");
+      d.className = "token chicken pop";
+      d.textContent = "🐔";
+      d.title = "鸡";
+      frag.appendChild(d);
+    }
+    for (let i = 0; i < rabbits; i++) {
+      const d = document.createElement("div");
+      d.className = "token rabbit pop";
+      d.textContent = "🐰";
+      d.title = "兔";
+      frag.appendChild(d);
+    }
+    pen.appendChild(frag);
+  }
+
+  function render() {
+    const h = heads();
+    const l = legs();
+    valHeads.textContent = String(h);
+    valLegs.textContent = String(l);
+    cVal.textContent = String(chickens);
+    rVal.textContent = String(rabbits);
+    cMinus.disabled = chickens <= 0;
+    rMinus.disabled = rabbits <= 0;
+    cPlus.disabled = chickens >= MAX;
+    rPlus.disabled = rabbits >= MAX;
+
+    if (mode === "challenge") {
+      const ok = h === targetH && l === targetL;
+      valHeads.classList.toggle("match-ok", ok);
+      valLegs.classList.toggle("match-ok", ok);
+      challengeHint.textContent = ok
+        ? "✓ 头数与腿数都符合题意，可以换一题继续练。"
+        : "试试调整鸡和兔的数量，使上面的头、腿与题目一致。";
+    } else {
+      valHeads.classList.remove("match-ok");
+      valLegs.classList.remove("match-ok");
+    }
+    renderPen();
+  }
+
+  function randomChallenge() {
+    let c = 1 + Math.floor(Math.random() * 10);
+    let r = 1 + Math.floor(Math.random() * 8);
+    if (Math.random() < 0.5) {
+      const t = c;
+      c = r;
+      r = t;
+    }
+    targetH = c + r;
+    targetL = c * 2 + r * 4;
+    challengeText.innerHTML =
+      "题目：笼子里一共有 <strong>" +
+      targetH +
+      "</strong> 个头、<strong>" +
+      targetL +
+      "</strong> 条腿。鸡有几只？兔有几只？（用下面按钮试出来）";
+  }
+
+  function setMode(m) {
+    mode = m;
+    const isFree = m === "free";
+    tabFree.classList.toggle("active", isFree);
+    tabFree.setAttribute("aria-selected", isFree ? "true" : "false");
+    tabChallenge.classList.toggle("active", !isFree);
+    tabChallenge.setAttribute("aria-selected", isFree ? "false" : "true");
+    challengeBox.hidden = isFree;
+    if (!isFree && targetH === 0) randomChallenge();
+    render();
+  }
+
+  cMinus.addEventListener("click", function () {
+    if (chickens > 0) {
+      chickens--;
+      render();
+    }
+  });
+  cPlus.addEventListener("click", function () {
+    if (chickens < MAX) {
+      chickens++;
+      render();
+    }
+  });
+  rMinus.addEventListener("click", function () {
+    if (rabbits > 0) {
+      rabbits--;
+      render();
+    }
+  });
+  rPlus.addEventListener("click", function () {
+    if (rabbits < MAX) {
+      rabbits++;
+      render();
+    }
+  });
+
+  tabFree.addEventListener("click", function () {
+    setMode("free");
+  });
+  tabChallenge.addEventListener("click", function () {
+    setMode("challenge");
+  });
+
+  btnReset.addEventListener("click", function () {
+    chickens = 0;
+    rabbits = 0;
+    render();
+  });
+
+  btnNew.addEventListener("click", function () {
+    if (mode === "challenge") randomChallenge();
+    else {
+      chickens = 2 + Math.floor(Math.random() * 5);
+      rabbits = 1 + Math.floor(Math.random() * 4);
+    }
+    render();
+  });
+
+  setMode("free");
+})();
+</script>
 </body>
 </html>

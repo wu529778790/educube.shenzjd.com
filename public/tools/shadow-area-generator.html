@@ -4,33 +4,63 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>阴影面积随机出题 — 教立方</title>
-  <!-- play-ref:jiaohukejian:081VZUA | ux:shadow-area-generator -->
+  <!-- play-ref:jiaohukejian:081VZUA | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .edu-content { display: flex; flex-direction: column; align-items: center; padding: 16px; overflow: auto; gap: 14px; max-width: 42rem; margin: 0 auto; }
+    .card { width: 100%; background: var(--edu-surface); border: 1px solid var(--edu-border); border-radius: var(--edu-radius); padding: 16px; box-shadow: var(--edu-shadow); }
+    .q { font-size: 15px; line-height: 1.65; font-weight: 600; color: var(--edu-text); }
+    .ans { margin-top: 12px; padding: 12px; background: #f0fdf4; border-radius: 8px; font-size: 14px; font-weight: 700; color: #166534; display: none; }
+    .ans.show { display: block; }
+    .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  </style>
 </head>
 <body>
-<div class="edu-tool edu-stub-tool" data-stub-id="shadow-area-generator">
+<div class="edu-tool">
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">📝 阴影面积随机出题</span>
-      <span class="edu-toolbar-subtitle">占位壳 · 交互开发中</span>
+      <span class="edu-toolbar-subtitle">出题 · 自核 · 再随机</span>
     </div>
   </div>
   <div class="edu-content">
-    <div class="edu-stub-body">
-      <div class="edu-stub-card">
-        <p class="edu-stub-lead">本教具条目已与交互动画导航主题对齐，采用与全站一致的大屏壳层。</p>
-        <p class="edu-stub-text">完整可操作模型与步骤引导将按教立方规范迭代上线；当前用于占位与教研沟通。</p>
-        <ul class="edu-stub-list">
-          <li>顶栏、留白与控件风格与 <code>edu-base.css</code> 统一</li>
-          <li>后续版本将替换为本页独立交互脚本与画布</li>
-        </ul>
-        <details class="edu-stub-details">
-          <summary class="edu-stub-summary">交互与体验（对标参考 play）</summary>
-          <p class="edu-stub-ux"><strong>开发验收口径：</strong>出题—作答—解析链路完整；再随机时不闪烁布局。</p>
-        </details>
+    <div class="card">
+      <p class="q" id="q"></p>
+      <div class="row">
+        <button type="button" class="edu-btn edu-btn-primary" id="new">随机一题</button>
+        <button type="button" class="edu-btn edu-btn-outline" id="show">显示解析</button>
       </div>
+      <div class="ans" id="ans"></div>
     </div>
+    <p style="font-size:12px;color:var(--edu-text-muted)">题目为整数边长的简单组合图形，课堂口算用；打印可浏览器 Ctrl+P。</p>
   </div>
 </div>
+<script>
+(function () {
+  const q = document.getElementById("q"), ans = document.getElementById("ans");
+  function pick() {
+    const a = 4 + Math.floor(Math.random() * 8);
+    const b = 3 + Math.floor(Math.random() * 7);
+    const r = 1 + Math.floor(Math.random() * 4);
+    const types = [
+      function () {
+        const s = a * b, qn = (Math.PI * r * r) / 4;
+        return { text: "边长为 " + a + " 的正方形一角剪去半径为 " + r + " 的四分之一圆，求剩余面积。", sol: (s - qn).toFixed(2) + "（正方形 − 四分之一圆）" };
+      },
+      function () {
+        const s = a * b - (a - 2) * (b - 2);
+        return { text: "外矩形 " + a + "×" + b + "，内部挖去小矩形 " + (a - 2) + "×" + (b - 2) + "（居中环带示意），求阴影框形面积。", sol: String(s) };
+      }
+    ];
+    const t = types[Math.floor(Math.random() * types.length)]();
+    q.textContent = t.text;
+    ans.textContent = "参考思路：" + t.sol;
+    ans.classList.remove("show");
+  }
+  document.getElementById("new").addEventListener("click", pick);
+  document.getElementById("show").addEventListener("click", function () { ans.classList.add("show"); });
+  pick();
+})();
+</script>
 </body>
 </html>

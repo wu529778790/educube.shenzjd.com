@@ -2,7 +2,10 @@
  * 交互动画 play 页与教立方教具的对照（导航 JSON + hashId）。
  * play 地址：https://www.jiaohukejian.com/math/play/{hashId}/
  *
- * mappedToolId：已有静态教具 id；为 null 时表示由 reference-stubs 中的占位教具承接。
+ * **用途（竞品参考，非代码复刻）**：仅记录「对方课题标识 ↔ 教立方教具 id」与体验验收要点，
+ * 便于产品、教研对齐进度；教立方中的 HTML/脚本均为自研或占位壳，不得嵌入或翻译对方源码。
+ *
+ * mappedToolId：已在年级数据等处的完整教具 id；为 null 时由 stubToolId（`reference-stubs`）承接。
  * uxFocus：**交互与课堂体验**应对标的方向（操作路径、反馈时机、动画节奏、触控热区等），
  * 而非仅外壳样式；实现时以此为验收口径。
  */
@@ -25,7 +28,7 @@ export const REFERENCE_PLAY_MAPPINGS: ReferencePlayMapping[] = [
   { hashId: "0SZLFA2", title: "五下表面积难题", category: "五年级", displayOrder: 2, mappedToolId: null, stubToolId: "surface-area-hard-p5", uxFocus: "切割或挖空后表面积变化立即算清；多道题切换不丢状态感；关键面高亮与数值同步。" },
   { hashId: "127FEAT", title: "水中浸物（排水法求体积）", category: "五年级", displayOrder: 3, mappedToolId: "water-displacement", uxFocus: "放入/取出与液面动画同步；读数与「上升体积」推理步骤一致；大屏上刻度与数字对比明显。" },
   { hashId: "0C6OVSC", title: "表面积难题2类", category: "六年级", displayOrder: 4, mappedToolId: null, stubToolId: "surface-area-stack-p6", uxFocus: "叠放、变高引起表面积变化可逐步试；组合体分层操作与总和反馈一致。" },
-  { hashId: "00CZI2H", title: "环形相遇追及问题", category: "四年级", displayOrder: 5, mappedToolId: "shortest-path", uxFocus: "双对象运动与环形轨迹同步可见；相遇/追及瞬间可暂停回看；拖动时间轴重播。" },
+  { hashId: "00CZI2H", title: "环形相遇追及问题", category: "四年级", displayOrder: 5, mappedToolId: null, stubToolId: "ring-track-meet-chase", uxFocus: "双对象运动与环形轨迹同步可见；相遇/追及瞬间可暂停回看；拖动时间轴重播。" },
   { hashId: "0LEIT9Z", title: "鸡兔同笼", category: "四年级", displayOrder: 6, mappedToolId: null, stubToolId: "chicken-rabbit-cage", uxFocus: "增删鸡兔与腿数同步；假设调整过程可逆；小学直观反馈优先于公式堆砌。" },
   { hashId: "1E5TA88", title: "表面涂色问题", category: "五年级", displayOrder: 7, mappedToolId: "block-build", uxFocus: "涂色面分类与计数同步；阶数变化时几何体可旋转观察；结果与「三面/两面」等规律核对顺畅。" },
   { hashId: "055FQDD", title: "长方体茶盒", category: "五年级", displayOrder: 8, mappedToolId: "cuboid-volume", uxFocus: "容器与茶盒摆放尝试无卡顿；多少件最优结论与试摆过程可对照。" },

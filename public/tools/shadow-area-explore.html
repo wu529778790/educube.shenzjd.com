@@ -4,33 +4,73 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>阴影部分面积 — 教立方</title>
-  <!-- play-ref:jiaohukejian:1XV65WR | ux:shadow-area-explore -->
+  <!-- play-ref:jiaohukejian:1XV65WR | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr minmax(280px, 300px); height: 100%; }
+    .canvas-wrap { background: #f1f5f9; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 10px; }
+    #cvs { background: #fff; border-radius: var(--edu-radius); border: 1px solid var(--edu-border); max-width: 100%; }
+    .panel { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; }
+    .slider-block label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
+    .out { font-weight: 800; font-size: 15px; color: var(--edu-accent); margin-top: 10px; text-align: center; }
+  </style>
 </head>
 <body>
-<div class="edu-tool edu-stub-tool" data-stub-id="shadow-area-explore">
+<div class="edu-tool">
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">🌓 阴影部分面积</span>
-      <span class="edu-toolbar-subtitle">占位壳 · 交互开发中</span>
+      <span class="edu-toolbar-subtitle">方减圆 · 可调半径</span>
     </div>
   </div>
   <div class="edu-content">
-    <div class="edu-stub-body">
-      <div class="edu-stub-card">
-        <p class="edu-stub-lead">本教具条目已与交互动画导航主题对齐，采用与全站一致的大屏壳层。</p>
-        <p class="edu-stub-text">完整可操作模型与步骤引导将按教立方规范迭代上线；当前用于占位与教研沟通。</p>
-        <ul class="edu-stub-list">
-          <li>顶栏、留白与控件风格与 <code>edu-base.css</code> 统一</li>
-          <li>后续版本将替换为本页独立交互脚本与画布</li>
-        </ul>
-        <details class="edu-stub-details">
-          <summary class="edu-stub-summary">交互与体验（对标参考 play）</summary>
-          <p class="edu-stub-ux"><strong>开发验收口径：</strong>割补与旋转操作可撤销；阴影边界变化时面积反馈连续。</p>
-        </details>
+    <div class="main-layout">
+      <div class="canvas-wrap"><canvas id="cvs" width="400" height="400"></canvas></div>
+      <div class="panel">
+        <p style="font-size:12px;color:var(--edu-text-muted);line-height:1.45">正方形边长 a，内切四分之一圆叠放成「弯角」阴影模型（示意）。</p>
+        <div class="slider-block"><label><span>正方形边长 a</span><span id="av">10</span></label><input type="range" id="a" min="6" max="16" value="10" /></div>
+        <div class="slider-block"><label><span>圆半径 r</span><span id="rv">4</span></label><input type="range" id="r" min="2" max="8" value="4" /></div>
+        <div class="out" id="out"></div>
       </div>
     </div>
   </div>
 </div>
+<script>
+(function () {
+  const c = document.getElementById("cvs"), x = c.getContext("2d");
+  const a = document.getElementById("a"), r = document.getElementById("r"), out = document.getElementById("out");
+  function draw() {
+    const A = Number(a.value), R = Number(r.value);
+    document.getElementById("av").textContent = String(A);
+    document.getElementById("rv").textContent = String(R);
+    const s = 22, W = A * s, H = A * s;
+    c.width = W + 40; c.height = H + 40;
+    x.translate(20, 20);
+    x.fillStyle = "#e2e8f0";
+    x.fillRect(0, 0, W, H);
+    x.strokeStyle = "#64748b";
+    x.strokeRect(0, 0, W, H);
+    x.fillStyle = "#94a3b8";
+    x.beginPath();
+    x.arc(0, 0, R * s, 0, Math.PI / 2);
+    x.lineTo(0, 0);
+    x.closePath();
+    x.fill();
+    x.fillStyle = "rgba(30,64,175,0.45)";
+    x.beginPath();
+    x.moveTo(0, 0); x.lineTo(W, 0); x.lineTo(W, H); x.lineTo(0, H); x.closePath();
+    x.moveTo(0, 0);
+    x.arc(0, 0, R * s, 0, Math.PI / 2);
+    x.closePath();
+    x.fill("evenodd");
+    const square = A * A;
+    const quarter = (Math.PI * R * R) / 4;
+    const shade = square - quarter;
+    out.textContent = "阴影 ≈ " + shade.toFixed(1) + "（a² − ¼πr²，单位一致即可）";
+  }
+  a.addEventListener("input", draw); r.addEventListener("input", draw);
+  draw();
+})();
+</script>
 </body>
 </html>

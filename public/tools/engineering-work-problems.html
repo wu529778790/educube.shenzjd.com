@@ -4,33 +4,77 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>工程问题 — 教立方</title>
-  <!-- play-ref:jiaohukejian:0K2C13S | ux:engineering-work-problems -->
+  <!-- play-ref:jiaohukejian:0K2C13S | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .edu-content { display: flex; flex-direction: column; padding: 16px; overflow: auto; gap: 14px; max-width: 36rem; margin: 0 auto; }
+    .card { background: var(--edu-surface); border: 1px solid var(--edu-border); border-radius: var(--edu-radius); padding: 16px; box-shadow: var(--edu-shadow); }
+    .q { font-size: 15px; font-weight: 600; line-height: 1.6; }
+    .bars { display: flex; gap: 8px; margin: 14px 0; height: 120px; align-items: flex-end; }
+    .bar { flex: 1; background: linear-gradient(180deg, #93c5fd, #2563eb); border-radius: 6px 6px 0 0; min-height: 8px; position: relative; }
+    .bar span { position: absolute; bottom: -22px; left: 0; right: 0; text-align: center; font-size: 11px; font-weight: 700; color: var(--edu-text-secondary); }
+    .ans { margin-top: 12px; padding: 10px; background: #eff6ff; border-radius: 8px; font-size: 14px; display: none; }
+    .ans.show { display: block; }
+  </style>
 </head>
 <body>
-<div class="edu-tool edu-stub-tool" data-stub-id="engineering-work-problems">
+<div class="edu-tool">
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">🏗️ 工程问题</span>
-      <span class="edu-toolbar-subtitle">占位壳 · 交互开发中</span>
+      <span class="edu-toolbar-subtitle">工量条 · 合作天数</span>
     </div>
   </div>
   <div class="edu-content">
-    <div class="edu-stub-body">
-      <div class="edu-stub-card">
-        <p class="edu-stub-lead">本教具条目已与交互动画导航主题对齐，采用与全站一致的大屏壳层。</p>
-        <p class="edu-stub-text">完整可操作模型与步骤引导将按教立方规范迭代上线；当前用于占位与教研沟通。</p>
-        <ul class="edu-stub-list">
-          <li>顶栏、留白与控件风格与 <code>edu-base.css</code> 统一</li>
-          <li>后续版本将替换为本页独立交互脚本与画布</li>
-        </ul>
-        <details class="edu-stub-details">
-          <summary class="edu-stub-summary">交互与体验（对标参考 play）</summary>
-          <p class="edu-stub-ux"><strong>开发验收口径：</strong>工量条与天数关系一眼可读；随机题干生成保持相同交互骨架。</p>
-        </details>
+    <div class="card">
+      <p class="q" id="q"></p>
+      <div class="bars" id="bars"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button type="button" class="edu-btn edu-btn-primary" id="new">换题</button>
+        <button type="button" class="edu-btn edu-btn-outline" id="show">显示思路</button>
       </div>
+      <div class="ans" id="ans"></div>
     </div>
   </div>
 </div>
+<script>
+(function () {
+  function gen() {
+    const a = 4 + Math.floor(Math.random() * 8);
+    const b = 5 + Math.floor(Math.random() * 8);
+    const rateA = 1 / a, rateB = 1 / b, rateT = rateA + rateB;
+    const days = 1 / rateT;
+    return {
+      text: "一件工作，甲单独完成需 " + a + " 天，乙单独完成需 " + b + " 天。若两人合作，几天能完成？（设工作总量为 1）",
+      days: days,
+      hint: "甲每天完成 1/" + a + "，乙每天完成 1/" + b + "，合作每天完成 1/" + a + "+1/" + b + "，故天数 = 1÷(1/" + a + "+1/" + b + ") ≈ " + days.toFixed(2) + " 天。",
+      ha: Math.round(100 / a), hb: Math.round(100 / b)
+    };
+  }
+  let cur = gen();
+  function render() {
+    document.getElementById("q").textContent = cur.text;
+    document.getElementById("ans").textContent = cur.hint;
+    document.getElementById("ans").classList.remove("show");
+    const bars = document.getElementById("bars");
+    bars.innerHTML = "";
+    function addBar(h, lab) {
+      const d = document.createElement("div");
+      d.className = "bar";
+      d.style.height = h + "%";
+      const s = document.createElement("span");
+      s.textContent = lab;
+      d.appendChild(s);
+      bars.appendChild(d);
+    }
+    addBar(cur.ha, "甲/天");
+    addBar(cur.hb, "乙/天");
+    addBar(Math.min(100, cur.ha + cur.hb), "合/天");
+  }
+  document.getElementById("new").addEventListener("click", function () { cur = gen(); render(); });
+  document.getElementById("show").addEventListener("click", function () { document.getElementById("ans").classList.add("show"); });
+  render();
+})();
+</script>
 </body>
 </html>

@@ -4,33 +4,83 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>圆绕图形运动 — 教立方</title>
-  <!-- play-ref:jiaohukejian:1LWRXC4 | ux:circle-rolling-motion -->
+  <!-- play-ref:jiaohukejian:1LWRXC4 | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr minmax(280px, 300px); height: 100%; }
+    .canvas-wrap { background: #fefce8; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 8px; }
+    #cvs { background: #fff; border-radius: var(--edu-radius); border: 1px solid var(--edu-border); max-width: 100%; }
+    .panel { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+    .slider-block label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
+  </style>
 </head>
 <body>
-<div class="edu-tool edu-stub-tool" data-stub-id="circle-rolling-motion">
+<div class="edu-tool">
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">⭕ 圆绕图形运动</span>
-      <span class="edu-toolbar-subtitle">占位壳 · 交互开发中</span>
+      <span class="edu-toolbar-subtitle">沿矩形外侧滚动 · 圆心轨迹</span>
     </div>
   </div>
   <div class="edu-content">
-    <div class="edu-stub-body">
-      <div class="edu-stub-card">
-        <p class="edu-stub-lead">本教具条目已与交互动画导航主题对齐，采用与全站一致的大屏壳层。</p>
-        <p class="edu-stub-text">完整可操作模型与步骤引导将按教立方规范迭代上线；当前用于占位与教研沟通。</p>
-        <ul class="edu-stub-list">
-          <li>顶栏、留白与控件风格与 <code>edu-base.css</code> 统一</li>
-          <li>后续版本将替换为本页独立交互脚本与画布</li>
-        </ul>
-        <details class="edu-stub-details">
-          <summary class="edu-stub-summary">交互与体验（对标参考 play）</summary>
-          <p class="edu-stub-ux"><strong>开发验收口径：</strong>圆心轨迹与扫过区域同步；速度/半径调节时仍保持跟手。</p>
-        </details>
+    <div class="main-layout">
+      <div class="canvas-wrap"><canvas id="cvs" width="500" height="340"></canvas></div>
+      <div class="panel">
+        <div class="slider-block"><label><span>圆半径 r</span><span id="rv">20</span></label><input type="range" id="rad" min="10" max="40" value="20" /></div>
+        <div class="slider-block"><label><span>滚动角 θ°</span><span id="tv">0</span></label><input type="range" id="th" min="0" max="360" value="0" /></div>
+        <p style="font-size:11px;color:var(--edu-text-muted)">圆沿大矩形外侧无滑动滚动时，圆心轨迹为「等距偏移」的圆角矩形（示意取直边段）。</p>
       </div>
     </div>
   </div>
 </div>
+<script>
+(function () {
+  const c = document.getElementById("cvs"), x = c.getContext("2d");
+  const rad = document.getElementById("rad"), th = document.getElementById("th");
+  function draw() {
+    const r = Number(rad.value), t = Number(th.value) * Math.PI / 180;
+    document.getElementById("rv").textContent = String(r);
+    document.getElementById("tv").textContent = String(th.value);
+    const W = c.parentElement.clientWidth - 12, H = 320;
+    c.width = Math.max(300, W); c.height = H;
+    x.clearRect(0, 0, c.width, c.height);
+    const rw = 200, rh = 120, ox = (c.width - rw) / 2, oy = (c.height - rh) / 2;
+    x.strokeStyle = "#334155"; x.lineWidth = 3;
+    x.strokeRect(ox, oy, rw, rh);
+    const L = 2 * (rw + rh) + 2 * Math.PI * r;
+    const dist = t / (2 * Math.PI) * L * 0.15;
+    let cx = ox + r, cy = oy - r, d = dist;
+    const peri = 2 * (rw + rh);
+    function walk() {
+      let seg = rw;
+      if (d < seg) { cx = ox + r + d; cy = oy - r; return; }
+      d -= seg;
+      seg = rh;
+      if (d < seg) { cx = ox + rw + r; cy = oy - r + d; return; }
+      d -= seg;
+      if (d < rw) { cx = ox + rw + r - d; cy = oy + rh + r; return; }
+      d -= rw;
+      if (d < rh) { cx = ox - r; cy = oy + rh + r - d; return; }
+      cx = ox - r + (d - rh); cy = oy - r;
+    }
+    walk();
+    x.strokeStyle = "#93c5fd";
+    x.setLineDash([4, 4]);
+    x.strokeRect(ox - r, oy - r, rw + 2 * r, rh + 2 * r);
+    x.setLineDash([]);
+    x.fillStyle = "#2563eb";
+    x.beginPath();
+    x.arc(cx, cy, r, 0, Math.PI * 2);
+    x.fill();
+    x.fillStyle = "#1e3a8a";
+    x.beginPath();
+    x.arc(cx, cy, 3, 0, Math.PI * 2);
+    x.fill();
+  }
+  rad.addEventListener("input", draw); th.addEventListener("input", draw);
+  window.addEventListener("resize", draw);
+  draw();
+})();
+</script>
 </body>
 </html>

@@ -4,33 +4,396 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>包装盒捆扎问题 — 教立方</title>
-  <!-- play-ref:jiaohukejian:193DIGW | ux:gift-wrap-packaging -->
+  <!-- play-ref:jiaohukejian:193DIGW | 自研：参考外站「控件结构/讲解顺序」，非复刻脚本 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr minmax(300px, 340px); height: 100%; }
+    .canvas-wrap {
+      position: relative; min-height: 0; background: linear-gradient(165deg, #fdf4f8, #f8fafc);
+      display: flex; align-items: center; justify-content: center; padding: 10px;
+    }
+    #cvs { max-width: 100%; max-height: 100%; width: auto; height: auto; display: block;
+      border-radius: var(--edu-radius); background: #fff; box-shadow: var(--edu-shadow); border: 1px solid var(--edu-border); }
+    .control-panel {
+      background: var(--edu-surface); border-left: 1px solid var(--edu-border);
+      padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow: auto;
+    }
+    .ctrl-label { font-size: 10px; font-weight: 800; color: #64748b; letter-spacing: .06em; }
+    .shape-tabs { display: flex; gap: 6px; }
+    .shape-tab {
+      flex: 1; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 700;
+      border: 2px solid var(--edu-border); background: #f8fafc; cursor: pointer; font-family: var(--edu-font);
+    }
+    .shape-tab.active { border-color: var(--edu-primary); background: color-mix(in srgb, var(--edu-primary) 10%, #fff); color: var(--edu-primary); }
+    .slider-block { display: flex; flex-direction: column; gap: 4px; }
+    .slider-block label { font-size: 12px; font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+    .wrap-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 8px 10px; background: #f8fafc; border-radius: var(--edu-radius-sm); border: 1px solid var(--edu-border);
+    }
+    .wrap-row .name { font-size: 12px; font-weight: 700; color: var(--edu-text); }
+    .stepper { display: flex; align-items: center; gap: 6px; }
+    .stepper button {
+      width: 32px; height: 32px; border-radius: 8px; border: 2px solid var(--edu-border);
+      background: #fff; font-size: 18px; font-weight: 700; cursor: pointer; color: var(--edu-primary);
+    }
+    .stepper button:disabled { opacity: .35; cursor: not-allowed; }
+    .stepper .num { min-width: 24px; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .ribbon-total {
+      font-size: 14px; font-weight: 800; color: var(--edu-accent); text-align: center;
+      padding: 8px; border-radius: var(--edu-radius-sm); background: color-mix(in srgb, var(--edu-accent) 12%, #fff);
+      border: 1px solid color-mix(in srgb, var(--edu-accent) 35%, var(--edu-border));
+    }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .toggle-on { box-shadow: 0 0 0 2px var(--edu-primary); }
+    details.edu-manual { font-size: 12px; color: var(--edu-text-secondary); line-height: 1.5; }
+    details.edu-manual summary { cursor: pointer; font-weight: 700; color: var(--edu-primary); }
+  </style>
 </head>
 <body>
-<div class="edu-tool edu-stub-tool" data-stub-id="gift-wrap-packaging">
+<div class="edu-tool">
   <div class="edu-toolbar">
-    <div class="edu-toolbar-lead">
+    <div class="edu-toolbar-lead edu-toolbar-lead--wrap">
       <span class="edu-toolbar-title">🎁 包装盒捆扎问题</span>
-      <span class="edu-toolbar-subtitle">占位壳 · 交互开发中</span>
+      <span class="edu-toolbar-subtitle">绳路示意 · 估算丝带总长（教学模型）</span>
+    </div>
+    <div class="edu-toolbar-actions">
+      <details class="edu-manual">
+        <summary>📖 操作说明</summary>
+        <p style="margin-top:8px">先选长方体或圆柱，用滑条改尺寸。三种「绕法」次数会按常见捆扎模型<strong>近似</strong>累加绳长（课堂讲题用，非工业精确值）。「拆解」展开为示意展开图；「还原」恢复默认尺寸与绕法。</p>
+      </details>
     </div>
   </div>
   <div class="edu-content">
-    <div class="edu-stub-body">
-      <div class="edu-stub-card">
-        <p class="edu-stub-lead">本教具条目已与交互动画导航主题对齐，采用与全站一致的大屏壳层。</p>
-        <p class="edu-stub-text">完整可操作模型与步骤引导将按教立方规范迭代上线；当前用于占位与教研沟通。</p>
-        <ul class="edu-stub-list">
-          <li>顶栏、留白与控件风格与 <code>edu-base.css</code> 统一</li>
-          <li>后续版本将替换为本页独立交互脚本与画布</li>
-        </ul>
-        <details class="edu-stub-details">
-          <summary class="edu-stub-summary">交互与体验（对标参考 play）</summary>
-          <p class="edu-stub-ux"><strong>开发验收口径：</strong>捆扎方式切换即时改变绳路可视；长宽高调参跟手；拆解/还原动画节奏清晰，便于全班跟随。</p>
-        </details>
+    <div class="main-layout">
+      <div class="canvas-wrap">
+        <canvas id="cvs" width="520" height="400" aria-label="包装盒与丝带示意"></canvas>
+      </div>
+      <div class="control-panel">
+        <div>
+          <div class="ctrl-label">盒体</div>
+          <div class="shape-tabs">
+            <button type="button" class="shape-tab active" id="tab-cuboid">长方体</button>
+            <button type="button" class="shape-tab" id="tab-cylinder">圆柱体</button>
+          </div>
+        </div>
+        <div id="dims-cuboid">
+          <div class="slider-block"><label><span>长</span><span id="lbl-l">20</span></label><input type="range" id="len" min="6" max="40" value="20" /></div>
+          <div class="slider-block"><label><span>宽</span><span id="lbl-w">15</span></label><input type="range" id="wid" min="6" max="36" value="15" /></div>
+          <div class="slider-block"><label><span>高</span><span id="lbl-h">10</span></label><input type="range" id="hei" min="4" max="30" value="10" /></div>
+        </div>
+        <div id="dims-cylinder" hidden>
+          <div class="slider-block"><label><span>底面半径</span><span id="lbl-r">8</span></label><input type="range" id="rad" min="4" max="18" value="8" /></div>
+          <div class="slider-block"><label><span>高</span><span id="lbl-ch">10</span></label><input type="range" id="chei" min="4" max="30" value="10" /></div>
+        </div>
+        <div class="wrap-row">
+          <span class="name">横绕(侧)</span>
+          <div class="stepper">
+            <button type="button" id="n1m">−</button><span class="num" id="n1v">0</span><button type="button" id="n1p">+</button>
+          </div>
+        </div>
+        <div class="wrap-row">
+          <span class="name">纵绕(长)</span>
+          <div class="stepper">
+            <button type="button" id="n2m">−</button><span class="num" id="n2v">1</span><button type="button" id="n2p">+</button>
+          </div>
+        </div>
+        <div class="wrap-row">
+          <span class="name">侧绕(宽)</span>
+          <div class="stepper">
+            <button type="button" id="n3m">−</button><span class="num" id="n3v">1</span><button type="button" id="n3p">+</button>
+          </div>
+        </div>
+        <div class="ribbon-total" id="ribbon-txt">丝带长约 0 cm</div>
+        <div class="btn-row">
+          <button type="button" class="edu-btn edu-btn-outline" id="btn-bow">🎀 装饰蝴蝶结</button>
+          <button type="button" class="edu-btn edu-btn-outline" id="btn-dismantle">🔍 拆解: 关</button>
+          <button type="button" class="edu-btn edu-btn-primary" id="btn-restore">🧹 还原</button>
+        </div>
+        <p class="edu-hint" style="text-align:left">蝴蝶结按 +30 cm 装饰量估算（与常见课堂题设定一致）。</p>
       </div>
     </div>
   </div>
 </div>
+<script>
+(function () {
+  const canvas = document.getElementById("cvs");
+  const ctx = canvas.getContext("2d");
+  let shape = "cuboid";
+  let L = 20, W = 15, H = 10, R = 8;
+  let n1 = 0, n2 = 1, n3 = 1;
+  let bow = false;
+  let dismantle = false;
+
+  const tabCuboid = document.getElementById("tab-cuboid");
+  const tabCylinder = document.getElementById("tab-cylinder");
+  const dimsCuboid = document.getElementById("dims-cuboid");
+  const dimsCylinder = document.getElementById("dims-cylinder");
+  const len = document.getElementById("len");
+  const wid = document.getElementById("wid");
+  const hei = document.getElementById("hei");
+  const rad = document.getElementById("rad");
+  const chei = document.getElementById("chei");
+  const lblL = document.getElementById("lbl-l");
+  const lblW = document.getElementById("lbl-w");
+  const lblH = document.getElementById("lbl-h");
+  const lblR = document.getElementById("lbl-r");
+  const lblCH = document.getElementById("lbl-ch");
+  const n1v = document.getElementById("n1v");
+  const n2v = document.getElementById("n2v");
+  const n3v = document.getElementById("n3v");
+  const ribbonTxt = document.getElementById("ribbon-txt");
+  const btnBow = document.getElementById("btn-bow");
+  const btnDismantle = document.getElementById("btn-dismantle");
+  const btnRestore = document.getElementById("btn-restore");
+
+  function ribbonLengthCm() {
+    if (shape === "cuboid") {
+      const a = L, b = W, c = H;
+      const part = n1 * 2 * (b + c) + n2 * 2 * (a + c) + n3 * 2 * (a + b);
+      return part + (bow ? 30 : 0);
+    }
+    const h = Number(chei.value);
+    const r = Number(rad.value);
+    const circ = 2 * Math.PI * r;
+    const part = n1 * (circ + 2 * h) * 0.85 + n2 * (circ + 2 * h) * 0.5 + n3 * (2 * r + 2 * h);
+    return Math.round(part + (bow ? 30 : 0));
+  }
+
+  function drawCuboidIso() {
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    const cx = w * 0.45, cy = h * 0.55;
+    const sx = 6, sy = 3.2;
+    const a = L * 2.2, b = W * 2.2, c = H * 2.5;
+    function proj(x, y, z) {
+      return { x: cx + (x - z) * sx, y: cy - y * sy + (x + z) * sy * 0.35 };
+    }
+    const verts = [
+      proj(0, 0, 0), proj(a, 0, 0), proj(a, b, 0), proj(0, b, 0),
+      proj(0, 0, c), proj(a, 0, c), proj(a, b, c), proj(0, b, c),
+    ];
+    function face(indices, fill, stroke) {
+      ctx.beginPath();
+      indices.forEach(function (i, k) {
+        const p = verts[i];
+        if (k === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+      });
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 2;
+      ctx.fill();
+      ctx.stroke();
+    }
+    face([0, 1, 2, 3], "#f1f5f9", "#94a3b8");
+    face([4, 5, 6, 7], "#e2e8f0", "#94a3b8");
+    face([0, 1, 5, 4], "#f8fafc", "#64748b");
+    face([1, 2, 6, 5], "#fff", "#64748b");
+    face([2, 3, 7, 6], "#f1f5f9", "#94a3b8");
+
+    ctx.strokeStyle = "#db2777";
+    ctx.lineWidth = 3;
+    ctx.lineJoin = "round";
+    if (n1 > 0) {
+      ctx.beginPath();
+      ctx.moveTo(verts[2].x, verts[2].y);
+      ctx.lineTo(verts[6].x, verts[6].y);
+      ctx.lineTo(verts[7].x, verts[7].y);
+      ctx.lineTo(verts[3].x, verts[3].y);
+      ctx.stroke();
+    }
+    if (n2 > 0) {
+      ctx.beginPath();
+      ctx.moveTo(verts[0].x, verts[0].y);
+      ctx.lineTo(verts[4].x, verts[4].y);
+      ctx.lineTo(verts[5].x, verts[5].y);
+      ctx.lineTo(verts[1].x, verts[1].y);
+      ctx.stroke();
+    }
+    if (n3 > 0) {
+      ctx.beginPath();
+      ctx.moveTo(verts[0].x, verts[0].y);
+      ctx.lineTo(verts[3].x, verts[3].y);
+      ctx.lineTo(verts[7].x, verts[7].y);
+      ctx.lineTo(verts[4].x, verts[4].y);
+      ctx.stroke();
+    }
+    if (bow) {
+      ctx.font = "22px sans-serif";
+      ctx.fillText("🎀", verts[6].x + 8, verts[6].y - 8);
+    }
+  }
+
+  function drawCylinder() {
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    const cx = w * 0.5, cy = h * 0.62;
+    const r = Number(rad.value) * 4;
+    const ch = Number(chei.value) * 5;
+    ctx.fillStyle = "#fce7f3";
+    ctx.strokeStyle = "#be185d";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy - ch, r, r * 0.32, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#fdf2f8";
+    ctx.beginPath();
+    ctx.moveTo(cx - r, cy - ch);
+    ctx.lineTo(cx - r, cy);
+    ctx.ellipse(cx, cy, r, r * 0.32, 0, Math.PI, 0, true);
+    ctx.lineTo(cx + r, cy - ch);
+    ctx.ellipse(cx, cy - ch, r, r * 0.32, 0, 0, Math.PI, true);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = "#db2777";
+    ctx.lineWidth = 3;
+    if (n1 + n2 + n3 > 0) {
+      ctx.beginPath();
+      ctx.moveTo(cx - r * 0.9, cy - ch * 0.5);
+      ctx.lineTo(cx + r * 0.9, cy - ch * 0.5);
+      ctx.stroke();
+    }
+    if (bow) {
+      ctx.font = "26px sans-serif";
+      ctx.fillText("🎀", cx + r * 0.5, cy - ch - 10);
+    }
+  }
+
+  function drawNet() {
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, w, h);
+    const u = 50, ox = 80, oy = 60;
+    ctx.strokeStyle = "#64748b";
+    ctx.lineWidth = 2;
+    ctx.fillStyle = "#f8fafc";
+    function rect(x, y, lw, lh, lab) {
+      ctx.fillRect(x, y, lw, lh);
+      ctx.strokeRect(x, y, lw, lh);
+      ctx.fillStyle = "#475569";
+      ctx.font = "11px sans-serif";
+      ctx.fillText(lab, x + 6, y + 16);
+      ctx.fillStyle = "#f8fafc";
+    }
+    rect(ox + u, oy, L * 2.2, H * 2.2, "上");
+    rect(ox, oy + u, L * 2.2, W * 2.2, "后");
+    rect(ox + u, oy + u, L * 2.2, W * 2.2, "底");
+    rect(ox + 2 * u, oy + u, L * 2.2, W * 2.2, "前");
+    rect(ox + 3 * u, oy + u, L * 2.2, W * 2.2, "右");
+    rect(ox + u, oy + 2 * u, L * 2.2, W * 2.2, "顶");
+    ctx.fillStyle = "#334155";
+    ctx.font = "12px sans-serif";
+    ctx.fillText("展开示意图（尺寸比例示意，非精确下料图）", ox, oy - 10);
+  }
+
+  function draw() {
+    if (dismantle && shape === "cuboid") {
+      drawNet();
+      return;
+    }
+    if (shape === "cuboid") drawCuboidIso();
+    else drawCylinder();
+  }
+
+  function syncLabels() {
+    lblL.textContent = len.value;
+    lblW.textContent = wid.value;
+    lblH.textContent = hei.value;
+    lblR.textContent = rad.value;
+    lblCH.textContent = chei.value;
+    L = Number(len.value);
+    W = Number(wid.value);
+    H = Number(hei.value);
+    n1v.textContent = String(n1);
+    n2v.textContent = String(n2);
+    n3v.textContent = String(n3);
+    ribbonTxt.textContent = "丝带长约 " + ribbonLengthCm() + " cm";
+    draw();
+  }
+
+  tabCuboid.addEventListener("click", function () {
+    shape = "cuboid";
+    tabCuboid.classList.add("active");
+    tabCylinder.classList.remove("active");
+    dimsCuboid.hidden = false;
+    dimsCylinder.hidden = true;
+    if (dismantle) btnDismantle.textContent = "🔍 拆解: 开";
+    syncLabels();
+  });
+  tabCylinder.addEventListener("click", function () {
+    shape = "cylinder";
+    tabCylinder.classList.add("active");
+    tabCuboid.classList.remove("active");
+    dimsCuboid.hidden = true;
+    dimsCylinder.hidden = false;
+    dismantle = false;
+    btnDismantle.textContent = "🔍 拆解: 关";
+    btnDismantle.classList.remove("toggle-on");
+    syncLabels();
+  });
+
+  [len, wid, hei, rad, chei].forEach(function (el) {
+    el.addEventListener("input", syncLabels);
+  });
+
+  function bindStep(idm, idp, get, set) {
+    document.getElementById(idm).addEventListener("click", function () {
+      var v = get();
+      if (v > 0) { set(v - 1); syncLabels(); }
+    });
+    document.getElementById(idp).addEventListener("click", function () {
+      var v = get();
+      if (v < 8) { set(v + 1); syncLabels(); }
+    });
+  }
+  bindStep("n1m", "n1p", function () { return n1; }, function (v) { n1 = v; });
+  bindStep("n2m", "n2p", function () { return n2; }, function (v) { n2 = v; });
+  bindStep("n3m", "n3p", function () { return n3; }, function (v) { n3 = v; });
+
+  btnBow.addEventListener("click", function () {
+    bow = !bow;
+    btnBow.classList.toggle("toggle-on", bow);
+    syncLabels();
+  });
+  btnDismantle.addEventListener("click", function () {
+    if (shape !== "cuboid") return;
+    dismantle = !dismantle;
+    btnDismantle.textContent = dismantle ? "🔍 拆解: 开" : "🔍 拆解: 关";
+    btnDismantle.classList.toggle("toggle-on", dismantle);
+    syncLabels();
+  });
+  btnRestore.addEventListener("click", function () {
+    shape = "cuboid";
+    tabCuboid.classList.add("active");
+    tabCylinder.classList.remove("active");
+    dimsCuboid.hidden = false;
+    dimsCylinder.hidden = true;
+    len.value = "20"; wid.value = "15"; hei.value = "10";
+    rad.value = "8"; chei.value = "10";
+    n1 = 0; n2 = 1; n3 = 1;
+    bow = false;
+    dismantle = false;
+    btnBow.classList.remove("toggle-on");
+    btnDismantle.classList.remove("toggle-on");
+    btnDismantle.textContent = "🔍 拆解: 关";
+    syncLabels();
+  });
+
+  function resize() {
+    const wrap = canvas.parentElement;
+    const w = Math.min(640, Math.max(280, wrap.clientWidth - 16));
+    const h = Math.min(440, Math.max(220, wrap.clientHeight - 16));
+    canvas.width = w;
+    canvas.height = h;
+    syncLabels();
+  }
+  window.addEventListener("resize", resize);
+  resize();
+})();
+</script>
 </body>
 </html>

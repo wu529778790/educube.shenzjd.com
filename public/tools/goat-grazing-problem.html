@@ -4,33 +4,70 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>羊吃草问题 — 教立方</title>
-  <!-- play-ref:jiaohukejian:153VNRQ | ux:goat-grazing-problem -->
+  <!-- play-ref:jiaohukejian:153VNRQ | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr minmax(280px, 300px); height: 100%; }
+    .canvas-wrap { background: #ecfccb; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 10px; }
+    #cvs { background: #fff; border-radius: var(--edu-radius); border: 1px solid var(--edu-border); max-width: 100%; }
+    .panel { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; }
+    .slider-block label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
+    .out { font-weight: 800; color: var(--edu-primary); margin-top: 10px; font-size: 14px; }
+  </style>
 </head>
 <body>
-<div class="edu-tool edu-stub-tool" data-stub-id="goat-grazing-problem">
+<div class="edu-tool">
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">🐑 羊吃草问题</span>
-      <span class="edu-toolbar-subtitle">占位壳 · 交互开发中</span>
+      <span class="edu-toolbar-subtitle">墙角扇形 · 绳长可调</span>
     </div>
   </div>
   <div class="edu-content">
-    <div class="edu-stub-body">
-      <div class="edu-stub-card">
-        <p class="edu-stub-lead">本教具条目已与交互动画导航主题对齐，采用与全站一致的大屏壳层。</p>
-        <p class="edu-stub-text">完整可操作模型与步骤引导将按教立方规范迭代上线；当前用于占位与教研沟通。</p>
-        <ul class="edu-stub-list">
-          <li>顶栏、留白与控件风格与 <code>edu-base.css</code> 统一</li>
-          <li>后续版本将替换为本页独立交互脚本与画布</li>
-        </ul>
-        <details class="edu-stub-details">
-          <summary class="edu-stub-summary">交互与体验（对标参考 play）</summary>
-          <p class="edu-stub-ux"><strong>开发验收口径：</strong>绳长与障碍墙变化后活动区域立即重算；扇形拼接可视化清晰。</p>
-        </details>
+    <div class="main-layout">
+      <div class="canvas-wrap"><canvas id="cvs" width="400" height="400"></canvas></div>
+      <div class="panel">
+        <div class="slider-block"><label><span>绳长 L</span><span id="lv">8</span></label><input type="range" id="len" min="3" max="14" value="8" /></div>
+        <p style="font-size:11px;color:var(--edu-text-muted)">羊拴在直角墙内侧顶点，活动区域为四分之一圆（两墙夹角 90°）。</p>
+        <div class="out" id="out"></div>
       </div>
     </div>
   </div>
 </div>
+<script>
+(function () {
+  const c = document.getElementById("cvs"), x = c.getContext("2d");
+  const len = document.getElementById("len"), out = document.getElementById("out");
+  function draw() {
+    const L = Number(len.value);
+    document.getElementById("lv").textContent = String(L);
+    const R = 24 * L, W = 400;
+    c.width = W; c.height = W;
+    x.clearRect(0, 0, W, W);
+    x.fillStyle = "#d9f99d";
+    x.fillRect(0, 0, W / 2, W / 2);
+    x.fillStyle = "#86efac";
+    x.fillRect(W / 2, 0, W / 2, W);
+    x.fillStyle = "#bbf7d0";
+    x.fillRect(0, W / 2, W, W / 2);
+    x.fillStyle = "rgba(254,240,138,0.75)";
+    x.beginPath();
+    x.moveTo(W / 2, W / 2);
+    x.arc(W / 2, W / 2, Math.min(R, W * 0.48), Math.PI, Math.PI * 1.5);
+    x.closePath();
+    x.fill();
+    x.strokeStyle = "#ca8a04";
+    x.lineWidth = 2;
+    x.stroke();
+    x.fillStyle = "#166534";
+    x.font = "24px sans-serif";
+    x.fillText("🐑", W / 2 - 8, W / 2 + 6);
+    const area = (Math.PI * L * L) / 4;
+    out.textContent = "活动面积 ≈ " + area.toFixed(2) + "（¼πL²，单位一致）";
+  }
+  len.addEventListener("input", draw);
+  draw();
+})();
+</script>
 </body>
 </html>

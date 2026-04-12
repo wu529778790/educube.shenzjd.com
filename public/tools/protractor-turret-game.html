@@ -4,33 +4,93 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>量角器炮塔 — 教立方</title>
-  <!-- play-ref:jiaohukejian:1C2BOAD | ux:protractor-turret-game -->
+  <!-- play-ref:jiaohukejian:1C2BOAD | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr minmax(280px, 300px); height: 100%; }
+    .canvas-wrap { background: #fffbeb; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 10px; }
+    #cvs { background: #fff; border-radius: var(--edu-radius); border: 1px solid var(--edu-border); max-width: 100%; }
+    .panel { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; }
+    .slider-block label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
+    .msg { font-size: 14px; font-weight: 800; margin-top: 10px; min-height: 1.4em; }
+    .ok { color: var(--edu-success); }
+    .bad { color: var(--edu-danger); }
+  </style>
 </head>
 <body>
-<div class="edu-tool edu-stub-tool" data-stub-id="protractor-turret-game">
+<div class="edu-tool">
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">🎯 量角器炮塔</span>
-      <span class="edu-toolbar-subtitle">占位壳 · 交互开发中</span>
+      <span class="edu-toolbar-subtitle">对准目标角 · 开火</span>
     </div>
   </div>
   <div class="edu-content">
-    <div class="edu-stub-body">
-      <div class="edu-stub-card">
-        <p class="edu-stub-lead">本教具条目已与交互动画导航主题对齐，采用与全站一致的大屏壳层。</p>
-        <p class="edu-stub-text">完整可操作模型与步骤引导将按教立方规范迭代上线；当前用于占位与教研沟通。</p>
-        <ul class="edu-stub-list">
-          <li>顶栏、留白与控件风格与 <code>edu-base.css</code> 统一</li>
-          <li>后续版本将替换为本页独立交互脚本与画布</li>
-        </ul>
-        <details class="edu-stub-details">
-          <summary class="edu-stub-summary">交互与体验（对标参考 play）</summary>
-          <p class="edu-stub-ux"><strong>开发验收口径：</strong>读角反馈即时且鼓励重试；触控瞄准时有吸附辅助。</p>
-        </details>
+    <div class="main-layout">
+      <div class="canvas-wrap"><canvas id="cvs" width="400" height="400"></canvas></div>
+      <div class="panel">
+        <p style="font-size:12px;color:var(--edu-text-muted)">目标角为红线与底边夹角（0°～180°）。拖动滑条使蓝线与红线重合后点「开火」。</p>
+        <div class="slider-block"><label><span>炮管角</span><span id="av">0°</span></label><input type="range" id="ang" min="0" max="180" value="0" /></div>
+        <button type="button" class="edu-btn edu-btn-primary" id="fire">开火</button>
+        <button type="button" class="edu-btn edu-btn-outline" id="new">新目标</button>
+        <div class="msg" id="msg"></div>
       </div>
     </div>
   </div>
 </div>
+<script>
+(function () {
+  const c = document.getElementById("cvs"), x = c.getContext("2d");
+  const ang = document.getElementById("ang"), msg = document.getElementById("msg");
+  let target = 45;
+  function newT() {
+    target = 15 + Math.floor(Math.random() * 11) * 15;
+    msg.textContent = "";
+    draw();
+  }
+  function draw() {
+    const a = Number(ang.value);
+    document.getElementById("av").textContent = a + "°";
+    c.width = 380; c.height = 380;
+    const cx = 80, cy = 300;
+    x.strokeStyle = "#94a3b8";
+    x.lineWidth = 4;
+    x.beginPath();
+    x.moveTo(cx, cy);
+    x.lineTo(340, cy);
+    x.stroke();
+    const tr = (target * Math.PI) / 180;
+    x.strokeStyle = "#dc2626";
+    x.lineWidth = 3;
+    x.beginPath();
+    x.moveTo(cx, cy);
+    x.lineTo(cx + 200 * Math.cos(-tr), cy - 200 * Math.sin(-tr));
+    x.stroke();
+    const ar = (a * Math.PI) / 180;
+    x.strokeStyle = "#2563eb";
+    x.lineWidth = 4;
+    x.beginPath();
+    x.moveTo(cx, cy);
+    x.lineTo(cx + 180 * Math.cos(-ar), cy - 180 * Math.sin(-ar));
+    x.stroke();
+    x.fillStyle = "#334155";
+    x.font = "12px sans-serif";
+    x.fillText("目标约 " + target + "°", 200, 40);
+  }
+  ang.addEventListener("input", draw);
+  document.getElementById("fire").addEventListener("click", function () {
+    const a = Number(ang.value);
+    if (Math.abs(a - target) <= 5) {
+      msg.textContent = "命中！偏差 " + Math.abs(a - target) + "°";
+      msg.className = "msg ok";
+    } else {
+      msg.textContent = "偏了，再试试（可 ±5° 吸附练习）";
+      msg.className = "msg bad";
+    }
+  });
+  document.getElementById("new").addEventListener("click", newT);
+  newT();
+})();
+</script>
 </body>
 </html>

@@ -4,33 +4,71 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>确定起跑线 — 教立方</title>
-  <!-- play-ref:jiaohukejian:1LK575O | ux:track-start-lines -->
+  <!-- play-ref:jiaohukejian:1LK575O | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr minmax(280px, 300px); height: 100%; }
+    .canvas-wrap { background: #fef2f2; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 10px; }
+    #cvs { background: #fff; border-radius: var(--edu-radius); border: 1px solid var(--edu-border); max-width: 100%; }
+    .panel { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; }
+    .slider-block label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
+    .out { font-weight: 800; color: var(--edu-primary); margin-top: 12px; font-size: 14px; line-height: 1.5; }
+  </style>
 </head>
 <body>
-<div class="edu-tool edu-stub-tool" data-stub-id="track-start-lines">
+<div class="edu-tool">
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">🏃 确定起跑线</span>
-      <span class="edu-toolbar-subtitle">占位壳 · 交互开发中</span>
+      <span class="edu-toolbar-subtitle">弯道外圈更长 · 周长差</span>
     </div>
   </div>
   <div class="edu-content">
-    <div class="edu-stub-body">
-      <div class="edu-stub-card">
-        <p class="edu-stub-lead">本教具条目已与交互动画导航主题对齐，采用与全站一致的大屏壳层。</p>
-        <p class="edu-stub-text">完整可操作模型与步骤引导将按教立方规范迭代上线；当前用于占位与教研沟通。</p>
-        <ul class="edu-stub-list">
-          <li>顶栏、留白与控件风格与 <code>edu-base.css</code> 统一</li>
-          <li>后续版本将替换为本页独立交互脚本与画布</li>
-        </ul>
-        <details class="edu-stub-details">
-          <summary class="edu-stub-summary">交互与体验（对标参考 play）</summary>
-          <p class="edu-stub-ux"><strong>开发验收口径：</strong>跑道展开与弯道差距数值同步；缩放仍易读。</p>
-        </details>
+    <div class="main-layout">
+      <div class="canvas-wrap"><canvas id="cvs" width="480" height="280"></canvas></div>
+      <div class="panel">
+        <div class="slider-block"><label><span>分道宽 w（米）</span><span id="wv">1.2</span></label><input type="range" id="w" min="80" max="200" value="120" /></div>
+        <div class="slider-block"><label><span>弯道半圆半径 R（内沿）</span><span id="rv">36</span></label><input type="range" id="r" min="280" max="500" value="360" /></div>
+        <p style="font-size:11px;color:var(--edu-text-muted)">标准跑道两弯道合为一个整圆：外圈比内圈多跑 2π×分道宽（模型）。</p>
+        <div class="out" id="out"></div>
       </div>
     </div>
   </div>
 </div>
+<script>
+(function () {
+  const c = document.getElementById("cvs"), x = c.getContext("2d");
+  const w = document.getElementById("w"), r = document.getElementById("r"), out = document.getElementById("out");
+  function draw() {
+    const Wm = Number(w.value) / 100;
+    const Rm = Number(r.value) / 10;
+    document.getElementById("wv").textContent = Wm.toFixed(1);
+    document.getElementById("rv").textContent = Rm.toFixed(1);
+    const diff = 2 * Math.PI * Wm;
+    out.innerHTML = "相邻跑道一圈周长差 ≈ <strong>" + diff.toFixed(2) + "</strong> 米<br>（2πw，与 R 无关）";
+    c.width = c.parentElement.clientWidth - 12;
+    c.height = 260;
+    x.clearRect(0, 0, c.width, c.height);
+    const cy = c.height / 2, rx = 120, ry = 40;
+    x.strokeStyle = "#64748b";
+    x.lineWidth = 8;
+    x.beginPath();
+    x.ellipse(c.width * 0.35, cy, rx, ry, 0, Math.PI * 0.15, Math.PI * 0.85);
+    x.stroke();
+    x.strokeStyle = "#ef4444";
+    x.lineWidth = 6;
+    x.beginPath();
+    x.ellipse(c.width * 0.35, cy, rx + 18, ry + 6, 0, Math.PI * 0.15, Math.PI * 0.85);
+    x.stroke();
+    x.fillStyle = "#334155";
+    x.font = "12px sans-serif";
+    x.fillText("内道", 40, cy - ry - 10);
+    x.fillText("外道", 40, cy - ry - 28);
+  }
+  w.addEventListener("input", draw); r.addEventListener("input", draw);
+  window.addEventListener("resize", draw);
+  draw();
+})();
+</script>
 </body>
 </html>

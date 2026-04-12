@@ -4,33 +4,70 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>浓度问题 — 教立方</title>
-  <!-- play-ref:jiaohukejian:0QTLN2F | ux:concentration-mixture -->
+  <!-- play-ref:jiaohukejian:0QTLN2F | 自研 -->
   <link rel="stylesheet" href="../edu-lib/edu-base.css" />
+  <style>
+    .main-layout { display: grid; grid-template-columns: 1fr minmax(280px, 300px); height: 100%; }
+    .viz { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; background: #ecfeff; min-height: 0; }
+    .beaker {
+      width: 100px; height: 160px; border: 3px solid #0e7490; border-radius: 0 0 16px 16px;
+      position: relative; overflow: hidden; background: linear-gradient(180deg, #e0f2fe 0%, #fff 40%);
+    }
+    .fill { position: absolute; left: 0; right: 0; bottom: 0; transition: height 0.2s ease; border-radius: 0 0 12px 12px; }
+    .panel { border-left: 1px solid var(--edu-border); padding: 12px; background: var(--edu-surface); overflow: auto; }
+    .slider-block label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
+    .pct { font-size: 22px; font-weight: 800; color: var(--edu-primary); text-align: center; margin-top: 8px; }
+  </style>
 </head>
 <body>
-<div class="edu-tool edu-stub-tool" data-stub-id="concentration-mixture">
+<div class="edu-tool">
   <div class="edu-toolbar">
     <div class="edu-toolbar-lead">
       <span class="edu-toolbar-title">🧪 浓度问题</span>
-      <span class="edu-toolbar-subtitle">占位壳 · 交互开发中</span>
+      <span class="edu-toolbar-subtitle">盐 + 水 → 盐水质量分数</span>
     </div>
   </div>
   <div class="edu-content">
-    <div class="edu-stub-body">
-      <div class="edu-stub-card">
-        <p class="edu-stub-lead">本教具条目已与交互动画导航主题对齐，采用与全站一致的大屏壳层。</p>
-        <p class="edu-stub-text">完整可操作模型与步骤引导将按教立方规范迭代上线；当前用于占位与教研沟通。</p>
-        <ul class="edu-stub-list">
-          <li>顶栏、留白与控件风格与 <code>edu-base.css</code> 统一</li>
-          <li>后续版本将替换为本页独立交互脚本与画布</li>
-        </ul>
-        <details class="edu-stub-details">
-          <summary class="edu-stub-summary">交互与体验（对标参考 play）</summary>
-          <p class="edu-stub-ux"><strong>开发验收口径：</strong>加盐/加水后浓度与颜色或条带同步；关键步骤可暂停讲解。</p>
-        </details>
+    <div class="main-layout">
+      <div class="viz">
+        <div class="beaker">
+          <div class="fill" id="fill" style="height:40%;background:linear-gradient(180deg,#bae6fd,#38bdf8)"></div>
+        </div>
+        <p style="font-size:12px;color:var(--edu-text-muted)">颜色深浅随浓度变化（示意）。</p>
+      </div>
+      <div class="panel">
+        <div class="slider-block"><label><span>盐（克）</span><span id="sv">10</span></label><input type="range" id="salt" min="1" max="50" value="10" /></div>
+        <div class="slider-block"><label><span>水（克）</span><span id="wv">90</span></label><input type="range" id="water" min="20" max="200" value="90" /></div>
+        <div class="pct" id="pct"></div>
+        <button type="button" class="edu-btn edu-btn-outline" id="rnd">随机一题</button>
+        <p id="quiz" style="font-size:13px;margin-top:10px;font-weight:600"></p>
       </div>
     </div>
   </div>
 </div>
+<script>
+(function () {
+  const salt = document.getElementById("salt"), water = document.getElementById("water");
+  const pct = document.getElementById("pct"), fill = document.getElementById("fill"), quiz = document.getElementById("quiz");
+  function sync() {
+    const s = Number(salt.value), w = Number(water.value);
+    document.getElementById("sv").textContent = String(s);
+    document.getElementById("wv").textContent = String(w);
+    const p = (100 * s) / (s + w);
+    pct.textContent = "浓度 ≈ " + p.toFixed(1) + "%";
+    const h = 25 + (p / 40) * 65;
+    fill.style.height = Math.min(90, h) + "%";
+    fill.style.opacity = String(0.35 + p / 120);
+  }
+  salt.addEventListener("input", sync); water.addEventListener("input", sync);
+  document.getElementById("rnd").addEventListener("click", function () {
+    salt.value = String(5 + Math.floor(Math.random() * 20));
+    water.value = String(40 + Math.floor(Math.random() * 100));
+    quiz.textContent = "现有盐 " + salt.value + " g、水 " + water.value + " g，完全溶解后浓度是多少？";
+    sync();
+  });
+  document.getElementById("rnd").click();
+})();
+</script>
 </body>
 </html>
