@@ -223,16 +223,18 @@ function buildFlat() {
   var mat = new THREE.MeshLambertMaterial({ color: def.color, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
   var edgeMat = new THREE.LineBasicMaterial({ color: 0x1e293b, linewidth: 2 });
 
-  var shape;
+  var geo;
   switch (_currentShape) {
     case 'rect': {
-      shape = new THREE.Shape();
-      shape.moveTo(0, 0); shape.lineTo(1.2, 0); shape.lineTo(1.2, 2); shape.lineTo(0, 2); shape.closePath();
+      var shapeR = new THREE.Shape();
+      shapeR.moveTo(0, 0); shapeR.lineTo(1.2, 0); shapeR.lineTo(1.2, 2); shapeR.lineTo(0, 2); shapeR.closePath();
+      geo = new THREE.ShapeGeometry(shapeR);
       break;
     }
     case 'rtriangle': {
-      shape = new THREE.Shape();
-      shape.moveTo(0, 0); shape.lineTo(1.2, 0); shape.lineTo(0, 2); shape.closePath();
+      var shapeT = new THREE.Shape();
+      shapeT.moveTo(0, 0); shapeT.lineTo(1.2, 0); shapeT.lineTo(0, 2); shapeT.closePath();
+      geo = new THREE.ShapeGeometry(shapeT);
       break;
     }
     case 'semicircle': {
@@ -243,28 +245,24 @@ function buildFlat() {
         var phi = -Math.PI / 2 + (Math.PI * i) / 48;
         pts.push(new THREE.Vector2(R * Math.cos(phi), R + R * Math.sin(phi)));
       }
-      shape = new THREE.Shape(pts);
+      var shapeS = new THREE.Shape(pts);
+      geo = new THREE.ShapeGeometry(shapeS);
       break;
     }
     case 'trapezoid': {
-      shape = new THREE.Shape();
-      shape.moveTo(0, 0); shape.lineTo(1.2, 0); shape.lineTo(0.8, 2); shape.lineTo(0, 2); shape.closePath();
+      var shapeZ = new THREE.Shape();
+      shapeZ.moveTo(0, 0); shapeZ.lineTo(1.2, 0); shapeZ.lineTo(0.8, 2); shapeZ.lineTo(0, 2); shapeZ.closePath();
+      geo = new THREE.ShapeGeometry(shapeZ);
       break;
     }
     case 'circle': {
-      // 圆心在 y 轴上 (0,0)，与旋转轴重合，半径与下方球体 R=1.2 一致
+      // CircleGeometry 默认圆心在 (0,0)，直径在 y 上为 [-R,R]，整体下移会有一半在 y<0，与 XZ 网格深度交错像「半截发白」
       var Rc = 1.2;
-      var pts2 = [];
-      for (var j = 0; j <= 64; j++) {
-        var a2 = (Math.PI * 2 * j) / 64;
-        pts2.push(new THREE.Vector2(Rc * Math.cos(a2), Rc * Math.sin(a2)));
-      }
-      shape = new THREE.Shape(pts2);
+      geo = new THREE.CircleGeometry(Rc, 64);
+      geo.translate(0, Rc, 0);
       break;
     }
   }
-
-  var geo = new THREE.ShapeGeometry(shape);
   var mesh = new THREE.Mesh(geo, mat);
   mesh.position.y = 0.5;
   mesh.rotation.y = 0; // face camera initially
