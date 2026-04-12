@@ -14,20 +14,20 @@ const ToolCard = memo(function ToolCard({ tool, index }: ToolCardProps) {
   return (
     <Link
       href={`/tools/${tool.id}`}
-      className="group block edu-card-elevated overflow-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+      className="group flex h-full min-h-0 flex-col edu-card-elevated overflow-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
       style={{ animationDelay: `${Math.min(index * 80, 800)}ms` }}
       role="listitem"
     >
       {/* 顶部渐变条 — 更宽更圆润 */}
       <div
-        className="h-2.5 w-full"
+        className="h-2.5 w-full shrink-0"
         style={{
           background: `linear-gradient(135deg, ${tool.gradient[0]}, ${tool.gradient[1]})`,
         }}
       />
 
-      {/* 卡片内容 */}
-      <div className="p-5">
+      {/* 卡片内容 — flex-1 撑满高度，便于底栏与同行卡片对齐 */}
+      <div className="flex min-h-0 flex-1 flex-col p-5">
         {/* 图标 + 章节 */}
         <div className="flex items-start justify-between mb-3.5">
           <div
@@ -96,27 +96,28 @@ const ToolCard = memo(function ToolCard({ tool, index }: ToolCardProps) {
             </span>
           ))}
         </div>
-      </div>
 
-      {/* 底部进入提示 — 触屏始终可见，桌面端 hover 显示 */}
-      <div
-        className="px-5 py-2.5 flex items-center justify-between text-sm font-medium opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-        style={{ borderTop: "1px solid var(--edu-border)", color: tool.gradient[0] }}
-      >
-        <span>点击进入教具</span>
-        <svg
-          className="w-4 h-4 translate-x-0 group-hover:translate-x-1 transition-transform"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2.5}
+        {/* 底部进入提示 — 贴底对齐，同一行网格内「点击进入」在同一水平线；触屏始终可见，桌面端 hover 显示 */}
+        <div
+          className="mt-auto flex items-center justify-between gap-2 border-t pt-2.5 text-sm font-medium leading-none opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+          style={{ borderColor: "var(--edu-border)", color: tool.gradient[0] }}
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M9 5l7 7-7 7"
-          />
-        </svg>
+          <span className="shrink-0">点击进入教具</span>
+          <svg
+            className="h-4 w-4 shrink-0 translate-x-0 transition-transform group-hover:translate-x-1"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            aria-hidden
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </div>
       </div>
     </Link>
   );
