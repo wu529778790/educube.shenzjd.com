@@ -117,12 +117,6 @@ export default function Header({ searchInput, onSearchChange }: HeaderProps) {
             </svg>
             AI 助手
           </Link>
-          <Link
-            href="/generate"
-            className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-xl edu-btn-accent shrink-0 shadow-md hover:shadow-lg"
-          >
-            AI 生成
-          </Link>
         </div>
       </div>
 
