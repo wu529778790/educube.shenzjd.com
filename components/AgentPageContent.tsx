@@ -119,6 +119,7 @@ export default function AgentPageContent() {
         if (!reader) throw new Error("无法读取响应流");
 
         const decoder = new TextDecoder();
+        let buffer = ""; // 缓冲区处理 chunk 边界
         let assistantContent = "";
         let assistantStage = "";
         let assistantActions: { label: string; action: string }[] | undefined;
@@ -127,13 +128,18 @@ export default function AgentPageContent() {
           const { done, value } = await reader.read();
           if (done) break;
 
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          // 保留最后一个可能不完整的行
+          buffer = lines.pop() || "";
 
           for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith("data: ")) continue;
             try {
-              const event: AgentEvent = JSON.parse(line.slice(6));
+              const jsonStr = trimmed.slice(5); // 去掉 "data:" 前缀
+              const event: AgentEvent = JSON.parse(jsonStr);
+              console.log("[Client SSE]", event); // 调试日志
 
               if (event.type === "done" && event._state) {
                 // 更新 session state
@@ -153,8 +159,34 @@ export default function AgentPageContent() {
               if (event.actions) {
                 assistantActions = event.actions;
               }
+            } catch (parseErr) {
+              console.error("[Client SSE Parse Error]", parseErr, trimmed);
+            }
+          }
+        }
+
+        // 处理缓冲区剩余内容
+        if (buffer.trim()) {
+          const trimmed = buffer.trim();
+          if (trimmed.startsWith("data: ")) {
+            try {
+              const event: AgentEvent = JSON.parse(trimmed.slice(5));
+              if (event.type === "done" && event._state) {
+                setSessionState(event._state);
+              }
+              if (event.content) {
+                assistantContent = event.content;
+                assistantStage = event.type;
+              }
+              if (event.html) {
+                setPreviewHtml(event.html);
+                setShowPreview(true);
+              }
+              if (event.actions) {
+                assistantActions = event.actions;
+              }
             } catch {
-              // 忽略解析错误
+              // 忽略最后的解析错误
             }
           }
         }

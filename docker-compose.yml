@@ -1,0 +1,24 @@
+services:
+  educube:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      # AI 提供商
+      - AI_PROVIDER=openai
+      # 智谱 API Key
+      - AI_API_KEY=7e265b3784514cc4a9438fc1d34dc048.vNQoO6ZHZKrd8pnI
+      # 智谱 API 地址
+      - AI_BASE_URL=https://open.bigmodel.cn/api/paas/v4/
+      # 模型名称
+      - AI_MODEL=glm-4-flash
+      # 最大 token
+      - AI_MAX_TOKENS=16000
+    volumes:
+      - educube-data:/app/data
+      - educube-gen:/app/public/tools/gen
+    restart: unless-stopped
+
+volumes:
+  educube-data:
+  educube-gen:

@@ -67,31 +67,29 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       try {
         for await (const event of orchestrator.handleMessage(message)) {
-          controller.enqueue(encoder.encode(formatSSE(event)));
+          const eventData = formatSSE(event);
+          console.log("[Agent SSE]", eventData.trim()); // 调试日志
+          controller.enqueue(encoder.encode(eventData));
         }
 
         // 发送最终状态
         const finalState = orchestrator.getState();
-        controller.enqueue(
-          encoder.encode(
-            formatSSE({
-              type: "done",
-              content: "",
-              _state: finalState,
-            } as Record<string, unknown> & { type: string; content: string }),
-          ),
-        );
+        const finalEvent = formatSSE({
+          type: "done",
+          content: "",
+          _state: finalState,
+        } as Record<string, unknown> & { type: string; content: string });
+        console.log("[Agent SSE Final]", finalEvent.trim());
+        controller.enqueue(encoder.encode(finalEvent));
 
         controller.close();
       } catch (err) {
-        controller.enqueue(
-          encoder.encode(
-            formatSSE({
-              type: "error",
-              content: `系统错误：${err instanceof Error ? err.message : "未知错误"}`,
-            }),
-          ),
-        );
+        const errorEvent = formatSSE({
+          type: "error",
+          content: `系统错误：${err instanceof Error ? err.message : "未知错误"}`,
+        });
+        console.error("[Agent SSE Error]", errorEvent.trim());
+        controller.enqueue(encoder.encode(errorEvent));
         controller.close();
       }
     },
@@ -147,9 +145,10 @@ function formatSSE(data: Record<string, unknown> | { type: string; content: stri
 
 function sseHeaders(): HeadersInit {
   return {
-    "Content-Type": "text/event-stream",
+    "Content-Type": "text/event-stream; charset=utf-8",
     "Cache-Control": "no-cache, no-transform",
     Connection: "keep-alive",
+    "X-Accel-Buffering": "no", // 禁用 Nginx 缓冲
   };
 }
 
