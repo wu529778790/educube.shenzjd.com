@@ -120,9 +120,23 @@ export default function AgentPageContent() {
 
         const decoder = new TextDecoder();
         let buffer = ""; // 缓冲区处理 chunk 边界
-        let assistantContent = "";
-        let assistantStage = "";
-        let assistantActions: { label: string; action: string }[] | undefined;
+
+        // 先添加一个占位消息，后续实时更新
+        const assistantMsgId = `assistant-${Date.now()}`;
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: assistantMsgId,
+            role: "assistant",
+            content: "",
+            stage: "thinking",
+          },
+        ]);
+
+        let currentContent = "";
+        let currentStage = "thinking";
+        let currentActions: { label: string; action: string }[] | undefined;
+        let hasHtml = false;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -147,17 +161,39 @@ export default function AgentPageContent() {
               }
 
               if (event.content) {
-                assistantContent = event.content;
-                assistantStage = event.type;
+                currentContent = event.content;
+                currentStage = event.type;
+                // 实时更新消息
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === assistantMsgId
+                      ? {
+                          ...msg,
+                          content: currentContent,
+                          stage: currentStage,
+                          actions: currentActions,
+                        }
+                      : msg
+                  )
+                );
               }
 
               if (event.html) {
                 setPreviewHtml(event.html);
                 setShowPreview(true);
+                hasHtml = true;
               }
 
               if (event.actions) {
-                assistantActions = event.actions;
+                currentActions = event.actions;
+                // 更新操作按钮
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === assistantMsgId
+                      ? { ...msg, actions: currentActions }
+                      : msg
+                  )
+                );
               }
             } catch (parseErr) {
               console.error("[Client SSE Parse Error]", parseErr, trimmed);
@@ -175,34 +211,39 @@ export default function AgentPageContent() {
                 setSessionState(event._state);
               }
               if (event.content) {
-                assistantContent = event.content;
-                assistantStage = event.type;
+                currentContent = event.content;
+                currentStage = event.type;
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === assistantMsgId
+                      ? {
+                          ...msg,
+                          content: currentContent,
+                          stage: currentStage,
+                          actions: currentActions,
+                        }
+                      : msg
+                  )
+                );
               }
               if (event.html) {
                 setPreviewHtml(event.html);
                 setShowPreview(true);
               }
               if (event.actions) {
-                assistantActions = event.actions;
+                currentActions = event.actions;
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === assistantMsgId
+                      ? { ...msg, actions: currentActions }
+                      : msg
+                  )
+                );
               }
             } catch {
               // 忽略最后的解析错误
             }
           }
-        }
-
-        // 添加助手消息
-        if (assistantContent) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `assistant-${Date.now()}`,
-              role: "assistant",
-              content: assistantContent,
-              stage: assistantStage,
-              actions: assistantActions,
-            },
-          ]);
         }
       } catch (err) {
         setMessages((prev) => [
