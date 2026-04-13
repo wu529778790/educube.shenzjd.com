@@ -119,24 +119,7 @@ export default function AgentPageContent() {
         if (!reader) throw new Error("无法读取响应流");
 
         const decoder = new TextDecoder();
-        let buffer = ""; // 缓冲区处理 chunk 边界
-
-        // 先添加一个占位消息，后续实时更新
-        const assistantMsgId = `assistant-${Date.now()}`;
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: assistantMsgId,
-            role: "assistant",
-            content: "",
-            stage: "thinking",
-          },
-        ]);
-
-        let currentContent = "";
-        let currentStage = "thinking";
-        let currentActions: { label: string; action: string }[] | undefined;
-        let hasHtml = false;
+        let buffer = "";
 
         while (true) {
           const { done, value } = await reader.read();
@@ -144,104 +127,56 @@ export default function AgentPageContent() {
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
-          // 保留最后一个可能不完整的行
           buffer = lines.pop() || "";
 
           for (const line of lines) {
             const trimmed = line.trim();
-            if (!trimmed || !trimmed.startsWith("data: ")) continue;
-            try {
-              const jsonStr = trimmed.slice(5); // 去掉 "data:" 前缀
-              const event: AgentEvent = JSON.parse(jsonStr);
-              console.log("[Client SSE]", event); // 调试日志
-
-              if (event.type === "done" && event._state) {
-                // 更新 session state
-                setSessionState(event._state);
-              }
-
-              if (event.content) {
-                currentContent = event.content;
-                currentStage = event.type;
-                // 实时更新消息
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === assistantMsgId
-                      ? {
-                          ...msg,
-                          content: currentContent,
-                          stage: currentStage,
-                          actions: currentActions,
-                        }
-                      : msg
-                  )
-                );
-              }
-
-              if (event.html) {
-                setPreviewHtml(event.html);
-                setShowPreview(true);
-                hasHtml = true;
-              }
-
-              if (event.actions) {
-                currentActions = event.actions;
-                // 更新操作按钮
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === assistantMsgId
-                      ? { ...msg, actions: currentActions }
-                      : msg
-                  )
-                );
-              }
-            } catch (parseErr) {
-              console.error("[Client SSE Parse Error]", parseErr, trimmed);
-            }
-          }
-        }
-
-        // 处理缓冲区剩余内容
-        if (buffer.trim()) {
-          const trimmed = buffer.trim();
-          if (trimmed.startsWith("data: ")) {
+            if (!trimmed.startsWith("data: ")) continue;
             try {
               const event: AgentEvent = JSON.parse(trimmed.slice(5));
-              if (event.type === "done" && event._state) {
-                setSessionState(event._state);
+
+              // done 事件只更新状态，不显示消息
+              if (event.type === "done") {
+                if (event._state) setSessionState(event._state);
+                if (event.html) {
+                  setPreviewHtml(event.html);
+                  setShowPreview(true);
+                }
+                continue;
               }
-              if (event.content) {
-                currentContent = event.content;
-                currentStage = event.type;
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === assistantMsgId
-                      ? {
-                          ...msg,
-                          content: currentContent,
-                          stage: currentStage,
-                          actions: currentActions,
-                        }
-                      : msg
-                  )
-                );
+
+              // error 事件显示错误消息
+              if (event.type === "error") {
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: `error-${Date.now()}`,
+                    role: "assistant",
+                    content: event.content,
+                    stage: "error",
+                  },
+                ]);
+                continue;
               }
+
+              // 其他事件：添加消息 + 更新预览
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: `${event.type}-${Date.now()}`,
+                  role: "assistant",
+                  content: event.content,
+                  stage: event.type,
+                  actions: event.actions,
+                },
+              ]);
+
               if (event.html) {
                 setPreviewHtml(event.html);
                 setShowPreview(true);
               }
-              if (event.actions) {
-                currentActions = event.actions;
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === assistantMsgId
-                      ? { ...msg, actions: currentActions }
-                      : msg
-                  )
-                );
-              }
-            } catch {
-              // 忽略最后的解析错误
+            } catch (e) {
+              console.error("[SSE parse error]", e, trimmed);
             }
           }
         }
