@@ -62,6 +62,29 @@ public/
 
 ## AI 教具生成架构
 
+### 三层架构
+
+```
+┌──────────────────────────────────────────────────────┐
+│  Layer 3: Agent 对话层                                │
+│  app/api/agent/route.ts  ←→  components/AgentPageContent.tsx
+│  意图识别 → 多轮对话 → SSE 流式响应 → 实时预览          │
+├──────────────────────────────────────────────────────┤
+│  Layer 2: 声明式规格层                                │
+│  data/spec-prompt.ts                                  │
+│  AI 生成 JSON Spec → wrapSpecAsHtml() 包装为页面      │
+│  parseSpecOutput() 容错解析 + 自动 fallback            │
+├──────────────────────────────────────────────────────┤
+│  Layer 1: 组件框架层                                  │
+│  public/edu-lib/edu-components.js  骨架+控件+绘图函数  │
+│  public/edu-lib/edu-renderer.js    JSON Spec → 渲染   │
+│  public/edu-lib/edu-base.css       设计系统+大屏适配   │
+│  public/edu-lib/edu-tools.js       公共工具+拖拽+大屏  │
+└──────────────────────────────────────────────────────┘
+```
+
+### 生成流程
+
 ```
 用户描述 "做一个分数乘法工具"
    │
