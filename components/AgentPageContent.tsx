@@ -88,6 +88,10 @@ export default function AgentPageContent() {
       };
       setMessages((prev) => [...prev, userMsg]);
 
+      // 创建超时控制器（10分钟）
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 600000);
+
       try {
         const res = await fetch("/api/agent", {
           method: "POST",
@@ -107,12 +111,17 @@ export default function AgentPageContent() {
                 }
               : undefined,
           }),
+          signal: controller.signal,
         });
+
+        clearTimeout(timeoutId);
 
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: "请求失败" }));
           throw new Error(err.error || "请求失败");
         }
+
+        console.log("[Client] Fetch OK, starting SSE read...");
 
         // 解析 SSE 流
         const reader = res.body?.getReader();
@@ -120,10 +129,14 @@ export default function AgentPageContent() {
 
         const decoder = new TextDecoder();
         let buffer = "";
+        let eventCount = 0;
 
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) {
+            console.log("[Client] SSE done, total events:", eventCount);
+            break;
+          }
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
@@ -134,9 +147,12 @@ export default function AgentPageContent() {
             if (!trimmed.startsWith("data: ")) continue;
             try {
               const event: AgentEvent = JSON.parse(trimmed.slice(5));
+              eventCount++;
+              console.log("[Client SSE event]", eventCount, event.type, event.content?.slice(0, 50));
 
               // done 事件只更新状态，不显示消息
               if (event.type === "done") {
+                console.log("[Client] Done event, _state:", !!event._state, "html:", !!event.html);
                 if (event._state) setSessionState(event._state);
                 if (event.html) {
                   setPreviewHtml(event.html);
@@ -147,6 +163,7 @@ export default function AgentPageContent() {
 
               // error 事件显示错误消息
               if (event.type === "error") {
+                console.error("[Client] Error event:", event.content);
                 setMessages((prev) => [
                   ...prev,
                   {
@@ -160,6 +177,7 @@ export default function AgentPageContent() {
               }
 
               // 其他事件：添加消息 + 更新预览
+              console.log("[Client] Adding message for type:", event.type);
               setMessages((prev) => [
                 ...prev,
                 {
@@ -180,6 +198,8 @@ export default function AgentPageContent() {
             }
           }
         }
+
+        console.log("[Client] SSE loop finished, total events:", eventCount);
       } catch (err) {
         setMessages((prev) => [
           ...prev,

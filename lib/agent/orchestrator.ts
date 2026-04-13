@@ -154,7 +154,8 @@ export class AgentOrchestrator {
         { maxTokens: 2048, temperature: 0.2 },
       );
       refinedSpec = parseRefinedSpecOutput(refineResult, userInput);
-    } catch {
+    } catch (err) {
+      console.error("[Agent] Refine failed:", err);
       refinedSpec = {
         name: userInput.slice(0, 18),
         spec: userInput,
@@ -162,16 +163,19 @@ export class AgentOrchestrator {
     }
 
     this.state.toolName = refinedSpec.name;
+
+    // 发送 planning 事件（不带详细规格，避免太大）
     yield {
       type: "planning",
-      content: `我理解你需要「${refinedSpec.name}」。正在设计教具规格...\n\n${refinedSpec.spec}`,
+      content: `我理解你需要「${refinedSpec.name}」。正在生成教具...`,
     };
 
     // 阶段 2：生成 JSON Spec
     this.state.stage = "generating";
-    yield { type: "generating", content: "正在生成教具..." };
+    yield { type: "generating", content: "正在生成教具代码..." };
 
     try {
+      console.log("[Agent] Starting spec generation...");
       // 优先使用 Spec-based 生成
       const specResult = await generateChatText(
         buildSpecSystemPrompt(),
@@ -187,6 +191,7 @@ export class AgentOrchestrator {
           temperature: 0.3,
         },
       );
+      console.log("[Agent] Spec generation complete, length:", specResult.length);
 
       const { spec, valid } = parseSpecOutput(specResult);
 
