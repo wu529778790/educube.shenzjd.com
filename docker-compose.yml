@@ -4,14 +4,14 @@ services:
     ports:
       - "3000:3000"
     environment:
-      # AI 提供商（使用 Anthropic 协议）
-      - AI_PROVIDER=anthropic
+      # AI 提供商（OpenAI 兼容协议）
+      - AI_PROVIDER=openai
       # 智谱 API Key
       - AI_API_KEY=c271d51f0d4a4b3fbc9fd1849a6a0a01.JFI7iQFzWLbJTxIq
-      # 智谱 Coding Plan Anthropic 端点
-      - AI_BASE_URL=https://open.bigmodel.cn/api/anthropic
-      # 模型名称（Anthropic 兼容模式会映射到智谱模型）
-      - AI_MODEL=claude-sonnet-4-20250514
+      # GLM Coding Plan 专属端点
+      - AI_BASE_URL=https://open.bigmodel.cn/api/coding/paas/v4
+      # 模型名称
+      - AI_MODEL=GLM-5-Turbo
       # 最大 token
       - AI_MAX_TOKENS=16000
       # API 超时（毫秒）
