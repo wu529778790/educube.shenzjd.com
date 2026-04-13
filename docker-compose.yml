@@ -8,8 +8,8 @@ services:
       - AI_PROVIDER=openai
       # 智谱 API Key
       - AI_API_KEY=c271d51f0d4a4b3fbc9fd1849a6a0a01.JFI7iQFzWLbJTxIq
-      # 智谱 API 地址
-      - AI_BASE_URL=https://open.bigmodel.cn/api/paas/v4/
+      # 智谱 Coding Plan API 地址
+      - AI_BASE_URL=https://open.bigmodel.cn/api/coding/paas/v4/
       # 模型名称（Coding Plan）
       - AI_MODEL=glm-5-turbo
       # 最大 token
