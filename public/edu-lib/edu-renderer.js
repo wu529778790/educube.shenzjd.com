@@ -105,6 +105,9 @@ var EduRender = (function () {
     var state = tool.state;
     var sliderRefs = {};
 
+    // 保存 tool 引用供 updateTabPanels 使用
+    window._eduTool = tool;
+
     // ── 构建控件 ──
     if (spec.controls) {
       spec.controls.forEach(function (ctrl) {
@@ -300,7 +303,7 @@ var EduRender = (function () {
 
   function updateTabPanels() {
     if (!window._tabPanels) return;
-    var activeTab = window._eduState && window._eduState._activeTab;
+    var activeTab = window._eduTool && window._eduTool.state && window._eduTool.state._activeTab;
     Object.keys(window._tabPanels).forEach(function (id) {
       window._tabPanels[id].style.display = id === activeTab ? '' : 'none';
     });
@@ -385,8 +388,7 @@ var EduRender = (function () {
         var ref = sliderRefs[key];
         if (state[key] != null) {
           ref.input.value = state[key];
-          ref.display.textContent = EduComp.draw._formatVal
-            ? '' : String(state[key]);
+          ref.display.textContent = formatSliderVal(state[key], ref.format);
         }
       });
       return;
@@ -399,11 +401,17 @@ var EduRender = (function () {
           state[ctrl.id] = ctrl.value;
           if (sliderRefs[ctrl.id]) {
             sliderRefs[ctrl.id].input.value = ctrl.value;
-            sliderRefs[ctrl.id].display.textContent = String(ctrl.value);
+            sliderRefs[ctrl.id].display.textContent = formatSliderVal(ctrl.value, ctrl.format);
           }
         }
       });
     }
+  }
+
+  function formatSliderVal(val, format) {
+    if (!format || format === 'int') return String(Math.round(val));
+    if (typeof format === 'number') return Number(val).toFixed(format);
+    return String(val);
   }
 
   /* ── 辅助 ── */
@@ -422,22 +430,7 @@ var EduRender = (function () {
     s.textContent =
       '.main-layout{display:grid;height:100%;}' +
       '.canvas-area{display:flex;flex-direction:column;align-items:center;}' +
-      '.control-panel{display:flex;flex-direction:column;gap:12px;overflow:auto;}' +
-      '.ctrl-section{display:flex;flex-direction:column;gap:6px;}' +
-      '.ctrl-label{font-size:11px;font-weight:700;color:#64748b;letter-spacing:.05em;}' +
-      '.slider-row{display:flex;align-items:center;gap:8px;}' +
-      '.slider-row input[type=range]{flex:1;}' +
-      '.slider-row .val{font-size:14px;font-weight:700;color:var(--edu-accent);min-width:24px;text-align:right;}' +
-      '.info-box{background:#fff;border:1px solid var(--edu-border);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.8;color:var(--edu-text);}' +
-      '.info-box strong{color:var(--edu-primary);}' +
-      '.preset-btn{padding:8px 0;border-radius:8px;font-size:13px;font-weight:600;background:#fff;border:1.5px solid #e2e8f0;cursor:pointer;transition:all .15s;}' +
-      '.preset-btn:hover{border-color:var(--edu-primary);color:var(--edu-primary);}' +
-      '.tab-bar{display:flex;gap:6px;margin-bottom:10px;}' +
-      '.tab-btn{padding:6px 12px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;font-size:13px;cursor:pointer;font-weight:600;transition:all .15s;}' +
-      '.tab-btn.active{background:var(--edu-primary);color:#fff;border-color:var(--edu-primary);}' +
-      '.mode-btn{padding:6px 10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;transition:all .15s;}' +
-      '.mode-btn.active{background:var(--edu-primary);color:#fff;border-color:var(--edu-primary);}' +
-      '.divider{height:1px;background:var(--edu-border);}';
+      '.control-panel{display:flex;flex-direction:column;gap:12px;overflow:auto;}';
     document.head.appendChild(s);
   }
 

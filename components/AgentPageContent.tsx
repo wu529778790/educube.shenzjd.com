@@ -38,18 +38,47 @@ interface ChatMessage {
  * Agent 对话页面
  * ────────────────────────────────────── */
 
+const SESSION_STORAGE_KEY = "educube-agent-session";
+const MESSAGES_STORAGE_KEY = "educube-agent-messages";
+const PREVIEW_STORAGE_KEY = "educube-agent-preview";
+
 export default function AgentPageContent() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: "你好！我是教立方的 AI 助手。\n\n你可以用自然语言描述你想创建的教学工具，我会帮你生成交互式教具。例如：\n\n• 「做一个三年级分数初步认识的工具」\n• 「生成一个五年级面积计算的互动教具」\n\n生成后你可以继续说「把颜色改成蓝色」「增加一个练习模式」来修改。",
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const saved = localStorage.getItem(MESSAGES_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch { /* ignore */ }
+    return [
+      {
+        id: "welcome",
+        role: "assistant",
+        content: "你好！我是教立方的 AI 助手。\n\n你可以用自然语言描述你想创建的教学工具，我会帮你生成交互式教具。例如：\n\n• 「做一个三年级分数初步认识的工具」\n• 「生成一个五年级面积计算的互动教具」\n\n生成后你可以继续说「把颜色改成蓝色」「增加一个练习模式」来修改。",
+      },
+    ];
+  });
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
-  const [sessionState, setSessionState] = useState<SessionState | null>(null);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      return localStorage.getItem(PREVIEW_STORAGE_KEY) || null;
+    } catch { return null; }
+  });
+  const [sessionState, setSessionState] = useState<SessionState | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const saved = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.currentHtml) return parsed;
+      }
+    } catch { /* ignore */ }
+    return null;
+  });
   const [showPreview, setShowPreview] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -60,6 +89,35 @@ export default function AgentPageContent() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // 持久化 sessionState
+  useEffect(() => {
+    if (sessionState) {
+      try {
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionState));
+      } catch { /* quota exceeded */ }
+    } else {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+    }
+  }, [sessionState]);
+
+  // 持久化 messages
+  useEffect(() => {
+    try {
+      localStorage.setItem(MESSAGES_STORAGE_KEY, JSON.stringify(messages));
+    } catch { /* quota exceeded */ }
+  }, [messages]);
+
+  // 持久化 previewHtml
+  useEffect(() => {
+    if (previewHtml) {
+      try {
+        localStorage.setItem(PREVIEW_STORAGE_KEY, previewHtml);
+      } catch { /* quota exceeded */ }
+    } else {
+      localStorage.removeItem(PREVIEW_STORAGE_KEY);
+    }
+  }, [previewHtml]);
 
   // 更新 iframe 预览
   useEffect(() => {
@@ -249,6 +307,8 @@ export default function AgentPageContent() {
     if (!sessionState?.currentHtml) return;
 
     try {
+      const semester = inferSemester(sessionState.currentSpec);
+
       const res = await fetch("/api/agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -259,7 +319,7 @@ export default function AgentPageContent() {
           saveMeta: {
             gradeId: sessionState.grade || "p5",
             subjectId: sessionState.subject || "math",
-            semester: "上册" as const,
+            semester,
           },
         }),
       });
@@ -437,13 +497,19 @@ function stageLabel(stage: string): string {
 }
 
 function formatContent(text: string) {
-  // 简单换行处理
   return text.split("\n").map((line, i) => (
     <span key={i}>
       {line}
       {i < text.split("\n").length - 1 && <br />}
     </span>
   ));
+}
+
+function inferSemester(spec: Record<string, unknown> | null): "上册" | "下册" {
+  if (!spec) return "上册";
+  const subtitle = typeof spec.subtitle === "string" ? spec.subtitle : "";
+  if (subtitle.includes("下册")) return "下册";
+  return "上册";
 }
 
 /* ──────────────────────────────────────

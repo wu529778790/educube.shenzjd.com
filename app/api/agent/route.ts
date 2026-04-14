@@ -9,8 +9,19 @@ import { NextRequest } from "next/server";
 import { AgentOrchestrator } from "@/lib/agent/orchestrator";
 import { saveGeneratedTool } from "@/data/generated-tools";
 import type { SessionState } from "@/lib/agent/orchestrator";
+import {
+  extractClientIp,
+  checkRateLimit,
+  checkCsrfOrigin,
+  acquireConnection,
+  releaseConnection,
+} from "@/lib/api-security";
 
 export const dynamic = "force-dynamic";
+
+const AGENT_RATE_LIMIT = 30;
+const AGENT_RATE_WINDOW = 60 * 60 * 1000;
+const MAX_CONCURRENT = 10;
 
 interface AgentRequestBody {
   message: string;
@@ -26,6 +37,30 @@ interface AgentRequestBody {
 }
 
 export async function POST(req: NextRequest) {
+  const ip = extractClientIp(req);
+
+  // CSRF 校验
+  const csrfErr = checkCsrfOrigin(req);
+  if (csrfErr) return csrfErr;
+
+  // IP 限流
+  if (!checkRateLimit(ip, AGENT_RATE_LIMIT, AGENT_RATE_WINDOW)) {
+    return jsonError("请求过于频繁，请稍后再试", 429);
+  }
+
+  // 并发限制
+  if (!acquireConnection(MAX_CONCURRENT)) {
+    return jsonError("服务器繁忙，请稍后重试", 503);
+  }
+
+  try {
+    return await handlePost(req);
+  } finally {
+    releaseConnection();
+  }
+}
+
+async function handlePost(req: NextRequest) {
   let body: AgentRequestBody;
   try {
     body = await req.json();
@@ -110,6 +145,11 @@ async function handleSave(
 
   try {
     const id = `gen-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    const spec = sessionState.currentSpec as Record<string, unknown> | null;
+    const gradient = extractGradient(spec);
+    const icon = extractIcon(spec);
+
     const tool = await saveGeneratedTool(
       id,
       sessionState.currentHtml,
@@ -119,8 +159,8 @@ async function handleSave(
         subject: meta.subjectId,
         chapter: sessionState.chapter || "",
         description: `AI 生成的${sessionState.toolName || "教具"}`,
-        gradient: ["#7c3aed", "#6366f1"] as [string, string],
-        icon: "sparkles",
+        gradient,
+        icon,
       },
     );
 
@@ -135,6 +175,39 @@ async function handleSave(
       500,
     );
   }
+}
+
+function extractGradient(spec: Record<string, unknown> | null): [string, string] {
+  if (!spec) return ["#7c3aed", "#6366f1"];
+  const bg = spec.bgGradient;
+  if (typeof bg === "string" && bg.includes(",")) {
+    const parts = bg.split(",").map((s) => s.trim());
+    if (parts.length >= 2 && parts[0].startsWith("#") && parts[1].startsWith("#")) {
+      return [parts[0], parts[1]] as [string, string];
+    }
+  }
+  const theme = spec.themeColor;
+  if (typeof theme === "string" && theme.startsWith("#")) {
+    return [lightenColor(theme, 0.85), lightenColor(theme, 0.7)] as [string, string];
+  }
+  return ["#7c3aed", "#6366f1"];
+}
+
+function extractIcon(spec: Record<string, unknown> | null): string {
+  if (!spec) return "sparkles";
+  const icon = spec.icon;
+  if (typeof icon === "string" && icon.trim().length > 0) return icon.trim();
+  return "sparkles";
+}
+
+function lightenColor(hex: string, factor: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const lr = Math.round(r + (255 - r) * factor);
+  const lg = Math.round(g + (255 - g) * factor);
+  const lb = Math.round(b + (255 - b) * factor);
+  return `#${lr.toString(16).padStart(2, "0")}${lg.toString(16).padStart(2, "0")}${lb.toString(16).padStart(2, "0")}`;
 }
 
 /* ── 辅助函数 ── */

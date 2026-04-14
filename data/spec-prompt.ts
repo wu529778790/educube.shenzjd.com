@@ -317,29 +317,150 @@ EduRender.run(spec);
  * 解析 AI 输出为 JSON Spec
  * ================================================================ */
 
-export function parseSpecOutput(raw: string): { spec: Record<string, unknown>; valid: boolean } {
+const VALID_RENDER_TYPES = new Set(["canvas2d", "tabs", "threejs"]);
+const VALID_CONTROL_TYPES = new Set(["slider", "presets", "tabs", "toggle", "divider", "info"]);
+
+interface SpecValidationResult {
+  spec: Record<string, unknown>;
+  valid: boolean;
+  errors: string[];
+}
+
+function validateSpecStructure(spec: Record<string, unknown>): string[] {
+  const errors: string[] = [];
+
+  if (!spec.title || typeof spec.title !== "string") {
+    errors.push("缺少 title 字段或 title 不是字符串");
+  }
+
+  const render = spec.render;
+  if (!render || typeof render !== "object" || Array.isArray(render)) {
+    errors.push("缺少 render 字段或 render 不是对象");
+    return errors;
+  }
+
+  const renderObj = render as Record<string, unknown>;
+  if (!renderObj.type || typeof renderObj.type !== "string" || !VALID_RENDER_TYPES.has(renderObj.type)) {
+    errors.push(`render.type 无效，必须是 canvas2d | tabs | threejs，当前值: ${String(renderObj.type)}`);
+  }
+
+  if (renderObj.type === "tabs") {
+    const tabs = renderObj.tabs;
+    if (!Array.isArray(tabs) || tabs.length === 0) {
+      errors.push("render.type 为 tabs 时，render.tabs 必须是非空数组");
+    } else {
+      for (let i = 0; i < tabs.length; i++) {
+        const tab = tabs[i] as Record<string, unknown>;
+        if (!tab.id || typeof tab.id !== "string") {
+          errors.push(`render.tabs[${i}] 缺少 id 字段`);
+        }
+        if (!tab.label || typeof tab.label !== "string") {
+          errors.push(`render.tabs[${i}] 缺少 label 字段`);
+        }
+      }
+    }
+  }
+
+  if (renderObj.type === "canvas2d") {
+    if (!renderObj.draw && !renderObj.drawSteps) {
+      errors.push("render.type 为 canvas2d 时，需要 render.draw 或 render.drawSteps");
+    }
+    if (typeof renderObj.draw === "string") {
+      const drawCheck = checkDrawFunctionSyntax(renderObj.draw);
+      if (drawCheck) errors.push(`render.draw 语法错误: ${drawCheck}`);
+    }
+  }
+
+  if (renderObj.type === "threejs") {
+    if (!renderObj.setup && !renderObj.update) {
+      errors.push("render.type 为 threejs 时，需要 render.setup 或 render.update");
+    }
+  }
+
+  if (Array.isArray(spec.controls)) {
+    for (let i = 0; i < spec.controls.length; i++) {
+      const ctrl = spec.controls[i] as Record<string, unknown>;
+      if (!ctrl.type || typeof ctrl.type !== "string" || !VALID_CONTROL_TYPES.has(ctrl.type)) {
+        errors.push(`controls[${i}].type 无效: ${String(ctrl.type)}`);
+        continue;
+      }
+      if (ctrl.type === "slider") {
+        if (!ctrl.id || typeof ctrl.id !== "string") {
+          errors.push(`controls[${i}] (slider) 缺少 id`);
+        }
+        if (typeof ctrl.min !== "number" || typeof ctrl.max !== "number") {
+          errors.push(`controls[${i}] (slider) 缺少 min/max 数值`);
+        }
+      }
+    }
+  } else if (spec.controls !== undefined) {
+    errors.push("controls 必须是数组");
+  }
+
+  return errors;
+}
+
+function checkDrawFunctionSyntax(code: string): string | null {
+  if (typeof code !== "string" || code.trim().length === 0) return "draw 函数体为空";
+  const normalized = code.replace(/\\n/g, "\n").replace(/\\t/g, "\t");
+  const unmatched = countUnmatched(normalized);
+  if (unmatched.paren !== 0) return `括号不匹配（差 ${unmatched.paren} 个）`;
+  if (unmatched.brace !== 0) return `花括号不匹配（差 ${unmatched.brace} 个）`;
+  if (unmatched.bracket !== 0) return `方括号不匹配（差 ${unmatched.bracket} 个）`;
+  return null;
+}
+
+function countUnmatched(code: string): { paren: number; brace: number; bracket: number } {
+  let paren = 0, brace = 0, bracket = 0;
+  let inString = false, stringChar = "";
+  for (let i = 0; i < code.length; i++) {
+    const ch = code[i];
+    if (inString) {
+      if (ch === "\\") { i++; continue; }
+      if (ch === stringChar) inString = false;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") { inString = true; stringChar = ch; continue; }
+    if (ch === "(") paren++;
+    else if (ch === ")") paren--;
+    else if (ch === "{") brace++;
+    else if (ch === "}") brace--;
+    else if (ch === "[") bracket++;
+    else if (ch === "]") bracket--;
+  }
+  return { paren, brace, bracket };
+}
+
+export function parseSpecOutput(raw: string): SpecValidationResult {
   let text = raw.trim();
-  // 去掉可能的 markdown 代码围栏
   text = text.replace(/^```(?:json)?\s*\n?/i, '');
   text = text.replace(/\n?```\s*$/i, '');
   text = text.trim();
 
-  // 尝试找到 JSON 对象（从第一个 { 到最后一个 }）
   const start = text.indexOf('{');
   const end = text.lastIndexOf('}');
   if (start === -1 || end === -1 || end <= start) {
-    return { spec: {}, valid: false };
+    return { spec: {}, valid: false, errors: ["未找到 JSON 对象"] };
   }
 
   const jsonStr = text.slice(start, end + 1);
 
+  let spec: Record<string, unknown>;
   try {
-    const spec = JSON.parse(jsonStr);
-    if (typeof spec === 'object' && spec !== null && (spec.title || spec.render)) {
-      return { spec, valid: true };
-    }
-    return { spec, valid: false };
-  } catch {
-    return { spec: {}, valid: false };
+    spec = JSON.parse(jsonStr);
+  } catch (parseErr) {
+    const msg = parseErr instanceof Error ? parseErr.message : String(parseErr);
+    return { spec: {}, valid: false, errors: [`JSON 解析失败: ${msg}`] };
   }
+
+  if (typeof spec !== "object" || spec === null) {
+    return { spec: {}, valid: false, errors: ["解析结果不是对象"] };
+  }
+
+  const errors = validateSpecStructure(spec);
+  if (errors.length > 0) {
+    return { spec, valid: false, errors };
+  }
+
+  return { spec, valid: true, errors: [] };
 }

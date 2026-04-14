@@ -12,6 +12,7 @@ import { generateChatText } from "@/lib/ai-client";
 import {
   buildRefineUserPrompt,
   parseRefinedSpecOutput,
+  REFINE_SYSTEM,
 } from "@/data/prompt-template";
 import {
   buildSpecSystemPrompt,
@@ -49,6 +50,7 @@ export interface SessionState {
   messages: AgentMessage[];
   currentHtml: string | null;
   currentSpec: Record<string, unknown> | null;
+  specOutOfSync: boolean;
   stage: "idle" | "planning" | "generating" | "reviewing" | "editing";
   toolName: string | null;
   chapter: string | null;
@@ -68,6 +70,7 @@ export class AgentOrchestrator {
       messages: initialState?.messages || [],
       currentHtml: initialState?.currentHtml || null,
       currentSpec: initialState?.currentSpec || null,
+      specOutOfSync: initialState?.specOutOfSync || false,
       stage: initialState?.stage || "idle",
       toolName: initialState?.toolName || null,
       chapter: initialState?.chapter || null,
@@ -106,28 +109,37 @@ export class AgentOrchestrator {
     }
   }
 
-  /* ── 意图识别（规则 + AI 辅助） ── */
+  /* ── 意图识别（基于上下文的规则匹配） ── */
 
   private detectIntent(input: string): "create" | "modify" | "review" {
-    const text = input.trim().toLowerCase();
+    const text = input.trim();
 
-    // 修改意图：已有 HTML 且用户要求修改
-    if (this.state.currentHtml) {
-      const modifyKeywords = [
-        "改", "修改", "调整", "换成", "增加", "加上", "添加", "去掉", "删除",
-        "移除", "放大", "缩小", "变", "把", "换成", "改成", "变成",
-        "不要", "换成蓝色", "改成红色", "移动", "拖到",
-      ];
-      if (modifyKeywords.some((k) => text.includes(k))) return "modify";
+    if (!this.state.currentHtml) {
+      return "create";
     }
 
-    // 审查意图
-    const reviewKeywords = ["检查", "审查", "有问题", "评价", "审查质量"];
-    if (reviewKeywords.some((k) => text.includes(k)) && this.state.currentHtml) {
+    const reviewKeywords = ["检查", "审查", "有问题", "评价", "质量"];
+    if (reviewKeywords.some((k) => text.includes(k))) {
       return "review";
     }
 
-    // 默认为创建
+    const modifyPatterns = [
+      /改[成换]/, /修改/, /调整/, /换成/, /改成/, /变成/,
+      /增加/, /加上/, /添加/, /去掉/, /删除/, /移除/,
+      /放大/, /缩小/, /不要/, /移动/,
+      /把.*改/, /把.*换/, /将.*改/, /将.*换/,
+      /颜色/, /色彩/, /配色/, /蓝色/, /红色/, /绿色/, /黄色/, /紫色/, /橙色/, /粉色/,
+      /标题/, /名字/, /名称/,
+      /范围/, /最小/, /最大/, /步长/,
+    ];
+    if (modifyPatterns.some((p) => p.test(text))) {
+      return "modify";
+    }
+
+    if (this.state.currentSpec || this.state.specOutOfSync) {
+      return "modify";
+    }
+
     return "create";
   }
 
@@ -145,7 +157,7 @@ export class AgentOrchestrator {
     let refinedSpec: { name: string; spec: string };
     try {
       const refineResult = await generateChatText(
-        REFINE_SYSTEM_AGENT,
+        REFINE_SYSTEM,
         buildRefineUserPrompt({
           gradeLabel,
           subjectLabel,
@@ -193,14 +205,14 @@ export class AgentOrchestrator {
       );
       console.log("[Agent] Spec generation complete, length:", specResult.length);
 
-      const { spec, valid } = parseSpecOutput(specResult);
+      const parsed = parseSpecOutput(specResult);
 
-      let finalHtml: string;
+      let finalHtml = "";
 
-      if (valid && spec.title) {
-        // Spec 有效 → 包装为 HTML
-        this.state.currentSpec = spec;
-        const specJson = JSON.stringify(spec, null, 2);
+      if (parsed.valid) {
+        this.state.currentSpec = parsed.spec;
+        this.state.specOutOfSync = false;
+        const specJson = JSON.stringify(parsed.spec, null, 2);
         finalHtml = wrapSpecAsHtml(specJson);
 
         this.state.stage = "idle";
@@ -208,7 +220,7 @@ export class AgentOrchestrator {
           type: "done",
           content: `教具「${refinedSpec.name}」已生成！(Spec 模式)\n\n使用了组件框架渲染，交互更稳定。你可以说"修改XXX"来调整。`,
           html: finalHtml,
-          spec,
+          spec: parsed.spec,
           actions: [
             { label: "保存教具", action: "save" },
             { label: "继续优化", action: "iterate" },
@@ -216,30 +228,76 @@ export class AgentOrchestrator {
           ],
         };
       } else {
-        // Spec 无效 → fallback 到原始 HTML 生成
-        const html = await generateChatText(
-          buildSystemPromptFallback(),
-          `请制作一个交互式教具：\n\n教具名称：${refinedSpec.name}\n适用年级：${gradeLabel}\n学科：${subjectLabel}\n\n<requirement>\n${refinedSpec.spec}\n</requirement>\n\n直接输出完整 HTML，不要输出任何解释文字。`,
-          {
-            maxTokens: parseInt(process.env.AI_MAX_TOKENS || "16000", 10),
-            temperature: 0.3,
-          },
-        );
+        // Spec 无效 → 尝试修复重试一次
+        console.log("[Agent] Spec validation failed:", parsed.errors);
+        let retrySucceeded = false;
 
-        finalHtml = cleanHtmlOutput(html);
-        this.state.currentHtml = finalHtml;
-        this.state.stage = "idle";
+        try {
+          yield { type: "generating", content: "Spec 格式有问题，正在自动修复..." };
 
-        yield {
-          type: "done",
-          content: `教具「${refinedSpec.name}」已生成！(HTML 模式)\n\n你可以说"修改XXX"来调整。`,
-          html: finalHtml,
-          actions: [
-            { label: "保存教具", action: "save" },
-            { label: "继续优化", action: "iterate" },
-            { label: "重新生成", action: "restart" },
-          ],
-        };
+          const fixPrompt = buildSpecFixPrompt(specResult, parsed.errors);
+          const fixResult = await generateChatText(
+            buildSpecSystemPrompt(),
+            fixPrompt,
+            {
+              maxTokens: parseInt(process.env.AI_MAX_TOKENS || "16000", 10),
+              temperature: 0.2,
+            },
+          );
+
+          const retryParsed = parseSpecOutput(fixResult);
+          if (retryParsed.valid) {
+            this.state.currentSpec = retryParsed.spec;
+            this.state.specOutOfSync = false;
+            const specJson = JSON.stringify(retryParsed.spec, null, 2);
+            finalHtml = wrapSpecAsHtml(specJson);
+            retrySucceeded = true;
+
+            this.state.stage = "idle";
+            yield {
+              type: "done",
+              content: `教具「${refinedSpec.name}」已生成！(Spec 模式，经自动修复)\n\n你可以说"修改XXX"来调整。`,
+              html: finalHtml,
+              spec: retryParsed.spec,
+              actions: [
+                { label: "保存教具", action: "save" },
+                { label: "继续优化", action: "iterate" },
+                { label: "重新生成", action: "restart" },
+              ],
+            };
+          } else {
+            console.log("[Agent] Spec fix retry also failed:", retryParsed.errors);
+          }
+        } catch (fixErr) {
+          console.error("[Agent] Spec fix retry error:", fixErr);
+        }
+
+        // 修复重试也失败 → fallback 到原始 HTML 生成
+        if (!retrySucceeded) {
+          const html = await generateChatText(
+            buildSystemPromptFallback(),
+            `请制作一个交互式教具：\n\n教具名称：${refinedSpec.name}\n适用年级：${gradeLabel}\n学科：${subjectLabel}\n\n<requirement>\n${refinedSpec.spec}\n</requirement>\n\n直接输出完整 HTML，不要输出任何解释文字。`,
+            {
+              maxTokens: parseInt(process.env.AI_MAX_TOKENS || "16000", 10),
+              temperature: 0.3,
+            },
+          );
+
+          finalHtml = cleanHtmlOutput(html);
+          this.state.currentHtml = finalHtml;
+          this.state.stage = "idle";
+
+          yield {
+            type: "done",
+            content: `教具「${refinedSpec.name}」已生成！(HTML 模式)\n\n你可以说"修改XXX"来调整。`,
+            html: finalHtml,
+            actions: [
+              { label: "保存教具", action: "save" },
+              { label: "继续优化", action: "iterate" },
+              { label: "重新生成", action: "restart" },
+            ],
+          };
+        }
       }
 
       this.state.currentHtml = finalHtml;
@@ -268,8 +326,7 @@ export class AgentOrchestrator {
     yield { type: "thinking", content: "正在理解修改需求..." };
 
     try {
-      // 如果有 JSON Spec，优先修改 spec
-      if (this.state.currentSpec) {
+      if (this.state.currentSpec && !this.state.specOutOfSync) {
         yield { type: "editing", content: "正在修改教具规格..." };
 
         const specStr = JSON.stringify(this.state.currentSpec, null, 2);
@@ -282,11 +339,12 @@ export class AgentOrchestrator {
           },
         );
 
-        const { spec, valid } = parseSpecOutput(modifiedResult);
+        const parsed = parseSpecOutput(modifiedResult);
 
-        if (valid && spec.title) {
-          this.state.currentSpec = spec;
-          const finalHtml = wrapSpecAsHtml(JSON.stringify(spec, null, 2));
+        if (parsed.valid) {
+          this.state.currentSpec = parsed.spec;
+          this.state.specOutOfSync = false;
+          const finalHtml = wrapSpecAsHtml(JSON.stringify(parsed.spec, null, 2));
           this.state.currentHtml = finalHtml;
           this.state.stage = "idle";
 
@@ -294,7 +352,7 @@ export class AgentOrchestrator {
             type: "done",
             content: "已修改完成！右侧预览已更新。",
             html: finalHtml,
-            spec,
+            spec: parsed.spec,
             actions: [
               { label: "保存教具", action: "save" },
               { label: "继续优化", action: "iterate" },
@@ -321,12 +379,12 @@ export class AgentOrchestrator {
 
       const cleanHtml = cleanHtmlOutput(modifiedHtml);
       this.state.currentHtml = cleanHtml;
-      this.state.currentSpec = null; // HTML 模式下清除 spec
+      this.state.specOutOfSync = true;
       this.state.stage = "idle";
 
       yield {
         type: "done",
-        content: "已修改完成！右侧预览已更新。",
+        content: "已修改完成！右侧预览已更新。（HTML 模式修改，Spec 可能不再同步）",
         html: cleanHtml,
         actions: [
           { label: "保存教具", action: "save" },
@@ -440,22 +498,6 @@ export class AgentOrchestrator {
  * Prompt 模板
  * ────────────────────────────────────── */
 
-const REFINE_SYSTEM_AGENT = `你是资深小学/初中教研员兼产品经理。用户会用口语描述想做的交互教具，你要整理成给前端工程师用的「标准需求说明」。
-
-## 输出格式（严格遵守，不要 markdown，不要代码块）
-第一行必须是：
-【教具名称】（这里写不超过18个字的简短名称，不要书名号）
-
-换行后写：
-【需求规格】
-然后换行，用有序列表或分段说明，必须包含：
-1. 教学目标（学生要理解什么）
-2. 界面与交互（画布区域展示什么、右侧有哪些控件、每个控件控制什么）
-3. 数学/学科约束（数值范围、单位、是否需要标注）
-4. 默认状态与重置行为
-
-语言简洁、可执行，总字数建议 200～500 字。不要输出 HTML。`;
-
 const EDIT_SPEC_SYSTEM_PROMPT = `你是一个教具规格修改专家。你会收到当前的 JSON Spec 和用户的修改要求。
 
 ## 严格规则
@@ -511,6 +553,26 @@ ${context}
 ${userRequest}
 
 请按要求修改 Spec，输出完整的修改后 JSON。`;
+}
+
+function buildSpecFixPrompt(
+  originalOutput: string,
+  errors: string[],
+): string {
+  const errorList = errors.map((e) => `- ${e}`).join("\n");
+  return `上一次生成的 JSON Spec 存在以下问题：
+
+${errorList}
+
+原始输出：
+${originalOutput}
+
+请修复以上问题，输出一个完整、合法的 JSON Spec。确保：
+1. 包含 title 字段
+2. render.type 为 canvas2d | tabs | threejs 之一
+3. controls 中每个控件都有正确的 type 和必要字段
+4. draw 函数体是合法的 JavaScript（字符串格式，内部换行用 \\n）
+5. 直接输出纯 JSON，不要 markdown 代码围栏，不要解释文字`;
 }
 
 function buildEditPrompt(
