@@ -10,6 +10,7 @@ import { revalidatePath } from "next/cache";
 import { AgentOrchestrator } from "@/lib/agent/orchestrator";
 import { saveGeneratedTool } from "@/data/generated-tools";
 import type { SessionState } from "@/lib/agent/orchestrator";
+import { logger } from "@/lib/logger";
 import {
   deleteAgentSession,
   getAgentSession,
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
       try {
         for await (const event of orchestrator.handleMessage(message)) {
           const eventData = formatSSE(event);
-          console.log("[Agent SSE]", eventData.trim());
+          logger.debug("Agent SSE 事件", { event: eventData.trim() });
           controller.enqueue(encoder.encode(eventData));
         }
 
@@ -98,7 +99,7 @@ export async function POST(req: NextRequest) {
           content: "",
           _state: toClientSessionState(session.sessionId, finalState),
         } as Record<string, unknown> & { type: string; content: string });
-        console.log("[Agent SSE Final]", finalEvent.trim());
+        logger.debug("Agent SSE 最终状态", { event: finalEvent.trim() });
         controller.enqueue(encoder.encode(finalEvent));
         controller.close();
       } catch (err) {
@@ -106,7 +107,10 @@ export async function POST(req: NextRequest) {
           type: "error",
           content: `系统错误：${err instanceof Error ? err.message : "未知错误"}`,
         });
-        console.error("[Agent SSE Error]", errorEvent.trim());
+        logger.error("Agent SSE 失败", {
+          event: errorEvent.trim(),
+          message: err instanceof Error ? err.message : "未知错误",
+        });
         controller.enqueue(encoder.encode(errorEvent));
         controller.close();
       }

@@ -23,6 +23,7 @@ import {
   sanitizeHtml,
   validateGeneratedJavaScript,
 } from "@/lib/html-sanitizer";
+import { logger } from "@/lib/logger";
 import { AI_MAX_TOKENS } from "@/lib/runtime-config";
 
 /* ──────────────────────────────────────
@@ -160,7 +161,9 @@ export class AgentOrchestrator {
       );
       refinedSpec = parseRefinedSpecOutput(refineResult, userInput);
     } catch (err) {
-      console.error("[Agent] Refine failed:", err);
+      logger.warn("Agent 需求整理失败，回退到原始输入", {
+        message: err instanceof Error ? err.message : "未知错误",
+      });
       refinedSpec = {
         name: userInput.slice(0, 18),
         spec: userInput,
@@ -180,7 +183,9 @@ export class AgentOrchestrator {
     yield { type: "generating", content: "正在生成教具代码..." };
 
     try {
-      console.log("[Agent] Starting spec generation...");
+      logger.debug("Agent 开始生成 spec", {
+        toolName: refinedSpec.name,
+      });
       // 优先使用 Spec-based 生成
       const specResult = await generateChatText(
         buildSpecSystemPrompt(),
@@ -196,7 +201,10 @@ export class AgentOrchestrator {
           temperature: 0.3,
         },
       );
-      console.log("[Agent] Spec generation complete, length:", specResult.length);
+      logger.debug("Agent spec 生成完成", {
+        toolName: refinedSpec.name,
+        length: specResult.length,
+      });
 
       const { spec, valid } = parseSpecOutput(specResult);
 

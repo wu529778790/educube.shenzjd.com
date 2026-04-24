@@ -1,5 +1,6 @@
 import type { Tool } from "@/data/tools";
 import { buildGeneratedToolFallbackHtml } from "@/data/gen-tool-fallback-html";
+import { logger } from "@/lib/logger";
 import type {
   GeneratedToolsRepository,
   SaveGeneratedToolMeta,
@@ -214,7 +215,7 @@ export class FileSystemGeneratedToolsRepository
         const parsed: unknown[] = JSON.parse(raw);
 
         if (!Array.isArray(parsed)) {
-          console.warn("[generated-tools] 索引文件内容不是数组，已忽略");
+          logger.warn("generated-tools 索引文件内容不是数组，已忽略");
           this.cachedTools = [];
           this.cacheTime = Date.now();
           return [];
@@ -226,7 +227,9 @@ export class FileSystemGeneratedToolsRepository
 
         if (hadExtraFields) {
           this.compactIndexFile(records).catch((err) => {
-            console.warn("[generated-tools] 索引压缩失败:", err);
+            logger.warn("generated-tools 索引压缩失败", {
+              message: err instanceof Error ? err.message : "未知错误",
+            });
           });
         }
 
@@ -234,7 +237,10 @@ export class FileSystemGeneratedToolsRepository
       } catch (err) {
         const code = (err as NodeJS.ErrnoException).code;
         if (code !== "ENOENT") {
-          console.error("[generated-tools] 读取索引文件失败:", err);
+          logger.error("generated-tools 读取索引文件失败", {
+            code,
+            message: err instanceof Error ? err.message : "未知错误",
+          });
         }
         this.cachedTools = [];
         this.cacheTime = Date.now();
@@ -370,10 +376,12 @@ export class FileSystemGeneratedToolsRepository
     try {
       await writeFile(tmpPath, JSON.stringify(compacted, null, 2), "utf-8");
       await rename(tmpPath, INDEX_PATH);
-      console.log("[generated-tools] 索引文件已压缩，移除遗留字段");
+      logger.info("generated-tools 索引文件已压缩，移除遗留字段");
       return true;
     } catch (err) {
-      console.error("[generated-tools] 压缩索引文件失败:", err);
+      logger.error("generated-tools 压缩索引文件失败", {
+        message: err instanceof Error ? err.message : "未知错误",
+      });
       try {
         await unlink(tmpPath).catch(() => {});
       } catch {
@@ -393,7 +401,9 @@ export class FileSystemGeneratedToolsRepository
     for (let i = 0; i < parsed.length; i++) {
       const result = validateToolRecord(parsed[i], i);
       if (!result.valid) {
-        console.warn(`[generated-tools] 跳过无效记录: ${result.reason}`);
+        logger.warn("generated-tools 跳过无效记录", {
+          reason: result.reason,
+        });
         continue;
       }
 

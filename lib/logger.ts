@@ -25,14 +25,18 @@ function formatEntry(level: LogLevel, msg: string, data?: Record<string, unknown
   return `${prefix} ${msg}${suffix}`;
 }
 
+const isTestEnv = process.env.NODE_ENV === "test";
+
 export const logger = {
   debug(msg: string, data?: Record<string, unknown>) {
-    if (process.env.NODE_ENV === "development") {
+    if (!isTestEnv && process.env.NODE_ENV === "development") {
       console.log(formatEntry("debug", msg, data));
     }
   },
   info(msg: string, data?: Record<string, unknown>) {
-    console.log(formatEntry("info", msg, data));
+    if (!isTestEnv) {
+      console.log(formatEntry("info", msg, data));
+    }
   },
   warn(msg: string, data?: Record<string, unknown>) {
     console.warn(formatEntry("warn", msg, data));

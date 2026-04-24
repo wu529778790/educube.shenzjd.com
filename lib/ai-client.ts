@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
+import { logger } from "@/lib/logger";
 import {
   AI_API_KEY,
   AI_MAX_TOKENS,
@@ -147,10 +148,12 @@ async function retryWithBackoff<T>(fn: () => Promise<T>): Promise<T> {
       if (!isRetryable || attempt === MAX_RETRIES) break;
 
       const delay = RETRY_BASE_DELAY * Math.pow(2, attempt);
-      console.warn(
-        `[ai-client] 请求失败 (尝试 ${attempt + 1}/${MAX_RETRIES + 1})，${delay}ms 后重试:`,
-        err instanceof Error ? err.message : err,
-      );
+      logger.warn("ai-client 请求失败，准备重试", {
+        attempt: attempt + 1,
+        totalAttempts: MAX_RETRIES + 1,
+        delayMs: delay,
+        message: err instanceof Error ? err.message : String(err),
+      });
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
