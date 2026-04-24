@@ -232,7 +232,7 @@ EduRender.run(spec, customDraw?)
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `AI_PROVIDER` | AI 提供商 | `openai` |
+| `AI_PROVIDER` | AI 提供商（`openai` / `anthropic`） | `openai` |
 | `AI_API_KEY` | API Key | — |
 | `AI_BASE_URL` | 自定义 API 端点 | 官方端点 |
 | `AI_MODEL` | 模型名 | `gpt-4o` / `claude-sonnet-4-20250514` |

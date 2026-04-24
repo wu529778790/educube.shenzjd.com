@@ -23,6 +23,7 @@ import {
   sanitizeHtml,
   validateGeneratedJavaScript,
 } from "@/lib/html-sanitizer";
+import { AI_MAX_TOKENS } from "@/lib/runtime-config";
 
 /* ──────────────────────────────────────
  * 类型定义
@@ -191,7 +192,7 @@ export class AgentOrchestrator {
           description: refinedSpec.spec,
         }),
         {
-          maxTokens: parseInt(process.env.AI_MAX_TOKENS || "16000", 10),
+          maxTokens: AI_MAX_TOKENS,
           temperature: 0.3,
         },
       );
@@ -226,7 +227,7 @@ export class AgentOrchestrator {
           buildSystemPromptFallback(),
           `请制作一个交互式教具：\n\n教具名称：${refinedSpec.name}\n适用年级：${gradeLabel}\n学科：${subjectLabel}\n\n<requirement>\n${refinedSpec.spec}\n</requirement>\n\n直接输出完整 HTML，不要输出任何解释文字。`,
           {
-            maxTokens: parseInt(process.env.AI_MAX_TOKENS || "16000", 10),
+            maxTokens: AI_MAX_TOKENS,
             temperature: 0.3,
           },
         );
@@ -284,7 +285,7 @@ export class AgentOrchestrator {
           EDIT_SPEC_SYSTEM_PROMPT,
           buildEditSpecPrompt(specStr, userInput, this.state.messages.slice(-6)),
           {
-            maxTokens: parseInt(process.env.AI_MAX_TOKENS || "16000", 10),
+            maxTokens: AI_MAX_TOKENS,
             temperature: 0.2,
           },
         );
@@ -322,7 +323,7 @@ export class AgentOrchestrator {
         EDIT_SYSTEM_PROMPT,
         buildEditPrompt(this.state.currentHtml, userInput, this.state.messages.slice(-6)),
         {
-          maxTokens: parseInt(process.env.AI_MAX_TOKENS || "16000", 10),
+          maxTokens: AI_MAX_TOKENS,
           temperature: 0.2,
         },
       );

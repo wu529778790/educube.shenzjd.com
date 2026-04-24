@@ -135,7 +135,7 @@ npm run dev
 
 | 环境变量 | 说明 | 默认值 |
 |------|------|------|
-| `AI_PROVIDER` | AI 提供商 | `openai` |
+| `AI_PROVIDER` | AI 提供商，支持 `openai` / `anthropic` | `openai` |
 | `AI_API_KEY` | AI API 密钥 | — |
 | `AI_BASE_URL` | 自定义 AI 端点 | 官方端点 |
 | `AI_MODEL` | 模型名 | provider 默认值 |
@@ -146,6 +146,7 @@ npm run dev
 | `AGENT_SESSION_STORE` | Agent 会话存储后端 | `memory` |
 
 当前仅内置两种默认实现：
+- `AI_PROVIDER=openai` 或 `AI_PROVIDER=anthropic`
 - `GENERATED_TOOLS_BACKEND=filesystem`
 - `AGENT_SESSION_STORE=memory`
 
