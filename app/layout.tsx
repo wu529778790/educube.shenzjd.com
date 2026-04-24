@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Serif_SC } from "next/font/google";
+import { validateRuntimeConfig } from "@/lib/runtime-config";
 import "./globals.css";
 
 const notoSerifSC = Noto_Serif_SC({
@@ -43,6 +44,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  validateRuntimeConfig();
+
   return (
     <html lang="zh-CN" className={`h-full ${notoSerifSC.variable}`}>
       <body className="min-h-full antialiased">

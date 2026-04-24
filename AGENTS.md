@@ -238,6 +238,8 @@ EduRender.run(spec, customDraw?)
 | `AI_MODEL` | 模型名 | `gpt-4o` / `claude-sonnet-4-20250514` |
 | `AI_MAX_TOKENS` | 最大生成 token | `16000` |
 | `GENERATE_SECRET` | 生成 API 认证密钥（可选） | — |
+| `GENERATED_TOOLS_BACKEND` | 生成教具存储后端 | `filesystem` |
+| `AGENT_SESSION_STORE` | Agent 会话存储后端 | `memory` |
 
 ## 核心依赖
 

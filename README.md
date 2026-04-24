@@ -131,6 +131,26 @@ npm run dev
 | `npm run lint` | ESLint |
 | `npm run test` | 单元测试（Vitest） |
 
+## 运行配置
+
+| 环境变量 | 说明 | 默认值 |
+|------|------|------|
+| `AI_PROVIDER` | AI 提供商 | `openai` |
+| `AI_API_KEY` | AI API 密钥 | — |
+| `AI_BASE_URL` | 自定义 AI 端点 | 官方端点 |
+| `AI_MODEL` | 模型名 | provider 默认值 |
+| `AI_MAX_TOKENS` | 最大生成 token | `16000` |
+| `AI_TIMEOUT` | AI 请求超时（毫秒） | `120000` |
+| `GENERATE_SECRET` | `/api/generate` 共享密钥 | 未设置时关闭 |
+| `GENERATED_TOOLS_BACKEND` | 生成教具存储后端 | `filesystem` |
+| `AGENT_SESSION_STORE` | Agent 会话存储后端 | `memory` |
+
+当前仅内置两种默认实现：
+- `GENERATED_TOOLS_BACKEND=filesystem`
+- `AGENT_SESSION_STORE=memory`
+
+如果配置成未支持的值，应用会在服务端初始化阶段直接报错，而不是等到首次请求时才失败。
+
 ---
 
 ## Docker 部署
