@@ -361,22 +361,6 @@ export class FileSystemGeneratedToolsRepository
   private async compactIndexFile(
     records: GeneratedToolRecord[],
   ): Promise<boolean> {
-    let needsRewrite = false;
-    for (const record of records) {
-      const toolKeys = Object.keys(record.tool as object);
-      if (toolKeys.some((key) => !KNOWN_TOOL_KEYS.has(key))) {
-        needsRewrite = true;
-        break;
-      }
-      const recordKeys = Object.keys(record);
-      if (recordKeys.some((key) => key !== "tool" && key !== "createdAt")) {
-        needsRewrite = true;
-        break;
-      }
-    }
-
-    if (!needsRewrite) return false;
-
     const compacted: GeneratedToolRecord[] = records.map((record) => ({
       tool: stripToolToSchema(record.tool),
       createdAt: record.createdAt,
