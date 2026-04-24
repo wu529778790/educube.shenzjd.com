@@ -12,13 +12,11 @@ interface AgentEvent {
   content: string;
   html?: string;
   actions?: { label: string; action: string }[];
-  _state?: SessionState;
+  _state?: SessionState | null;
 }
 
 interface SessionState {
-  messages: { role: string; content: string }[];
-  currentHtml: string | null;
-  currentSpec: Record<string, unknown> | null;
+  sessionId: string;
   stage: string;
   toolName: string | null;
   chapter: string | null;
@@ -54,22 +52,11 @@ export default function AgentPageContent() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // 自动滚动到底部
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  // 更新 iframe 预览
-  useEffect(() => {
-    if (previewHtml && iframeRef.current) {
-      const blob = new Blob([previewHtml], { type: "text/html" });
-      const url = URL.createObjectURL(blob);
-      iframeRef.current.src = url;
-      return () => URL.revokeObjectURL(url);
-    }
-  }, [previewHtml]);
 
   // 发送消息
   const sendMessage = useCallback(
@@ -98,18 +85,7 @@ export default function AgentPageContent() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             message: msg,
-            sessionState: sessionState
-              ? {
-                  messages: sessionState.messages,
-                  currentHtml: sessionState.currentHtml,
-                  currentSpec: sessionState.currentSpec,
-                  stage: sessionState.stage,
-                  toolName: sessionState.toolName,
-                  chapter: sessionState.chapter,
-                  grade: sessionState.grade,
-                  subject: sessionState.subject,
-                }
-              : undefined,
+            sessionId: sessionState?.sessionId,
           }),
           signal: controller.signal,
         });
@@ -153,7 +129,9 @@ export default function AgentPageContent() {
               // done 事件只更新状态，不显示消息
               if (event.type === "done") {
                 console.log("[Client] Done event, _state:", !!event._state, "html:", !!event.html);
-                if (event._state) setSessionState(event._state);
+                if (event._state !== undefined) {
+                  setSessionState(event._state ?? null);
+                }
                 if (event.html) {
                   setPreviewHtml(event.html);
                   setShowPreview(true);
@@ -222,6 +200,17 @@ export default function AgentPageContent() {
     (action: string) => {
       switch (action) {
         case "restart":
+          if (sessionState?.sessionId) {
+            void fetch("/api/agent", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                message: "",
+                action: "restart",
+                sessionId: sessionState.sessionId,
+              }),
+            });
+          }
           setSessionState(null);
           setPreviewHtml(null);
           setShowPreview(false);
@@ -246,7 +235,7 @@ export default function AgentPageContent() {
   );
 
   const handleSave = useCallback(async () => {
-    if (!sessionState?.currentHtml) return;
+    if (!sessionState?.sessionId) return;
 
     try {
       const res = await fetch("/api/agent", {
@@ -255,7 +244,7 @@ export default function AgentPageContent() {
         body: JSON.stringify({
           message: "",
           action: "save",
-          sessionState,
+          sessionId: sessionState.sessionId,
           saveMeta: {
             gradeId: sessionState.grade || "p5",
             subjectId: sessionState.subject || "math",
@@ -405,9 +394,9 @@ export default function AgentPageContent() {
               </button>
             </div>
             <iframe
-              ref={iframeRef}
               className="preview-iframe"
-              sandbox="allow-scripts allow-same-origin"
+              sandbox="allow-scripts"
+              srcDoc={previewHtml}
               title="教具预览"
             />
           </div>

@@ -10,7 +10,7 @@ function escapeHtml(s: string): string {
 
 /**
  * 当 `public/tools/gen/{id}.html` 缺失时写入的默认可运行教具（长方体/正方体三向滑条 + 体积）。
- * 路径以 `/tools/gen/` 为基准，静态资源使用 `../../edu-lib/`。
+ * 静态资源使用绝对路径，避免依赖具体的承载路由层级。
  */
 export function buildGeneratedToolFallbackHtml(tool: Tool): string {
   const title = escapeHtml(tool.name);
@@ -26,10 +26,10 @@ export function buildGeneratedToolFallbackHtml(tool: Tool): string {
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>${title} — 教立方</title>
-<link rel="stylesheet" href="../../edu-lib/edu-base.css"/>
-<script src="../../edu-lib/three.min.js"></script>
-<script src="../../edu-lib/OrbitControls.js"></script>
-<script src="../../edu-lib/edu-3d.js"></script>
+<link rel="stylesheet" href="/edu-lib/edu-base.css"/>
+<script src="/edu-lib/three.min.js"></script>
+<script src="/edu-lib/OrbitControls.js"></script>
+<script src="/edu-lib/edu-3d.js"></script>
 <style>
   .main-layout { display:grid; grid-template-columns:1fr minmax(260px,300px); height:100%; }
   .canvas-area { position:relative; background:linear-gradient(135deg,#eff6ff,#dbeafe); overflow:hidden; }

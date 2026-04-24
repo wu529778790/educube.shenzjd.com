@@ -19,6 +19,10 @@ import {
   parseSpecOutput,
   wrapSpecAsHtml,
 } from "@/data/spec-prompt";
+import {
+  sanitizeHtml,
+  validateGeneratedJavaScript,
+} from "@/lib/html-sanitizer";
 
 /* ──────────────────────────────────────
  * 类型定义
@@ -198,6 +202,7 @@ export class AgentOrchestrator {
       let finalHtml: string;
 
       if (valid && spec.title) {
+        validateSpecRuntime(spec);
         // Spec 有效 → 包装为 HTML
         this.state.currentSpec = spec;
         const specJson = JSON.stringify(spec, null, 2);
@@ -226,7 +231,9 @@ export class AgentOrchestrator {
           },
         );
 
-        finalHtml = cleanHtmlOutput(html);
+        finalHtml = sanitizeHtml(html, {
+          preserveInlineEventHandlers: true,
+        });
         this.state.currentHtml = finalHtml;
         this.state.stage = "idle";
 
@@ -285,6 +292,7 @@ export class AgentOrchestrator {
         const { spec, valid } = parseSpecOutput(modifiedResult);
 
         if (valid && spec.title) {
+          validateSpecRuntime(spec);
           this.state.currentSpec = spec;
           const finalHtml = wrapSpecAsHtml(JSON.stringify(spec, null, 2));
           this.state.currentHtml = finalHtml;
@@ -319,7 +327,9 @@ export class AgentOrchestrator {
         },
       );
 
-      const cleanHtml = cleanHtmlOutput(modifiedHtml);
+      const cleanHtml = sanitizeHtml(modifiedHtml, {
+        preserveInlineEventHandlers: true,
+      });
       this.state.currentHtml = cleanHtml;
       this.state.currentSpec = null; // HTML 模式下清除 spec
       this.state.stage = "idle";
@@ -548,14 +558,35 @@ function buildSystemPromptFallback(): string {
   return buildSystemPrompt();
 }
 
-/* ──────────────────────────────────────
- * 工具函数
- * ────────────────────────────────────── */
+function validateSpecRuntime(spec: Record<string, unknown>): void {
+  const render = asRecord(spec.render);
+  if (!render) return;
 
-function cleanHtmlOutput(raw: string): string {
-  let html = raw.trim();
-  // 去掉 markdown 代码围栏
-  html = html.replace(/^```(?:html)?\s*\n?/i, "");
-  html = html.replace(/\n?```\s*$/i, "");
-  return html.trim();
+  validateSpecCode(render.draw);
+  validateSpecCode(render.resultArea);
+  validateSpecCode(render.setup);
+  validateSpecCode(render.update);
+
+  const tabs = render.tabs;
+  if (Array.isArray(tabs)) {
+    for (const tab of tabs) {
+      const tabRecord = asRecord(tab);
+      if (!tabRecord) continue;
+      validateSpecCode(tabRecord.draw);
+    }
+  }
+
+  validateSpecCode(spec.onReset);
+}
+
+function validateSpecCode(value: unknown): void {
+  if (typeof value !== "string") return;
+  validateGeneratedJavaScript(value);
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
 }

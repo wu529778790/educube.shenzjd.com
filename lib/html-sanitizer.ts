@@ -8,13 +8,17 @@
  * 4. 确保 edu-base.css 链接存在
  *
  * 注意：正则检测是纵深防御的一层，不是安全边界。
- * 线上教具壳使用 sandbox="allow-scripts allow-same-origin"（本站首方 HTML）；生成页预览仍为仅脚本沙箱
+ * 线上教具壳与生成页预览都使用仅脚本沙箱（不授予 same-origin）
  * 以及为生成的 HTML 文件设置的 CSP sandbox 头。
  */
 import sanitize from "sanitize-html";
 
 /* ── 允许的 script src 路径前缀（仅允许本地 edu-lib 资源） ── */
-const ALLOWED_SCRIPT_SRC_PREFIXES = ["../edu-lib/"];
+const ALLOWED_SCRIPT_SRC_PREFIXES = [
+  "/edu-lib/",
+  "../edu-lib/",
+  "../../edu-lib/",
+];
 
 /**
  * 验证 script 内容是否安全。
@@ -22,7 +26,7 @@ const ALLOWED_SCRIPT_SRC_PREFIXES = ["../edu-lib/"];
  * 这不是完美的安全边界（JS 有无穷种编码方式），而是最佳努力过滤。
  * 真正的安全边界是 iframe sandbox + CSP sandbox 头。
  */
-function validateScriptContent(content: string): void {
+export function validateGeneratedJavaScript(content: string): void {
   // 先去除注释，防止注释混淆绕过：eval/*comment*/(payload)
   const stripped = content
     .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -363,7 +367,7 @@ export function sanitizeHtml(
   // ── 6. 验证 script 内容安全性 ──
   const scriptContentRe = /<script[^>]*>([\s\S]*?)<\/script>/gi;
   while ((match = scriptContentRe.exec(html)) !== null) {
-    validateScriptContent(match[1]);
+    validateGeneratedJavaScript(match[1]);
   }
 
   // ── 7. 验证 style 内容（防止 CSS 注入外泄数据） ──
@@ -377,7 +381,7 @@ export function sanitizeHtml(
   if (!hasEduBaseLink) {
     html = html.replace(
       "</head>",
-      '  <link rel="stylesheet" href="../edu-lib/edu-base.css"/>\n</head>',
+      '  <link rel="stylesheet" href="/edu-lib/edu-base.css"/>\n</head>',
     );
   }
 

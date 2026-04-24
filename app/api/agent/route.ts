@@ -2,19 +2,26 @@
  * Agent API 端点 — SSE 流式响应
  *
  * POST /api/agent
- * Body: { message: string, sessionState?: Partial<SessionState>, action?: string }
+ * Body: { message: string, sessionId?: string, action?: string }
  */
 
 import { NextRequest } from "next/server";
+import { revalidatePath } from "next/cache";
 import { AgentOrchestrator } from "@/lib/agent/orchestrator";
 import { saveGeneratedTool } from "@/data/generated-tools";
 import type { SessionState } from "@/lib/agent/orchestrator";
+import {
+  deleteAgentSession,
+  getAgentSession,
+  getOrCreateAgentSession,
+  saveAgentSession,
+} from "@/lib/agent/session-store";
 
 export const dynamic = "force-dynamic";
 
 interface AgentRequestBody {
   message: string;
-  sessionState?: Partial<SessionState>;
+  sessionId?: string;
   /** 快捷操作：save | restart */
   action?: string;
   /** 保存时需要的元数据 */
@@ -25,6 +32,15 @@ interface AgentRequestBody {
   };
 }
 
+interface ClientSessionState {
+  sessionId: string;
+  stage: SessionState["stage"];
+  toolName: string | null;
+  chapter: string | null;
+  grade: string | null;
+  subject: string | null;
+}
+
 export async function POST(req: NextRequest) {
   let body: AgentRequestBody;
   try {
@@ -33,19 +49,21 @@ export async function POST(req: NextRequest) {
     return jsonError("无效的请求体", 400);
   }
 
-  const { message, sessionState, action, saveMeta } = body;
+  const { message, sessionId, action, saveMeta } = body;
 
-  // ── 快捷操作：保存 ──
-  if (action === "save" && sessionState?.currentHtml && saveMeta) {
-    return handleSave(sessionState, saveMeta);
+  if (action === "save" && sessionId && saveMeta) {
+    return handleSave(sessionId, saveMeta);
   }
 
-  // ── 快捷操作：重新开始 ──
   if (action === "restart") {
+    if (sessionId) {
+      deleteAgentSession(sessionId);
+    }
     return new Response(
       formatSSE({
         type: "done",
         content: "已重置。请描述你想创建的教具。",
+        _state: null,
       }) + "\n",
       { headers: sseHeaders() },
     );
@@ -59,29 +77,29 @@ export async function POST(req: NextRequest) {
     return jsonError("消息太长（最多 2000 字）", 400);
   }
 
-  // ── SSE 流式响应 ──
   const encoder = new TextEncoder();
-  const orchestrator = new AgentOrchestrator(sessionState);
+  const session = getOrCreateAgentSession(sessionId);
+  const orchestrator = new AgentOrchestrator(session.state);
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
         for await (const event of orchestrator.handleMessage(message)) {
           const eventData = formatSSE(event);
-          console.log("[Agent SSE]", eventData.trim()); // 调试日志
+          console.log("[Agent SSE]", eventData.trim());
           controller.enqueue(encoder.encode(eventData));
         }
 
-        // 发送最终状态
         const finalState = orchestrator.getState();
+        saveAgentSession(session.sessionId, finalState);
+
         const finalEvent = formatSSE({
           type: "done",
           content: "",
-          _state: finalState,
+          _state: toClientSessionState(session.sessionId, finalState),
         } as Record<string, unknown> & { type: string; content: string });
         console.log("[Agent SSE Final]", finalEvent.trim());
         controller.enqueue(encoder.encode(finalEvent));
-
         controller.close();
       } catch (err) {
         const errorEvent = formatSSE({
@@ -98,13 +116,12 @@ export async function POST(req: NextRequest) {
   return new Response(stream, { headers: sseHeaders() });
 }
 
-/* ── 保存教具 ── */
-
 async function handleSave(
-  sessionState: Partial<SessionState>,
+  sessionId: string,
   meta: NonNullable<AgentRequestBody["saveMeta"]>,
 ) {
-  if (!sessionState.currentHtml) {
+  const sessionState = getAgentSession(sessionId);
+  if (!sessionState?.currentHtml) {
     return jsonError("没有可保存的教具", 400);
   }
 
@@ -123,6 +140,7 @@ async function handleSave(
         icon: "sparkles",
       },
     );
+    revalidatePath("/");
 
     return Response.json({
       ok: true,
@@ -137,9 +155,23 @@ async function handleSave(
   }
 }
 
-/* ── 辅助函数 ── */
+function toClientSessionState(
+  sessionId: string,
+  state: SessionState,
+): ClientSessionState {
+  return {
+    sessionId,
+    stage: state.stage,
+    toolName: state.toolName,
+    chapter: state.chapter,
+    grade: state.grade,
+    subject: state.subject,
+  };
+}
 
-function formatSSE(data: Record<string, unknown> | { type: string; content: string }): string {
+function formatSSE(
+  data: Record<string, unknown> | { type: string; content: string },
+): string {
   return `data: ${JSON.stringify(data)}\n\n`;
 }
 
@@ -148,7 +180,7 @@ function sseHeaders(): HeadersInit {
     "Content-Type": "text/event-stream; charset=utf-8",
     "Cache-Control": "no-cache, no-transform",
     Connection: "keep-alive",
-    "X-Accel-Buffering": "no", // 禁用 Nginx 缓冲
+    "X-Accel-Buffering": "no",
   };
 }
 

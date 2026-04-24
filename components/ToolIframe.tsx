@@ -134,7 +134,7 @@ export default function ToolIframe({ src, title }: ToolIframeProps) {
         src={src}
         className="w-full h-full border-0"
         title={title}
-        sandbox="allow-scripts allow-same-origin"
+        sandbox="allow-scripts"
         onLoad={handleLoad}
         onError={handleError}
       />
