@@ -10,6 +10,7 @@ import {
   generateAndPublishTool,
   GenerateToolError,
 } from "@/lib/generate/service";
+import { createSseHeaders, formatSseEvent } from "@/lib/http/sse";
 import { logger } from "@/lib/logger";
 import { grades, subjects } from "@/data/curriculum";
 
@@ -43,13 +44,6 @@ function validateInput(body: Partial<GenerateRequest>): string | null {
   if (body.subject && !VALID_SUBJECTS.has(body.subject))
     return "无效的学科";
   return null;
-}
-
-/* ================================================================
- * SSE 辅助
- * ================================================================ */
-function sseMessage(event: string, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
 /* ================================================================
@@ -145,7 +139,7 @@ export async function POST(request: Request): Promise<Response> {
   const stream = new ReadableStream({
     async start(controller) {
       const send = (event: string, data: unknown) => {
-        controller.enqueue(encoder.encode(sseMessage(event, data)));
+        controller.enqueue(encoder.encode(formatSseEvent(event, data)));
       };
 
       // 心跳保活：每 15s 发送 SSE 注释，防止反向代理超时断连
@@ -214,9 +208,6 @@ export async function POST(request: Request): Promise<Response> {
   });
 
   return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-    },
+    headers: createSseHeaders(),
   });
 }

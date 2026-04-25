@@ -8,6 +8,7 @@
 import { NextRequest } from "next/server";
 import { AgentOrchestrator } from "@/lib/agent/orchestrator";
 import type { SessionState } from "@/lib/agent/orchestrator";
+import { createSseHeaders, formatSseData } from "@/lib/http/sse";
 import { logger } from "@/lib/logger";
 import { publishGeneratedTool } from "@/lib/generated-tools/publish-generated-tool";
 import {
@@ -60,12 +61,12 @@ export async function POST(req: NextRequest) {
       deleteAgentSession(sessionId);
     }
     return new Response(
-      formatSSE({
+      formatSseData({
         type: "done",
         content: "已重置。请描述你想创建的教具。",
         _state: null,
       }) + "\n",
-      { headers: sseHeaders() },
+      { headers: createSseHeaders() },
     );
   }
 
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       try {
         for await (const event of orchestrator.handleMessage(message)) {
-          const eventData = formatSSE(event);
+          const eventData = formatSseData(event);
           logger.debug("Agent SSE 事件", { event: eventData.trim() });
           controller.enqueue(encoder.encode(eventData));
         }
@@ -93,7 +94,7 @@ export async function POST(req: NextRequest) {
         const finalState = orchestrator.getState();
         saveAgentSession(session.sessionId, finalState);
 
-        const finalEvent = formatSSE({
+        const finalEvent = formatSseData({
           type: "done",
           content: "",
           _state: toClientSessionState(session.sessionId, finalState),
@@ -102,7 +103,7 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encoder.encode(finalEvent));
         controller.close();
       } catch (err) {
-        const errorEvent = formatSSE({
+        const errorEvent = formatSseData({
           type: "error",
           content: `系统错误：${err instanceof Error ? err.message : "未知错误"}`,
         });
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return new Response(stream, { headers: sseHeaders() });
+  return new Response(stream, { headers: createSseHeaders() });
 }
 
 async function handleSave(
@@ -168,21 +169,6 @@ function toClientSessionState(
     chapter: state.chapter,
     grade: state.grade,
     subject: state.subject,
-  };
-}
-
-function formatSSE(
-  data: Record<string, unknown> | { type: string; content: string },
-): string {
-  return `data: ${JSON.stringify(data)}\n\n`;
-}
-
-function sseHeaders(): HeadersInit {
-  return {
-    "Content-Type": "text/event-stream; charset=utf-8",
-    "Cache-Control": "no-cache, no-transform",
-    Connection: "keep-alive",
-    "X-Accel-Buffering": "no",
   };
 }
 
