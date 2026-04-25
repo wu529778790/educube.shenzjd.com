@@ -7,6 +7,11 @@
 
 import { NextRequest } from "next/server";
 import { AgentOrchestrator } from "@/lib/agent/orchestrator";
+import {
+  type AgentSaveMeta,
+  handleAgentRestartAction,
+  handleAgentSaveAction,
+} from "@/lib/agent/route-actions";
 import type {
   AgentClientSessionState,
   AgentStreamEvent,
@@ -14,10 +19,7 @@ import type {
 } from "@/lib/agent/types";
 import { createSseHeaders, formatSseData } from "@/lib/http/sse";
 import { logger } from "@/lib/logger";
-import { publishGeneratedTool } from "@/lib/generated-tools/publish-generated-tool";
 import {
-  deleteAgentSession,
-  getAgentSession,
   getOrCreateAgentSession,
   saveAgentSession,
 } from "@/lib/agent/session-store";
@@ -30,11 +32,7 @@ interface AgentRequestBody {
   /** 快捷操作：save | restart */
   action?: string;
   /** 保存时需要的元数据 */
-  saveMeta?: {
-    gradeId: string;
-    subjectId: string;
-    semester: "上册" | "下册";
-  };
+  saveMeta?: AgentSaveMeta;
 }
 
 export async function POST(req: NextRequest) {
@@ -48,21 +46,11 @@ export async function POST(req: NextRequest) {
   const { message, sessionId, action, saveMeta } = body;
 
   if (action === "save" && sessionId && saveMeta) {
-    return handleSave(sessionId, saveMeta);
+    return handleAgentSaveAction(sessionId, saveMeta);
   }
 
   if (action === "restart") {
-    if (sessionId) {
-      deleteAgentSession(sessionId);
-    }
-    return new Response(
-      formatSseData({
-        type: "done",
-        content: "已重置。请描述你想创建的教具。",
-        _state: null,
-      } satisfies AgentStreamEvent) + "\n",
-      { headers: createSseHeaders() },
-    );
+    return handleAgentRestartAction(sessionId);
   }
 
   if (!message || typeof message !== "string" || message.trim().length === 0) {
@@ -113,44 +101,6 @@ export async function POST(req: NextRequest) {
   });
 
   return new Response(stream, { headers: createSseHeaders() });
-}
-
-async function handleSave(
-  sessionId: string,
-  meta: NonNullable<AgentRequestBody["saveMeta"]>,
-) {
-  const sessionState = getAgentSession(sessionId);
-  if (!sessionState?.currentHtml) {
-    return jsonError("没有可保存的教具", 400);
-  }
-
-  try {
-    const id = `gen-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const tool = await publishGeneratedTool({
-      id,
-      html: sessionState.currentHtml,
-      meta: {
-        name: sessionState.toolName || "自定义教具",
-        grade: meta.gradeId,
-        subject: meta.subjectId,
-        chapter: sessionState.chapter || "",
-        description: `AI 生成的${sessionState.toolName || "教具"}`,
-        gradient: ["#7c3aed", "#6366f1"] as [string, string],
-        icon: "sparkles",
-      },
-    });
-
-    return Response.json({
-      ok: true,
-      tool,
-      message: `教具「${sessionState.toolName}」已保存`,
-    });
-  } catch (err) {
-    return jsonError(
-      `保存失败：${err instanceof Error ? err.message : "未知错误"}`,
-      500,
-    );
-  }
 }
 
 function toClientSessionState(
