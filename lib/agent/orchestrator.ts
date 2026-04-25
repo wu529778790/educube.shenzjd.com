@@ -9,6 +9,10 @@
  */
 
 import { generateChatText } from "@/lib/ai-client";
+import {
+  detectAgentIntent,
+  quickReviewGeneratedTool,
+} from "@/lib/agent/analysis";
 import type {
   AgentEvent,
   AgentMessage,
@@ -63,7 +67,9 @@ export class AgentOrchestrator {
     this.state.messages.push({ role: "user", content: userInput });
 
     // 意图识别
-    const intent = this.detectIntent(userInput);
+    const intent = detectAgentIntent(userInput, {
+      hasCurrentHtml: Boolean(this.state.currentHtml),
+    });
 
     switch (intent) {
       case "create":
@@ -79,31 +85,6 @@ export class AgentOrchestrator {
         yield* this.handleCreate(userInput);
         break;
     }
-  }
-
-  /* ── 意图识别（规则 + AI 辅助） ── */
-
-  private detectIntent(input: string): "create" | "modify" | "review" {
-    const text = input.trim().toLowerCase();
-
-    // 修改意图：已有 HTML 且用户要求修改
-    if (this.state.currentHtml) {
-      const modifyKeywords = [
-        "改", "修改", "调整", "换成", "增加", "加上", "添加", "去掉", "删除",
-        "移除", "放大", "缩小", "变", "把", "换成", "改成", "变成",
-        "不要", "换成蓝色", "改成红色", "移动", "拖到",
-      ];
-      if (modifyKeywords.some((k) => text.includes(k))) return "modify";
-    }
-
-    // 审查意图
-    const reviewKeywords = ["检查", "审查", "有问题", "评价", "审查质量"];
-    if (reviewKeywords.some((k) => text.includes(k)) && this.state.currentHtml) {
-      return "review";
-    }
-
-    // 默认为创建
-    return "create";
   }
 
   /* ── 创建新教具（三阶段：需求整理 → Spec 生成 → HTML 包装） ── */
@@ -345,7 +326,7 @@ export class AgentOrchestrator {
 
     yield { type: "reviewing", content: "正在审查教具质量..." };
 
-    const result = this.quickReview(this.state.currentHtml);
+    const result = quickReviewGeneratedTool(this.state.currentHtml);
 
     yield {
       type: "done",
@@ -356,71 +337,6 @@ export class AgentOrchestrator {
         { label: "保存教具", action: "save" },
       ],
     };
-  }
-
-  /* ── 快速审查（不消耗 AI token，基于规则） ── */
-
-  private quickReview(html: string): {
-    score: number;
-    summary: string;
-  } {
-    let score = 100;
-    const issues: string[] = [];
-    const good: string[] = [];
-
-    // 检查是否使用组件框架
-    if (html.includes("EduRender.run")) {
-      good.push("✓ 使用了组件框架渲染（Spec 模式）");
-    }
-
-    // 检查必需结构
-    if (!html.includes("edu-tool") && !html.includes("EduRender")) {
-      score -= 20; issues.push("缺少 .edu-tool 容器");
-    } else good.push("✓ 使用了标准容器结构");
-
-    if (!html.includes("edu-toolbar") && !html.includes("EduComp.create")) {
-      score -= 15; issues.push("缺少工具栏");
-    } else good.push("✓ 包含工具栏");
-
-    if (html.includes("resetAll") || html.includes("onReset")) {
-      good.push("✓ 包含重置功能");
-    } else {
-      score -= 10; issues.push("缺少重置功能");
-    }
-
-    // 检查交互控件
-    const sliderCount = (html.match(/"type":\s*"slider"/g) || []).length
-      + (html.match(/type="range"/g) || []).length;
-    if (sliderCount === 0) { score -= 15; issues.push("缺少滑块交互控件"); }
-    else if (sliderCount >= 3) good.push(`✓ 包含 ${sliderCount} 个交互滑块`);
-    else good.push(`✓ 包含 ${sliderCount} 个滑块（建议 3 个以上）`);
-
-    // 检查 info-box
-    if (html.includes("info-box") || html.includes('"type":"info"') || html.includes('"type": "info"')) {
-      good.push("✓ 包含知识点说明");
-    } else {
-      score -= 5; issues.push("建议添加知识点说明卡片");
-    }
-
-    // 检查 Canvas 或 3D
-    if (html.includes("canvas") || html.includes("Edu3D") || html.includes("EduComp.draw")) {
-      good.push("✓ 包含可视化内容");
-    } else {
-      score -= 20; issues.push("缺少可视化内容（Canvas 或 3D）");
-    }
-
-    // 检查中文
-    const hasChinese = /[\u4e00-\u9fff]/.test(html);
-    if (!hasChinese) { score -= 10; issues.push("缺少中文界面文字"); }
-    else good.push("✓ 包含中文界面");
-
-    score = Math.max(0, Math.min(100, score));
-
-    let summary = `质量评分：${score}/100\n\n`;
-    if (good.length > 0) summary += `优点：\n${good.join("\n")}\n\n`;
-    if (issues.length > 0) summary += `需要改进：\n${issues.map((i) => "• " + i).join("\n")}`;
-
-    return { score, summary };
   }
 }
 
