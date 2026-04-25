@@ -1,7 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import {
+  HeaderSearchField,
+  HeaderSearchToggle,
+  useHeaderSearch,
+} from "@/components/header/HeaderSearch";
 
 interface HeaderProps {
   searchInput?: string;
@@ -9,14 +13,8 @@ interface HeaderProps {
 }
 
 export default function Header({ searchInput, onSearchChange }: HeaderProps) {
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const mobileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (mobileSearchOpen && mobileInputRef.current) {
-      mobileInputRef.current.focus();
-    }
-  }, [mobileSearchOpen]);
+  const handleSearchChange = onSearchChange ?? (() => undefined);
+  const headerSearch = useHeaderSearch({ onSearchChange: handleSearchChange });
 
   return (
     <header
@@ -47,66 +45,20 @@ export default function Header({ searchInput, onSearchChange }: HeaderProps) {
         </Link>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          {onSearchChange && (
+          {onSearchChange ? (
             <>
-              {/* Desktop search */}
               <div className="relative hidden sm:block">
-                <svg
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-                  style={{ color: "rgba(255,255,255,0.5)" }}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-                  />
-                </svg>
-                <input
-                  type="text"
-                  value={searchInput ?? ""}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder="搜索教具…"
-                  aria-label="搜索教具"
-                  className="w-48 lg:w-56 rounded-lg border bg-white/10 border-white/20 pl-9 pr-3 py-1.5 text-sm outline-none transition-all focus:bg-white/20 focus:border-white/40 placeholder-white/40"
-                  style={{ color: "white" }}
+                <HeaderSearchField
+                  searchInput={searchInput ?? ""}
+                  onSearchChange={handleSearchChange}
                 />
-                {searchInput && (
-                  <button
-                    type="button"
-                    onClick={() => onSearchChange("")}
-                    aria-label="清除搜索"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full flex items-center justify-center text-[10px] transition-colors"
-                    style={{ background: "rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.7)" }}
-                  >
-                    &times;
-                  </button>
-                )}
               </div>
-
-              {/* Mobile search toggle */}
-              <button
-                type="button"
-                onClick={() => { setMobileSearchOpen(!mobileSearchOpen); if (mobileSearchOpen) onSearchChange(""); }}
-                aria-label="搜索教具"
-                className="sm:hidden w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
-                style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}
-              >
-                {mobileSearchOpen ? (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                ) : (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                  </svg>
-                )}
-              </button>
+              <HeaderSearchToggle
+                mobileSearchOpen={headerSearch.mobileSearchOpen}
+                onToggle={headerSearch.handleMobileSearchToggle}
+              />
             </>
-          )}
+          ) : null}
           <a
             href="/agent"
             target="_blank"
@@ -122,33 +74,16 @@ export default function Header({ searchInput, onSearchChange }: HeaderProps) {
         </div>
       </div>
 
-      {/* Mobile search bar */}
-      {onSearchChange && mobileSearchOpen && (
-        <div className="sm:hidden px-4 pb-3">
-          <div className="relative">
-            <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-              style={{ color: "rgba(255,255,255,0.5)" }}
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-            </svg>
-            <input
-              ref={mobileInputRef}
-              type="text"
-              value={searchInput ?? ""}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="搜索教具…"
-              aria-label="搜索教具"
-              className="w-full rounded-lg border bg-white/10 border-white/20 pl-9 pr-3 py-2.5 text-sm outline-none transition-all focus:bg-white/20 focus:border-white/40 placeholder-white/40"
-              style={{ color: "white" }}
-            />
-          </div>
+      {onSearchChange && headerSearch.mobileSearchOpen ? (
+        <div className="px-4 pb-3 sm:hidden">
+          <HeaderSearchField
+            mobile
+            searchInput={searchInput ?? ""}
+            onSearchChange={handleSearchChange}
+            inputRef={headerSearch.mobileInputRef}
+          />
         </div>
-      )}
+      ) : null}
     </header>
   );
 }
