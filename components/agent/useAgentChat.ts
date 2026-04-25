@@ -3,15 +3,11 @@ import type { KeyboardEvent, RefObject } from "react";
 import { executeAgentChatAction } from "@/components/agent/action-handlers";
 import {
   createInitialChatMessages,
-  createRequestErrorMessage,
   createResetChatMessages,
-  createUserChatMessage,
 } from "@/components/agent/messages";
-import { createAgentStreamStateUpdate } from "@/components/agent/stream-updates";
+import { executeAgentSendMessage } from "@/components/agent/send-handler";
+import type { AgentStreamStateUpdate } from "@/components/agent/stream-updates";
 import type { ChatMessage } from "@/components/agent/types";
-import {
-  streamAgentMessage,
-} from "@/lib/agent/client";
 import type { AgentClientSessionState } from "@/lib/agent/types";
 
 export interface UseAgentChatResult {
@@ -45,50 +41,34 @@ export function useAgentChat(
     setMessages((prev) => [...prev, message]);
   }, []);
 
+  const applyStreamUpdate = useCallback((update: AgentStreamStateUpdate) => {
+    if (update.sessionState !== undefined) {
+      setSessionState(update.sessionState);
+    }
+
+    if (update.message) {
+      appendMessage(update.message);
+    }
+
+    if (update.previewHtml) {
+      setPreviewHtml(update.previewHtml);
+      setShowPreview(true);
+    }
+  }, [appendMessage]);
+
   const sendMessage = useCallback(
     async (text?: string) => {
-      const msg = (text || input).trim();
-      if (!msg || isLoading) {
-        return;
-      }
-
-      setInput("");
-      setIsLoading(true);
-      appendMessage(createUserChatMessage(msg));
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 600000);
-
-      try {
-        await streamAgentMessage({
-          message: msg,
-          sessionId: sessionState?.sessionId,
-          signal: controller.signal,
-          onEvent: (event) => {
-            const update = createAgentStreamStateUpdate(event);
-
-            if (update.sessionState !== undefined) {
-              setSessionState(update.sessionState);
-            }
-
-            if (update.message) {
-              appendMessage(update.message);
-            }
-
-            if (update.previewHtml) {
-              setPreviewHtml(update.previewHtml);
-              setShowPreview(true);
-            }
-          },
-        });
-      } catch (error) {
-        appendMessage(createRequestErrorMessage(error));
-      } finally {
-        clearTimeout(timeoutId);
-        setIsLoading(false);
-      }
+      await executeAgentSendMessage({
+        appendMessage,
+        applyStreamUpdate,
+        isLoading,
+        message: text || input,
+        sessionId: sessionState?.sessionId,
+        setInput,
+        setLoading: setIsLoading,
+      });
     },
-    [appendMessage, input, isLoading, sessionState],
+    [appendMessage, applyStreamUpdate, input, isLoading, sessionState],
   );
 
   const resetChatState = useCallback(() => {
