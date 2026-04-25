@@ -1,18 +1,15 @@
 import { useCallback, useState } from "react";
 import type { KeyboardEvent, RefObject } from "react";
+import { executeAgentChatAction } from "@/components/agent/action-handlers";
 import {
   createInitialChatMessages,
   createRequestErrorMessage,
   createResetChatMessages,
-  createSaveErrorMessage,
-  createSaveSuccessMessage,
   createUserChatMessage,
 } from "@/components/agent/messages";
 import { createAgentStreamStateUpdate } from "@/components/agent/stream-updates";
 import type { ChatMessage } from "@/components/agent/types";
 import {
-  restartAgentSession,
-  saveAgentTool,
   streamAgentMessage,
 } from "@/lib/agent/client";
 import type { AgentClientSessionState } from "@/lib/agent/types";
@@ -94,51 +91,24 @@ export function useAgentChat(
     [appendMessage, input, isLoading, sessionState],
   );
 
-  const handleSave = useCallback(async () => {
-    if (!sessionState?.sessionId) {
-      return;
-    }
-
-    try {
-      const data = await saveAgentTool({
-        sessionId: sessionState.sessionId,
-        gradeId: sessionState.grade || "p5",
-        subjectId: sessionState.subject || "math",
-        semester: "上册",
-      });
-
-      if (data.ok) {
-        appendMessage(createSaveSuccessMessage(sessionState.toolName));
-        return;
-      }
-
-      throw new Error(data.error || "保存失败");
-    } catch (error) {
-      appendMessage(createSaveErrorMessage(error));
-    }
-  }, [appendMessage, sessionState]);
+  const resetChatState = useCallback(() => {
+    setSessionState(null);
+    setPreviewHtml(null);
+    setShowPreview(false);
+    setMessages(createResetChatMessages());
+  }, []);
 
   const handleAction = useCallback(
     (action: string) => {
-      switch (action) {
-        case "restart":
-          if (sessionState?.sessionId) {
-            void restartAgentSession(sessionState.sessionId);
-          }
-          setSessionState(null);
-          setPreviewHtml(null);
-          setShowPreview(false);
-          setMessages(createResetChatMessages());
-          return;
-        case "iterate":
-          inputRef.current?.focus();
-          return;
-        case "save":
-          void handleSave();
-          return;
-      }
+      void executeAgentChatAction({
+        action,
+        appendMessage,
+        inputRef,
+        resetChatState,
+        sessionState,
+      });
     },
-    [handleSave, inputRef, sessionState],
+    [appendMessage, inputRef, resetChatState, sessionState],
   );
 
   const handleKeyDown = useCallback(
