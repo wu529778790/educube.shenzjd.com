@@ -1,8 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
+import {
+  getFilterGradeCounts,
+  getJuniorGrades,
+  getPrimaryGrades,
+} from "@/components/home/filter-panel";
 import type { Tool } from "@/data/tools";
-import { grades } from "@/data/curriculum";
 
 interface FilterPanelProps {
   tools: Tool[];
@@ -19,21 +23,15 @@ export default function FilterPanel({
   displayCount,
   onGradeChange,
 }: FilterPanelProps) {
-  const counts = useMemo(() => {
-    const grade = new Map<string, number>();
-    for (const t of tools) {
-      if (t.subjectId === subjectId) {
-        grade.set(t.gradeId, (grade.get(t.gradeId) ?? 0) + 1);
-      }
-    }
-    grade.set("all", grade.size > 0 ? [...grade.values()].reduce((a, b) => a + b, 0) : 0);
-    return grade;
-  }, [tools, subjectId]);
+  const counts = useMemo(
+    () => getFilterGradeCounts(tools, subjectId),
+    [tools, subjectId],
+  );
 
   const countForGrade = (gid: string) => counts.get(gid) ?? 0;
 
-  const primaryGrades = grades.filter((g) => g.stage === "primary");
-  const juniorGrades = grades.filter((g) => g.stage === "junior");
+  const primaryGrades = getPrimaryGrades();
+  const juniorGrades = getJuniorGrades();
 
   return (
     <section
