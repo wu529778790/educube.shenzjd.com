@@ -1,4 +1,3 @@
-import { generateToolHtml, generateRefinedSpec } from "@/lib/ai-client";
 import {
   extractClientIp,
   GenerateConnectionGate,
@@ -7,18 +6,12 @@ import {
   isAllowedOrigin,
   isGenerateRequestAuthorized,
 } from "@/lib/generate/request-guards";
-import { sanitizeHtml } from "@/lib/html-sanitizer";
-import { publishGeneratedTool } from "@/lib/generated-tools/publish-generated-tool";
-import { logger } from "@/lib/logger";
 import {
-  REFINE_SYSTEM,
-  buildRefineUserPrompt,
-  buildSystemPrompt,
-  buildUserPrompt,
-  parseRefinedSpecOutput,
-} from "@/data/prompt-template";
+  generateAndPublishTool,
+  GenerateToolError,
+} from "@/lib/generate/service";
+import { logger } from "@/lib/logger";
 import { grades, subjects } from "@/data/curriculum";
-import { randomUUID } from "crypto";
 
 const GENERATE_SECRET = process.env.GENERATE_SECRET || "";
 const allowedOriginHosts = getAllowedOriginHosts({
@@ -39,10 +32,6 @@ interface GenerateRequest {
   subject: string;
   description: string;
 }
-
-const DEFAULT_GRADIENT: [string, string] = ["#3B82F6", "#2563EB"];
-const DEFAULT_ICON = "📐";
-const DEFAULT_CHAPTER = "综合实践";
 
 function validateInput(body: Partial<GenerateRequest>): string | null {
   if (!body.description?.trim()) return "请填写需求描述";
@@ -73,11 +62,6 @@ export async function GET(request: Request): Promise<Response> {
     headers: { "Content-Type": "application/json" },
   });
 }
-
-/* ================================================================
- * POST /api/generate — SSE 流式生成
- * ================================================================ */
-const MAX_HTML_SIZE = 1_024 * 1024; // 1MB 上限
 
 export async function POST(request: Request): Promise<Response> {
   const startTime = Date.now();
@@ -184,80 +168,45 @@ export async function POST(request: Request): Promise<Response> {
       }, 3 * 60 * 1000);
 
       try {
-        // ── 阶段 1：整理需求 ──
-        send("stage", { stage: "refining", message: "正在分析需求并整理规格说明…" });
+        const result = await generateAndPublishTool(
+          {
+            gradeId,
+            subjectId,
+            userIntent,
+          },
+          {
+            onStage(event) {
+              send("stage", event);
+            },
+            onRefined(event) {
+              send("refined", event);
+            },
+          },
+        );
 
-        let refinedRaw: string;
-        try {
-          refinedRaw = await generateRefinedSpec(
-            REFINE_SYSTEM,
-            buildRefineUserPrompt({ gradeLabel, subjectLabel, userIntent }),
-          );
-        } catch {
-          send("error", { error: "整理需求失败，请稍后重试" });
-          cleanup();
-          controller.close();
-          return;
-        }
-
-        const { name, spec } = parseRefinedSpecOutput(refinedRaw, userIntent);
-        send("refined", { refinedName: name, refinedSpec: spec });
-
-        // ── 阶段 2：生成 HTML ──
-        send("stage", { stage: "generating", message: "正在生成交互式教具页面…" });
-
-        const systemPrompt = buildSystemPrompt();
-        const userPrompt = buildUserPrompt({
-          name,
+        send("done", result);
+        logger.info("生成成功", {
+          id: result.tool.id,
+          name: result.refinedName,
           gradeLabel,
           subjectLabel,
-          chapter: DEFAULT_CHAPTER,
-          description: spec,
+          durationMs: Date.now() - startTime,
         });
-
-        let html: string;
-        try {
-          const raw = await generateToolHtml(systemPrompt, userPrompt);
-          // 生成的 HTML 大小限制
-          if (raw.length > MAX_HTML_SIZE) {
-            send("error", { error: "生成的教具过大，请简化需求后重试" });
-            cleanup();
-            controller.close();
-            return;
-          }
-          html = sanitizeHtml(raw, { preserveInlineEventHandlers: true });
-        } catch {
-          send("error", { error: "生成失败，请稍后重试" });
-          cleanup();
-          controller.close();
-          return;
-        }
-
-        // ── 阶段 3：保存 ──
-        send("stage", { stage: "saving", message: "正在保存教具…" });
-
-        const id = `gen-${randomUUID()}`;
-        const tool = await publishGeneratedTool({
-          id,
-          html,
-          meta: {
-            name,
-            grade: gradeId,
-            subject: subjectId,
-            chapter: DEFAULT_CHAPTER,
-            description: spec,
-            gradient: DEFAULT_GRADIENT,
-            icon: DEFAULT_ICON,
-          },
-        });
-
-        send("done", { tool, html, refinedName: name, refinedSpec: spec });
-        logger.info("生成成功", { id, name, durationMs: Date.now() - startTime });
         cleanup();
         controller.close();
       } catch (err) {
-        logger.error("生成失败", { message: err instanceof Error ? err.message : "未知错误", durationMs: Date.now() - startTime });
-        send("error", { error: "生成失败，请稍后重试" });
+        logger.error("生成失败", {
+          message: err instanceof Error ? err.message : "未知错误",
+          gradeLabel,
+          subjectLabel,
+          durationMs: Date.now() - startTime,
+        });
+        send("error", {
+          error:
+            err instanceof GenerateToolError
+              ? err.userMessage
+              : "生成失败，请稍后重试",
+        });
         cleanup();
         controller.close();
       }
