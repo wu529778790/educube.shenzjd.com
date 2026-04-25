@@ -13,6 +13,14 @@ import {
   quickReviewGeneratedTool,
 } from "@/lib/agent/analysis";
 import {
+  createAgentCreateDoneEvent,
+  createAgentErrorEvent,
+  createAgentModifyDoneEvent,
+  createAgentReviewEvent,
+} from "@/lib/agent/events";
+import {
+  applyCreateResultToSession,
+  applyModifyResultToSession,
   cloneSessionState,
   createEmptySessionState,
 } from "@/lib/agent/state";
@@ -99,35 +107,11 @@ export class AgentOrchestrator {
         gradeLabel,
         subjectLabel,
       });
-      this.state.toolName = result.toolName;
-      this.state.currentSpec = result.spec;
-      this.state.currentHtml = result.html;
-      this.state.stage = "idle";
-      this.state.messages.push({
-        role: "assistant",
-        content: `已生成教具「${result.toolName}」`,
-      });
-
-      yield {
-        type: "done",
-        content:
-          result.mode === "spec"
-            ? `教具「${result.toolName}」已生成！(Spec 模式)\n\n使用了组件框架渲染，交互更稳定。你可以说"修改XXX"来调整。`
-            : `教具「${result.toolName}」已生成！(HTML 模式)\n\n你可以说"修改XXX"来调整。`,
-        html: result.html,
-        spec: result.spec ?? undefined,
-        actions: [
-          { label: "保存教具", action: "save" },
-          { label: "继续优化", action: "iterate" },
-          { label: "重新生成", action: "restart" },
-        ],
-      };
+      applyCreateResultToSession(this.state, result);
+      yield createAgentCreateDoneEvent(result);
     } catch (err) {
       this.state.stage = "idle";
-      yield {
-        type: "error",
-        content: `生成失败：${err instanceof Error ? err.message : "未知错误"}，请重试。`,
-      };
+      yield createAgentErrorEvent("生成失败", err, "，请重试。");
     }
   }
 
@@ -157,31 +141,11 @@ export class AgentOrchestrator {
         messages: this.state.messages,
       });
 
-      this.state.currentHtml = result.html;
-      this.state.currentSpec = result.spec;
-      this.state.stage = "idle";
-
-      yield {
-        type: "done",
-        content: "已修改完成！右侧预览已更新。",
-        html: result.html,
-        spec: result.spec ?? undefined,
-        actions: [
-          { label: "保存教具", action: "save" },
-          { label: "继续优化", action: "iterate" },
-        ],
-      };
-
-      this.state.messages.push({
-        role: "assistant",
-        content: `已按"${userInput}"修改了教具`,
-      });
+      applyModifyResultToSession(this.state, userInput, result);
+      yield createAgentModifyDoneEvent(result);
     } catch (err) {
       this.state.stage = "idle";
-      yield {
-        type: "error",
-        content: `修改失败：${err instanceof Error ? err.message : "未知错误"}`,
-      };
+      yield createAgentErrorEvent("修改失败", err);
     }
   }
 
@@ -197,14 +161,6 @@ export class AgentOrchestrator {
 
     const result = quickReviewGeneratedTool(this.state.currentHtml);
 
-    yield {
-      type: "done",
-      content: `审查完成：\n\n${result.summary}\n\n你可以说"修改XXX"来修复问题。`,
-      html: this.state.currentHtml,
-      actions: [
-        { label: "自动修复", action: "autoFix" },
-        { label: "保存教具", action: "save" },
-      ],
-    };
+    yield createAgentReviewEvent(this.state, result.summary);
   }
 }
