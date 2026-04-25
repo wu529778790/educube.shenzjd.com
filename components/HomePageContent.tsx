@@ -2,7 +2,13 @@
 
 import { useMemo, useState, useDeferredValue, useCallback, useEffect } from "react";
 import type { Tool } from "@/data/tools";
-import { filterToolsByCatalog } from "@/data/tools";
+import {
+  buildCatalogSearchParams,
+  getCatalogGradeId,
+  getCatalogSearchInput,
+  getCatalogTools,
+  getDisplayTools,
+} from "@/components/home/catalog";
 import { defaultCatalogPath } from "@/data/curriculum";
 import Header from "./Header";
 import FilterPanel from "./FilterPanel";
@@ -10,35 +16,21 @@ import ToolGrid from "./ToolGrid";
 import EmptyState from "./EmptyState";
 import { useRouter, useSearchParams } from "next/navigation";
 
-function sortToolsForDisplay(list: Tool[]): Tool[] {
-  return [...list].sort((a, b) => {
-    if (a.semester !== b.semester) return a.semester === "上册" ? -1 : 1;
-    if (a.unitNum !== b.unitNum) return a.unitNum - b.unitNum;
-    return a.id.localeCompare(b.id);
-  });
-}
-
 export default function HomePageContent({ tools }: { tools: Tool[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const gradeId = searchParams.get("grade") ?? defaultCatalogPath.gradeId;
-  const subjectId = defaultCatalogPath.subjectId;
-  const [searchInput, setSearchInput] = useState(searchParams.get("q") ?? "");
+  const gradeId = getCatalogGradeId(searchParams);
+  const [searchInput, setSearchInput] = useState(getCatalogSearchInput(searchParams));
   const searchQuery = useDeferredValue(searchInput);
 
   const updateURL = useCallback(
     (overrides: { grade?: string; q?: string }) => {
-      const next = new URLSearchParams(searchParams);
-      const grade = overrides.grade ?? gradeId;
-      const q = overrides.q ?? searchQuery;
-
-      if (grade && grade !== defaultCatalogPath.gradeId) next.set("grade", grade);
-      else next.delete("grade");
-
-      if (q) next.set("q", q);
-      else next.delete("q");
-
+      const next = buildCatalogSearchParams({
+        current: searchParams,
+        gradeId: overrides.grade ?? gradeId,
+        query: overrides.q ?? searchQuery,
+      });
       const qs = next.toString();
       router.replace(qs ? `?${qs}` : "/", { scroll: false });
     },
@@ -64,25 +56,12 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
   }, []);
 
   const catalogTools = useMemo(
-    () => filterToolsByCatalog(tools, gradeId, subjectId),
-    [tools, gradeId, subjectId],
+    () => getCatalogTools(tools, gradeId),
+    [tools, gradeId],
   );
 
   const displayTools = useMemo(() => {
-    let list = catalogTools;
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
-      list = list.filter(
-        (t) =>
-          t.name.toLowerCase().includes(q) ||
-          t.description.toLowerCase().includes(q) ||
-          t.chapter.toLowerCase().includes(q) ||
-          t.tags.some((tag) => tag.toLowerCase().includes(q)),
-      );
-    }
-
-    return sortToolsForDisplay(list);
+    return getDisplayTools(catalogTools, searchQuery);
   }, [catalogTools, searchQuery]);
 
   return (
@@ -96,7 +75,7 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
       <FilterPanel
         tools={tools}
         gradeId={gradeId}
-        subjectId={subjectId}
+        subjectId={defaultCatalogPath.subjectId}
         displayCount={displayTools.length}
         onGradeChange={handleGradeChange}
       />
