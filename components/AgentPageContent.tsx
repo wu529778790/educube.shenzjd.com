@@ -1,209 +1,36 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import Link from "next/link";
 import AgentInputBar from "@/components/agent/AgentInputBar";
 import AgentMessageList from "@/components/agent/AgentMessageList";
 import AgentPreviewPanel from "@/components/agent/AgentPreviewPanel";
-import type { ChatMessage } from "@/components/agent/types";
-import {
-  restartAgentSession,
-  saveAgentTool,
-  streamAgentMessage,
-} from "@/lib/agent/client";
-import type {
-  AgentClientSessionState,
-} from "@/lib/agent/types";
+import { useAgentChat } from "@/components/agent/useAgentChat";
 
 /* ──────────────────────────────────────
  * Agent 对话页面
  * ────────────────────────────────────── */
 
 export default function AgentPageContent() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: "你好！我是教立方的 AI 助手。\n\n你可以用自然语言描述你想创建的教学工具，我会帮你生成交互式教具。例如：\n\n• 「做一个三年级分数初步认识的工具」\n• 「生成一个五年级面积计算的互动教具」\n\n生成后你可以继续说「把颜色改成蓝色」「增加一个练习模式」来修改。",
-    },
-  ]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
-  const [sessionState, setSessionState] =
-    useState<AgentClientSessionState | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const {
+    handleAction,
+    handleKeyDown,
+    input,
+    isLoading,
+    messages,
+    previewHtml,
+    sendMessage,
+    setInput,
+    setShowPreview,
+    showPreview,
+  } = useAgentChat(inputRef);
 
   // 自动滚动到底部
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  // 发送消息
-  const sendMessage = useCallback(
-    async (text?: string) => {
-      const msg = (text || input).trim();
-      if (!msg || isLoading) return;
-
-      setInput("");
-      setIsLoading(true);
-
-      // 添加用户消息
-      const userMsg: ChatMessage = {
-        id: `user-${Date.now()}`,
-        role: "user",
-        content: msg,
-      };
-      setMessages((prev) => [...prev, userMsg]);
-
-      // 创建超时控制器（10分钟）
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 600000);
-
-      try {
-        await streamAgentMessage({
-          message: msg,
-          sessionId: sessionState?.sessionId,
-          signal: controller.signal,
-          onEvent: (event) => {
-            if (event.type === "done") {
-              if (event._state !== undefined) {
-                setSessionState(event._state ?? null);
-              }
-              if (event.html) {
-                setPreviewHtml(event.html);
-                setShowPreview(true);
-              }
-              return;
-            }
-
-            if (event.type === "error") {
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: `error-${Date.now()}`,
-                  role: "assistant",
-                  content: event.content,
-                  stage: "error",
-                },
-              ]);
-              return;
-            }
-
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: `${event.type}-${Date.now()}`,
-                role: "assistant",
-                content: event.content,
-                stage: event.type,
-                actions: event.actions,
-              },
-            ]);
-
-            if (event.html) {
-              setPreviewHtml(event.html);
-              setShowPreview(true);
-            }
-          },
-        });
-      } catch (err) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `error-${Date.now()}`,
-            role: "assistant",
-            content: `出错了：${err instanceof Error ? err.message : "请重试"}`,
-            stage: "error",
-          },
-        ]);
-      } finally {
-        clearTimeout(timeoutId);
-        setIsLoading(false);
-      }
-    },
-    [input, isLoading, sessionState],
-  );
-
-  // 处理快捷操作
-  const handleAction = useCallback(
-    (action: string) => {
-      switch (action) {
-        case "restart":
-          if (sessionState?.sessionId) {
-            void restartAgentSession(sessionState.sessionId);
-          }
-          setSessionState(null);
-          setPreviewHtml(null);
-          setShowPreview(false);
-          setMessages([
-            {
-              id: "welcome",
-              role: "assistant",
-              content: "已重置。请描述你想创建的教具。",
-            },
-          ]);
-          break;
-        case "iterate":
-          inputRef.current?.focus();
-          break;
-        case "save":
-          handleSave();
-          break;
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sessionState],
-  );
-
-  const handleSave = useCallback(async () => {
-    if (!sessionState?.sessionId) return;
-
-    try {
-      const data = await saveAgentTool({
-        sessionId: sessionState.sessionId,
-        gradeId: sessionState.grade || "p5",
-        subjectId: sessionState.subject || "math",
-        semester: "上册",
-      });
-      if (data.ok) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `save-${Date.now()}`,
-            role: "assistant",
-            content: `教具「${sessionState.toolName || "自定义教具"}」已保存成功！`,
-          },
-        ]);
-      } else {
-        throw new Error(data.error || "保存失败");
-      }
-    } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `save-err-${Date.now()}`,
-          role: "assistant",
-          content: `保存失败：${err instanceof Error ? err.message : "请重试"}`,
-          stage: "error",
-        },
-      ]);
-    }
-  }, [sessionState]);
-
-  // 键盘快捷键
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-      }
-    },
-    [sendMessage],
-  );
 
   return (
     <div className="agent-page">
