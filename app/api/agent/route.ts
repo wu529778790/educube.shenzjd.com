@@ -6,11 +6,10 @@
  */
 
 import { NextRequest } from "next/server";
-import { revalidatePath } from "next/cache";
 import { AgentOrchestrator } from "@/lib/agent/orchestrator";
-import { saveGeneratedTool } from "@/data/generated-tools";
 import type { SessionState } from "@/lib/agent/orchestrator";
 import { logger } from "@/lib/logger";
+import { publishGeneratedTool } from "@/lib/generated-tools/publish-generated-tool";
 import {
   deleteAgentSession,
   getAgentSession,
@@ -131,10 +130,10 @@ async function handleSave(
 
   try {
     const id = `gen-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const tool = await saveGeneratedTool(
+    const tool = await publishGeneratedTool({
       id,
-      sessionState.currentHtml,
-      {
+      html: sessionState.currentHtml,
+      meta: {
         name: sessionState.toolName || "自定义教具",
         grade: meta.gradeId,
         subject: meta.subjectId,
@@ -143,8 +142,7 @@ async function handleSave(
         gradient: ["#7c3aed", "#6366f1"] as [string, string],
         icon: "sparkles",
       },
-    );
-    revalidatePath("/");
+    });
 
     return Response.json({
       ok: true,

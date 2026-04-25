@@ -5,8 +5,7 @@ const deleteAgentSession = vi.fn();
 const getAgentSession = vi.fn();
 const getOrCreateAgentSession = vi.fn();
 const saveAgentSession = vi.fn();
-const saveGeneratedTool = vi.fn();
-const revalidatePath = vi.fn();
+const publishGeneratedTool = vi.fn();
 
 let orchestratorEvents: Array<Record<string, unknown>> = [];
 let orchestratorFinalState: SessionState;
@@ -29,12 +28,8 @@ vi.mock("@/lib/agent/session-store", () => ({
   saveAgentSession,
 }));
 
-vi.mock("@/data/generated-tools", () => ({
-  saveGeneratedTool,
-}));
-
-vi.mock("next/cache", () => ({
-  revalidatePath,
+vi.mock("@/lib/generated-tools/publish-generated-tool", () => ({
+  publishGeneratedTool,
 }));
 
 vi.mock("@/lib/agent/orchestrator", () => ({
@@ -72,8 +67,7 @@ beforeEach(() => {
   getAgentSession.mockReset();
   getOrCreateAgentSession.mockReset();
   saveAgentSession.mockReset();
-  saveGeneratedTool.mockReset();
-  revalidatePath.mockReset();
+  publishGeneratedTool.mockReset();
 });
 
 afterEach(() => {
@@ -104,7 +98,7 @@ describe("/api/agent", () => {
   it("save 动作从服务端 session 读取 HTML 并触发首页刷新", async () => {
     const { POST } = await importRouteModule();
     getAgentSession.mockReturnValue(baseState);
-    saveGeneratedTool.mockResolvedValue({
+    publishGeneratedTool.mockResolvedValue({
       id: "gen-1",
       name: "测试教具",
     });
@@ -123,16 +117,17 @@ describe("/api/agent", () => {
     );
 
     expect(getAgentSession).toHaveBeenCalledWith("sess-2");
-    expect(saveGeneratedTool).toHaveBeenCalledWith(
-      expect.stringMatching(/^gen-/),
-      baseState.currentHtml,
+    expect(publishGeneratedTool).toHaveBeenCalledWith(
       expect.objectContaining({
-        name: "测试教具",
-        grade: "p5",
-        subject: "math",
+        id: expect.stringMatching(/^gen-/),
+        html: baseState.currentHtml,
+        meta: expect.objectContaining({
+          name: "测试教具",
+          grade: "p5",
+          subject: "math",
+        }),
       }),
     );
-    expect(revalidatePath).toHaveBeenCalledWith("/");
 
     const data = await response.json();
     expect(data.ok).toBe(true);

@@ -1,6 +1,6 @@
 import { generateToolHtml, generateRefinedSpec } from "@/lib/ai-client";
 import { sanitizeHtml } from "@/lib/html-sanitizer";
-import { saveGeneratedTool } from "@/data/generated-tools";
+import { publishGeneratedTool } from "@/lib/generated-tools/publish-generated-tool";
 import { logger } from "@/lib/logger";
 import {
   REFINE_SYSTEM,
@@ -11,7 +11,6 @@ import {
 } from "@/data/prompt-template";
 import { grades, subjects } from "@/data/curriculum";
 import { randomUUID } from "crypto";
-import { revalidatePath } from "next/cache";
 
 /* ================================================================
  * 共享密钥认证：防止未授权调用消耗 AI API 额度
@@ -348,18 +347,19 @@ export async function POST(request: Request): Promise<Response> {
         send("stage", { stage: "saving", message: "正在保存教具…" });
 
         const id = `gen-${randomUUID()}`;
-        const tool = await saveGeneratedTool(id, html, {
-          name,
-          grade: gradeId,
-          subject: subjectId,
-          chapter: DEFAULT_CHAPTER,
-          description: spec,
-          gradient: DEFAULT_GRADIENT,
-          icon: DEFAULT_ICON,
+        const tool = await publishGeneratedTool({
+          id,
+          html,
+          meta: {
+            name,
+            grade: gradeId,
+            subject: subjectId,
+            chapter: DEFAULT_CHAPTER,
+            description: spec,
+            gradient: DEFAULT_GRADIENT,
+            icon: DEFAULT_ICON,
+          },
         });
-
-        // 主动刷新首页缓存，使新生成的工具立即可见
-        revalidatePath("/");
 
         send("done", { tool, html, refinedName: name, refinedSpec: spec });
         logger.info("生成成功", { id, name, durationMs: Date.now() - startTime });
