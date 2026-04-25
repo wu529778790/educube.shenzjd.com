@@ -9,6 +9,11 @@
  */
 
 import { generateChatText } from "@/lib/ai-client";
+import type {
+  AgentEvent,
+  AgentMessage,
+  SessionState,
+} from "@/lib/agent/types";
 import {
   buildRefineUserPrompt,
   parseRefinedSpecOutput,
@@ -25,42 +30,6 @@ import {
 } from "@/lib/html-sanitizer";
 import { logger } from "@/lib/logger";
 import { AI_MAX_TOKENS } from "@/lib/runtime-config";
-
-/* ──────────────────────────────────────
- * 类型定义
- * ────────────────────────────────────── */
-
-export interface AgentMessage {
-  role: "user" | "assistant";
-  content: string;
-}
-
-export interface AgentEvent {
-  type: "thinking" | "planning" | "generating" | "reviewing" | "editing" | "done" | "error";
-  content: string;
-  /** 生成的 HTML（仅 generating/done 阶段） */
-  html?: string;
-  /** 生成的 JSON Spec（仅 planning 阶段） */
-  spec?: Record<string, unknown>;
-  /** 可选的操作按钮 */
-  actions?: AgentAction[];
-}
-
-export interface AgentAction {
-  label: string;
-  action: string;
-}
-
-export interface SessionState {
-  messages: AgentMessage[];
-  currentHtml: string | null;
-  currentSpec: Record<string, unknown> | null;
-  stage: "idle" | "planning" | "generating" | "reviewing" | "editing";
-  toolName: string | null;
-  chapter: string | null;
-  grade: string | null;
-  subject: string | null;
-}
 
 /* ──────────────────────────────────────
  * Agent 编排器

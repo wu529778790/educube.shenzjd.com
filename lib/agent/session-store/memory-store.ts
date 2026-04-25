@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import type { SessionState } from "@/lib/agent/orchestrator";
+import type { SessionState } from "@/lib/agent/types";
 import type {
   AgentSessionSnapshot,
   AgentSessionStore,

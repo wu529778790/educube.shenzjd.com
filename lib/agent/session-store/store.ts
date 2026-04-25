@@ -1,4 +1,4 @@
-import type { SessionState } from "@/lib/agent/orchestrator";
+import type { SessionState } from "@/lib/agent/types";
 
 export interface AgentSessionSnapshot {
   sessionId: string;

@@ -1,4 +1,4 @@
-import type { SessionState } from "@/lib/agent/orchestrator";
+import type { SessionState } from "@/lib/agent/types";
 import { getDefaultAgentSessionStore } from "@/lib/agent/session-store/provider";
 import type { AgentSessionSnapshot } from "@/lib/agent/session-store/store";
 

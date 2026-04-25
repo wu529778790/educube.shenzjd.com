@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { SessionState } from "@/lib/agent/orchestrator";
+import type { SessionState } from "@/lib/agent/types";
 
 const deleteAgentSession = vi.fn();
 const getAgentSession = vi.fn();

@@ -7,7 +7,11 @@
 
 import { NextRequest } from "next/server";
 import { AgentOrchestrator } from "@/lib/agent/orchestrator";
-import type { SessionState } from "@/lib/agent/orchestrator";
+import type {
+  AgentClientSessionState,
+  AgentStreamEvent,
+  SessionState,
+} from "@/lib/agent/types";
 import { createSseHeaders, formatSseData } from "@/lib/http/sse";
 import { logger } from "@/lib/logger";
 import { publishGeneratedTool } from "@/lib/generated-tools/publish-generated-tool";
@@ -33,15 +37,6 @@ interface AgentRequestBody {
   };
 }
 
-interface ClientSessionState {
-  sessionId: string;
-  stage: SessionState["stage"];
-  toolName: string | null;
-  chapter: string | null;
-  grade: string | null;
-  subject: string | null;
-}
-
 export async function POST(req: NextRequest) {
   let body: AgentRequestBody;
   try {
@@ -65,7 +60,7 @@ export async function POST(req: NextRequest) {
         type: "done",
         content: "已重置。请描述你想创建的教具。",
         _state: null,
-      }) + "\n",
+      } satisfies AgentStreamEvent) + "\n",
       { headers: createSseHeaders() },
     );
   }
@@ -98,7 +93,7 @@ export async function POST(req: NextRequest) {
           type: "done",
           content: "",
           _state: toClientSessionState(session.sessionId, finalState),
-        } as Record<string, unknown> & { type: string; content: string });
+        } satisfies AgentStreamEvent);
         logger.debug("Agent SSE 最终状态", { event: finalEvent.trim() });
         controller.enqueue(encoder.encode(finalEvent));
         controller.close();
@@ -161,7 +156,7 @@ async function handleSave(
 function toClientSessionState(
   sessionId: string,
   state: SessionState,
-): ClientSessionState {
+): AgentClientSessionState {
   return {
     sessionId,
     stage: state.stage,

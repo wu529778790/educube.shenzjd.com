@@ -2,34 +2,22 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
+import type {
+  AgentAction,
+  AgentClientSessionState,
+  AgentStreamEvent,
+} from "@/lib/agent/types";
 
 /* ──────────────────────────────────────
  * 类型定义
  * ────────────────────────────────────── */
-
-interface AgentEvent {
-  type: "thinking" | "planning" | "generating" | "reviewing" | "editing" | "done" | "error";
-  content: string;
-  html?: string;
-  actions?: { label: string; action: string }[];
-  _state?: SessionState | null;
-}
-
-interface SessionState {
-  sessionId: string;
-  stage: string;
-  toolName: string | null;
-  chapter: string | null;
-  grade: string | null;
-  subject: string | null;
-}
 
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
   stage?: string;
-  actions?: { label: string; action: string }[];
+  actions?: AgentAction[];
 }
 
 /* ──────────────────────────────────────
@@ -47,7 +35,8 @@ export default function AgentPageContent() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
-  const [sessionState, setSessionState] = useState<SessionState | null>(null);
+  const [sessionState, setSessionState] =
+    useState<AgentClientSessionState | null>(null);
   const [showPreview, setShowPreview] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -122,7 +111,7 @@ export default function AgentPageContent() {
             const trimmed = line.trim();
             if (!trimmed.startsWith("data: ")) continue;
             try {
-              const event: AgentEvent = JSON.parse(trimmed.slice(5));
+              const event: AgentStreamEvent = JSON.parse(trimmed.slice(5));
               eventCount++;
               console.log("[Client SSE event]", eventCount, event.type, event.content?.slice(0, 50));
 
