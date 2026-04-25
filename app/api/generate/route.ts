@@ -1,4 +1,12 @@
 import { generateToolHtml, generateRefinedSpec } from "@/lib/ai-client";
+import {
+  extractClientIp,
+  GenerateConnectionGate,
+  GenerateRateLimiter,
+  getAllowedOriginHosts,
+  isAllowedOrigin,
+  isGenerateRequestAuthorized,
+} from "@/lib/generate/request-guards";
 import { sanitizeHtml } from "@/lib/html-sanitizer";
 import { publishGeneratedTool } from "@/lib/generated-tools/publish-generated-tool";
 import { logger } from "@/lib/logger";
@@ -12,109 +20,13 @@ import {
 import { grades, subjects } from "@/data/curriculum";
 import { randomUUID } from "crypto";
 
-/* ================================================================
- * 共享密钥认证：防止未授权调用消耗 AI API 额度
- *
- * 设置环境变量 GENERATE_SECRET 后，POST /api/generate 要求请求头
- * X-Generate-Secret 携带相同密钥。GET 端点（查询余量）免认证。
- * 未设置 GENERATE_SECRET 时跳过认证（开发模式）。
- * ================================================================ */
 const GENERATE_SECRET = process.env.GENERATE_SECRET || "";
-
-function checkAuth(request: Request): Response | null {
-  if (!GENERATE_SECRET) return null; // 未配置密钥则跳过
-  const header = request.headers.get("x-generate-secret") ?? "";
-  if (header === GENERATE_SECRET) return null;
-  return new Response(
-    JSON.stringify({ error: "认证失败" }),
-    { status: 401, headers: { "Content-Type": "application/json" } },
-  );
-}
-
-/* ================================================================
- * IP 限流：5 次/小时，自动清理过期条目，防止内存泄漏
- * ================================================================ */
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 5;
-const RATE_WINDOW = 60 * 60 * 1000; // 1 小时
-const CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 分钟清理一次
-const MAX_ENTRIES = 10_000; // Map 大小上限，防止 OOM
-let lastCleanup = Date.now();
-
-/** 校验字符串是否为合法 IPv4 或 IPv6 格式 */
-const IP_REGEX =
-  /^(?:(?:\d{1,3}\.){3}\d{1,3}|(?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}|unknown)$/;
-
-/**
- * 提取客户端真实 IP。
- * 优先使用 CDN 提供商的真实 IP 头（如 CF-Connecting-IP），
- * 再回退到 x-forwarded-for / x-real-ip。
- */
-function extractClientIp(request: Request): string {
-  // 优先使用 CDN 提供商头（不可被客户端伪造）
-  const cfIp = request.headers.get("cf-connecting-ip");
-  if (cfIp && IP_REGEX.test(cfIp)) return cfIp;
-
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    const parts = forwarded.split(",").map((s) => s.trim()).filter(Boolean);
-    const skipCount = parseInt(process.env.TRUSTED_PROXY_COUNT || "1", 10);
-    const idx = Math.max(0, parts.length - skipCount);
-    const ip = parts[idx];
-    if (ip && IP_REGEX.test(ip)) return ip;
-  }
-  const realIp = request.headers.get("x-real-ip");
-  if (realIp && IP_REGEX.test(realIp)) return realIp;
-  return "unknown";
-}
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-
-  const needsCleanup =
-    now - lastCleanup > CLEANUP_INTERVAL ||
-    rateLimitMap.size >= MAX_ENTRIES;
-
-  if (needsCleanup) {
-    // 批量清理所有过期条目
-    for (const [key, val] of rateLimitMap) {
-      if (now > val.resetAt) rateLimitMap.delete(key);
-    }
-    // 超过上限时批量驱逐最旧的 10%
-    if (rateLimitMap.size >= MAX_ENTRIES) {
-      const entries = [...rateLimitMap.entries()]
-        .sort((a, b) => a[1].resetAt - b[1].resetAt);
-      const toRemove = Math.max(1, Math.floor(entries.length * 0.1));
-      for (let i = 0; i < toRemove && i < entries.length; i++) {
-        rateLimitMap.delete(entries[i][0]);
-      }
-    }
-    lastCleanup = now;
-  }
-
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT) return false;
-  entry.count++;
-  return true;
-}
-
-function getRemainingCount(ip: string): { remaining: number; resetAt: number } {
-  const entry = rateLimitMap.get(ip);
-  if (!entry || Date.now() > entry.resetAt) {
-    return { remaining: RATE_LIMIT, resetAt: Date.now() + RATE_WINDOW };
-  }
-  return { remaining: RATE_LIMIT - entry.count, resetAt: entry.resetAt };
-}
-
-/* ================================================================
- * 并发连接限制：防止 Slowloris 式攻击耗尽服务器资源
- * ================================================================ */
-let activeConnections = 0;
-const MAX_CONCURRENT = 10;
+const allowedOriginHosts = getAllowedOriginHosts({
+  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://educube.cn",
+  extraOrigins: process.env.ALLOWED_ORIGINS,
+});
+const rateLimiter = new GenerateRateLimiter();
+const connectionGate = new GenerateConnectionGate(10);
 
 /* ================================================================
  * 输入校验
@@ -151,31 +63,12 @@ function sseMessage(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
-/** 服务端配置的合法 Origin 白名单 */
-function getAllowedOrigins(): Set<string> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://educube.cn";
-  const origins = new Set([
-    new URL(siteUrl).host,
-    "localhost:3000",
-    "127.0.0.1:3000",
-  ]);
-  // 额外配置
-  const extra = process.env.ALLOWED_ORIGINS;
-  if (extra) {
-    for (const o of extra.split(",")) {
-      const trimmed = o.trim();
-      if (trimmed) origins.add(trimmed);
-    }
-  }
-  return origins;
-}
-
 /* ================================================================
  * GET /api/generate — 查询剩余次数（免认证）
  * ================================================================ */
 export async function GET(request: Request): Promise<Response> {
   const ip = extractClientIp(request);
-  const { remaining, resetAt } = getRemainingCount(ip);
+  const { remaining, resetAt } = rateLimiter.getRemaining(ip);
   return new Response(JSON.stringify({ remaining, resetAt }), {
     headers: { "Content-Type": "application/json" },
   });
@@ -190,40 +83,35 @@ export async function POST(request: Request): Promise<Response> {
   const startTime = Date.now();
   const ip = extractClientIp(request);
 
-  // 共享密钥认证
-  const authErr = checkAuth(request);
-  if (authErr) return authErr;
+  if (!isGenerateRequestAuthorized(request, GENERATE_SECRET)) {
+    return new Response(
+      JSON.stringify({ error: "认证失败" }),
+      { status: 401, headers: { "Content-Type": "application/json" } },
+    );
+  }
 
-  // 并发连接限制
-  if (activeConnections >= MAX_CONCURRENT) {
-    logger.warn("并发连接数已达上限", { ip, active: activeConnections });
+  if (!connectionGate.tryAcquire()) {
+    logger.warn("并发连接数已达上限", {
+      ip,
+      active: connectionGate.getActiveCount(),
+    });
     return new Response(
       JSON.stringify({ error: "服务器繁忙，请稍后重试" }),
       { status: 503, headers: { "Content-Type": "application/json" } },
     );
   }
 
-  // CSRF 防护：校验 Origin 头（使用服务端白名单而非客户端 Host 头）
   const origin = request.headers.get("origin");
-  if (origin) {
-    const allowedOrigins = getAllowedOrigins();
-    try {
-      const originHost = new URL(origin).host;
-      if (!allowedOrigins.has(originHost)) {
-        return new Response(
-          JSON.stringify({ error: "不允许的请求来源" }),
-          { status: 403, headers: { "Content-Type": "application/json" } },
-        );
-      }
-    } catch {
-      return new Response(
-        JSON.stringify({ error: "无效的请求来源" }),
-        { status: 403, headers: { "Content-Type": "application/json" } },
-      );
-    }
+  if (!isAllowedOrigin(origin, allowedOriginHosts)) {
+    connectionGate.release();
+    return new Response(
+      JSON.stringify({ error: "不允许的请求来源" }),
+      { status: 403, headers: { "Content-Type": "application/json" } },
+    );
   }
 
-  if (!checkRateLimit(ip)) {
+  if (!rateLimiter.check(ip)) {
+    connectionGate.release();
     logger.warn("生成请求被限流拒绝", { ip });
     return new Response(
       JSON.stringify({ error: "生成次数已达上限，请一小时后再试" }),
@@ -236,6 +124,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const rawBody = await request.text();
     if (rawBody.length > 10_000) {
+      connectionGate.release();
       return new Response(
         JSON.stringify({ error: "请求体过大" }),
         { status: 413, headers: { "Content-Type": "application/json" } },
@@ -243,6 +132,7 @@ export async function POST(request: Request): Promise<Response> {
     }
     body = JSON.parse(rawBody);
   } catch {
+    connectionGate.release();
     return new Response(
       JSON.stringify({ error: "请求格式错误" }),
       { status: 400, headers: { "Content-Type": "application/json" } },
@@ -251,6 +141,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const validationError = validateInput(body);
   if (validationError) {
+    connectionGate.release();
     return new Response(
       JSON.stringify({ error: validationError }),
       { status: 400, headers: { "Content-Type": "application/json" } },
@@ -266,7 +157,6 @@ export async function POST(request: Request): Promise<Response> {
   const subjectLabel =
     subjects.find((s) => s.id === subjectId)?.name ?? subjectId;
 
-  activeConnections++;
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -283,7 +173,7 @@ export async function POST(request: Request): Promise<Response> {
       const cleanup = () => {
         clearInterval(heartbeat);
         clearTimeout(serverTimeout);
-        activeConnections--;
+        connectionGate.release();
       };
 
       // 服务端超时：3 分钟后强制关闭
