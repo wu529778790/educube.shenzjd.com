@@ -1,4 +1,8 @@
 import { randomUUID } from "crypto";
+import {
+  cloneSessionState,
+  createEmptySessionState,
+} from "@/lib/agent/state";
 import type { SessionState } from "@/lib/agent/types";
 import type {
   AgentSessionSnapshot,
@@ -13,27 +17,6 @@ interface StoredSession {
 const SESSION_TTL = 2 * 60 * 60 * 1000;
 const MAX_SESSIONS = 500;
 
-function cloneState(state: SessionState): SessionState {
-  return {
-    ...state,
-    messages: [...state.messages],
-    currentSpec: state.currentSpec ? { ...state.currentSpec } : null,
-  };
-}
-
-function emptyState(): SessionState {
-  return {
-    messages: [],
-    currentHtml: null,
-    currentSpec: null,
-    stage: "idle",
-    toolName: null,
-    chapter: null,
-    grade: null,
-    subject: null,
-  };
-}
-
 export class MemoryAgentSessionStore implements AgentSessionStore {
   private sessionStore = new Map<string, StoredSession>();
 
@@ -47,17 +30,17 @@ export class MemoryAgentSessionStore implements AgentSessionStore {
         existing.updatedAt = now;
         return {
           sessionId,
-          state: cloneState(existing.state),
+          state: cloneSessionState(existing.state),
         };
       }
     }
 
     const nextSessionId = randomUUID();
-    const state = emptyState();
+    const state = createEmptySessionState();
     this.sessionStore.set(nextSessionId, { state, updatedAt: now });
     return {
       sessionId: nextSessionId,
-      state: cloneState(state),
+      state: cloneSessionState(state),
     };
   }
 
@@ -65,7 +48,7 @@ export class MemoryAgentSessionStore implements AgentSessionStore {
     const now = Date.now();
     this.prune(now);
     this.sessionStore.set(sessionId, {
-      state: cloneState(state),
+      state: cloneSessionState(state),
       updatedAt: now,
     });
   }
@@ -76,7 +59,7 @@ export class MemoryAgentSessionStore implements AgentSessionStore {
     const existing = this.sessionStore.get(sessionId);
     if (!existing) return null;
     existing.updatedAt = now;
-    return cloneState(existing.state);
+    return cloneSessionState(existing.state);
   }
 
   delete(sessionId: string): void {

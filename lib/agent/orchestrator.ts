@@ -13,6 +13,10 @@ import {
   quickReviewGeneratedTool,
 } from "@/lib/agent/analysis";
 import {
+  cloneSessionState,
+  createEmptySessionState,
+} from "@/lib/agent/state";
+import {
   createAgentTool,
   modifyAgentTool,
 } from "@/lib/agent/workflow";
@@ -30,19 +34,14 @@ export class AgentOrchestrator {
 
   constructor(initialState?: Partial<SessionState>) {
     this.state = {
-      messages: initialState?.messages || [],
-      currentHtml: initialState?.currentHtml || null,
-      currentSpec: initialState?.currentSpec || null,
-      stage: initialState?.stage || "idle",
-      toolName: initialState?.toolName || null,
-      chapter: initialState?.chapter || null,
-      subject: initialState?.subject || null,
-      grade: initialState?.grade || null,
+      ...createEmptySessionState(),
+      ...initialState,
+      messages: initialState?.messages ?? [],
     };
   }
 
   getState(): SessionState {
-    return { ...this.state };
+    return cloneSessionState(this.state);
   }
 
   /**
