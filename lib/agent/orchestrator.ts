@@ -8,40 +8,18 @@
  * 4. 流式输出 SSE 事件
  */
 
-import { generateChatText } from "@/lib/ai-client";
 import {
   detectAgentIntent,
   quickReviewGeneratedTool,
 } from "@/lib/agent/analysis";
 import {
-  buildCreateFallbackHtmlPrompt,
-  buildEditPrompt,
-  buildEditSpecPrompt,
-  buildFallbackSystemPrompt,
-  EDIT_SPEC_SYSTEM_PROMPT,
-  EDIT_SYSTEM_PROMPT,
-  REFINE_SYSTEM_AGENT,
-} from "@/lib/agent/prompting";
-import { validateSpecRuntime } from "@/lib/agent/spec-runtime";
+  createAgentTool,
+  modifyAgentTool,
+} from "@/lib/agent/workflow";
 import type {
   AgentEvent,
   SessionState,
 } from "@/lib/agent/types";
-import {
-  buildRefineUserPrompt,
-  parseRefinedSpecOutput,
-} from "@/data/prompt-template";
-import {
-  buildSpecSystemPrompt,
-  buildSpecUserPrompt,
-  parseSpecOutput,
-  wrapSpecAsHtml,
-} from "@/data/spec-prompt";
-import {
-  sanitizeHtml,
-} from "@/lib/html-sanitizer";
-import { logger } from "@/lib/logger";
-import { AI_MAX_TOKENS } from "@/lib/runtime-config";
 
 /* ──────────────────────────────────────
  * Agent 编排器
@@ -106,34 +84,10 @@ export class AgentOrchestrator {
     const gradeLabel = this.state.grade || "未指定年级";
     const subjectLabel = this.state.subject || "数学";
 
-    let refinedSpec: { name: string; spec: string };
-    try {
-      const refineResult = await generateChatText(
-        REFINE_SYSTEM_AGENT,
-        buildRefineUserPrompt({
-          gradeLabel,
-          subjectLabel,
-          userIntent: userInput,
-        }),
-        { maxTokens: 2048, temperature: 0.2 },
-      );
-      refinedSpec = parseRefinedSpecOutput(refineResult, userInput);
-    } catch (err) {
-      logger.warn("Agent 需求整理失败，回退到原始输入", {
-        message: err instanceof Error ? err.message : "未知错误",
-      });
-      refinedSpec = {
-        name: userInput.slice(0, 18),
-        spec: userInput,
-      };
-    }
-
-    this.state.toolName = refinedSpec.name;
-
     // 发送 planning 事件（不带详细规格，避免太大）
     yield {
       type: "planning",
-      content: `我理解你需要「${refinedSpec.name}」。正在生成教具...`,
+      content: "我正在整理需求并生成教具...",
     };
 
     // 阶段 2：生成 JSON Spec
@@ -141,91 +95,34 @@ export class AgentOrchestrator {
     yield { type: "generating", content: "正在生成教具代码..." };
 
     try {
-      logger.debug("Agent 开始生成 spec", {
-        toolName: refinedSpec.name,
+      const result = await createAgentTool({
+        userInput,
+        gradeLabel,
+        subjectLabel,
       });
-      // 优先使用 Spec-based 生成
-      const specResult = await generateChatText(
-        buildSpecSystemPrompt(),
-        buildSpecUserPrompt({
-          name: refinedSpec.name,
-          gradeLabel,
-          subjectLabel,
-          chapter: "",
-          description: refinedSpec.spec,
-        }),
-        {
-          maxTokens: AI_MAX_TOKENS,
-          temperature: 0.3,
-        },
-      );
-      logger.debug("Agent spec 生成完成", {
-        toolName: refinedSpec.name,
-        length: specResult.length,
-      });
-
-      const { spec, valid } = parseSpecOutput(specResult);
-
-      let finalHtml: string;
-
-      if (valid && spec.title) {
-        validateSpecRuntime(spec);
-        // Spec 有效 → 包装为 HTML
-        this.state.currentSpec = spec;
-        const specJson = JSON.stringify(spec, null, 2);
-        finalHtml = wrapSpecAsHtml(specJson);
-
-        this.state.stage = "idle";
-        yield {
-          type: "done",
-          content: `教具「${refinedSpec.name}」已生成！(Spec 模式)\n\n使用了组件框架渲染，交互更稳定。你可以说"修改XXX"来调整。`,
-          html: finalHtml,
-          spec,
-          actions: [
-            { label: "保存教具", action: "save" },
-            { label: "继续优化", action: "iterate" },
-            { label: "重新生成", action: "restart" },
-          ],
-        };
-      } else {
-        // Spec 无效 → fallback 到原始 HTML 生成
-        const html = await generateChatText(
-          buildFallbackSystemPrompt(),
-          buildCreateFallbackHtmlPrompt({
-            name: refinedSpec.name,
-            gradeLabel,
-            subjectLabel,
-            refinedSpec: refinedSpec.spec,
-          }),
-          {
-            maxTokens: AI_MAX_TOKENS,
-            temperature: 0.3,
-          },
-        );
-
-        finalHtml = sanitizeHtml(html, {
-          preserveInlineEventHandlers: true,
-        });
-        this.state.currentHtml = finalHtml;
-        this.state.stage = "idle";
-
-        yield {
-          type: "done",
-          content: `教具「${refinedSpec.name}」已生成！(HTML 模式)\n\n你可以说"修改XXX"来调整。`,
-          html: finalHtml,
-          actions: [
-            { label: "保存教具", action: "save" },
-            { label: "继续优化", action: "iterate" },
-            { label: "重新生成", action: "restart" },
-          ],
-        };
-      }
-
-      this.state.currentHtml = finalHtml;
+      this.state.toolName = result.toolName;
+      this.state.currentSpec = result.spec;
+      this.state.currentHtml = result.html;
+      this.state.stage = "idle";
       this.state.messages.push({
         role: "assistant",
-        content: `已生成教具「${refinedSpec.name}」`,
+        content: `已生成教具「${result.toolName}」`,
       });
+
+      yield {
+        type: "done",
+        content:
+          result.mode === "spec"
+            ? `教具「${result.toolName}」已生成！(Spec 模式)\n\n使用了组件框架渲染，交互更稳定。你可以说"修改XXX"来调整。`
+            : `教具「${result.toolName}」已生成！(HTML 模式)\n\n你可以说"修改XXX"来调整。`,
+        html: result.html,
+        spec: result.spec ?? undefined,
+        actions: [
+          { label: "保存教具", action: "save" },
+          { label: "继续优化", action: "iterate" },
+          { label: "重新生成", action: "restart" },
+        ],
+      };
     } catch (err) {
       this.state.stage = "idle";
       yield {
@@ -247,69 +144,29 @@ export class AgentOrchestrator {
     yield { type: "thinking", content: "正在理解修改需求..." };
 
     try {
-      // 如果有 JSON Spec，优先修改 spec
-      if (this.state.currentSpec) {
-        yield { type: "editing", content: "正在修改教具规格..." };
+      yield {
+        type: "editing",
+        content: this.state.currentSpec
+          ? "正在修改教具规格..."
+          : "正在修改教具代码...",
+      };
 
-        const specStr = JSON.stringify(this.state.currentSpec, null, 2);
-        const modifiedResult = await generateChatText(
-          EDIT_SPEC_SYSTEM_PROMPT,
-          buildEditSpecPrompt(specStr, userInput, this.state.messages.slice(-6)),
-          {
-            maxTokens: AI_MAX_TOKENS,
-            temperature: 0.2,
-          },
-        );
-
-        const { spec, valid } = parseSpecOutput(modifiedResult);
-
-        if (valid && spec.title) {
-          validateSpecRuntime(spec);
-          this.state.currentSpec = spec;
-          const finalHtml = wrapSpecAsHtml(JSON.stringify(spec, null, 2));
-          this.state.currentHtml = finalHtml;
-          this.state.stage = "idle";
-
-          yield {
-            type: "done",
-            content: "已修改完成！右侧预览已更新。",
-            html: finalHtml,
-            spec,
-            actions: [
-              { label: "保存教具", action: "save" },
-              { label: "继续优化", action: "iterate" },
-            ],
-          };
-
-          this.state.messages.push({
-            role: "assistant",
-            content: `已按"${userInput}"修改了教具`,
-          });
-          return;
-        }
-      }
-
-      // Fallback：直接修改 HTML
-      const modifiedHtml = await generateChatText(
-        EDIT_SYSTEM_PROMPT,
-        buildEditPrompt(this.state.currentHtml, userInput, this.state.messages.slice(-6)),
-        {
-          maxTokens: AI_MAX_TOKENS,
-          temperature: 0.2,
-        },
-      );
-
-      const cleanHtml = sanitizeHtml(modifiedHtml, {
-        preserveInlineEventHandlers: true,
+      const result = await modifyAgentTool({
+        userInput,
+        currentHtml: this.state.currentHtml,
+        currentSpec: this.state.currentSpec,
+        messages: this.state.messages,
       });
-      this.state.currentHtml = cleanHtml;
-      this.state.currentSpec = null; // HTML 模式下清除 spec
+
+      this.state.currentHtml = result.html;
+      this.state.currentSpec = result.spec;
       this.state.stage = "idle";
 
       yield {
         type: "done",
         content: "已修改完成！右侧预览已更新。",
-        html: cleanHtml,
+        html: result.html,
+        spec: result.spec ?? undefined,
         actions: [
           { label: "保存教具", action: "save" },
           { label: "继续优化", action: "iterate" },
