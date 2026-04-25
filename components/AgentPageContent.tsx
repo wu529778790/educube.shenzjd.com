@@ -2,27 +2,18 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
+import AgentInputBar from "@/components/agent/AgentInputBar";
+import AgentMessageList from "@/components/agent/AgentMessageList";
+import AgentPreviewPanel from "@/components/agent/AgentPreviewPanel";
+import type { ChatMessage } from "@/components/agent/types";
 import {
   restartAgentSession,
   saveAgentTool,
   streamAgentMessage,
 } from "@/lib/agent/client";
 import type {
-  AgentAction,
   AgentClientSessionState,
 } from "@/lib/agent/types";
-
-/* ──────────────────────────────────────
- * 类型定义
- * ────────────────────────────────────── */
-
-interface ChatMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  stage?: string;
-  actions?: AgentAction[];
-}
 
 /* ──────────────────────────────────────
  * Agent 对话页面
@@ -238,125 +229,36 @@ export default function AgentPageContent() {
       <div className="agent-body">
         {/* 对话面板 */}
         <div className={`agent-chat ${showPreview ? "with-preview" : ""}`}>
-          <div className="chat-messages">
-            {messages.map((msg) => (
-              <div key={msg.id} className={`chat-msg chat-msg-${msg.role}`}>
-                {msg.role === "assistant" && (
-                  <div className="chat-avatar">AI</div>
-                )}
-                <div className="chat-bubble">
-                  {msg.stage && msg.stage !== "done" && msg.stage !== "error" && (
-                    <div className={`stage-badge stage-${msg.stage}`}>
-                      {stageLabel(msg.stage)}
-                    </div>
-                  )}
-                  <div className="chat-text">{formatContent(msg.content)}</div>
-                  {msg.actions && msg.actions.length > 0 && (
-                    <div className="chat-actions">
-                      {msg.actions.map((act) => (
-                        <button
-                          key={act.action}
-                          className="chat-action-btn"
-                          onClick={() => handleAction(act.action)}
-                        >
-                          {act.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            {isLoading && (
-              <div className="chat-msg chat-msg-assistant">
-                <div className="chat-avatar">AI</div>
-                <div className="chat-bubble">
-                  <div className="chat-typing">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
+          <AgentMessageList
+            isLoading={isLoading}
+            messages={messages}
+            messagesEndRef={messagesEndRef}
+            onAction={handleAction}
+          />
 
           {/* 输入区 */}
-          <div className="chat-input-area">
-            <textarea
-              ref={inputRef}
-              className="chat-input"
-              placeholder="描述你想创建的教具，或对当前教具提出修改..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              rows={2}
-              disabled={isLoading}
-            />
-            <button
-              className="chat-send-btn"
-              onClick={() => sendMessage()}
-              disabled={isLoading || !input.trim()}
-            >
-              {isLoading ? "生成中..." : "发送"}
-            </button>
-          </div>
+          <AgentInputBar
+            input={input}
+            inputRef={inputRef}
+            isLoading={isLoading}
+            onChange={setInput}
+            onKeyDown={handleKeyDown}
+            onSend={() => void sendMessage()}
+          />
         </div>
 
         {/* 预览面板 */}
         {showPreview && previewHtml && (
-          <div className="agent-preview">
-            <div className="preview-header">
-              <span>实时预览</span>
-              <button
-                className="preview-close"
-                onClick={() => setShowPreview(false)}
-              >
-                ✕
-              </button>
-            </div>
-            <iframe
-              className="preview-iframe"
-              sandbox="allow-scripts"
-              srcDoc={previewHtml}
-              title="教具预览"
-            />
-          </div>
+          <AgentPreviewPanel
+            html={previewHtml}
+            onClose={() => setShowPreview(false)}
+          />
         )}
       </div>
 
       <style>{agentStyles}</style>
     </div>
   );
-}
-
-/* ──────────────────────────────────────
- * 辅助函数
- * ────────────────────────────────────── */
-
-function stageLabel(stage: string): string {
-  const map: Record<string, string> = {
-    thinking: "思考中...",
-    planning: "规划教具",
-    generating: "生成代码",
-    reviewing: "质量检查",
-    editing: "修改中",
-    done: "完成",
-    error: "出错了",
-  };
-  return map[stage] || stage;
-}
-
-function formatContent(text: string) {
-  // 简单换行处理
-  return text.split("\n").map((line, i) => (
-    <span key={i}>
-      {line}
-      {i < text.split("\n").length - 1 && <br />}
-    </span>
-  ));
 }
 
 /* ──────────────────────────────────────
