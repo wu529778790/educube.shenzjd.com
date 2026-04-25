@@ -1,8 +1,6 @@
 import { useCallback, useState } from "react";
 import type { KeyboardEvent, RefObject } from "react";
 import {
-  createAgentErrorMessage,
-  createAgentEventMessage,
   createInitialChatMessages,
   createRequestErrorMessage,
   createResetChatMessages,
@@ -10,6 +8,7 @@ import {
   createSaveSuccessMessage,
   createUserChatMessage,
 } from "@/components/agent/messages";
+import { createAgentStreamStateUpdate } from "@/components/agent/stream-updates";
 import type { ChatMessage } from "@/components/agent/types";
 import {
   restartAgentSession,
@@ -69,26 +68,18 @@ export function useAgentChat(
           sessionId: sessionState?.sessionId,
           signal: controller.signal,
           onEvent: (event) => {
-            if (event.type === "done") {
-              if (event._state !== undefined) {
-                setSessionState(event._state ?? null);
-              }
-              if (event.html) {
-                setPreviewHtml(event.html);
-                setShowPreview(true);
-              }
-              return;
+            const update = createAgentStreamStateUpdate(event);
+
+            if (update.sessionState !== undefined) {
+              setSessionState(update.sessionState);
             }
 
-            if (event.type === "error") {
-              appendMessage(createAgentErrorMessage(event.content));
-              return;
+            if (update.message) {
+              appendMessage(update.message);
             }
 
-            appendMessage(createAgentEventMessage(event));
-
-            if (event.html) {
-              setPreviewHtml(event.html);
+            if (update.previewHtml) {
+              setPreviewHtml(update.previewHtml);
               setShowPreview(true);
             }
           },
