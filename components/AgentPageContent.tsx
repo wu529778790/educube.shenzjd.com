@@ -2,10 +2,14 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
+import {
+  restartAgentSession,
+  saveAgentTool,
+  streamAgentMessage,
+} from "@/lib/agent/client";
 import type {
   AgentAction,
   AgentClientSessionState,
-  AgentStreamEvent,
 } from "@/lib/agent/types";
 
 /* ──────────────────────────────────────
@@ -69,104 +73,52 @@ export default function AgentPageContent() {
       const timeoutId = setTimeout(() => controller.abort(), 600000);
 
       try {
-        const res = await fetch("/api/agent", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: msg,
-            sessionId: sessionState?.sessionId,
-          }),
+        await streamAgentMessage({
+          message: msg,
+          sessionId: sessionState?.sessionId,
           signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({ error: "请求失败" }));
-          throw new Error(err.error || "请求失败");
-        }
-
-        console.log("[Client] Fetch OK, starting SSE read...");
-
-        // 解析 SSE 流
-        const reader = res.body?.getReader();
-        if (!reader) throw new Error("无法读取响应流");
-
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let eventCount = 0;
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) {
-            console.log("[Client] SSE done, total events:", eventCount);
-            break;
-          }
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed.startsWith("data: ")) continue;
-            try {
-              const event: AgentStreamEvent = JSON.parse(trimmed.slice(5));
-              eventCount++;
-              console.log("[Client SSE event]", eventCount, event.type, event.content?.slice(0, 50));
-
-              // done 事件只更新状态，不显示消息
-              if (event.type === "done") {
-                console.log("[Client] Done event, _state:", !!event._state, "html:", !!event.html);
-                if (event._state !== undefined) {
-                  setSessionState(event._state ?? null);
-                }
-                if (event.html) {
-                  setPreviewHtml(event.html);
-                  setShowPreview(true);
-                }
-                continue;
+          onEvent: (event) => {
+            if (event.type === "done") {
+              if (event._state !== undefined) {
+                setSessionState(event._state ?? null);
               }
-
-              // error 事件显示错误消息
-              if (event.type === "error") {
-                console.error("[Client] Error event:", event.content);
-                setMessages((prev) => [
-                  ...prev,
-                  {
-                    id: `error-${Date.now()}`,
-                    role: "assistant",
-                    content: event.content,
-                    stage: "error",
-                  },
-                ]);
-                continue;
-              }
-
-              // 其他事件：添加消息 + 更新预览
-              console.log("[Client] Adding message for type:", event.type);
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: `${event.type}-${Date.now()}`,
-                  role: "assistant",
-                  content: event.content,
-                  stage: event.type,
-                  actions: event.actions,
-                },
-              ]);
-
               if (event.html) {
                 setPreviewHtml(event.html);
                 setShowPreview(true);
               }
-            } catch (e) {
-              console.error("[SSE parse error]", e, trimmed);
+              return;
             }
-          }
-        }
 
-        console.log("[Client] SSE loop finished, total events:", eventCount);
+            if (event.type === "error") {
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: `error-${Date.now()}`,
+                  role: "assistant",
+                  content: event.content,
+                  stage: "error",
+                },
+              ]);
+              return;
+            }
+
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `${event.type}-${Date.now()}`,
+                role: "assistant",
+                content: event.content,
+                stage: event.type,
+                actions: event.actions,
+              },
+            ]);
+
+            if (event.html) {
+              setPreviewHtml(event.html);
+              setShowPreview(true);
+            }
+          },
+        });
       } catch (err) {
         setMessages((prev) => [
           ...prev,
@@ -178,6 +130,7 @@ export default function AgentPageContent() {
           },
         ]);
       } finally {
+        clearTimeout(timeoutId);
         setIsLoading(false);
       }
     },
@@ -190,15 +143,7 @@ export default function AgentPageContent() {
       switch (action) {
         case "restart":
           if (sessionState?.sessionId) {
-            void fetch("/api/agent", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                message: "",
-                action: "restart",
-                sessionId: sessionState.sessionId,
-              }),
-            });
+            void restartAgentSession(sessionState.sessionId);
           }
           setSessionState(null);
           setPreviewHtml(null);
@@ -227,22 +172,12 @@ export default function AgentPageContent() {
     if (!sessionState?.sessionId) return;
 
     try {
-      const res = await fetch("/api/agent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: "",
-          action: "save",
-          sessionId: sessionState.sessionId,
-          saveMeta: {
-            gradeId: sessionState.grade || "p5",
-            subjectId: sessionState.subject || "math",
-            semester: "上册" as const,
-          },
-        }),
+      const data = await saveAgentTool({
+        sessionId: sessionState.sessionId,
+        gradeId: sessionState.grade || "p5",
+        subjectId: sessionState.subject || "math",
+        semester: "上册",
       });
-
-      const data = await res.json();
       if (data.ok) {
         setMessages((prev) => [
           ...prev,
