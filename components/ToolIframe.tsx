@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import ToolIframeOverlay from "@/components/tool-iframe/ToolIframeOverlay";
+import { useToolIframeState } from "@/components/tool-iframe/useToolIframeState";
 
 interface ToolIframeProps {
   src: string;
@@ -8,126 +9,13 @@ interface ToolIframeProps {
 }
 
 export default function ToolIframe({ src, title }: ToolIframeProps) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  const finishLoad = useCallback(() => {
-    setLoading(false);
-  }, []);
-
-  const handleLoad = useCallback(() => {
-    finishLoad();
-  }, [finishLoad]);
-
-  const handleError = useCallback(() => {
-    setLoading(false);
-    setError(true);
-  }, []);
-
-  /**
-   * 部分浏览器在强缓存下会在绑定 onLoad 之前就让 iframe 进入 complete，
-   * 导致 React 的 onLoad 永远不触发、遮罩一直显示。这里用 ref + readyState 复查，并超时兜底。
-   */
-  useEffect(() => {
-    let done = false;
-    const complete = () => {
-      if (done) return;
-      done = true;
-      finishLoad();
-    };
-
-    const el = iframeRef.current;
-    if (!el) {
-      const fallbackId = window.setTimeout(complete, 15000);
-      return () => {
-        done = true;
-        window.clearTimeout(fallbackId);
-      };
-    }
-
-    const onLoadEv = () => complete();
-    el.addEventListener("load", onLoadEv);
-
-    const checkAlreadyDone = () => {
-      try {
-        if (el.contentDocument?.readyState === "complete") {
-          complete();
-        }
-      } catch {
-        /* 非同源时不可读 document，依赖 load 事件 */
-      }
-    };
-
-    checkAlreadyDone();
-    const rafId = requestAnimationFrame(checkAlreadyDone);
-
-    const timeoutId = window.setTimeout(complete, 15000);
-
-    return () => {
-      done = true;
-      el.removeEventListener("load", onLoadEv);
-      cancelAnimationFrame(rafId);
-      window.clearTimeout(timeoutId);
-    };
-  }, [src, finishLoad]);
+  const { iframeRef, state, handleLoad, handleError } = useToolIframeState({
+    src,
+  });
 
   return (
     <div className="relative flex-1 overflow-hidden min-h-0">
-      {loading && !error && (
-        <div
-          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 text-white/90"
-          style={{ background: "var(--edu-primary)" }}
-          aria-busy="true"
-          aria-live="polite"
-        >
-          <svg
-            className="w-9 h-9 animate-spin text-white/85"
-            viewBox="0 0 24 24"
-            fill="none"
-            aria-hidden
-          >
-            <circle
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeDasharray="31.4 31.4"
-              strokeLinecap="round"
-            />
-          </svg>
-          <p className="text-sm font-medium">教具加载中…</p>
-        </div>
-      )}
-      {error && (
-        <div
-          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-red-50"
-          role="alert"
-        >
-          <svg
-            className="w-9 h-9 text-red-500"
-            viewBox="0 0 24 24"
-            fill="none"
-            aria-hidden
-          >
-            <circle
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="2"
-            />
-            <path
-              d="M12 8v4M12 16h.01"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-          <p className="text-sm font-semibold text-red-600">教具加载失败，请刷新页面重试</p>
-        </div>
-      )}
+      <ToolIframeOverlay state={state} />
       <iframe
         ref={iframeRef}
         key={src}
