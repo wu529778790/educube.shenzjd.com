@@ -1,67 +1,23 @@
 "use client";
 
-import { useMemo, useState, useDeferredValue, useCallback, useEffect } from "react";
 import type { Tool } from "@/data/tools";
-import {
-  buildCatalogSearchParams,
-  getCatalogGradeId,
-  getCatalogSearchInput,
-  getCatalogTools,
-  getDisplayTools,
-} from "@/components/home/catalog";
 import HomeCatalogState from "@/components/home/HomeCatalogState";
+import { useHomeCatalog } from "@/components/home/useHomeCatalog";
 import { defaultCatalogPath } from "@/data/curriculum";
 import Header from "./Header";
 import FilterPanel from "./FilterPanel";
-import { useRouter, useSearchParams } from "next/navigation";
 
 export default function HomePageContent({ tools }: { tools: Tool[] }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const gradeId = getCatalogGradeId(searchParams);
-  const [searchInput, setSearchInput] = useState(getCatalogSearchInput(searchParams));
-  const searchQuery = useDeferredValue(searchInput);
-
-  const updateURL = useCallback(
-    (overrides: { grade?: string; q?: string }) => {
-      const next = buildCatalogSearchParams({
-        current: searchParams,
-        gradeId: overrides.grade ?? gradeId,
-        query: overrides.q ?? searchQuery,
-      });
-      const qs = next.toString();
-      router.replace(qs ? `?${qs}` : "/", { scroll: false });
-    },
-    [searchParams, gradeId, searchQuery, router],
-  );
-
-  useEffect(() => {
-    const currentQ = searchParams.get("q") ?? "";
-    if (currentQ !== searchQuery) {
-      updateURL({ q: searchQuery });
-    }
-  }, [searchQuery, searchParams, updateURL]);
-
-  const handleGradeChange = useCallback(
-    (id: string) => {
-      updateURL({ grade: id });
-    },
-    [updateURL],
-  );
-
-  const handleSearchChange = useCallback((value: string) => {
-    setSearchInput(value);
-  }, []);
-
-  const catalogTools = useMemo(
-    () => getCatalogTools(tools, gradeId),
-    [tools, gradeId],
-  );
-
-  const displayTools = useMemo(() => {
-    return getDisplayTools(catalogTools, searchQuery);
-  }, [catalogTools, searchQuery]);
+  const {
+    gradeId,
+    searchInput,
+    searchQuery,
+    displayCount,
+    catalogTools,
+    displayTools,
+    handleGradeChange,
+    handleSearchChange,
+  } = useHomeCatalog(tools);
 
   return (
     <div
@@ -75,7 +31,7 @@ export default function HomePageContent({ tools }: { tools: Tool[] }) {
         tools={tools}
         gradeId={gradeId}
         subjectId={defaultCatalogPath.subjectId}
-        displayCount={displayTools.length}
+        displayCount={displayCount}
         onGradeChange={handleGradeChange}
       />
 
