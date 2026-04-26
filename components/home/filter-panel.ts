@@ -1,6 +1,19 @@
 import { grades } from "@/data/curriculum";
 import type { Tool } from "@/data/tools";
 
+export interface FilterGradeOption {
+  id: string;
+  name: string;
+  count: number;
+  active: boolean;
+}
+
+export interface FilterPanelSections {
+  allOption: FilterGradeOption;
+  primaryOptions: FilterGradeOption[];
+  juniorOptions: FilterGradeOption[];
+}
+
 export function getFilterGradeCounts(
   tools: Tool[],
   subjectId: string,
@@ -27,4 +40,26 @@ export function getPrimaryGrades() {
 
 export function getJuniorGrades() {
   return grades.filter((grade) => grade.stage === "junior");
+}
+
+export function getFilterPanelSections(
+  gradeId: string,
+  counts: Map<string, number>,
+): FilterPanelSections {
+  const createOption = (id: string, name: string): FilterGradeOption => ({
+    id,
+    name,
+    count: counts.get(id) ?? 0,
+    active: gradeId === id,
+  });
+
+  return {
+    allOption: createOption("all", "全部"),
+    primaryOptions: getPrimaryGrades().map((grade) =>
+      createOption(grade.id, grade.name),
+    ),
+    juniorOptions: getJuniorGrades().map((grade) =>
+      createOption(grade.id, grade.name),
+    ),
+  };
 }

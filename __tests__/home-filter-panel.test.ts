@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getFilterGradeCounts,
+  getFilterPanelSections,
   getJuniorGrades,
   getPrimaryGrades,
 } from "@/components/home/filter-panel";
@@ -75,5 +76,26 @@ describe("home filter panel helpers", () => {
       "j8",
       "j9",
     ]);
+  });
+
+  it("生成筛选面板的全部、小学和初中选项", () => {
+    const sections = getFilterPanelSections(
+      "p4",
+      getFilterGradeCounts(sampleTools, "math"),
+    );
+
+    expect(sections.allOption).toEqual({
+      id: "all",
+      name: "全部",
+      count: 2,
+      active: false,
+    });
+    expect(sections.primaryOptions.find((grade) => grade.id === "p4")).toEqual({
+      id: "p4",
+      name: "四年级",
+      count: 1,
+      active: true,
+    });
+    expect(sections.juniorOptions.every((grade) => grade.count === 0)).toBe(true);
   });
 });

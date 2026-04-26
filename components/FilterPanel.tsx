@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
+import FilterButton from "@/components/home/FilterButton";
 import {
   getFilterGradeCounts,
-  getJuniorGrades,
-  getPrimaryGrades,
+  getFilterPanelSections,
 } from "@/components/home/filter-panel";
 import type { Tool } from "@/data/tools";
 
@@ -27,11 +27,10 @@ export default function FilterPanel({
     () => getFilterGradeCounts(tools, subjectId),
     [tools, subjectId],
   );
-
-  const countForGrade = (gid: string) => counts.get(gid) ?? 0;
-
-  const primaryGrades = getPrimaryGrades();
-  const juniorGrades = getJuniorGrades();
+  const sections = useMemo(
+    () => getFilterPanelSections(gradeId, counts),
+    [counts, gradeId],
+  );
 
   return (
     <section
@@ -40,70 +39,34 @@ export default function FilterPanel({
     >
       <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
         <FilterButton
-          active={gradeId === "all"}
-          onClick={() => onGradeChange("all")}
-          count={countForGrade("all")}
-        >
-          全部
-        </FilterButton>
-        {primaryGrades.map((g) => (
+          active={sections.allOption.active}
+          count={sections.allOption.count}
+          label={sections.allOption.name}
+          onClick={() => onGradeChange(sections.allOption.id)}
+        />
+        {sections.primaryOptions.map((grade) => (
           <FilterButton
-            key={g.id}
-            active={gradeId === g.id}
-            onClick={() => onGradeChange(g.id)}
-            count={countForGrade(g.id)}
-          >
-            {g.name}
-          </FilterButton>
+            key={grade.id}
+            active={grade.active}
+            count={grade.count}
+            label={grade.name}
+            onClick={() => onGradeChange(grade.id)}
+          />
         ))}
         <span className="px-1 text-sm leading-none" style={{ color: "var(--edu-border)" }} aria-hidden>|</span>
-        {juniorGrades.map((g) => (
+        {sections.juniorOptions.map((grade) => (
           <FilterButton
-            key={g.id}
-            active={gradeId === g.id}
-            onClick={() => onGradeChange(g.id)}
-            count={countForGrade(g.id)}
-          >
-            {g.name}
-          </FilterButton>
+            key={grade.id}
+            active={grade.active}
+            count={grade.count}
+            label={grade.name}
+            onClick={() => onGradeChange(grade.id)}
+          />
         ))}
         <span className="ml-auto text-sm" style={{ color: "var(--edu-text-muted)" }}>
           共 {displayCount} 个教具
         </span>
       </div>
     </section>
-  );
-}
-
-interface FilterButtonProps {
-  active: boolean;
-  onClick: () => void;
-  count: number;
-  children: React.ReactNode;
-}
-
-function FilterButton({
-  active,
-  onClick,
-  count,
-  children,
-}: FilterButtonProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all"
-      style={{
-        borderColor: active ? "var(--edu-primary)" : "var(--edu-border)",
-        background: active ? "var(--edu-primary)" : "var(--edu-surface)",
-        color: active ? "white" : "var(--edu-text-secondary)",
-      }}
-    >
-      {children}
-      <span style={{ color: active ? "rgba(255,255,255,0.7)" : "var(--edu-text-muted)" }}>
-        {count}
-      </span>
-    </button>
   );
 }
