@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import { getAgentMessageDisplayInfo } from "@/components/agent/message-list";
 import type { ChatMessage } from "@/components/agent/types";
 
 interface AgentMessageListProps {
@@ -16,37 +17,46 @@ export default function AgentMessageList({
 }: AgentMessageListProps) {
   return (
     <div className="chat-messages">
-      {messages.map((message) => (
-        <div
-          key={message.id}
-          className={`chat-msg chat-msg-${message.role}`}
-        >
-          {message.role === "assistant" && <div className="chat-avatar">AI</div>}
-          <div className="chat-bubble">
-            {message.stage &&
-              message.stage !== "done" &&
-              message.stage !== "error" && (
-                <div className={`stage-badge stage-${message.stage}`}>
-                  {stageLabel(message.stage)}
+      {messages.map((message) => {
+        const display = getAgentMessageDisplayInfo(message);
+
+        return (
+          <div
+            key={message.id}
+            className={`chat-msg chat-msg-${message.role}`}
+          >
+            {message.role === "assistant" && <div className="chat-avatar">AI</div>}
+            <div className="chat-bubble">
+              {display.showStageBadge && display.stageClassName && display.stageLabel && (
+                <div className={`stage-badge ${display.stageClassName}`}>
+                  {display.stageLabel}
                 </div>
               )}
-            <div className="chat-text">{formatContent(message.content)}</div>
-            {message.actions && message.actions.length > 0 && (
-              <div className="chat-actions">
-                {message.actions.map((action) => (
-                  <button
-                    key={action.action}
-                    className="chat-action-btn"
-                    onClick={() => onAction(action.action)}
-                  >
-                    {action.label}
-                  </button>
+              <div className="chat-text">
+                {display.contentLines.map((line, index) => (
+                  <span key={index}>
+                    {line}
+                    {index < display.contentLines.length - 1 && <br />}
+                  </span>
                 ))}
               </div>
-            )}
+              {message.actions && message.actions.length > 0 && (
+                <div className="chat-actions">
+                  {message.actions.map((action) => (
+                    <button
+                      key={action.action}
+                      className="chat-action-btn"
+                      onClick={() => onAction(action.action)}
+                    >
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {isLoading && (
         <div className="chat-msg chat-msg-assistant">
@@ -63,29 +73,4 @@ export default function AgentMessageList({
       <div ref={messagesEndRef} />
     </div>
   );
-}
-
-function stageLabel(stage: string): string {
-  const map: Record<string, string> = {
-    thinking: "思考中...",
-    planning: "规划教具",
-    generating: "生成代码",
-    reviewing: "质量检查",
-    editing: "修改中",
-    done: "完成",
-    error: "出错了",
-  };
-
-  return map[stage] || stage;
-}
-
-function formatContent(text: string) {
-  const lines = text.split("\n");
-
-  return lines.map((line, index) => (
-    <span key={index}>
-      {line}
-      {index < lines.length - 1 && <br />}
-    </span>
-  ));
 }
