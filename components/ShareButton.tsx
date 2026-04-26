@@ -1,61 +1,30 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState } from "react";
+import QRCodeSVG from "@/components/share/QRCodeSVG";
+import { useSharePopover } from "@/components/share/useSharePopover";
 
 interface ShareButtonProps {
   toolName: string;
 }
 
 export default function ShareButton({ toolName }: ShareButtonProps) {
-  const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const popoverRef = useRef<HTMLDivElement>(null);
-
-  const url =
-    typeof window !== "undefined" ? window.location.href : "";
-
-  // 点击外部关闭 & Escape 关闭
-  useEffect(() => {
-    if (!open) return;
-    const clickHandler = (e: MouseEvent) => {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
-    };
-    const keyHandler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", clickHandler);
-    document.addEventListener("keydown", keyHandler);
-    return () => {
-      document.removeEventListener("mousedown", clickHandler);
-      document.removeEventListener("keydown", keyHandler);
-    };
-  }, [open]);
-
-  const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      // Clipboard API 不可用时，静默失败
-      if (process.env.NODE_ENV === "development") {
-        console.warn("[ShareButton] 复制失败:", err);
-      }
-    }
-  }, [url]);
+  const [url] = useState(() =>
+    typeof window === "undefined" ? "" : window.location.href,
+  );
+  const {
+    open,
+    copied,
+    popoverRef,
+    toggleOpen,
+    handleCopy,
+  } = useSharePopover({ url });
 
   return (
     <div className="relative" ref={popoverRef}>
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={toggleOpen}
         className="flex items-center gap-1.5 text-xs hover:text-white px-3 py-1.5 rounded transition-colors"
         style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)" }}
         title="分享教具"
@@ -114,76 +83,6 @@ export default function ShareButton({ toolName }: ShareButtonProps) {
             )}
           </button>
         </div>
-      )}
-    </div>
-  );
-}
-
-interface QRCodeSVGProps {
-  text: string;
-  size: number;
-}
-
-/** 轻量 QR 码 SVG 渲染，基于 qrcode-generator */
-function QRCodeSVG({ text, size }: QRCodeSVGProps) {
-  // 动态导入会复杂化，直接用 inline 生成
-  const [svg, setSvg] = useState<React.ReactNode>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    import("qrcode-generator")
-      .then((QRCode) => {
-      if (cancelled) return;
-      const qr = QRCode.default(0, "M");
-      qr.addData(text);
-      qr.make();
-      const moduleCount = qr.getModuleCount();
-      const cellSize = size / moduleCount;
-
-      const rects: React.ReactNode[] = [];
-      for (let row = 0; row < moduleCount; row++) {
-        for (let col = 0; col < moduleCount; col++) {
-          if (qr.isDark(row, col)) {
-            rects.push(
-              <rect
-                key={`${row}-${col}`}
-                x={col * cellSize}
-                y={row * cellSize}
-                width={cellSize + 0.5}
-                height={cellSize + 0.5}
-                fill="#1e293b"
-              />,
-            );
-          }
-        }
-      }
-
-      setSvg(
-        <svg
-          width={size}
-          height={size}
-          viewBox={`0 0 ${size} ${size}`}
-          className="rounded"
-        >
-          <rect width={size} height={size} fill="white" rx="4" />
-          {rects}
-        </svg>,
-      );
-    })
-    .catch((err) => {
-      if (cancelled) return;
-      if (process.env.NODE_ENV === "development") {
-        console.warn("[QRCode] 加载失败:", err);
-      }
-      setSvg(<span className="text-xs text-red-400">二维码加载失败</span>);
-    });
-    return () => { cancelled = true; };
-  }, [text, size]);
-
-  return (
-    <div className="w-[140px] h-[140px] flex items-center justify-center bg-slate-50 rounded">
-      {svg ?? (
-        <span className="text-xs text-slate-400">加载中…</span>
       )}
     </div>
   );
