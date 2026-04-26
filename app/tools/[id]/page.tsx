@@ -1,12 +1,16 @@
 import { getPathLabel } from "@/data/curriculum";
-import { getToolById, tools } from "@/data/tools";
-import { loadGeneratedTools } from "@/data/generated-tools";
+import { tools } from "@/data/tools";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import BackArrow from "@/components/BackArrow";
 import ShareButton from "@/components/ShareButton";
 import ToolIframe from "@/components/ToolIframe";
 import FullscreenButton from "@/components/FullscreenButton";
+import {
+  createToolMetadata,
+  findToolPageEntry,
+  getToolIframeSrc,
+} from "@/lib/tool-page";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -19,48 +23,19 @@ export async function generateStaticParams() {
   return tools.map((tool) => ({ id: tool.id }));
 }
 
-async function findTool(id: string) {
-  // 快速路径：静态工具直接命中，无需加载生成工具索引
-  const staticTool = getToolById(id);
-  if (staticTool) return { tool: staticTool, isGenerated: false };
-  // 只有 gen- 前缀的 ID 才会去查生成工具（避免对每个静态工具页面读 JSON 索引）
-  if (!id.startsWith("gen-")) return null;
-  const generated = await loadGeneratedTools();
-  const genTool = generated.find((t) => t.id === id);
-  if (genTool) return { tool: genTool, isGenerated: true };
-  return null;
-}
-
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params;
-  const result = await findTool(id);
-  if (!result) return {};
-  const title = `${result.tool.name} — 教立方 EduCube`;
-  return {
-    title,
-    description: result.tool.description,
-    openGraph: {
-      title,
-      description: result.tool.description,
-      type: "article",
-    },
-    twitter: {
-      card: "summary",
-      title,
-      description: result.tool.description,
-    },
-  };
+  const result = await findToolPageEntry(id);
+  return result ? createToolMetadata(result.tool) : {};
 }
 
 export default async function ToolPage({ params }: PageProps) {
   const { id } = await params;
-  const result = await findTool(id);
+  const result = await findToolPageEntry(id);
   if (!result) notFound();
 
   const { tool, isGenerated } = result;
-  const iframeSrc = isGenerated
-    ? `/api/generated-tools/${id}/html`
-    : `/tools/${id}.html`;
+  const iframeSrc = getToolIframeSrc(id, isGenerated);
 
   return (
     <div className="flex flex-col h-screen" style={{ background: "var(--edu-primary)" }}>
